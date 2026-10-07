@@ -86,6 +86,39 @@ type ChatVerifier interface {
 	VerifyChat(ctx context.Context, chat string) (Profile, error)
 }
 
+// ChatMessage is a message posted into a chat the platform bot can see, reduced
+// to what ownership proof needs. Adapters produce it from their inbound update
+// format; the accounts use case consumes it without knowing the platform.
+type ChatMessage struct {
+	// ChatID is the platform chat id, usable with ChatVerifier.VerifyChat.
+	ChatID    string
+	MessageID int64
+	Text      string
+	// SenderID identifies the human who posted. Empty when SenderTrusted.
+	SenderID string
+	// SenderTrusted is true when the platform itself guarantees that only
+	// administrators can post this message (channel posts, anonymous admins).
+	SenderTrusted bool
+}
+
+// ChatLinker is implemented by chat providers that let a user prove control of
+// a chat by posting a one-time code there (Telegram).
+type ChatLinker interface {
+	ChatVerifier
+	// BotUsername is the public handle users must add to their chat.
+	BotUsername(ctx context.Context) (string, error)
+	// ParseUpdate turns a raw inbound platform update (webhook body or polled
+	// item) into a chat message. It returns (nil, nil) for updates that are
+	// irrelevant (edits, joins, private chats, ...).
+	ParseUpdate(raw []byte) (*ChatMessage, error)
+	// IsChatAdmin reports whether a platform user owns or administers the chat.
+	IsChatAdmin(ctx context.Context, chatID, userID string) (bool, error)
+	// DeleteMessage removes a message from the chat.
+	DeleteMessage(ctx context.Context, chatID string, messageID int64) error
+	// LinkInstructions is the user-facing text that goes with a link code.
+	LinkInstructions(botUsername, code string, ttl time.Duration) string
+}
+
 // AccountRef is the non-secret account data an adapter needs.
 type AccountRef struct {
 	ID                string

@@ -44,6 +44,10 @@ func (a *Adapter) redact(err error) error {
 
 // callJSON invokes a Bot API method with a JSON body and decodes result into out.
 func (a *Adapter) callJSON(ctx context.Context, method string, params any, out any) error {
+	return a.callJSONLimit(ctx, method, params, out, maxResponseBytes)
+}
+
+func (a *Adapter) callJSONLimit(ctx context.Context, method string, params any, out any, limit int64) error {
 	body, err := json.Marshal(params)
 	if err != nil {
 		return err
@@ -53,10 +57,18 @@ func (a *Adapter) callJSON(ctx context.Context, method string, params any, out a
 		return a.redact(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	return a.do(req, out)
+	return a.doLimit(req, out, limit)
 }
 
-func (a *Adapter) do(req *http.Request, out any) error {
+// maxResponseBytes caps ordinary Bot API responses; getUpdates may carry many messages.
+const (
+	maxResponseBytes    = 1 << 20
+	maxUpdatesRespBytes = 8 << 20
+)
+
+func (a *Adapter) do(req *http.Request, out any) error { return a.doLimit(req, out, maxResponseBytes) }
+
+func (a *Adapter) doLimit(req *http.Request, out any, limit int64) error {
 	if a.token == "" {
 		return &provider.Error{Kind: provider.KindPermanent, Provider: Name, Code: "BOT_NOT_CONFIGURED", Message: "TELEGRAM_BOT_TOKEN is not configured"}
 	}
@@ -69,7 +81,7 @@ func (a *Adapter) do(req *http.Request, out any) error {
 		_ = resp.Body.Close()
 	}()
 	var ar apiResponse
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&ar); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, limit)).Decode(&ar); err != nil {
 		if resp.StatusCode >= 500 {
 			return provider.FromHTTPStatus(Name, resp.StatusCode, "Telegram unavailable", 0)
 		}

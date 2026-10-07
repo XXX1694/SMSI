@@ -5,8 +5,10 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/errs"
@@ -112,20 +114,50 @@ func (a *API) redirectWeb(w http.ResponseWriter, r *http.Request, path string, q
 	http.Redirect(w, r, a.opt.WebBaseURL+path+sep+q.Encode(), http.StatusFound)
 }
 
-type chatReq struct {
-	Chat string `json:"chat"`
+// linkStartDTO answers POST /social/telegram/connect. The code is only ever
+// returned here, once; the server keeps just its hash.
+type linkStartDTO struct {
+	ID           uuid.UUID `json:"id"`
+	Code         string    `json:"code"`
+	ExpiresAt    time.Time `json:"expires_at"`
+	BotUsername  string    `json:"bot_username"`
+	Instructions string    `json:"instructions"`
 }
 
-func (a *API) connectTelegram(w http.ResponseWriter, r *http.Request) {
-	var req chatReq
-	if err := decode(r, &req); err != nil {
-		httpx.Error(w, r, err)
-		return
-	}
-	acc, err := a.svc.Accounts.ConnectChat(r.Context(), actorOf(r), "telegram", req.Chat)
+// startTelegramLink begins proving control of a Telegram chat: it takes no chat,
+// it hands out a one-time code the user must post there.
+func (a *API) startTelegramLink(w http.ResponseWriter, r *http.Request) {
+	ls, err := a.svc.Accounts.StartChatLink(r.Context(), actorOf(r), "telegram")
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusCreated, toAccount(acc))
+	httpx.JSON(w, http.StatusCreated, linkStartDTO{ID: ls.ID, Code: ls.Code, ExpiresAt: utc(ls.ExpiresAt),
+		BotUsername: ls.BotUsername, Instructions: ls.Instructions})
+}
+
+type linkStatusDTO struct {
+	Status  string      `json:"status"`
+	Account *accountDTO `json:"account,omitempty"`
+}
+
+// telegramLinkStatus is polled by the UI while the user posts the code. Another
+// user's link id is a 404, exactly like an unknown one.
+func (a *API) telegramLinkStatus(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	st, err := a.svc.Accounts.ChatLinkStatus(r.Context(), actorOf(r), id)
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	out := linkStatusDTO{Status: string(st.Status)}
+	if st.Account != nil {
+		dto := toAccount(st.Account)
+		out.Account = &dto
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }

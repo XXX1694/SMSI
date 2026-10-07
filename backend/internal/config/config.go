@@ -53,7 +53,20 @@ type Config struct {
 	LinkedInVersion string
 	LinkedInPKCE    bool
 	TelegramToken   string
+	// TelegramUpdatesMode selects how the bot receives the messages that prove
+	// chat ownership: "polling" (worker long-polls getUpdates, needs no public
+	// URL; default) or "webhook" (Telegram calls POST /api/v1/webhooks/telegram).
+	TelegramUpdatesMode string
+	// TelegramWebhookSecret is the secret_token Telegram echoes in the
+	// X-Telegram-Bot-Api-Secret-Token header; required in webhook mode.
+	TelegramWebhookSecret string
 }
+
+// Telegram update intake modes.
+const (
+	TelegramModePolling = "polling"
+	TelegramModeWebhook = "webhook"
+)
 
 // Load reads and validates configuration.
 func Load() (*Config, error) {
@@ -98,6 +111,9 @@ func Load() (*Config, error) {
 		LinkedInVersion: env("LINKEDIN_API_VERSION", "202606"),
 		LinkedInPKCE:    envBool("LINKEDIN_USE_PKCE", true),
 		TelegramToken:   env("TELEGRAM_BOT_TOKEN", ""),
+
+		TelegramUpdatesMode:   strings.ToLower(env("TELEGRAM_UPDATES_MODE", TelegramModePolling)),
+		TelegramWebhookSecret: env("TELEGRAM_WEBHOOK_SECRET", ""),
 	}
 	return c, c.validate()
 }
@@ -121,6 +137,21 @@ func (c *Config) validate() error {
 	if c.StorageDriver != "s3" && c.StorageDriver != "memory" {
 		problems = append(problems, "STORAGE_DRIVER must be s3 or memory")
 	}
+	switch c.TelegramUpdatesMode {
+	case TelegramModePolling:
+	case TelegramModeWebhook:
+		if c.TelegramToken != "" {
+			if c.TelegramWebhookSecret == "" {
+				problems = append(problems, "TELEGRAM_WEBHOOK_SECRET is required when TELEGRAM_UPDATES_MODE=webhook (openssl rand -hex 32)")
+			} else if !validWebhookSecret(c.TelegramWebhookSecret) {
+				problems = append(problems, "TELEGRAM_WEBHOOK_SECRET must be 1-256 characters of A-Z a-z 0-9 _ - (Telegram's secret_token rule)")
+			} else if c.Production() && len(c.TelegramWebhookSecret) < 16 {
+				problems = append(problems, "TELEGRAM_WEBHOOK_SECRET must be at least 16 characters in production")
+			}
+		}
+	default:
+		problems = append(problems, "TELEGRAM_UPDATES_MODE must be polling or webhook")
+	}
 	if c.Production() {
 		if !c.CookieSecure {
 			problems = append(problems, "COOKIE_SECURE must be true in production")
@@ -136,6 +167,20 @@ func (c *Config) validate() error {
 		return errors.New("config: " + strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+func validWebhookSecret(s string) bool {
+	if s == "" || len(s) > 256 {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_', r == '-':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func env(key, def string) string {

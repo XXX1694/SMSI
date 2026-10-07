@@ -44,6 +44,9 @@ type Options struct {
 	Ready        []ReadyCheck
 	APILimiter   *middleware.Limiter
 	AuthLimiter  *middleware.Limiter
+	// TelegramWebhookSecret enables POST /webhooks/telegram (webhook intake
+	// mode); with an empty secret the route does not exist.
+	TelegramWebhookSecret string
 }
 
 // API holds handler dependencies.
@@ -77,6 +80,11 @@ func NewRouter(svc Services, opt Options) http.Handler {
 	a.mountOps(r)
 	r.Route("/api/v1", func(r chi.Router) {
 		a.mountOps(r)
+		if opt.TelegramWebhookSecret != "" {
+			// Machine-to-machine: authenticated by the shared secret header only, so it sits
+			// outside the cookie/CSRF/per-client rate-limit group below.
+			r.Post("/webhooks/telegram", a.telegramWebhook)
+		}
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Authenticate(svc.Auth, opt.TrustProxy), middleware.APIKeyAudit(svc.Audit, opt.Logger),
 				middleware.RateLimit(opt.APILimiter, opt.TrustProxy, opt.Metrics, "api:"), middleware.CSRF)
@@ -109,7 +117,9 @@ func (a *API) mountAuthenticated(r chi.Router) {
 	r.Get("/social/accounts", a.listAccounts)
 	r.Get("/social/accounts/{id}", a.getAccount)
 	r.Delete("/social/accounts/{id}", a.disconnectAccount)
-	r.Post("/social/telegram/connect", a.connectTelegram)
+	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.opt.TrustProxy, a.opt.Metrics, "link:")).
+		Post("/social/telegram/connect", a.startTelegramLink)
+	r.Get("/social/telegram/connect/{id}", a.telegramLinkStatus)
 	r.Get("/social/{provider}/connect", a.connect)
 
 	r.Post("/posts", a.createPost)

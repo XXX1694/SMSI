@@ -424,7 +424,7 @@ func TestCSRFMatrix(t *testing.T) {
 	junk.req("GET", "/api/v1/me", nil).apiErr(t, 401, "UNAUTHENTICATED")
 	junk.req("GET", "/health", nil)
 	// CSRF protects the account-changing OAuth/connect endpoints that mutate state too.
-	owner.req("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": "@x"}, func(r *http.Request) { r.Header.Del("X-CSRF-Token") }).apiErr(t, 403, "FORBIDDEN")
+	owner.req("POST", "/api/v1/social/telegram/connect", nil, func(r *http.Request) { r.Header.Del("X-CSRF-Token") }).apiErr(t, 403, "FORBIDDEN")
 }
 
 func TestAuthorizationHeaderForms(t *testing.T) {

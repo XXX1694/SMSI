@@ -23,10 +23,16 @@ type fakeBot struct {
 	files    []string
 	status   string // member status of the bot
 	rateOnce bool
+
+	members  map[float64]string // getChatMember status of other users (default "member")
+	bodies   map[string][]map[string]any
+	updates  []string // raw updates served by getUpdates
+	failPoll []int    // HTTP statuses getUpdates answers with, one per call, before succeeding
+	meCalls  int
 }
 
 func newFakeBot(t *testing.T) *fakeBot {
-	f := &fakeBot{status: "administrator"}
+	f := &fakeBot{status: "administrator", members: map[float64]string{}, bodies: map[string][]map[string]any{}}
 	f.srv = httptest.NewServer(http.HandlerFunc(f.handle))
 	t.Cleanup(f.srv.Close)
 	return f
@@ -71,8 +77,14 @@ func (f *fakeBot) handle(w http.ResponseWriter, r *http.Request) {
 	} else {
 		_ = json.NewDecoder(r.Body).Decode(&params)
 	}
+	f.mu.Lock()
+	f.bodies[method] = append(f.bodies[method], params)
+	f.mu.Unlock()
 	switch method {
 	case "getMe":
+		f.mu.Lock()
+		f.meCalls++
+		f.mu.Unlock()
 		reply(w, map[string]any{"id": 42, "is_bot": true, "username": "socialos_bot"})
 	case "getChat":
 		if params["chat_id"] != "@mychannel" {
@@ -81,7 +93,36 @@ func (f *fakeBot) handle(w http.ResponseWriter, r *http.Request) {
 		}
 		reply(w, map[string]any{"id": -1001234567890, "type": "channel", "title": "My Channel", "username": "mychannel"})
 	case "getChatMember":
+		if uid, _ := params["user_id"].(float64); uid != 42 {
+			st, ok := f.members[uid]
+			if !ok {
+				st = "member"
+			}
+			reply(w, map[string]any{"status": st})
+			return
+		}
 		reply(w, map[string]any{"status": f.status, "can_post_messages": true})
+	case "getUpdates":
+		f.mu.Lock()
+		if len(f.failPoll) > 0 {
+			code := f.failPoll[0]
+			f.failPoll = f.failPoll[1:]
+			f.mu.Unlock()
+			fail(w, code, "boom", nil)
+			return
+		}
+		out := f.updates
+		f.updates = nil
+		f.mu.Unlock()
+		raws := make([]json.RawMessage, len(out))
+		for i, u := range out {
+			raws[i] = json.RawMessage(u)
+		}
+		reply(w, raws)
+	case "setWebhook", "deleteWebhook":
+		reply(w, true)
+	case "getWebhookInfo":
+		reply(w, map[string]any{"url": "https://api.example.com/hook", "pending_update_count": 3})
 	case "sendMessage":
 		if f.rateOnce {
 			f.rateOnce = false

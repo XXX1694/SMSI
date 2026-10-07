@@ -39,7 +39,7 @@ Without `make`, export the same variables yourself, e.g.
 ## Commands (run in `/home/claude/SMSI/backend`)
 
 ```bash
-make build              # bin/api bin/worker bin/migrate (static, CGO off)
+make build              # bin/api bin/worker bin/migrate bin/telegram (static, CGO off)
 make test               # unit tests only, no services needed
 make test-integration   # everything against real Postgres + Redis (about 1 minute)
 make lint               # gofmt, go vet, golangci-lint
@@ -54,8 +54,27 @@ Run API and worker in the background and stop them again:
 setsid nohup make run-api    > /tmp/socialos-api.log    2>&1 &
 setsid nohup make run-worker > /tmp/socialos-worker.log 2>&1 &
 # stop (graceful):
-pkill -TERM -f 'exe/api'; pkill -TERM -f 'exe/worker'; pkill -TERM -f 'go run ./cmd/'
+# stop one binary by PID (a pattern like `pkill -f` can match your own shell):
+kill -TERM $(pgrep -f '^./bin/api'); kill -TERM $(pgrep -f '^./bin/worker')
 ```
+
+## Telegram locally
+
+Telegram needs a real bot token and a chat the bot administers, so it is off without `TELEGRAM_BOT_TOKEN`
+(`POST /social/telegram/connect` answers 501). With a token:
+
+```bash
+TELEGRAM_BOT_TOKEN=123456:ABC...        # from @BotFather
+TELEGRAM_UPDATES_MODE=polling           # default: the worker long-polls, nothing public is needed
+```
+
+1. Start the worker (it polls `getUpdates`; check `/tmp/socialos-worker.log` for `telegram polling started`).
+2. `curl -s -b $J -X POST -H "X-CSRF-Token: $CSRF" localhost:8080/api/v1/social/telegram/connect` returns `{id, code, expires_at, bot_username, ...}`.
+3. Add the bot to a channel as admin with "Post messages", post the code there, and poll `GET /api/v1/social/telegram/connect/<id>` until `status` is `connected`.
+
+`webhook` mode needs an https URL Telegram can reach (a tunnel such as `cloudflared tunnel --url http://localhost:8080` works): set `TELEGRAM_UPDATES_MODE=webhook`, `TELEGRAM_WEBHOOK_SECRET` and `API_PUBLIC_URL`, restart the api and run `make telegram-set-webhook`.
+Telegram refuses `getUpdates` while a webhook is set, so run `make telegram-delete-webhook` before going back to polling.
+Without a bot, the whole flow is covered by the e2e tests against a fake Bot API (`internal/e2e/telegram_link_test.go`).
 
 ## Smoke test with curl
 

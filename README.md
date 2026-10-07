@@ -88,7 +88,9 @@ Use `make logs`, `make ps` and `make down` to watch, inspect and stop the stack.
 | `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_PUBLIC_ENDPOINT` | Object storage (MinIO / R2 / S3) |
 | `API_PUBLIC_URL`, `WEB_BASE_URL`, `MCP_PUBLIC_URL`, `CORS_ALLOWED_ORIGINS` | Public URLs and the CORS allow-list (`*` is rejected) |
 | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | LinkedIn app |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot (one per deployment, shared by all users) |
+| `TELEGRAM_UPDATES_MODE` | How the bot receives chat posts: `polling` (default, the worker long-polls) or `webhook` |
+| `TELEGRAM_WEBHOOK_SECRET` | Webhook mode only: secret Telegram echoes in `X-Telegram-Bot-Api-Secret-Token` (1-256 chars of `A-Z a-z 0-9 _ -`; 16+ in production) |
 | `SOCIAL_MOCK_PROVIDERS` | Mock network (development only) |
 | `COOKIE_SECURE`, `METRICS_TOKEN`, `RATE_LIMIT_*` | Hardening |
 
@@ -103,14 +105,14 @@ make migrate                         # docker: one-shot migrate service
 make -C backend migrate              # host: uses backend/.env DATABASE_URL
 ```
 
-The schema covers these tables: `users`, `sessions`, `oauth_states`, `social_accounts`, `oauth_credentials`, `posts`, `post_targets`, `media`, `post_media`, `scheduled_jobs`, `publication_attempts`, `api_keys`, `mcp_connections`, `audit_logs` and `analytics`. Every table has UUID primary keys and `created_at`/`updated_at`. One user can own many accounts on the same platform, enforced by `unique(user_id, provider, provider_account_id)`.
+The schema covers these tables: `users`, `sessions`, `oauth_states`, `social_accounts`, `oauth_credentials`, `posts`, `post_targets`, `media`, `post_media`, `scheduled_jobs`, `publication_attempts`, `api_keys`, `mcp_connections`, `audit_logs`, `analytics` and `telegram_link_codes`. Every table has UUID primary keys and `created_at`/`updated_at`. One user can own many accounts on the same platform, enforced by `unique(user_id, provider, provider_account_id)`.
 
 ## 5. Running the components individually
 
 | Component | Command | Notes |
 |---|---|---|
 | Backend API | `make -C backend run-api` | `:8080`; `GET /health`, `GET /ready` (Postgres, Redis, S3), `GET /metrics` |
-| Worker | `make -C backend run-worker` | Publishes due targets, retries with exponential backoff (max 5) and runs a reconciler every minute. Health on `:8081` |
+| Worker | `make -C backend run-worker` | Publishes due targets, retries with exponential backoff (max 5), runs a reconciler every minute and, in `polling` mode, long-polls Telegram for link codes (one worker at a time, via a Redis lease). Health on `:8081` |
 | Frontend | `cd frontend && npm ci && npm run dev` | `:3000`. `npm run mock-api` serves the contract on `:8080` for UI work without the backend |
 | MCP | `cd mcp && npm ci && npm run build && SOCIALOS_API_URL=http://localhost:8080 npm start` | HTTP mode. Add `--stdio` with `SOCIALOS_API_KEY` for stdio mode |
 
@@ -147,7 +149,7 @@ No test needs real OAuth credentials.
 | Provider | Status | Notes |
 |---|---|---|
 | LinkedIn | Real | OAuth 2.0 + OpenID `userinfo`, `/rest/posts`. Text and image; video not in the MVP. Personal profiles via "Share on LinkedIn". **Company pages need Marketing Developer Platform approval** (`requires_approval`) |
-| Telegram | Real | Bot API, not OAuth. Add the bot as a channel admin, then connect `@channel`; the backend verifies admin rights. Text, image, video, delete |
+| Telegram | Real | Bot API, not OAuth. One bot serves all users, so a chat is connected by posting a one-time code in it (proof of control), never by typing its name. Text, image, video, delete |
 | Mock | Dev/test only | Deterministic; content containing `#mock-fail`, `#mock-retry`, `#mock-auth` or `#mock-unknown` simulates failures |
 | Instagram, Facebook, TikTok, YouTube, X, Threads, Pinterest | Not available | Registered stubs returning `PROVIDER_NOT_AVAILABLE`. All need app review or business accounts, so they are not pretended to work |
 
@@ -207,9 +209,27 @@ The requested scopes are `openid profile email w_member_social`. Posting to comp
 
 **Telegram**
 
+SocialOS runs **one bot for the whole deployment**. If connecting only needed the channel's `@username`, any user could attach somebody else's channel, because the bot is an admin of all of them. So a chat is linked only when the user proves they control it with a one-time code.
+
+Setup (operator):
+
 1. Create a bot with @BotFather and set `TELEGRAM_BOT_TOKEN`.
-2. The user adds the bot as an administrator with the "Post messages" right in their channel.
-3. On `/accounts`, connect by `@channelname` or chat ID.
+2. Choose how updates arrive with `TELEGRAM_UPDATES_MODE`:
+   - `polling` (default): nothing else to do. The worker long-polls Telegram (`getUpdates`), so it works behind NAT and on localhost. Only one worker polls at a time (Redis lease), so you can run several. Do not run another consumer of the same bot token.
+   - `webhook`: set `TELEGRAM_WEBHOOK_SECRET` (for example `openssl rand -hex 24`), make `API_PUBLIC_URL` an https address Telegram can reach and run `make -C backend telegram-set-webhook` (add `URL=https://…/api/v1/webhooks/telegram` to override). `make -C backend telegram-webhook-info` shows what Telegram has registered and `telegram-delete-webhook` removes it. Switching back to `polling` requires deleting the webhook first (Telegram refuses `getUpdates` while one is set; the worker logs a hint).
+
+Connecting (user, on `/accounts`):
+
+1. Click **Connect channel**. SocialOS shows a code such as `SOS-7KQ2M9XA`, valid for 15 minutes and usable once.
+2. Add the bot to your channel or group as an administrator with the **Post messages** right.
+3. Post the code in that chat as a normal message. The page detects it within a couple of seconds, shows the connected chat and the bot deletes your message.
+
+Notes:
+
+- In a group or supergroup only an administrator's code counts (anyone can post there). In a channel only admins can post anyway.
+- A wrong, expired or reused code is ignored silently: the bot never replies in the chat.
+- If the bot lacks the right to post, the code is kept: fix the permission and post it again before it expires.
+- A bot that is an administrator receives every message of a group, so Telegram's privacy mode does not stop the bot from seeing the code. If a group still shows nothing, check that the bot really is an administrator.
 
 The flow, after `GET /api/v1/social/{provider}/connect`:
 
@@ -231,12 +251,13 @@ All endpoints are under `/api/v1`. Errors look like this:
 | Area | Endpoints |
 |---|---|
 | Auth | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /me` (user, scopes, csrf_token) |
-| Social | `GET /social/providers` · `GET /social/accounts` · `GET /social/accounts/{id}` · `GET /social/{provider}/connect` · `GET /social/{provider}/callback` · `POST /social/telegram/connect` · `DELETE /social/accounts/{id}` |
+| Social | `GET /social/providers` · `GET /social/accounts` · `GET /social/accounts/{id}` · `GET /social/{provider}/connect` · `GET /social/{provider}/callback` · `POST /social/telegram/connect` (no body, returns a link code) · `GET /social/telegram/connect/{id}` (link status) · `DELETE /social/accounts/{id}` |
 | Posts | `POST /posts` · `GET /posts?status=&from=&to=&cursor=` · `GET /posts/{id}` · `PATCH /posts/{id}` · `DELETE /posts/{id}` · `POST /posts/{id}/publish` · `/schedule` · `/cancel` · `/retry` · `GET /posts/{id}/status` |
 | Media | `POST /media` (multipart; images ≤ 10 MB, video ≤ 100 MB; MIME sniffed) · `GET /media` · `GET /media/{id}` · `DELETE /media/{id}` |
 | Insights | `GET /dashboard/summary` · `GET /analytics` · `GET /audit-logs` |
 | Developer | `GET/POST /developer/api-keys` · `DELETE /developer/api-keys/{id}` · `GET/POST /developer/mcp-connections` · `DELETE /developer/mcp-connections/{id}` · `GET /developer/usage` |
 | Ops | `GET /health` · `GET /ready` · `GET /metrics` |
+| Webhook | `POST /webhooks/telegram` (only when `TELEGRAM_UPDATES_MODE=webhook`; authenticated by the `X-Telegram-Bot-Api-Secret-Token` header, not by session or key) |
 
 **Post lifecycle.** Posts move `draft → scheduled → publishing → published | partially_published | failed`, and `draft|scheduled → cancelled`. Invalid transitions return `409 INVALID_STATE_TRANSITION`. Every attempt is recorded in `publication_attempts` with its number, times, status, error and response metadata.
 

@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/adapters/provider"
@@ -16,6 +17,8 @@ import (
 type Service struct {
 	repo            Repo
 	states          States
+	links           LinkCodes
+	log             *slog.Logger
 	vault           *Vault
 	registry        *provider.Registry
 	tx              port.TxRunner
@@ -29,6 +32,8 @@ type Service struct {
 type Deps struct {
 	Repo     Repo
 	States   States
+	Links    LinkCodes
+	Log      *slog.Logger
 	Registry *provider.Registry
 	Tx       port.TxRunner
 	Audit    port.AuditRecorder
@@ -40,7 +45,11 @@ type Deps struct {
 
 // NewService creates the service.
 func NewService(d Deps) *Service {
-	return &Service{repo: d.Repo, states: d.States, vault: NewVault(d.Repo, d.Enc), registry: d.Registry,
+	log := d.Log
+	if log == nil {
+		log = slog.Default()
+	}
+	return &Service{repo: d.Repo, states: d.States, links: d.Links, log: log, vault: NewVault(d.Repo, d.Enc), registry: d.Registry,
 		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL}
 }
 

@@ -2,182 +2,19 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"strings"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/socialos/backend/internal/adapters/provider"
-	"github.com/socialos/backend/internal/adapters/telegram"
 	"github.com/socialos/backend/internal/application/media"
 	"github.com/socialos/backend/internal/config"
 )
-
-// ---------------------------------------------------------------- Telegram
-
-const fakeBotToken = "123456:AAH-SECRET-bot-token"
-
-// fakeBotAPI is a minimal Telegram Bot API. It records sendMessage calls and
-// can be switched to reject them.
-type fakeBotAPI struct {
-	srv      *httptest.Server
-	mu       sync.Mutex
-	texts    []string
-	failSend bool
-}
-
-func newFakeBotAPI(t *testing.T) *fakeBotAPI {
-	f := &fakeBotAPI{}
-	f.srv = httptest.NewServer(http.HandlerFunc(f.handle))
-	t.Cleanup(f.srv.Close)
-	return f
-}
-
-func (f *fakeBotAPI) sent() []string {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return append([]string(nil), f.texts...)
-}
-
-func (f *fakeBotAPI) handle(w http.ResponseWriter, r *http.Request) {
-	reply := func(code int, v any) {
-		w.WriteHeader(code)
-		_ = json.NewEncoder(w).Encode(v)
-	}
-	prefix := "/bot" + fakeBotToken + "/"
-	if !strings.HasPrefix(r.URL.Path, prefix) {
-		reply(401, map[string]any{"ok": false, "error_code": 401, "description": "Unauthorized"})
-		return
-	}
-	var params map[string]any
-	_ = json.NewDecoder(r.Body).Decode(&params)
-	switch strings.TrimPrefix(r.URL.Path, prefix) {
-	case "getMe":
-		reply(200, map[string]any{"ok": true, "result": map[string]any{"id": 42, "is_bot": true, "username": "socialos_bot"}})
-	case "getChat":
-		if params["chat_id"] != "@e2e_channel" {
-			reply(400, map[string]any{"ok": false, "error_code": 400, "description": "Bad Request: chat not found"})
-			return
-		}
-		reply(200, map[string]any{"ok": true, "result": map[string]any{"id": -1009876543210, "type": "channel", "title": "E2E Channel", "username": "e2e_channel"}})
-	case "getChatMember":
-		reply(200, map[string]any{"ok": true, "result": map[string]any{"status": "administrator", "can_post_messages": true}})
-	case "sendMessage":
-		f.mu.Lock()
-		defer f.mu.Unlock()
-		if f.failSend {
-			reply(403, map[string]any{"ok": false, "error_code": 403, "description": "Forbidden: bot was kicked from the channel chat"})
-			return
-		}
-		f.texts = append(f.texts, fmt.Sprint(params["text"]))
-		reply(200, map[string]any{"ok": true, "result": map[string]any{"message_id": 100 + len(f.texts)}})
-	default:
-		reply(404, map[string]any{"ok": false, "error_code": 404, "description": "Not Found"})
-	}
-}
-
-func TestTelegramConnectAndPublish(t *testing.T) {
-	bot := newFakeBotAPI(t)
-	tg := telegram.New(telegram.Config{BotToken: fakeBotToken, APIBaseURL: bot.srv.URL})
-	e := newEnv(t, envOpts{startWorker: true, providers: []provider.Provider{tg}})
-	c := e.browser()
-	c.register("tg@example.com")
-
-	var bodies []string
-	seen := func(r resp) resp { bodies = append(bodies, string(r.body)); return r }
-
-	p := seen(c.do("GET", "/api/v1/social/providers", nil))
-	for _, it := range p.json(t)["items"].([]any) {
-		if m := it.(map[string]any); m["id"] == "telegram" && (m["configured"] != true || m["status"] != "supported") {
-			t.Fatalf("telegram must be configured once a bot token is present: %v", m)
-		}
-	}
-
-	// Validation and verification failures.
-	for chat, want := range map[string]int{"": 400, "not a chat!": 400, "@someone_else": 400} {
-		if r := seen(c.do("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": chat})); r.status != want {
-			t.Errorf("chat %q: want %d got %d %s", chat, want, r.status, r.body)
-		}
-	}
-	// A key may not connect accounts.
-	k := e.apiKeyClient(c.createKey("tg key", "social:read", "posts:read", "posts:write", "posts:schedule", "posts:publish"))
-	if r := k.do("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": "@e2e_channel"}); r.status != 403 {
-		t.Errorf("api key connected a chat: %d %s", r.status, r.body)
-	}
-
-	acc := seen(c.do("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": "https://t.me/e2e_channel"}))
-	if acc.status != 201 {
-		t.Fatalf("connect: %d %s", acc.status, acc.body)
-	}
-	a := acc.json(t)
-	if a["provider"] != "telegram" || a["username"] != "e2e_channel" || a["display_name"] != "E2E Channel" || a["status"] != "active" {
-		t.Fatalf("telegram account: %v", a)
-	}
-	accID := a["id"].(string)
-	// Connecting the same chat again does not duplicate the account.
-	again := seen(c.do("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": "@e2e_channel"}))
-	if again.status != 201 && again.status != 200 || again.json(t)["id"] != accID {
-		t.Fatalf("reconnect: %d %s", again.status, again.body)
-	}
-	if n := len(c.must("GET", "/api/v1/social/accounts", nil, 200)["items"].([]any)); n != 1 {
-		t.Fatalf("reconnect duplicated the chat: %d accounts", n)
-	}
-
-	// Publish through the real worker; the bot receives exactly the text.
-	post := seen(c.do("POST", "/api/v1/posts", map[string]any{"content": "hello telegram", "social_account_ids": []string{accID}}))
-	id := post.json(t)["id"].(string)
-	seen(c.do("POST", "/api/v1/posts/"+id+"/publish", nil))
-	st := c.waitStatus(id, "published", 20*time.Second)
-	tgt := st["targets"].([]any)[0].(map[string]any)
-	if got := bot.sent(); len(got) != 1 || got[0] != "hello telegram" {
-		t.Fatalf("bot received %v", got)
-	}
-	if tgt["external_post_id"] != "-1009876543210:101" || tgt["external_url"] != "https://t.me/e2e_channel/101" {
-		t.Fatalf("external reference: %v", tgt)
-	}
-
-	// A rejected post fails with a classified, sanitized error.
-	bot.mu.Lock()
-	bot.failSend = true
-	bot.mu.Unlock()
-	bad := c.must("POST", "/api/v1/posts", map[string]any{"content": "will fail", "social_account_ids": []string{accID}}, 201)
-	c.must("POST", "/api/v1/posts/"+bad["id"].(string)+"/publish", nil, 202)
-	failed := c.waitStatus(bad["id"].(string), "failed", 20*time.Second)
-	ft := failed["targets"].([]any)[0].(map[string]any)
-	if ft["error_code"] == nil || ft["error_code"] == "" || strings.Contains(fmt.Sprint(ft), fakeBotToken) {
-		t.Fatalf("failure details: %v", ft)
-	}
-	bodies = append(bodies, fmt.Sprint(failed), fmt.Sprint(c.must("GET", "/api/v1/posts/"+bad["id"].(string), nil, 200)))
-	bodies = append(bodies, fmt.Sprint(c.must("GET", "/api/v1/audit-logs?limit=100", nil, 200)))
-
-	// The bot token is configuration: it must be in no response and in no table.
-	for _, b := range bodies {
-		if strings.Contains(b, fakeBotToken) || strings.Contains(b, "AAH-SECRET") {
-			t.Fatalf("bot token leaked in an API response: %.300s", b)
-		}
-	}
-	for table, col := range map[string]string{"social_accounts": "metadata::text", "audit_logs": "metadata::text",
-		"publication_attempts": "coalesce(error_message,'')", "post_targets": "coalesce(error_message,'')"} {
-		var n int
-		q := fmt.Sprintf("SELECT count(*) FROM %s WHERE %s LIKE '%%AAH-SECRET%%'", table, col)
-		if err := e.app.DB.Pool.QueryRow(context.Background(), q).Scan(&n); err != nil || n != 0 {
-			t.Errorf("bot token stored in %s (n=%d err=%v)", table, n, err)
-		}
-	}
-	var credRows int
-	_ = e.app.DB.Pool.QueryRow(context.Background(), `SELECT count(*) FROM oauth_credentials WHERE social_account_id = $1`, accID).Scan(&credRows)
-	if credRows != 0 {
-		t.Errorf("telegram accounts need no stored credentials, found %d", credRows)
-	}
-}
 
 // ---------------------------------------------------------------- limits
 

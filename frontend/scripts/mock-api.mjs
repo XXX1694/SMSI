@@ -7,11 +7,21 @@
  *   demo login: demo@socialos.dev / demo12345
  *
  * Special behaviours: post content containing "FAIL" fails to publish (to exercise error UI).
+ *
+ * Telegram: POST /social/telegram/connect hands out a one-time code like the real backend. Nobody posts
+ * it anywhere here, so the mock "sees" the code in a demo channel MOCK_LINK_DELAY_MS (default 5000) after
+ * it was created and connects that channel. MOCK_LINK_TTL_SECONDS (default 900) shortens the code lifetime
+ * to try the "expired" screen, and a delay of 0 or less never connects (the code just expires).
  */
 import { createServer } from 'node:http';
 import { randomBytes, randomUUID } from 'node:crypto';
 
 const PORT = Number(process.env.PORT ?? 8080);
+const LINK_DELAY_MS = Number(process.env.MOCK_LINK_DELAY_MS ?? 5000);
+const LINK_TTL_S = Number(process.env.MOCK_LINK_TTL_SECONDS ?? 900);
+const MAX_ACTIVE_LINKS = 3;
+// Same alphabet as the backend: no 0/O, 1/I/L.
+const LINK_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const now = () => new Date().toISOString();
 const inFuture = (h) => new Date(Date.now() + h * 3600_000).toISOString();
 const inPast = (h) => new Date(Date.now() - h * 3600_000).toISOString();
@@ -23,7 +33,7 @@ const caps = (o) => ({
 });
 const PROVIDERS = [
   { provider: 'linkedin', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, max_text_length: 3000, max_media_count: 9, requires_approval: true, notes: 'Company pages need Marketing Developer Platform approval. Video is not supported yet.' }) },
-  { provider: 'telegram', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, can_publish_video: true, can_delete: true, max_text_length: 4096, max_media_count: 10, notes: 'Add the bot as admin of your channel.' }) },
+  { provider: 'telegram', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, can_publish_video: true, can_delete: true, max_text_length: 4096, max_media_count: 10, notes: "Add the SocialOS bot as an admin with 'Post messages' to your channel or group, then post the one-time code SocialOS gives you there to prove you control it." }) },
   { provider: 'mock', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, can_publish_video: true, can_schedule: true, can_delete: true, can_analytics: true, max_text_length: 280, max_media_count: 4, notes: 'Deterministic mock provider for testing.' }) },
   ...['instagram', 'facebook', 'tiktok', 'youtube', 'x', 'threads', 'pinterest'].map((p) => ({
     provider: p, configured: false, status: 'unsupported', capabilities: caps({ requires_approval: true, notes: 'Registered stub: returns PROVIDER_NOT_AVAILABLE.' }),
@@ -32,7 +42,7 @@ const PROVIDERS = [
 
 const users = new Map();
 const sessions = new Map();
-const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [] };
+const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [], links: [] };
 
 function addUser(email, password, display_name) {
   const u = { id: randomUUID(), email, password, display_name };
@@ -180,12 +190,38 @@ async function handle(req, res) {
   if (path === '/social/providers') return send(res, 200, { items: PROVIDERS });
   if (path === '/social/accounts' && m === 'GET') return send(res, 200, { items: mine(db.accounts).map(({ user_id, ...a }) => a), next_cursor: null });
   if (path === '/social/telegram/connect' && m === 'POST') {
-    if (!/^(@\w{4,}|-?\d{5,})$/.test(body.chat ?? '')) return fail(res, 400, 'VALIDATION_ERROR', 'chat must be @username or numeric id');
-    if (body.chat.includes('private')) return fail(res, 422, 'VALIDATION_ERROR', 'The bot is not an administrator of this channel');
-    const a = { id: randomUUID(), user_id: user.id, provider: 'telegram', username: body.chat, display_name: `Telegram ${body.chat}`, avatar_url: null, status: 'active', scopes: [], connected_at: now() };
-    db.accounts.push(a); audit(user.display_name, 'social.connect', 'social_account', a.id);
-    const { user_id, ...pub } = a;
-    return send(res, 201, pub);
+    // The old direct connect (a chat name in the body) is gone: this only mints a code.
+    const t = Date.now();
+    const active = mine(db.links).filter((l) => !l.account_id && Date.parse(l.expires_at) > t).sort((a, b) => b.created_ms - a.created_ms);
+    active.slice(MAX_ACTIVE_LINKS - 1).forEach((l) => { l.expires_at = new Date(t).toISOString(); }); // the oldest are retired
+    const code = `SOS-${Array.from(randomBytes(8), (b) => LINK_ALPHABET[b % LINK_ALPHABET.length]).join('')}`;
+    const link = { id: randomUUID(), user_id: user.id, code, created_ms: t, expires_at: new Date(t + LINK_TTL_S * 1000).toISOString(), account_id: null };
+    db.links.push(link);
+    if (LINK_DELAY_MS > 0 && LINK_DELAY_MS < LINK_TTL_S * 1000) {
+      // Stand-in for "the user posted the code in their channel and the bot saw it".
+      setTimeout(() => {
+        if (Date.parse(link.expires_at) <= Date.now() || link.account_id) return;
+        const n = mine(db.accounts).filter((a) => a.provider === 'telegram').length + 1;
+        const a = { id: randomUUID(), user_id: user.id, provider: 'telegram', username: `demo_channel_${n}`, display_name: `Demo Channel ${n}`, avatar_url: null, status: 'active', scopes: ['post_messages'], connected_at: now() };
+        db.accounts.push(a);
+        link.account_id = a.id;
+        audit('telegram', 'social_account.connected', 'social_account', a.id, 'system');
+      }, LINK_DELAY_MS);
+    }
+    return send(res, 201, {
+      id: link.id, code, expires_at: link.expires_at, bot_username: 'socialos_bot',
+      instructions: `Add @socialos_bot as an administrator of your Telegram channel or group with the "Post messages" right. Post this code there as a normal message: ${code}. The code expires in ${Math.max(1, Math.round(LINK_TTL_S / 60))} minutes and works once.`,
+    });
+  }
+  if ((r = path.match(/^\/social\/telegram\/connect\/([^/]+)$/)) && m === 'GET') {
+    const link = mine(db.links).find((l) => l.id === r[1]); // another user's id is a 404, like the real API
+    if (!link) return fail(res, 404, 'NOT_FOUND', 'link not found');
+    if (link.account_id) {
+      const a = db.accounts.find((x) => x.id === link.account_id);
+      const { user_id, ...pub } = a ?? {};
+      return send(res, 200, { status: 'connected', account: a ? pub : undefined });
+    }
+    return send(res, 200, { status: Date.parse(link.expires_at) > Date.now() ? 'pending' : 'expired' });
   }
   if ((r = path.match(/^\/social\/(\w+)\/connect$/)) && m === 'GET') {
     const p = PROVIDERS.find((x) => x.provider === r[1]);

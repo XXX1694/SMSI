@@ -12,6 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/socialos/backend/internal/adapters/telegram"
 	"github.com/socialos/backend/internal/app"
 	"github.com/socialos/backend/internal/config"
 	"github.com/socialos/backend/internal/infrastructure/queue"
@@ -47,11 +48,28 @@ func run() error {
 	}
 	go a.Reconciler.Loop(ctx, cfg.ReconcileEvery)
 	go serveHealth(ctx, a, log)
+	startTelegramIntake(ctx, a, cfg, log)
 	log.Info("worker started", slog.String("queue", cfg.QueueName), slog.Int("concurrency", cfg.WorkerConc))
 	<-ctx.Done()
 	log.Info("shutting down worker")
 	srv.Shutdown()
 	return nil
+}
+
+// startTelegramIntake long-polls the Bot API for the messages that prove chat
+// ownership. In webhook mode the API receives them instead and nothing runs here.
+// Several workers may run this: a Redis lease lets exactly one of them poll.
+func startTelegramIntake(ctx context.Context, a *app.App, cfg *config.Config, log *slog.Logger) {
+	if cfg.TelegramUpdatesMode != config.TelegramModePolling {
+		log.Info("telegram updates arrive by webhook; polling is off", slog.String("mode", cfg.TelegramUpdatesMode))
+		return
+	}
+	poller := a.NewTelegramPoller(telegram.PollerOptions{})
+	if poller == nil {
+		log.Info("telegram is not configured (TELEGRAM_BOT_TOKEN is empty); not polling for updates")
+		return
+	}
+	go poller.Run(ctx)
 }
 
 // serveHealth exposes /health and /metrics for the worker on WORKER_HTTP_ADDR (default :8081).

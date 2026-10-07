@@ -183,11 +183,12 @@ func TestEndpointContract(t *testing.T) {
 				t.Errorf("account %s: %d %s", id, r.status, r.body)
 			}
 		}
-		if r := c.do("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": "@x"}); r.status != 501 || r.errCode(t) != "PROVIDER_NOT_AVAILABLE" {
+		if r := c.do("POST", "/api/v1/social/telegram/connect", nil); r.status != 501 || r.errCode(t) != "PROVIDER_NOT_AVAILABLE" {
 			t.Errorf("unconfigured telegram: %d %s", r.status, r.body)
 		}
-		if r := c.do("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": ""}); r.status != 400 || r.errCode(t) != "VALIDATION_ERROR" {
-			t.Errorf("empty chat: %d %s", r.status, r.body)
+		// The old direct connect no longer exists: a chat in the body changes nothing.
+		if r := c.do("POST", "/api/v1/social/telegram/connect", map[string]any{"chat": "@x"}); r.status != 501 {
+			t.Errorf("telegram connect with a chat: %d %s", r.status, r.body)
 		}
 	})
 
@@ -604,7 +605,8 @@ func TestMeRequiresAuthentication(t *testing.T) {
 		{"GET", "/api/v1/posts"}, {"POST", "/api/v1/posts"}, {"GET", "/api/v1/media"}, {"POST", "/api/v1/media"}, {"GET", "/api/v1/analytics"},
 		{"GET", "/api/v1/dashboard/summary"}, {"GET", "/api/v1/audit-logs"}, {"GET", "/api/v1/developer/api-keys"},
 		{"POST", "/api/v1/developer/api-keys"}, {"GET", "/api/v1/developer/mcp-connections"}, {"GET", "/api/v1/developer/usage"},
-		{"POST", "/api/v1/social/telegram/connect"}, {"GET", "/api/v1/social/mock/connect"},
+		{"POST", "/api/v1/social/telegram/connect"}, {"GET", "/api/v1/social/telegram/connect/00000000-0000-0000-0000-000000000000"},
+		{"GET", "/api/v1/social/mock/connect"},
 	} {
 		if r := anon.do(tc.m, tc.p, nil); r.status != 401 || r.errCode(t) != "UNAUTHENTICATED" {
 			t.Errorf("%s %s anonymous: want 401 UNAUTHENTICATED, got %d %s", tc.m, tc.p, r.status, r.body)

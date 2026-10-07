@@ -7,6 +7,10 @@ import type {
   ApiKey,
   Page,
   Provider,
+  SocialAccount,
+  TelegramLink,
+  TelegramLinkState,
+  TelegramLinkStatus,
 } from './types';
 
 type Rec = Record<string, unknown>;
@@ -140,4 +144,24 @@ export function normalizeCreatedMcp(raw: unknown, mcpUrl: string, apiUrl: string
       stdio: (cfg && fromServer(cfg.stdio)) ?? built.stdio,
     },
   };
+}
+
+export function normalizeTelegramLink(raw: unknown): TelegramLink {
+  const r = isRec(raw) ? raw : {};
+  return {
+    id: str(r.id),
+    code: str(r.code),
+    expires_at: str(r.expires_at),
+    bot_username: str(r.bot_username).replace(/^@/, ''),
+    instructions: str(r.instructions),
+  };
+}
+
+const LINK_STATUSES: readonly TelegramLinkStatus[] = ['pending', 'connected', 'expired'];
+
+/** Unknown statuses are treated as pending: the next poll decides, nothing is ever wrongly "connected". */
+export function normalizeTelegramLinkState(raw: unknown): TelegramLinkState {
+  const r = isRec(raw) ? raw : {};
+  const status = LINK_STATUSES.find((s) => s === r.status) ?? 'pending';
+  return { status, account: isRec(r.account) ? (r.account as unknown as SocialAccount) : null };
 }

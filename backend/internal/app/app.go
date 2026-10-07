@@ -132,8 +132,8 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	if err != nil {
 		return fmt.Errorf("auth service: %w", err)
 	}
-	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Registry: a.Registry,
-		Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL})
+	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Links: postgres.NewLinkCodes(db),
+		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL})
 	analyticsSvc := analytics.NewService(analyticsRepo, clk)
 	a.Services = transport.Services{
 		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc,
@@ -154,12 +154,35 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	return nil
 }
 
+// NewTelegramPoller builds the getUpdates poller for TELEGRAM_UPDATES_MODE=polling.
+// It returns nil when the registered Telegram provider cannot poll (not configured).
+// Every poller shares one lease and offset in Redis, so any number of workers may
+// run it while only one actually polls.
+func (a *App) NewTelegramPoller(o telegram.PollerOptions) *telegram.Poller {
+	p, err := a.Registry.Get(telegram.Name)
+	src, ok := p.(telegram.UpdateSource)
+	if err != nil || !ok || !p.Configured() {
+		return nil
+	}
+	prefix := "socialos:telegram:" + a.Cfg.QueueName + ":"
+	store := telegramPollStore{redis.NewPollState(a.Redis.Client, prefix)}
+	handle := func(ctx context.Context, raw []byte) error {
+		return a.Services.Accounts.HandleChatUpdate(ctx, telegram.Name, raw)
+	}
+	return telegram.NewPoller(src, store, handle, a.Log, o)
+}
+
 // Router returns the HTTP handler.
 func (a *App) Router() http.Handler {
+	webhookSecret := ""
+	if a.Cfg.TelegramUpdatesMode == config.TelegramModeWebhook {
+		webhookSecret = a.Cfg.TelegramWebhookSecret
+	}
 	return transport.NewRouter(a.Services, transport.Options{
 		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
 		CookieDomain: a.Cfg.CookieDomain, TrustProxy: a.Cfg.TrustProxy, MetricsToken: a.Cfg.MetricsToken,
 		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
+		TelegramWebhookSecret: webhookSecret,
 		Ready: []transport.ReadyCheck{
 			{Name: "postgres", Check: a.DB.Ping},
 			{Name: "redis", Check: a.Redis.Ping},

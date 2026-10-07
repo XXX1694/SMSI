@@ -76,6 +76,24 @@ export interface SocialAccount {
   connected_at: string;
 }
 
+/** Answer of POST /social/telegram/connect: a one-time code the user posts in their chat. */
+export interface TelegramLink {
+  id: string;
+  /** Shown once; the server keeps only its hash. */
+  code: string;
+  expires_at: string;
+  bot_username: string;
+  instructions: string;
+}
+
+export type TelegramLinkStatus = 'pending' | 'connected' | 'expired';
+
+/** Answer of GET /social/telegram/connect/{id}. */
+export interface TelegramLinkState {
+  status: TelegramLinkStatus;
+  account: SocialAccount | null;
+}
+
 export interface Media {
   id: string;
   kind: 'image' | 'video';

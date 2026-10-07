@@ -1,8 +1,10 @@
 // Package telegram is the real Telegram Bot API adapter.
 //
 // Telegram is not OAuth: the operator configures one bot (TELEGRAM_BOT_TOKEN),
-// the user adds the bot as an administrator of their channel/group and supplies
-// the chat (@username or numeric id). The backend verifies admin rights with
+// the user adds the bot as an administrator of their channel/group and proves
+// they control it by posting a one-time code there (see ParseUpdate). The bot
+// receives that message through getUpdates (poller.go) or a webhook
+// (webhook.go); the backend then verifies the bot's rights with
 // getMe + getChat + getChatMember before storing the account.
 //
 // Limits: text ≤ 4096 chars, caption ≤ 1024 chars, ≤ 10 media per album,
@@ -40,11 +42,12 @@ type Config struct {
 	HTTPClient *http.Client
 }
 
-// Adapter implements provider.Provider, ChatVerifier and Publisher.
+// Adapter implements provider.Provider, ChatLinker and Publisher.
 type Adapter struct {
 	token string
 	base  string
 	http  *http.Client
+	bot   botIdentity
 }
 
 // New creates the adapter.
@@ -71,7 +74,7 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 		CanPublishText: true, CanPublishImage: true, CanPublishVideo: true, CanDelete: true,
 		MaxTextLength: MaxTextLength, MaxCaptionLength: MaxCaptionLength, MaxMediaCount: MaxMedia,
 		ConnectMethod: provider.ConnectTelegram,
-		Notes: "Add the SocialOS bot as an admin with 'Post messages' to your channel, then connect with @channel or chat id. " +
-			"Captions with media are limited to 1024 characters; videos ≤ 50 MB.",
+		Notes: "Add the SocialOS bot as an admin with 'Post messages' to your channel or group, then post the one-time code " +
+			"SocialOS gives you there to prove you control it. Captions with media are limited to 1024 characters; videos ≤ 50 MB.",
 	}
 }

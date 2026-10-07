@@ -33,7 +33,7 @@ server or product).
   - `POST /posts/{id}/retry` needs `posts:publish` (it sends again).
   - `GET /dashboard/summary` needs `posts:read`; `GET /analytics` needs `analytics:read`.
   - `GET /social/providers`, `GET /social/accounts*` need `social:read`.
-- **Session-only endpoints** (API keys get 403 `FORBIDDEN` even with every scope): `GET /audit-logs`, all of `/developer/*`, `GET /social/{provider}/connect`, `POST /social/telegram/connect`.
+- **Session-only endpoints** (API keys get 403 `FORBIDDEN` even with every scope): `GET /audit-logs`, all of `/developer/*`, `GET /social/{provider}/connect`, `POST /social/telegram/connect`, `GET /social/telegram/connect/{id}`.
 - **405 is reported as 404 `NOT_FOUND`** with the standard envelope; the contract has no 405 code.
 - **`POST /posts` with an empty body** creates a blank draft (editor autosave). Scheduling or publishing it is rejected with 400 `VALIDATION_ERROR` until it has content and accounts.
 - **Post limits**: title 200, content 10 000 characters, 20 accounts, 20 media, `scheduled_at` at most 366 days ahead. Per-network limits come from the provider capabilities.
@@ -45,6 +45,15 @@ server or product).
 - **Reconciler** (every minute, `RECONCILE_INTERVAL`) re-enqueues overdue jobs that have no live task, recovers `publishing` targets stuck longer than 15 minutes, and sends exhausted targets whose last attempt is `started`/`unknown` to `needs_review` (`OUTCOME_UNKNOWN`) instead of failing them, as the contract prefers a missed post over a duplicate. A `started` attempt younger than 5 minutes (`InFlightWindow`) is treated as owned by a live worker; one provider call is bounded to 3 minutes.
 - **Storage outage**: the API starts even when S3 is down (bucket check is retried lazily, `/ready` reports it). An upload during the outage answers `500 INTERNAL` after about 4 s (the cause is in the log, `/ready` shows `storage: unavailable`).
 - **Telegram** uses one bot token per deployment (`TELEGRAM_BOT_TOKEN`); the token is never stored per account, never returned and redacted from errors. Accounts keep only `token_ref`.
+- **Telegram connect is a one-time-code flow, not "connect by name"** (security fix: with one shared bot, `{chat}` + "bot is admin there" let any user connect any channel whose `@username` they knew). `POST /social/telegram/connect` takes no chat and returns `201 {id, code, expires_at, bot_username, instructions}`; `GET /social/telegram/connect/{id}` returns `{status, account?}` (404 for another user's id). The old direct path is gone. A stale client that still sends `{chat}` only gets a code.
+  - Codes: `SOS-` + 8 characters, SHA-256 stored, 15 minutes, single use, at most 3 active per user (the oldest is retired).
+  - **Extra rule not in the brief: in a group or supergroup the sender must be an administrator** (or an anonymous admin posting as the group). Anyone can post in a group, so without this any member could redeem a code they saw. Channels need nothing extra.
+  - A failed rights check (bot not admin / cannot post) does **not** burn the code, so the user can fix the permission and repost.
+  - The rate limit reuses the auth limiter (prefix `link:`, per user) rather than adding a new bucket type.
+  - **Residual risk**: any administrator of a chat in which the bot is an administrator can link that chat to their own account. A shared channel with several admins can therefore be connected by each of them.
+  - **Webhook mode processes the update synchronously** (20 s detached context) and answers `200` even when handling failed transiently, as the brief asks. Such a post is not retried by Telegram, so the user just posts a fresh code. Polling mode retries a failing update (5 attempts) before dropping it.
+  - The poller never calls `deleteWebhook` by itself: on a 409 it logs how to do it, so a misconfigured worker cannot silently take over a production webhook.
+  - Needs bot privacy mode to be irrelevant: a bot that is an administrator receives all group messages. A group where the bot is not an administrator is not supported (the rights check fails anyway).
 
 ## 3. Unresolved mismatches with other components
 
@@ -60,7 +69,7 @@ server or product).
 
 - **Rate limiting is in memory per API instance.** With N replicas the effective limit is N times higher (put an edge limiter in front or move buckets to Redis).
 - **Every API-key request writes an `api_key.request` audit row** (it powers `/developer/usage`). Plan retention if keys are used heavily.
-- **LinkedIn and Telegram adapters were tested against local fakes only** (`httptest` servers that mimic the documented endpoints). No live credentials were available, so real-network behaviour, LinkedIn app review (`w_member_social`) and Telegram rate limits are unverified.
+- **LinkedIn and Telegram adapters were tested against local fakes only** (`httptest` servers that mimic the documented endpoints, including a fake `getUpdates` with offset confirmation for the link flow). No live credentials were available, so real-network behaviour, LinkedIn app review (`w_member_social`) and Telegram rate limits are unverified.
 - **Unsupported networks** (Instagram, Facebook, TikTok, YouTube, X, Threads, Pinterest) are listed as `status=unsupported`, `requires_approval=true`, with the reason in `notes`. Connecting or publishing returns `501 PROVIDER_NOT_AVAILABLE`; nothing pretends to work.
 - **The Dockerfile could not be built in the sandbox** (no Docker daemon). Its steps were run by hand: the same `go build` flags produce static binaries (`ldd`: not a dynamic executable) and `api healthcheck` was exercised against a running instance.
 - **`SOCIAL_MOCK_PROVIDERS=true`** registers a fake network. Production startup refuses it, together with `COOKIE_SECURE=false` and `STORAGE_DRIVER=memory`.

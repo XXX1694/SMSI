@@ -15,7 +15,7 @@ AI agent ──► MCP server (TS, :3333) ──┘             │             
 ```
 
 * **api** – Go HTTP server (chi). Stateless. Auth by session cookie (browser) or `Authorization: Bearer sk_live_…` (API key / MCP).
-* **worker** – Go Asynq worker. Same module/images, `cmd/worker`. Runs `post:publish_target` jobs.
+* **worker** – Go Asynq worker. Same module/images, `cmd/worker`. Runs `post:publish_target` jobs and, in the default `TELEGRAM_UPDATES_MODE=polling`, the single Telegram `getUpdates` long-poll that redeems link codes (§4 "Telegram linking").
 * **mcp** – TypeScript, official `@modelcontextprotocol/sdk`, Streamable HTTP transport. Talks only to the REST API using the caller's API key. No DB, no social APIs.
 * **frontend** – Next.js (App Router) + Tailwind + shadcn-style components. Talks to the REST API through a same-origin `/api` rewrite so session cookies are first-party.
 
@@ -62,7 +62,7 @@ ProviderCapabilities { CanPublishText, CanPublishImage, CanPublishVideo, CanSche
                        MaxTextLength, MaxMediaCount, RequiresApproval bool, Notes string }
 ```
 * **LinkedIn** – real adapter (OAuth 2.0 auth-code, OpenID `userinfo`, `/rest/posts`, `w_member_social`). Text + image; video marked unsupported in MVP; company pages need Marketing Developer Platform approval (`RequiresApproval=true`, flagged in Notes). Analytics: false.
-* **Telegram** – real adapter (Bot API). Not OAuth: user supplies channel `@username`/chat id; backend verifies the bot is admin via `getChat`/`getChatMember`, stores bot token reference (global `TELEGRAM_BOT_TOKEN`) in account metadata. Text, image, video, delete. Analytics: false.
+* **Telegram** – real adapter (Bot API). Not OAuth, and **one platform-wide bot** (`TELEGRAM_BOT_TOKEN`) serves every tenant. Because the bot is shared, knowing a channel's `@username` proves nothing: "the bot is admin there" is true for every user's channel. A chat is therefore connected only by **proof of control**: the user asks SocialOS for a one-time link code, adds the bot as admin with "Post messages" and posts the code in the chat. The bot sees the post (`channel_post` / group `message`), the backend matches the code to its owner, re-checks the bot's rights on that chat (`getChat`/`getChatMember`) and creates the `social_account` for **that user only**. There is no endpoint that takes a chat name or id. The bot token is never stored per account (account metadata keeps a `token_ref` only). Text, image, video, delete. Analytics: false.
 * **mock** – deterministic in-memory/DB-less provider used by tests and `SOCIAL_MOCK_PROVIDERS=true` dev mode. Clearly labelled.
 * instagram, facebook, tiktok, youtube, x, threads, pinterest – **registered as `unsupported` stubs** returning `PROVIDER_NOT_AVAILABLE` and capabilities with `RequiresApproval=true`. Not pretended to work.
 
@@ -78,6 +78,8 @@ erDiagram
   users ||--o{ media : uploads
   users ||--o{ api_keys : owns
   users ||--o{ mcp_connections : owns
+  users ||--o{ telegram_link_codes : requests
+  telegram_link_codes }o--o| social_accounts : "connected"
   users ||--o{ audit_logs : generates
   social_accounts ||--|| oauth_credentials : "encrypted tokens"
   posts ||--o{ post_targets : has
@@ -98,6 +100,7 @@ oauth_states(id, user_id, provider, state_hash unique, code_verifier, redirect_a
 social_accounts(id, user_id, provider, provider_account_id, username, display_name, avatar_url,
                 scopes text[], metadata jsonb, status ['active','expired','revoked','error'], connected_at,
                 unique(user_id, provider, provider_account_id))
+telegram_link_codes(id, user_id FK, code_hash unique, expires_at, used_at, chat_id, social_account_id FK null, created_at, updated_at)   -- migration 00002; only the SHA-256 of the code is stored
 oauth_credentials(id, social_account_id unique, access_token_enc, refresh_token_enc, expires_at, refresh_expires_at, key_version)
 posts(id, user_id, title, status, scheduled_at, published_at, created_by ['user','api_key'], created_by_ref, deleted_at)
 post_targets(id, post_id, user_id, social_account_id, platform, content, status, external_post_id,
@@ -112,7 +115,7 @@ mcp_connections(id, user_id, api_key_id, name, client_name, last_seen_at, revoke
 audit_logs(id, user_id, actor_type ['user','api_key','scheduler','system'], actor_id, actor_label, action, resource_type, resource_id, metadata jsonb, request_id, ip)
 analytics(id, user_id, social_account_id, post_target_id null, metric, value bigint, captured_at)   -- MVP: table + endpoint, filled by adapters that CanAnalytics (none yet) and by internal counters
 ```
-Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`.
+Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`.
 
 ## 4. REST API (`/api/v1`)
 
@@ -128,7 +131,34 @@ Pagination: `?limit=&cursor=` → `{"items":[…],"next_cursor":null|"…"}`. Ti
 Browser mutating requests need header `X-CSRF-Token` (value returned by `GET /me` / login in `csrf_token`, also in cookie `socialos_csrf`). API-key requests are exempt.
 
 ### Social
-`GET /social/providers` (capabilities + configured flag) · `GET /social/accounts` · `GET /social/{provider}/connect` (302 to provider; `?redirect=` allow-listed) · `GET /social/{provider}/callback` · `POST /social/telegram/connect {chat}` (non-OAuth) · `GET /social/accounts/{id}` · `DELETE /social/accounts/{id}` (disconnect)
+`GET /social/providers` (capabilities + configured flag) · `GET /social/accounts` · `GET /social/{provider}/connect` (302 to provider; `?redirect=` allow-listed) · `GET /social/{provider}/callback` · `POST /social/telegram/connect` (non-OAuth; no body, mints a link code) · `GET /social/telegram/connect/{id}` (link status) · `GET /social/accounts/{id}` · `DELETE /social/accounts/{id}` (disconnect)
+
+### Telegram linking (proof of control)
+Both endpoints are **session only** (API keys get 403) and the POST is CSRF-protected and rate-limited per user (the auth limiter, key prefix `link:`).
+
+* `POST /social/telegram/connect` takes **no chat**. It creates a link code bound to the session user and returns `201 {id, code, expires_at, bot_username, instructions}`, e.g. `SOS-7KQ2M9XA`. A `{chat}` body, if a stale client still sends one, is ignored: it can never name a chat.
+* `GET /social/telegram/connect/{id}` returns `{status: "pending"|"connected"|"expired", account?}`. It is tenant-scoped: another user's id, an unknown id and a malformed id are all `404 NOT_FOUND`.
+
+Code: `SOS-` plus 8 characters drawn by rejection sampling from `crypto/rand` over an unambiguous 31-character alphabet (no `0 O 1 I L`), about 40 bits. Only its SHA-256 is stored (`telegram_link_codes.code_hash`, unique), so a database read does not reveal usable codes. TTL 15 minutes, **single use**, at most 3 active codes per user (creating a fourth retires the oldest).
+
+Redemption (`application/accounts.HandleChatUpdate`, the single entry point for both intake modes):
+
+1. The adapter (`adapters/telegram`) parses the update into a provider-neutral `ChatMessage`. Only `channel_post` and group/supergroup `message` count; edits, private chats, bot senders, other update types and messages posted on behalf of another chat are ignored.
+2. The message must consist of the code and nothing else (surrounding whitespace and letter case are ignored). Anything else is dropped before hashing.
+3. The hash is looked up; the code must be unused and unexpired. Otherwise nothing happens: **no reply**, only a debug log without the code.
+4. In a group or supergroup anyone can post, so the **sender must be the creator or an administrator** (`getChatMember`), or an anonymous admin posting as the group. A channel post is trusted by construction: only admins can post there.
+5. The existing `VerifyChat` checks run on that chat id: the bot must be an administrator and, for channels, hold "Post messages". If not, the code is **not** burned, so the user can fix the rights and post it again.
+6. One transaction upserts the `social_account` for the code's owner, writes an audit entry (actor `system`, source `telegram`) and marks the code used with the `chat_id` and account id.
+7. Best effort: `deleteMessage` removes the code message from the chat.
+
+Update intake, `TELEGRAM_UPDATES_MODE` (both modes call the same method):
+
+| Mode | How |
+|---|---|
+| `polling` (default) | A goroutine in the worker long-polls `getUpdates` (`timeout=25`, `allowed_updates=channel_post,message,my_chat_member`). A Redis lease (`SET NX PX`, renewed while polling) guarantees that only one worker polls; the next offset lives in Redis and is committed only while the lease is held. Errors back off exponentially with jitter (honouring `retry_after`); an update that keeps failing is dropped after 5 attempts. A 409 means a webhook is registered: the poller logs how to remove it and never deletes it on its own. |
+| `webhook` | `POST /api/v1/webhooks/telegram`, outside the session/CSRF stack. The `X-Telegram-Bot-Api-Secret-Token` header is compared with `TELEGRAM_WEBHOOK_SECRET` in constant time, else `401`. The body is limited to 256 KiB and, once the secret is verified, the answer is always `200 {"ok":true}` (a garbage body must not make Telegram redeliver forever). The route is mounted only in this mode (404 otherwise). Register it with `make -C backend telegram-set-webhook`, which calls `setWebhook` with `secret_token`. |
+
+Security properties: user B cannot connect user A's channel without posting a code B created in it, so B must be able to post in that chat; B polling A's link id gets 404; expired, reused and unknown codes connect nothing. Residual risk: anyone who is an administrator of a chat where the bot is an administrator can link it to their own account. That is the proof of control the design relies on.
 
 ### Posts
 `POST /posts {title?, content, social_account_ids[], media_ids[]?, targets?:[{social_account_id, content}], scheduled_at?}` → creates **draft** (or scheduled when `scheduled_at` given and `schedule:true`)
@@ -200,12 +230,12 @@ Errors redirect to `/accounts?error=<code>`; tokens never logged; provider id (n
 ## 8. Backend layout (hexagonal, differences from the brief explained)
 ```
 backend/
-  cmd/api  cmd/worker  cmd/migrate
+  cmd/api  cmd/worker  cmd/migrate  cmd/telegram (setWebhook / deleteWebhook / webhookInfo)
   internal/
-    domain/        user socialaccount post media job apikey audit      (entities, state machine, errors; no I/O)
+    domain/        user socialaccount post media job apikey audit linkcode      (entities, state machine, errors; no I/O)
     application/   auth accounts posts scheduler media developer analytics audit   (use cases + port interfaces)
     infrastructure/ postgres redis storage crypto queue(asynq) clock
-    adapters/      provider(interface, registry, capabilities)  linkedin telegram mock stubs(instagram tiktok youtube twitter …)
+    adapters/      provider(interface, registry, capabilities)  linkedin telegram(+update parsing, poller, webhook helpers) mock stubs(instagram tiktok youtube twitter …)
     transport/     http(handlers, router, dto) middleware(requestid, logging, auth, csrf, ratelimit, cors, recover)
     config/ observability/
   migrations/  Dockerfile  Makefile

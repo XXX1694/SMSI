@@ -93,3 +93,10 @@ func From(ctx context.Context) (Actor, bool) {
 func Scheduler(userID uuid.UUID) Actor {
 	return Actor{UserID: userID, Type: TypeScheduler, ID: "scheduler", Label: "scheduler"}
 }
+
+// System returns the actor for automated actions on behalf of a tenant that no
+// user or key performed (e.g. a chat platform delivering proof of ownership).
+// source names the originator ("telegram").
+func System(userID uuid.UUID, source string) Actor {
+	return Actor{UserID: userID, Type: TypeSystem, ID: source, Label: source}
+}

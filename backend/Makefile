@@ -4,7 +4,7 @@ SHELL := /bin/bash
 
 GO        ?= go
 BIN       ?= bin
-CMDS      := api worker migrate
+CMDS      := api worker migrate telegram
 IMAGE     ?= socialos-backend
 GOLANGCI  ?= golangci-lint
 
@@ -18,12 +18,12 @@ set -a; if [ -f .env ]; then . ./.env; fi; set +a; $(1)
 endef
 
 .DEFAULT_GOAL := help
-.PHONY: help build test test-integration cover lint fmt vet tidy migrate migrate-status migrate-down run-api run-worker docker env clean
+.PHONY: help build test test-integration cover lint fmt vet tidy migrate migrate-status migrate-down run-api run-worker telegram-set-webhook telegram-delete-webhook telegram-webhook-info docker env clean
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
 
-build: ## Build api, worker and migrate into ./bin
+build: ## Build api, worker, migrate and telegram into ./bin
 	@mkdir -p $(BIN)
 	@for c in $(CMDS); do CGO_ENABLED=0 $(GO) build -trimpath -ldflags="-s -w" -o $(BIN)/$$c ./cmd/$$c && echo "built $(BIN)/$$c"; done
 
@@ -72,6 +72,15 @@ run-api: ## Run the API on HTTP_ADDR (default :8080); needs .env (run `make env`
 
 run-worker: ## Run the publish worker + reconciler; needs .env
 	@$(call with_env,$(GO) run ./cmd/worker)
+
+telegram-set-webhook: ## Register the Telegram webhook (TELEGRAM_UPDATES_MODE=webhook); URL=https://... overrides API_PUBLIC_URL
+	@$(call with_env,$(GO) run ./cmd/telegram set-webhook $(if $(URL),-url '$(URL)',))
+
+telegram-delete-webhook: ## Remove the Telegram webhook (needed before polling can be used)
+	@$(call with_env,$(GO) run ./cmd/telegram delete-webhook)
+
+telegram-webhook-info: ## Show the webhook Telegram has registered
+	@$(call with_env,$(GO) run ./cmd/telegram webhook-info)
 
 docker: ## Build the container image ($(IMAGE))
 	docker build -t $(IMAGE) .

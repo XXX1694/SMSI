@@ -77,3 +77,30 @@ describe('request layer', () => {
     expect(JSON.parse(c.config.stdio).mcpServers.socialos.env.SOCIALOS_API_KEY).toBe('sk_live_abc');
   });
 });
+
+describe('telegram link flow', () => {
+  it('starts a link with a bodyless CSRF-protected POST (no chat is ever sent)', async () => {
+    setCsrfToken('tok123');
+    const fn = mockFetch(201, { id: 'l1', code: 'SOS-7KQ2M9XA', expires_at: '2026-10-07T12:15:00Z', bot_username: 'socialos_bot', instructions: 'x' });
+    const link = await api.social.startTelegramLink();
+    const [url, init] = (fn.mock.calls as unknown as [string, RequestInit][])[0]!;
+    expect(url).toBe('/api/v1/social/telegram/connect');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBeUndefined();
+    expect((init.headers as Record<string, string>)['X-CSRF-Token']).toBe('tok123');
+    expect(link).toMatchObject({ id: 'l1', code: 'SOS-7KQ2M9XA', bot_username: 'socialos_bot' });
+  });
+
+  it('polls the link status by id and encodes the id', async () => {
+    const fn = mockFetch(200, { status: 'connected', account: { id: 'a1', provider: 'telegram', username: 'chan' } });
+    const st = await api.social.telegramLinkStatus('a/b');
+    expect((fn.mock.calls as unknown as [string][])[0]![0]).toBe('/api/v1/social/telegram/connect/a%2Fb');
+    expect(st.status).toBe('connected');
+    expect(st.account?.id).toBe('a1');
+  });
+
+  it('surfaces a 404 for somebody else’s link as an ApiError', async () => {
+    mockFetch(404, { error: { code: 'NOT_FOUND', message: 'not found' } });
+    await expect(api.social.telegramLinkStatus('other')).rejects.toMatchObject({ status: 404 });
+  });
+});

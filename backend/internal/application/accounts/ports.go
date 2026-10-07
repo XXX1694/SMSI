@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/socialos/backend/internal/domain/linkcode"
 	"github.com/socialos/backend/internal/domain/socialaccount"
 )
 
@@ -49,4 +50,19 @@ type States interface {
 	// Consume atomically marks the state used; returns NOT_FOUND when it is
 	// unknown, already used, expired, for another provider or another user.
 	Consume(ctx context.Context, userID uuid.UUID, provider, stateHash string, now time.Time) (*OAuthState, error)
+}
+
+// LinkCodes persists the one-time codes that prove control of a chat.
+type LinkCodes interface {
+	// Create stores the code for c.UserID. It retires that user's oldest active
+	// codes so that at most maxActive are active afterwards, and purges long-finished ones.
+	Create(ctx context.Context, c *linkcode.Code, maxActive int, now time.Time) error
+	// Get returns one of the user's codes; another user's id is NOT_FOUND.
+	Get(ctx context.Context, userID, id uuid.UUID) (*linkcode.Code, error)
+	// FindByHash looks a code up without knowing its owner (inbound bot
+	// messages only; never reachable from an HTTP request). NOT_FOUND when unknown.
+	FindByHash(ctx context.Context, hash string) (*linkcode.Code, error)
+	// MarkUsed atomically redeems an unused, unexpired code and records the chat and
+	// account. NOT_FOUND when it was used or expired in the meantime.
+	MarkUsed(ctx context.Context, id uuid.UUID, now time.Time, chatID string, accountID uuid.UUID) error
 }

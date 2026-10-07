@@ -145,3 +145,61 @@ func TestErrorNeverEchoesSecrets(t *testing.T) {
 		t.Fatalf("configuration error leaks a secret: %v", err)
 	}
 }
+
+func TestTelegramUpdatesModeDefaultsToPolling(t *testing.T) {
+	validEnv(t)
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.TelegramUpdatesMode != TelegramModePolling || c.TelegramWebhookSecret != "" {
+		t.Fatalf("defaults: %q %q", c.TelegramUpdatesMode, c.TelegramWebhookSecret)
+	}
+	t.Setenv("TELEGRAM_BOT_TOKEN", "1:abc")
+	if _, err := Load(); err != nil {
+		t.Fatalf("polling needs no webhook secret: %v", err)
+	}
+}
+
+func TestTelegramWebhookModeNeedsAValidSecret(t *testing.T) {
+	validEnv(t)
+	t.Setenv("TELEGRAM_UPDATES_MODE", "WEBHOOK") // case-insensitive
+	if _, err := Load(); err != nil {
+		t.Fatalf("webhook mode without a bot token is harmless (telegram is off): %v", err)
+	}
+	t.Setenv("TELEGRAM_BOT_TOKEN", "1:abc")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TELEGRAM_WEBHOOK_SECRET is required") {
+		t.Fatalf("missing secret: %v", err)
+	}
+	for _, bad := range []string{"has space", "semi;colon", strings.Repeat("a", 257)} {
+		t.Setenv("TELEGRAM_WEBHOOK_SECRET", bad)
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TELEGRAM_WEBHOOK_SECRET must be") {
+			t.Fatalf("secret %.20q: %v", bad, err)
+		}
+	}
+	t.Setenv("TELEGRAM_WEBHOOK_SECRET", "short-dev-secret")
+	c, err := Load()
+	if err != nil || c.TelegramUpdatesMode != TelegramModeWebhook || c.TelegramWebhookSecret != "short-dev-secret" {
+		t.Fatalf("%+v %v", c, err)
+	}
+	// Production demands a long secret.
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("COOKIE_SECURE", "true")
+	t.Setenv("STORAGE_DRIVER", "s3")
+	t.Setenv("TELEGRAM_WEBHOOK_SECRET", "tooshort")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "at least 16") {
+		t.Fatalf("production short secret: %v", err)
+	}
+	t.Setenv("TELEGRAM_WEBHOOK_SECRET", "0123456789abcdef0123456789abcdef")
+	if _, err := Load(); err != nil {
+		t.Fatalf("production long secret: %v", err)
+	}
+}
+
+func TestTelegramUpdatesModeRejectsUnknownValues(t *testing.T) {
+	validEnv(t)
+	t.Setenv("TELEGRAM_UPDATES_MODE", "carrier-pigeon")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TELEGRAM_UPDATES_MODE must be polling or webhook") {
+		t.Fatalf("got %v", err)
+	}
+}

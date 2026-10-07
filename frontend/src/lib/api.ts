@@ -3,6 +3,8 @@ import {
   normalizeCreatedApiKey,
   normalizeCreatedMcp,
   normalizePage,
+  normalizeTelegramLink,
+  normalizeTelegramLinkState,
   normalizeProvider,
   unwrapList,
 } from './normalize';
@@ -21,6 +23,8 @@ import type {
   Post,
   Provider,
   SocialAccount,
+  TelegramLink,
+  TelegramLinkState,
   UsageSummary,
 } from './types';
 
@@ -170,8 +174,16 @@ export const api = {
     connectUrl(provider: string): string {
       return `${API_BASE}/social/${enc(provider)}/connect?redirect=${enc('/accounts')}`;
     },
-    async connectTelegram(chat: string): Promise<SocialAccount> {
-      return (await request('/social/telegram/connect', { method: 'POST', body: { chat } })) as SocialAccount;
+    /**
+     * Starts proving control of a Telegram channel or group: returns a one-time code to post
+     * there (there is no way to connect a chat by name). Session only, CSRF protected.
+     */
+    async startTelegramLink(): Promise<TelegramLink> {
+      return normalizeTelegramLink(await request('/social/telegram/connect', { method: 'POST' }));
+    },
+    /** Polled while the user posts the code. Another user's link id is a 404. */
+    async telegramLinkStatus(id: string): Promise<TelegramLinkState> {
+      return normalizeTelegramLinkState(await request(`/social/telegram/connect/${enc(id)}`));
     },
     async disconnect(id: string): Promise<void> {
       await request(`/social/accounts/${enc(id)}`, { method: 'DELETE' });
