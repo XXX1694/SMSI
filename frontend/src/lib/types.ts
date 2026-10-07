@@ -1,0 +1,216 @@
+export type Scope =
+  | 'social:read'
+  | 'posts:read'
+  | 'posts:write'
+  | 'posts:schedule'
+  | 'posts:publish'
+  | 'posts:delete'
+  | 'social:disconnect'
+  | 'media:write'
+  | 'analytics:read';
+
+export type PostStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'publishing'
+  | 'published'
+  | 'partially_published'
+  | 'failed'
+  | 'cancelled';
+
+export type TargetStatus =
+  | 'pending'
+  | 'publishing'
+  | 'published'
+  | 'failed'
+  | 'cancelled'
+  | 'needs_review';
+
+export type AccountStatus = 'active' | 'expired' | 'revoked' | 'error';
+export type AttemptStatus = 'started' | 'succeeded' | 'failed' | 'unknown';
+
+export interface Page<T> {
+  items: T[];
+  next_cursor: string | null;
+}
+
+export interface Me {
+  id: string;
+  email: string;
+  display_name: string;
+  csrf_token: string;
+  scopes?: string[];
+}
+
+export interface Capabilities {
+  canPublishText: boolean;
+  canPublishImage: boolean;
+  canPublishVideo: boolean;
+  canSchedule: boolean;
+  canDelete: boolean;
+  canAnalytics: boolean;
+  maxTextLength: number;
+  maxMediaCount: number;
+  requiresApproval: boolean;
+  notes: string;
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  configured: boolean;
+  unsupported: boolean;
+  /** True when users can actually connect and publish. */
+  available: boolean;
+  capabilities: Capabilities;
+}
+
+export interface SocialAccount {
+  id: string;
+  provider: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  status: AccountStatus;
+  scopes: string[];
+  connected_at: string;
+}
+
+export interface Media {
+  id: string;
+  kind: 'image' | 'video';
+  mime_type: string;
+  size_bytes: number;
+  original_name: string;
+  width: number | null;
+  height: number | null;
+  status: string;
+  url?: string;
+  created_at: string;
+}
+
+export interface PostTarget {
+  id: string;
+  social_account_id: string;
+  platform: string;
+  content: string;
+  status: TargetStatus;
+  external_url: string | null;
+  published_at: string | null;
+  error_code: string | null;
+  error_message: string | null;
+  attempt_count: number;
+}
+
+export interface PublicationAttempt {
+  id: string;
+  post_target_id: string;
+  attempt_no: number;
+  status: AttemptStatus;
+  started_at: string;
+  finished_at: string | null;
+  error_code: string | null;
+  error_message: string | null;
+}
+
+export interface Post {
+  id: string;
+  title: string | null;
+  content?: string;
+  status: PostStatus;
+  scheduled_at: string | null;
+  published_at: string | null;
+  created_by: 'user' | 'api_key';
+  created_by_ref?: string | null;
+  created_at: string;
+  updated_at?: string;
+  targets: PostTarget[];
+  media?: Media[];
+  attempts?: PublicationAttempt[];
+}
+
+export interface CreatePostInput {
+  title?: string;
+  content: string;
+  social_account_ids: string[];
+  media_ids?: string[];
+  targets?: { social_account_id: string; content: string }[];
+  scheduled_at?: string;
+  schedule?: boolean;
+}
+
+export interface DashboardSummary {
+  connected_accounts: number;
+  scheduled_posts: number;
+  drafts: number;
+  published_this_month: number;
+  failed: number;
+  upcoming: Post[];
+  recent: Post[];
+}
+
+export interface AnalyticsPoint {
+  metric: string;
+  value: number;
+  captured_at: string;
+  social_account_id?: string;
+}
+
+export interface AnalyticsResult {
+  items: AnalyticsPoint[];
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  expires_at: string | null;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+export interface CreatedApiKey {
+  key: ApiKey;
+  rawKey: string;
+}
+
+export interface McpConnection {
+  id: string;
+  name: string;
+  client_name: string | null;
+  scopes: string[];
+  last_seen_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+export interface McpConfigSnippets {
+  http: string;
+  stdio: string;
+}
+
+export interface CreatedMcpConnection {
+  connection: McpConnection;
+  rawKey: string;
+  config: McpConfigSnippets;
+}
+
+export interface UsageSummary {
+  total_requests: number;
+  by_key: { name: string; requests: number; last_used_at: string | null }[];
+  by_day: { day: string; requests: number }[];
+}
+
+export interface AuditLog {
+  id: string;
+  actor_type: 'user' | 'api_key' | 'scheduler' | 'system';
+  actor_label: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  request_id: string | null;
+  ip: string | null;
+  created_at: string;
+}

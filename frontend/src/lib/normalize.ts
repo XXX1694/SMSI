@@ -1,0 +1,143 @@
+import type {
+  Capabilities,
+  CreatedApiKey,
+  CreatedMcpConnection,
+  McpConfigSnippets,
+  McpConnection,
+  ApiKey,
+  Page,
+  Provider,
+} from './types';
+
+type Rec = Record<string, unknown>;
+
+function isRec(v: unknown): v is Rec {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Read a field accepting snake_case, camelCase or PascalCase spellings. */
+function pick(rec: Rec, name: string): unknown {
+  const snake = name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+  const pascal = name.charAt(0).toUpperCase() + name.slice(1);
+  for (const k of [name, snake, pascal]) if (k in rec) return rec[k];
+  return undefined;
+}
+
+const bool = (v: unknown): boolean => v === true;
+const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+export function normalizeCapabilities(raw: unknown): Capabilities {
+  const r = isRec(raw) ? raw : {};
+  return {
+    canPublishText: bool(pick(r, 'canPublishText')),
+    canPublishImage: bool(pick(r, 'canPublishImage')),
+    canPublishVideo: bool(pick(r, 'canPublishVideo')),
+    canSchedule: bool(pick(r, 'canSchedule')),
+    canDelete: bool(pick(r, 'canDelete')),
+    canAnalytics: bool(pick(r, 'canAnalytics')),
+    maxTextLength: num(pick(r, 'maxTextLength')),
+    maxMediaCount: num(pick(r, 'maxMediaCount')),
+    requiresApproval: bool(pick(r, 'requiresApproval')),
+    notes: str(pick(r, 'notes')),
+  };
+}
+
+export function normalizeProvider(raw: unknown): Provider {
+  const r = isRec(raw) ? raw : {};
+  const capabilities = normalizeCapabilities(pick(r, 'capabilities') ?? r);
+  const id = str(pick(r, 'id')) || str(pick(r, 'provider')) || str(pick(r, 'name'));
+  const status = str(pick(r, 'status'));
+  const configured = pick(r, 'configured') !== false;
+  const unsupported = status === 'unsupported' || pick(r, 'unsupported') === true;
+  const canDoAnything =
+    capabilities.canPublishText || capabilities.canPublishImage || capabilities.canPublishVideo;
+  return {
+    id,
+    name: str(pick(r, 'displayName')) || str(pick(r, 'label')) || providerLabel(id),
+    configured,
+    unsupported,
+    available: configured && !unsupported && canDoAnything,
+    capabilities,
+  };
+}
+
+const LABELS: Record<string, string> = {
+  linkedin: 'LinkedIn',
+  telegram: 'Telegram',
+  mock: 'Mock',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  x: 'X',
+  threads: 'Threads',
+  pinterest: 'Pinterest',
+};
+
+export function providerLabel(id: string): string {
+  return LABELS[id] ?? (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Unknown');
+}
+
+export function unwrapList<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (isRec(raw) && Array.isArray(raw.items)) return raw.items as T[];
+  return [];
+}
+
+export function normalizePage<T>(raw: unknown): Page<T> {
+  const next = isRec(raw) && typeof raw.next_cursor === 'string' ? raw.next_cursor : null;
+  return { items: unwrapList<T>(raw), next_cursor: next };
+}
+
+/** Find the one-time raw key (`sk_…`) anywhere at the top level of a creation response. */
+function findRawKey(raw: Rec): string {
+  for (const k of ['raw_key', 'api_key', 'key', 'secret', 'token']) {
+    const v = raw[k];
+    if (typeof v === 'string' && v.startsWith('sk_')) return v;
+  }
+  for (const v of Object.values(raw)) if (typeof v === 'string' && v.startsWith('sk_')) return v;
+  return '';
+}
+
+export function normalizeCreatedApiKey(raw: unknown): CreatedApiKey {
+  const r = isRec(raw) ? raw : {};
+  const meta = ['key', 'api_key', 'item'].map((k) => r[k]).find(isRec) ?? r;
+  return { key: meta as unknown as ApiKey, rawKey: findRawKey(r) };
+}
+
+export function buildMcpConfig(rawKey: string, mcpUrl: string, apiUrl: string): McpConfigSnippets {
+  const http = {
+    mcpServers: {
+      socialos: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${rawKey}` } },
+    },
+  };
+  const stdio = {
+    mcpServers: {
+      socialos: {
+        command: 'npx',
+        args: ['-y', 'socialos-mcp', '--stdio'],
+        env: { SOCIALOS_API_KEY: rawKey, SOCIALOS_API_URL: apiUrl },
+      },
+    },
+  };
+  return { http: JSON.stringify(http, null, 2), stdio: JSON.stringify(stdio, null, 2) };
+}
+
+export function normalizeCreatedMcp(raw: unknown, mcpUrl: string, apiUrl: string): CreatedMcpConnection {
+  const r = isRec(raw) ? raw : {};
+  const meta = ['connection', 'mcp_connection', 'item'].map((k) => r[k]).find(isRec) ?? r;
+  const rawKey = findRawKey(r);
+  const cfg = isRec(r.config) ? r.config : null;
+  const fromServer = (v: unknown): string | null =>
+    typeof v === 'string' ? v : isRec(v) ? JSON.stringify(v, null, 2) : null;
+  const built = buildMcpConfig(rawKey, mcpUrl, apiUrl);
+  return {
+    connection: meta as unknown as McpConnection,
+    rawKey,
+    config: {
+      http: (cfg && fromServer(cfg.http)) ?? built.http,
+      stdio: (cfg && fromServer(cfg.stdio)) ?? built.stdio,
+    },
+  };
+}

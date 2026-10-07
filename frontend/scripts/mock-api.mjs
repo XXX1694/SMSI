@@ -1,0 +1,306 @@
+#!/usr/bin/env node
+/**
+ * In-memory implementation of the SocialOS REST contract (docs/ARCHITECTURE.md section 4),
+ * so the frontend can be run and verified without the Go backend.
+ *
+ *   PORT=8080 node scripts/mock-api.mjs
+ *   demo login: demo@socialos.dev / demo12345
+ *
+ * Special behaviours: post content containing "FAIL" fails to publish (to exercise error UI).
+ */
+import { createServer } from 'node:http';
+import { randomBytes, randomUUID } from 'node:crypto';
+
+const PORT = Number(process.env.PORT ?? 8080);
+const now = () => new Date().toISOString();
+const inFuture = (h) => new Date(Date.now() + h * 3600_000).toISOString();
+const inPast = (h) => new Date(Date.now() - h * 3600_000).toISOString();
+const ALL_SCOPES = ['social:read', 'posts:read', 'posts:write', 'posts:schedule', 'posts:publish', 'posts:delete', 'social:disconnect', 'media:write', 'analytics:read'];
+
+const caps = (o) => ({
+  can_publish_text: false, can_publish_image: false, can_publish_video: false, can_schedule: false,
+  can_delete: false, can_analytics: false, max_text_length: 0, max_media_count: 0, requires_approval: false, notes: '', ...o,
+});
+const PROVIDERS = [
+  { provider: 'linkedin', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, max_text_length: 3000, max_media_count: 9, requires_approval: true, notes: 'Company pages need Marketing Developer Platform approval. Video is not supported yet.' }) },
+  { provider: 'telegram', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, can_publish_video: true, can_delete: true, max_text_length: 4096, max_media_count: 10, notes: 'Add the bot as admin of your channel.' }) },
+  { provider: 'mock', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, can_publish_video: true, can_schedule: true, can_delete: true, can_analytics: true, max_text_length: 280, max_media_count: 4, notes: 'Deterministic mock provider for testing.' }) },
+  ...['instagram', 'facebook', 'tiktok', 'youtube', 'x', 'threads', 'pinterest'].map((p) => ({
+    provider: p, configured: false, status: 'unsupported', capabilities: caps({ requires_approval: true, notes: 'Registered stub: returns PROVIDER_NOT_AVAILABLE.' }),
+  })),
+];
+
+const users = new Map();
+const sessions = new Map();
+const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [] };
+
+function addUser(email, password, display_name) {
+  const u = { id: randomUUID(), email, password, display_name };
+  users.set(email, u);
+  return u;
+}
+
+function svgThumb(label, hue) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="hsl(${hue},45%,82%)"/><text x="200" y="210" font-family="sans-serif" font-size="28" text-anchor="middle" fill="hsl(${hue},40%,25%)">${label}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function audit(actor_label, action, resource_type, resource_id, actor_type = 'user') {
+  db.audit.unshift({ id: randomUUID(), actor_type, actor_label, action, resource_type, resource_id, request_id: randomUUID().slice(0, 8), ip: '127.0.0.1', created_at: now() });
+}
+
+function mkTarget(post_id, account, content, status, extra = {}) {
+  return { id: randomUUID(), social_account_id: account.id, platform: account.provider, content, status, external_url: null, published_at: null, error_code: null, error_message: null, attempt_count: 0, ...extra };
+}
+
+function seed() {
+  const u = addUser('demo@socialos.dev', 'demo12345', 'Demo User');
+  const mk = (provider, username, display_name) => {
+    const a = { id: randomUUID(), user_id: u.id, provider, username, display_name, avatar_url: null, status: 'active', scopes: [], connected_at: inPast(72) };
+    db.accounts.push(a);
+    return a;
+  };
+  const li = mk('linkedin', 'alex-morgan', 'Alex Morgan');
+  const tg = mk('telegram', '@socialos_demo', 'SocialOS Demo Channel');
+  const mock = mk('mock', 'mock-1', 'Mock Account');
+  const post = (title, status, accounts, content, extra = {}) => {
+    const p = { id: randomUUID(), user_id: u.id, title, status, scheduled_at: null, published_at: null, created_by: 'user', created_at: inPast(48), updated_at: now(), media_ids: [], deleted: false, attempts: [], ...extra };
+    p.targets = accounts.map((a) => mkTarget(p.id, a, content, status === 'published' ? 'published' : status === 'failed' ? 'failed' : status === 'scheduled' ? 'pending' : 'pending'));
+    db.posts.push(p);
+    return p;
+  };
+  post('Launch announcement', 'scheduled', [li, tg], 'We are launching SocialOS next week. Write once, publish everywhere.', { scheduled_at: inFuture(26) });
+  post('Weekly tip', 'scheduled', [tg], 'Tip: schedule posts in your audience timezone.', { scheduled_at: inFuture(5) });
+  post('Draft: case study', 'draft', [li], 'Case study draft - how a 3-person team halved their publishing time.');
+  const pub = post('Hello world', 'published', [li, tg], 'Hello world from SocialOS!', { published_at: inPast(30) });
+  pub.targets.forEach((t) => Object.assign(t, { published_at: inPast(30), external_url: 'https://example.com/post/1', attempt_count: 1 }));
+  pub.attempts = pub.targets.map((t) => ({ id: randomUUID(), post_target_id: t.id, attempt_no: 1, status: 'succeeded', started_at: inPast(30), finished_at: inPast(30), error_code: null, error_message: null }));
+  const bad = post('Broken post', 'failed', [li], 'This one failed to publish.', { scheduled_at: inPast(3) });
+  const bt = bad.targets[0];
+  Object.assign(bt, { error_code: 'SOCIAL_ACCOUNT_EXPIRED', error_message: 'LinkedIn authorization has expired', attempt_count: 2 });
+  bad.attempts = [1, 2].map((n) => ({ id: randomUUID(), post_target_id: bt.id, attempt_no: n, status: 'failed', started_at: inPast(3 - n * 0.1), finished_at: inPast(3 - n * 0.1), error_code: 'SOCIAL_ACCOUNT_EXPIRED', error_message: 'LinkedIn authorization has expired' }));
+  post('Half and half', 'partially_published', [tg, mock], 'Partially published example.', { published_at: inPast(8) });
+  const m = (name, kind, hue) => db.media.push({ id: randomUUID(), user_id: u.id, kind, mime_type: kind === 'image' ? 'image/png' : 'video/mp4', size_bytes: 480_000, original_name: name, width: 400, height: 400, status: 'ready', url: kind === 'image' ? svgThumb(name, hue) : undefined, created_at: inPast(20) });
+  m('launch-banner.png', 'image', 230); m('team.png', 'image', 20); m('demo.mp4', 'video', 0);
+  db.keys.push({ id: randomUUID(), user_id: u.id, name: 'CI reader', prefix: 'sk_live_a1b2', scopes: ['posts:read', 'social:read'], expires_at: inFuture(24 * 60), revoked_at: null, last_used_at: inPast(2), created_at: inPast(100) });
+  db.mcp.push({ id: randomUUID(), user_id: u.id, name: 'Claude Desktop', client_name: 'claude-desktop 1.2', scopes: ['social:read', 'posts:read', 'posts:write'], last_seen_at: inPast(1), revoked_at: null, created_at: inPast(50) });
+  audit('Demo User', 'post.create', 'post', pub.id);
+  audit('CI reader', 'post.list', 'post', null, 'api_key');
+}
+seed();
+
+// ---- http helpers
+const send = (res, status, body, headers = {}) => {
+  const data = body === undefined ? '' : JSON.stringify(body);
+  res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
+  res.end(data);
+};
+const fail = (res, status, code, message) => send(res, status, { error: { code, message, request_id: randomUUID().slice(0, 8) } });
+const cookies = (req) => Object.fromEntries((req.headers.cookie ?? '').split(';').map((c) => c.trim().split('=')).filter((p) => p[0]).map(([k, ...v]) => [k, decodeURIComponent(v.join('='))]));
+const readBody = (req) => new Promise((resolve) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => resolve(Buffer.concat(c))); });
+const sessionCookies = (s) => [`socialos_session=${s.token}; Path=/; HttpOnly; SameSite=Lax`, `socialos_csrf=${s.csrf}; Path=/; SameSite=Lax`];
+const meBody = (u, s) => ({ id: u.id, email: u.email, display_name: u.display_name, csrf_token: s.csrf, scopes: ALL_SCOPES });
+
+function newSession(u) {
+  const s = { token: randomBytes(24).toString('hex'), csrf: randomBytes(16).toString('hex'), userId: u.id };
+  sessions.set(s.token, s);
+  return s;
+}
+
+const publicPost = (p, full) => {
+  const { user_id, media_ids, deleted, attempts, ...rest } = p;
+  const base = { ...rest, content: p.targets[0]?.content };
+  return full ? { ...base, media: db.media.filter((m) => media_ids.includes(m.id)), attempts } : base;
+};
+
+function paginate(items, url) {
+  const limit = Math.min(Number(url.searchParams.get('limit') ?? 20), 200);
+  const offset = Number(url.searchParams.get('cursor') ?? 0);
+  const slice = items.slice(offset, offset + limit);
+  return { items: slice, next_cursor: offset + limit < items.length ? String(offset + limit) : null };
+}
+
+function settle(post) {
+  setTimeout(() => {
+    for (const t of post.targets.filter((x) => x.status === 'publishing')) {
+      const acc = db.accounts.find((a) => a.id === t.social_account_id);
+      const bad = t.content.includes('FAIL') || acc?.status !== 'active';
+      const n = t.attempt_count + 1;
+      t.attempt_count = n;
+      post.attempts.push({ id: randomUUID(), post_target_id: t.id, attempt_no: n, status: bad ? 'failed' : 'succeeded', started_at: now(), finished_at: now(), error_code: bad ? 'PROVIDER_ERROR' : null, error_message: bad ? 'Provider rejected the request (simulated)' : null });
+      Object.assign(t, bad ? { status: 'failed', error_code: 'PROVIDER_ERROR', error_message: 'Provider rejected the request (simulated)' } : { status: 'published', published_at: now(), external_url: `https://example.com/p/${t.id.slice(0, 6)}`, error_code: null, error_message: null });
+    }
+    const st = post.targets.map((t) => t.status);
+    post.status = st.every((s) => s === 'published') ? 'published' : st.some((s) => s === 'published') ? 'partially_published' : 'failed';
+    if (post.status !== 'failed') post.published_at = now();
+    post.updated_at = now();
+  }, 900);
+}
+
+const TRANSITIONS = { draft: ['scheduled', 'publishing', 'cancelled'], scheduled: ['draft', 'publishing', 'cancelled'], failed: ['scheduled', 'publishing'], partially_published: ['scheduled', 'publishing'] };
+const canMove = (p, to) => (TRANSITIONS[p.status] ?? []).includes(to);
+
+async function handle(req, res) {
+  const url = new URL(req.url, 'http://x');
+  const m = req.method ?? 'GET';
+  const path = url.pathname.replace(/^\/api\/v1/, '') || '/';
+  if (!url.pathname.startsWith('/api/v1')) return fail(res, 404, 'NOT_FOUND', 'Not found');
+  const raw = await readBody(req);
+  const ct = req.headers['content-type'] ?? '';
+  let body = {};
+  if (ct.includes('json') && raw.length) { try { body = JSON.parse(raw.toString()); } catch { return fail(res, 400, 'VALIDATION_ERROR', 'Invalid JSON'); } }
+
+  if (path === '/health') return send(res, 200, { status: 'ok' });
+  if (path === '/auth/register' && m === 'POST') {
+    if (!body.email || !body.password || String(body.password).length < 8) return fail(res, 400, 'VALIDATION_ERROR', 'Email and a password of 8+ characters are required');
+    if (users.has(body.email)) return fail(res, 409, 'CONFLICT', 'Email already registered');
+    const u = addUser(body.email, body.password, body.display_name || body.email);
+    const s = newSession(u);
+    return send(res, 201, meBody(u, s), { 'Set-Cookie': sessionCookies(s) });
+  }
+  if (path === '/auth/login' && m === 'POST') {
+    const u = users.get(body.email);
+    if (!u || u.password !== body.password) return fail(res, 401, 'UNAUTHENTICATED', 'Invalid email or password');
+    const s = newSession(u);
+    return send(res, 200, meBody(u, s), { 'Set-Cookie': sessionCookies(s) });
+  }
+
+  // ---- authenticated
+  const sess = sessions.get(cookies(req).socialos_session ?? '');
+  const bearer = (req.headers.authorization ?? '').startsWith('Bearer sk_');
+  const user = sess ? [...users.values()].find((x) => x.id === sess.userId) : bearer ? users.get('demo@socialos.dev') : null;
+  if (!user) return fail(res, 401, 'UNAUTHENTICATED', 'Authentication required');
+  if (sess && m !== 'GET' && req.headers['x-csrf-token'] !== sess.csrf) return fail(res, 403, 'FORBIDDEN', 'Missing or invalid CSRF token');
+  const mine = (arr) => arr.filter((x) => x.user_id === user.id);
+  let r;
+
+  if (path === '/auth/logout' && m === 'POST') { sessions.delete(sess?.token); return send(res, 204, undefined, { 'Set-Cookie': ['socialos_session=; Path=/; Max-Age=0'] }); }
+  if (path === '/me') return send(res, 200, meBody(user, sess ?? { csrf: '' }));
+
+  if (path === '/social/providers') return send(res, 200, { items: PROVIDERS });
+  if (path === '/social/accounts' && m === 'GET') return send(res, 200, { items: mine(db.accounts).map(({ user_id, ...a }) => a), next_cursor: null });
+  if (path === '/social/telegram/connect' && m === 'POST') {
+    if (!/^(@\w{4,}|-?\d{5,})$/.test(body.chat ?? '')) return fail(res, 400, 'VALIDATION_ERROR', 'chat must be @username or numeric id');
+    if (body.chat.includes('private')) return fail(res, 422, 'VALIDATION_ERROR', 'The bot is not an administrator of this channel');
+    const a = { id: randomUUID(), user_id: user.id, provider: 'telegram', username: body.chat, display_name: `Telegram ${body.chat}`, avatar_url: null, status: 'active', scopes: [], connected_at: now() };
+    db.accounts.push(a); audit(user.display_name, 'social.connect', 'social_account', a.id);
+    const { user_id, ...pub } = a;
+    return send(res, 201, pub);
+  }
+  if ((r = path.match(/^\/social\/(\w+)\/connect$/)) && m === 'GET') {
+    const p = PROVIDERS.find((x) => x.provider === r[1]);
+    if (!p || p.status === 'unsupported' || !p.configured) return fail(res, 501, 'PROVIDER_NOT_AVAILABLE', 'Provider not available');
+    db.accounts.push({ id: randomUUID(), user_id: user.id, provider: p.provider, username: `${p.provider}-${db.accounts.length}`, display_name: `${p.provider} account ${db.accounts.length + 1}`, avatar_url: null, status: 'active', scopes: [], connected_at: now() });
+    res.writeHead(302, { Location: `/accounts?connected=${p.provider}` }); return res.end();
+  }
+  if ((r = path.match(/^\/social\/accounts\/([^/]+)$/))) {
+    const a = mine(db.accounts).find((x) => x.id === r[1]);
+    if (!a) return fail(res, 404, 'NOT_FOUND', 'Account not found');
+    if (m === 'DELETE') { db.accounts = db.accounts.filter((x) => x !== a); audit(user.display_name, 'social.disconnect', 'social_account', a.id); return send(res, 204); }
+    const { user_id, ...pub } = a; return send(res, 200, pub);
+  }
+
+  // ---- posts
+  if (path === '/posts' && m === 'POST') {
+    const accs = (body.social_account_ids ?? []).map((id) => mine(db.accounts).find((a) => a.id === id));
+    if (!body.content?.trim() && !body.targets?.length) return fail(res, 400, 'VALIDATION_ERROR', 'content is required');
+    if (accs.length === 0 || accs.some((a) => !a)) return fail(res, 400, 'VALIDATION_ERROR', 'social_account_ids must reference your accounts');
+    const p = { id: randomUUID(), user_id: user.id, title: body.title ?? null, status: 'draft', scheduled_at: null, published_at: null, created_by: 'user', created_at: now(), updated_at: now(), media_ids: body.media_ids ?? [], attempts: [] };
+    p.targets = accs.map((a) => mkTarget(p.id, a, body.targets?.find((t) => t.social_account_id === a.id)?.content ?? body.content, 'pending'));
+    if (body.scheduled_at && body.schedule) { p.status = 'scheduled'; p.scheduled_at = body.scheduled_at; }
+    db.posts.push(p); audit(user.display_name, 'post.create', 'post', p.id);
+    return send(res, 201, publicPost(p, true));
+  }
+  if (path === '/posts' && m === 'GET') {
+    const st = url.searchParams.get('status'); const from = url.searchParams.get('from'); const to = url.searchParams.get('to');
+    const t = (p) => p.scheduled_at ?? p.published_at ?? p.created_at;
+    const list = mine(db.posts).filter((p) => (!st || p.status === st) && (!from || t(p) >= from) && (!to || t(p) < to)).sort((a, b) => t(b).localeCompare(t(a)));
+    const pg = paginate(list, url); return send(res, 200, { ...pg, items: pg.items.map((p) => publicPost(p, false)) });
+  }
+  if ((r = path.match(/^\/posts\/([^/]+)(?:\/(publish|schedule|cancel|retry|status))?$/))) {
+    const p = mine(db.posts).find((x) => x.id === r[1]);
+    if (!p) return fail(res, 404, 'NOT_FOUND', 'Post not found');
+    const act = r[2];
+    if (!act && m === 'GET') return send(res, 200, publicPost(p, true));
+    if (act === 'status') return send(res, 200, { id: p.id, status: p.status, targets: p.targets.map((t) => ({ id: t.id, status: t.status })) });
+    if (!act && m === 'DELETE') { db.posts = db.posts.filter((x) => x !== p); audit(user.display_name, 'post.delete', 'post', p.id); return send(res, 204); }
+    if (m !== 'POST') return fail(res, 404, 'NOT_FOUND', 'Not found');
+    const to = { publish: 'publishing', schedule: 'scheduled', cancel: 'cancelled', retry: 'publishing' }[act];
+    if (!canMove(p, to)) return fail(res, 409, 'INVALID_STATE_TRANSITION', `Cannot go from ${p.status} to ${to}`);
+    if (act === 'schedule') { if (!body.scheduled_at || new Date(body.scheduled_at) <= new Date()) return fail(res, 400, 'VALIDATION_ERROR', 'scheduled_at must be in the future'); p.scheduled_at = body.scheduled_at; }
+    if (act === 'cancel') p.targets.forEach((t) => { t.status = 'cancelled'; });
+    if (act === 'publish' || act === 'retry') { p.targets.filter((t) => t.status !== 'published').forEach((t) => { t.status = 'publishing'; }); settle(p); }
+    p.status = to; p.updated_at = now(); audit(user.display_name, `post.${act}`, 'post', p.id);
+    return send(res, 200, publicPost(p, true));
+  }
+
+  // ---- media
+  if (path === '/media' && m === 'POST') {
+    const text = raw.toString('latin1');
+    const name = /filename="([^"]+)"/.exec(text)?.[1] ?? 'upload';
+    const mime = /Content-Type: ([^\r\n]+)/.exec(text)?.[1] ?? 'application/octet-stream';
+    if (!/^(image\/(jpeg|png|webp|gif)|video\/(mp4|quicktime))$/.test(mime)) return fail(res, 400, 'VALIDATION_ERROR', 'Unsupported media type');
+    const kind = mime.startsWith('image') ? 'image' : 'video';
+    const x = { id: randomUUID(), user_id: user.id, kind, mime_type: mime, size_bytes: raw.length, original_name: name, width: null, height: null, status: 'ready', url: kind === 'image' ? svgThumb(name, Math.floor(Math.random() * 360)) : undefined, created_at: now() };
+    db.media.push(x); return send(res, 201, x);
+  }
+  if (path === '/media' && m === 'GET') return send(res, 200, { items: mine(db.media).reverse(), next_cursor: null });
+  if ((r = path.match(/^\/media\/([^/]+)$/))) {
+    const x = mine(db.media).find((y) => y.id === r[1]);
+    if (!x) return fail(res, 404, 'NOT_FOUND', 'Media not found');
+    if (m === 'DELETE') { db.media = db.media.filter((y) => y !== x); return send(res, 204); }
+    return send(res, 200, x);
+  }
+
+  // ---- dashboard / analytics / audit
+  if (path === '/dashboard/summary') {
+    const ps = mine(db.posts); const month = now().slice(0, 7);
+    const by = (s) => ps.filter((p) => p.status === s);
+    return send(res, 200, {
+      connected_accounts: mine(db.accounts).length, scheduled_posts: by('scheduled').length, drafts: by('draft').length,
+      published_this_month: by('published').filter((p) => p.published_at?.startsWith(month)).length, failed: by('failed').length,
+      upcoming: by('scheduled').sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).slice(0, 5).map((p) => publicPost(p, false)),
+      recent: by('published').slice(0, 5).map((p) => publicPost(p, false)),
+    });
+  }
+  if (path === '/analytics') {
+    const acc = mine(db.accounts).find((a) => a.provider === 'mock');
+    const items = acc ? Array.from({ length: 14 }, (_, i) => ({ metric: 'impressions', value: 100 + ((i * 37) % 90) + i * 5, captured_at: inPast((14 - i) * 24), social_account_id: acc.id })) : [];
+    return send(res, 200, { items });
+  }
+  if (path === '/audit-logs') return send(res, 200, paginate(db.audit, url));
+
+  // ---- developer
+  if (path === '/developer/api-keys' && m === 'GET') return send(res, 200, { items: mine(db.keys).map(({ user_id, ...k }) => k) });
+  if (path === '/developer/api-keys' && m === 'POST') {
+    if (!body.name || !Array.isArray(body.scopes) || body.scopes.some((s) => !ALL_SCOPES.includes(s))) return fail(res, 400, 'VALIDATION_ERROR', 'name and valid scopes are required');
+    const rawKey = `sk_live_${randomBytes(18).toString('hex')}`;
+    const k = { id: randomUUID(), user_id: user.id, name: body.name, prefix: rawKey.slice(0, 12), scopes: body.scopes, expires_at: body.expires_at ?? null, revoked_at: null, last_used_at: null, created_at: now() };
+    db.keys.push(k); audit(user.display_name, 'apikey.create', 'api_key', k.id);
+    const { user_id, ...pub } = k; return send(res, 201, { key: pub, raw_key: rawKey });
+  }
+  if ((r = path.match(/^\/developer\/api-keys\/([^/]+)$/)) && m === 'DELETE') {
+    const k = mine(db.keys).find((x) => x.id === r[1]); if (!k) return fail(res, 404, 'NOT_FOUND', 'Key not found');
+    k.revoked_at = now(); audit(user.display_name, 'apikey.revoke', 'api_key', k.id); return send(res, 204);
+  }
+  if (path === '/developer/mcp-connections' && m === 'GET') return send(res, 200, { items: mine(db.mcp).map(({ user_id, ...c }) => c) });
+  if (path === '/developer/mcp-connections' && m === 'POST') {
+    if (!body.name || !Array.isArray(body.scopes) || !body.scopes.length) return fail(res, 400, 'VALIDATION_ERROR', 'name and scopes are required');
+    const rawKey = `sk_live_${randomBytes(18).toString('hex')}`;
+    const c = { id: randomUUID(), user_id: user.id, name: body.name, client_name: null, scopes: body.scopes, last_seen_at: null, revoked_at: null, created_at: now() };
+    db.mcp.push(c); audit(user.display_name, 'mcp.create', 'mcp_connection', c.id);
+    const { user_id, ...pub } = c; return send(res, 201, { connection: pub, raw_key: rawKey });
+  }
+  if ((r = path.match(/^\/developer\/mcp-connections\/([^/]+)$/)) && m === 'DELETE') {
+    const c = mine(db.mcp).find((x) => x.id === r[1]); if (!c) return fail(res, 404, 'NOT_FOUND', 'Connection not found');
+    c.revoked_at = now(); audit(user.display_name, 'mcp.revoke', 'mcp_connection', c.id); return send(res, 204);
+  }
+  if (path === '/developer/usage') {
+    return send(res, 200, { total_requests: 128, by_key: [{ name: 'CI reader', requests: 96, last_used_at: inPast(2) }, { name: 'Claude Desktop', requests: 32, last_used_at: inPast(1) }], by_day: Array.from({ length: 7 }, (_, i) => ({ day: inPast((6 - i) * 24).slice(0, 10), requests: 8 + ((i * 11) % 23) })) });
+  }
+  return fail(res, 404, 'NOT_FOUND', 'Not found');
+}
+
+createServer((req, res) => {
+  handle(req, res).catch((e) => { console.error(e); fail(res, 500, 'INTERNAL', 'Internal error'); });
+}).listen(PORT, () => console.log(`mock SocialOS API on http://localhost:${PORT}  (demo@socialos.dev / demo12345)`));

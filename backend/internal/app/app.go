@@ -1,0 +1,182 @@
+// Package app is the composition root: it wires configuration, infrastructure,
+// adapters and use cases for the api and worker binaries (and E2E tests).
+package app
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+
+	"github.com/socialos/backend/internal/adapters/linkedin"
+	"github.com/socialos/backend/internal/adapters/mock"
+	"github.com/socialos/backend/internal/adapters/provider"
+	"github.com/socialos/backend/internal/adapters/stubs"
+	"github.com/socialos/backend/internal/adapters/telegram"
+	"github.com/socialos/backend/internal/application/accounts"
+	"github.com/socialos/backend/internal/application/analytics"
+	"github.com/socialos/backend/internal/application/audit"
+	"github.com/socialos/backend/internal/application/auth"
+	"github.com/socialos/backend/internal/application/developer"
+	"github.com/socialos/backend/internal/application/media"
+	"github.com/socialos/backend/internal/application/port"
+	"github.com/socialos/backend/internal/application/posts"
+	"github.com/socialos/backend/internal/application/scheduler"
+	"github.com/socialos/backend/internal/config"
+	"github.com/socialos/backend/internal/infrastructure/clock"
+	"github.com/socialos/backend/internal/infrastructure/crypto"
+	"github.com/socialos/backend/internal/infrastructure/postgres"
+	"github.com/socialos/backend/internal/infrastructure/queue"
+	"github.com/socialos/backend/internal/infrastructure/redis"
+	"github.com/socialos/backend/internal/infrastructure/storage"
+	"github.com/socialos/backend/internal/observability"
+	transport "github.com/socialos/backend/internal/transport/http"
+	"github.com/socialos/backend/internal/transport/middleware"
+)
+
+// Overrides let tests replace infrastructure pieces.
+type Overrides struct {
+	Storage   media.Storage
+	Clock     port.Clock
+	Providers []provider.Provider
+	Hasher    auth.PasswordHasher
+}
+
+// App holds every wired component.
+type App struct {
+	Cfg        *config.Config
+	Log        *slog.Logger
+	DB         *postgres.DB
+	Redis      *redis.Conn
+	Queue      *queue.Client
+	Storage    media.Storage
+	Registry   *provider.Registry
+	Metrics    *observability.Metrics
+	Services   transport.Services
+	Publisher  *scheduler.Publisher
+	Reconciler *scheduler.Reconciler
+	APILimiter *middleware.Limiter
+	AuthLimit  *middleware.Limiter
+}
+
+// Build connects to dependencies and wires the application.
+func Build(ctx context.Context, cfg *config.Config, log *slog.Logger, ov Overrides) (*App, error) {
+	a := &App{Cfg: cfg, Log: log, Metrics: observability.NewMetrics()}
+	var err error
+	if a.DB, err = postgres.Open(ctx, cfg.DatabaseURL, cfg.DBMaxConns); err != nil {
+		return nil, err
+	}
+	if a.Redis, err = redis.Open(cfg.RedisURL); err != nil {
+		a.Close()
+		return nil, err
+	}
+	a.Queue = queue.NewClient(a.Redis.Asynq, cfg.QueueName)
+	if a.Storage, err = buildStorage(ctx, cfg, ov.Storage); err != nil {
+		a.Close()
+		return nil, err
+	}
+	a.Registry = buildRegistry(cfg, ov.Providers)
+	if err := a.wire(cfg, log, ov); err != nil {
+		a.Close()
+		return nil, err
+	}
+	return a, nil
+}
+
+func buildStorage(ctx context.Context, cfg *config.Config, override media.Storage) (media.Storage, error) {
+	if override != nil {
+		return override, nil
+	}
+	if cfg.StorageDriver == "memory" {
+		return storage.NewMemory(), nil
+	}
+	return storage.NewS3(ctx, storage.S3Config{Endpoint: cfg.S3Endpoint, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey,
+		Bucket: cfg.S3Bucket, Region: cfg.S3Region, UseSSL: cfg.S3UseSSL, PublicEndpoint: cfg.S3PublicURL, AutoCreate: cfg.S3AutoCreate})
+}
+
+func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Registry {
+	reg := provider.NewRegistry(stubs.All()...)
+	reg.Register(linkedin.New(linkedin.Config{ClientID: cfg.LinkedInID, ClientSecret: cfg.LinkedInSecret,
+		APIVersion: cfg.LinkedInVersion, UsePKCE: cfg.LinkedInPKCE}))
+	reg.Register(telegram.New(telegram.Config{BotToken: cfg.TelegramToken}))
+	if cfg.MockProviders {
+		reg.Register(mock.New())
+	}
+	for _, p := range extra {
+		reg.Register(p)
+	}
+	return reg
+}
+
+func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
+	clk := ov.Clock
+	if clk == nil {
+		clk = clock.System{}
+	}
+	enc, err := crypto.NewCipherFromBase64(cfg.EncryptionKey)
+	if err != nil {
+		return err
+	}
+	hasher := ov.Hasher
+	if hasher == nil {
+		hasher = crypto.NewPasswordHasher(crypto.DefaultArgon2)
+	}
+	db := a.DB
+	auditRepo := postgres.NewAudit(db)
+	auditSvc := audit.NewService(auditRepo, clk)
+	accountRepo, postRepo, jobRepo := postgres.NewAccounts(db), postgres.NewPosts(db), postgres.NewJobs(db)
+	mediaRepo, keyRepo, analyticsRepo := postgres.NewMedia(db), postgres.NewAPIKeys(db), postgres.NewAnalytics(db)
+
+	authSvc, err := auth.NewService(auth.Deps{Users: postgres.NewUsers(db), Sessions: postgres.NewSessions(db), APIKeys: keyRepo,
+		Hasher: hasher, Tx: db, Audit: auditSvc, Clock: clk, SessionTTL: cfg.SessionTTL})
+	if err != nil {
+		return fmt.Errorf("auth service: %w", err)
+	}
+	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Registry: a.Registry,
+		Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL})
+	analyticsSvc := analytics.NewService(analyticsRepo, clk)
+	a.Services = transport.Services{
+		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc,
+		Posts: posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
+			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log}),
+		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk),
+		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
+			Tx: db, Audit: auditSvc, Clock: clk, MCPPublicURL: cfg.MCPPublicURL, APIPublicURL: cfg.APIPublicURL}),
+	}
+	a.Publisher = scheduler.NewPublisher(scheduler.Deps{Targets: postRepo, Posts: postRepo, Jobs: jobRepo,
+		Accounts: accountsAdapter{repo: accountRepo, svc: accountSvc}, Vault: accountSvc.Vault(),
+		Media: mediaAdapter{repo: mediaRepo, storage: a.Storage}, Metrics: analyticsSvc, Registry: a.Registry,
+		Tx: db, Audit: auditSvc, Clock: clk, Log: log,
+		OnOutcome: func(prov, outcome string) { a.Metrics.PublishOutcomes.WithLabelValues(prov, outcome).Inc() }})
+	a.Reconciler = scheduler.NewReconciler(a.Publisher, a.Queue)
+	a.APILimiter = middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
+	a.AuthLimit = middleware.NewLimiter(cfg.AuthRateRPS, cfg.AuthRateBurst)
+	return nil
+}
+
+// Router returns the HTTP handler.
+func (a *App) Router() http.Handler {
+	return transport.NewRouter(a.Services, transport.Options{
+		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
+		CookieDomain: a.Cfg.CookieDomain, TrustProxy: a.Cfg.TrustProxy, MetricsToken: a.Cfg.MetricsToken,
+		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
+		Ready: []transport.ReadyCheck{
+			{Name: "postgres", Check: a.DB.Ping},
+			{Name: "redis", Check: a.Redis.Ping},
+			{Name: "storage", Check: a.Storage.Ping},
+		},
+	})
+}
+
+// Close releases connections.
+func (a *App) Close() {
+	if a.Queue != nil {
+		_ = a.Queue.Close()
+	}
+	if a.Redis != nil {
+		_ = a.Redis.Close()
+	}
+	if a.DB != nil {
+		a.DB.Close()
+	}
+}

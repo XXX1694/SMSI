@@ -1,0 +1,88 @@
+package queue
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/hibiken/asynq"
+
+	"github.com/socialos/backend/internal/application/scheduler"
+)
+
+// ServerConfig configures the worker server.
+type ServerConfig struct {
+	Queue       string
+	Concurrency int
+	// DelayedCheck is how often scheduled tasks are promoted (default 1s, so a post goes out within ~1s of its time).
+	DelayedCheck time.Duration
+	// RetryDelay overrides the retry backoff (default scheduler.RetryDelay: 30s·2^n ±20%). Tests only.
+	RetryDelay func(n int, err error) time.Duration
+}
+
+// Server runs publish handlers.
+type Server struct {
+	srv *asynq.Server
+	mux *asynq.ServeMux
+}
+
+// NewServer wires the publisher into an Asynq server.
+func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publisher, log *slog.Logger) *Server {
+	if cfg.Concurrency <= 0 {
+		cfg.Concurrency = 10
+	}
+	if cfg.DelayedCheck <= 0 {
+		cfg.DelayedCheck = time.Second
+	}
+	retryDelay := cfg.RetryDelay
+	if retryDelay == nil {
+		retryDelay = scheduler.RetryDelay
+	}
+	srv := asynq.NewServer(redis, asynq.Config{
+		Concurrency:              cfg.Concurrency,
+		Queues:                   map[string]int{cfg.Queue: 1},
+		RetryDelayFunc:           func(n int, err error, _ *asynq.Task) time.Duration { return retryDelay(n, err) },
+		ShutdownTimeout:          30 * time.Second,
+		DelayedTaskCheckInterval: cfg.DelayedCheck,
+		Logger:                   asynqLogger{log: log},
+		ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, t *asynq.Task, err error) {
+			retried, _ := asynq.GetRetryCount(ctx)
+			log.WarnContext(ctx, "publish task returned error", slog.String("type", t.Type()), slog.Int("retried", retried), slog.Any("error", err))
+		}),
+	})
+	mux := asynq.NewServeMux()
+	mux.HandleFunc(TypePublishTarget, Handler(pub))
+	return &Server{srv: srv, mux: mux}
+}
+
+// Handler adapts the publisher to an Asynq handler.
+func Handler(pub *scheduler.Publisher) func(context.Context, *asynq.Task) error {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var pl scheduler.Payload
+		if err := json.Unmarshal(t.Payload(), &pl); err != nil {
+			return fmt.Errorf("bad payload: %v: %w", err, asynq.SkipRetry)
+		}
+		retried, _ := asynq.GetRetryCount(ctx)
+		maxRetry, ok := asynq.GetMaxRetry(ctx)
+		if !ok {
+			maxRetry = scheduler.MaxRetry
+		}
+		return pub.Run(ctx, pl, scheduler.RetryInfo{Retried: retried, MaxRetry: maxRetry})
+	}
+}
+
+// Start begins processing in the background.
+func (s *Server) Start() error { return s.srv.Start(s.mux) }
+
+// Shutdown stops gracefully, waiting for in-flight tasks.
+func (s *Server) Shutdown() { s.srv.Shutdown() }
+
+type asynqLogger struct{ log *slog.Logger }
+
+func (l asynqLogger) Debug(args ...any) { l.log.Debug(fmt.Sprint(args...)) }
+func (l asynqLogger) Info(args ...any)  { l.log.Info(fmt.Sprint(args...)) }
+func (l asynqLogger) Warn(args ...any)  { l.log.Warn(fmt.Sprint(args...)) }
+func (l asynqLogger) Error(args ...any) { l.log.Error(fmt.Sprint(args...)) }
+func (l asynqLogger) Fatal(args ...any) { l.log.Error(fmt.Sprint(args...)) }

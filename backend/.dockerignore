@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+!.env.example
+*.md
+Dockerfile
+.dockerignore
+bin/
+coverage.out
+**/*_test.go

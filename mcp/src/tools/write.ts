@@ -1,0 +1,143 @@
+import { z } from "zod";
+import { defineTool, requireConfirm, seg } from "./types.js";
+
+const id = (what: string) => z.string().min(1).max(128).describe(what);
+const when = (what: string) => z.iso.datetime({ offset: true }).describe(what);
+const confirm = z
+  .boolean()
+  .optional()
+  .describe("Must be exactly true. Only set after the user has explicitly approved this specific action.");
+
+const perPlatform = z
+  .record(z.string(), z.string().min(1))
+  .describe(
+    "Optional per-account text override: map of social_account_id to the text to use for that account (e.g. shorter for X). Accounts not listed use `content`.",
+  );
+
+function toTargets(overrides: Record<string, string> | undefined, accountIds: string[] | undefined) {
+  if (!overrides) return undefined;
+  const unknown = accountIds ? Object.keys(overrides).filter((k) => !accountIds.includes(k)) : [];
+  if (unknown.length) {
+    throw new Error(`VALIDATION_ERROR: per_platform_content has ids not in social_account_ids: ${unknown.join(", ")}`);
+  }
+  return Object.entries(overrides).map(([social_account_id, content]) => ({ social_account_id, content }));
+}
+
+export const writeTools = [
+  defineTool({
+    name: "create_draft",
+    title: "Create draft post",
+    scope: "posts:write",
+    risk: "safe",
+    description:
+      "Create a DRAFT post for one or more connected accounts. Nothing is published or scheduled; use schedule_post or publish_post afterwards. Returns the post with its id.",
+    inputSchema: {
+      content: z.string().min(1).describe("Post text"),
+      social_account_ids: z.array(z.string().min(1)).min(1).describe("Target accounts from list_social_accounts"),
+      media_ids: z.array(z.string().min(1)).optional().describe("Previously uploaded media ids"),
+      title: z.string().optional().describe("Internal title (not published)"),
+      per_platform_content: perPlatform.optional(),
+    },
+    annotations: { title: "Create draft post", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    handler: (c, a) =>
+      c.request("POST", "/posts", {
+        body: {
+          title: a.title,
+          content: a.content,
+          social_account_ids: a.social_account_ids,
+          media_ids: a.media_ids,
+          targets: toTargets(a.per_platform_content, a.social_account_ids),
+        },
+      }),
+  }),
+  defineTool({
+    name: "update_post",
+    title: "Update post",
+    scope: "posts:write",
+    risk: "low",
+    description:
+      "Edit a post that is still a draft or scheduled (the API rejects other states with INVALID_STATE_TRANSITION). Only the fields you pass are changed.",
+    inputSchema: {
+      post_id: id("Post id"),
+      title: z.string().optional(),
+      content: z.string().min(1).optional(),
+      social_account_ids: z.array(z.string().min(1)).min(1).optional(),
+      media_ids: z.array(z.string().min(1)).optional(),
+      per_platform_content: perPlatform.optional(),
+      scheduled_at: when("New RFC 3339 schedule time (only for scheduled posts)").optional(),
+    },
+    annotations: { title: "Update post", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    handler: (c, a) => {
+      const { post_id, per_platform_content, ...rest } = a;
+      const body = { ...rest, targets: toTargets(per_platform_content, rest.social_account_ids) };
+      if (Object.values(body).every((v) => v === undefined)) {
+        throw new Error("VALIDATION_ERROR: pass at least one field to update");
+      }
+      return c.request("PATCH", `/posts/${seg(post_id)}`, { body });
+    },
+  }),
+  defineTool({
+    name: "schedule_post",
+    title: "Schedule post",
+    scope: "posts:schedule",
+    risk: "medium",
+    description:
+      "Schedule a draft to be published automatically at scheduled_at (RFC 3339, must be in the future). The post WILL go public at that time unless cancelled with cancel_scheduled_post.",
+    inputSchema: { post_id: id("Post id"), scheduled_at: when("Publish time, RFC 3339 e.g. 2026-11-01T09:00:00Z") },
+    annotations: { title: "Schedule post", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    handler: (c, a) => c.request("POST", `/posts/${seg(a.post_id)}/schedule`, { body: { scheduled_at: a.scheduled_at } }),
+  }),
+  defineTool({
+    name: "cancel_scheduled_post",
+    title: "Cancel scheduled post",
+    scope: "posts:write",
+    risk: "medium",
+    description:
+      "Cancel a draft or scheduled post. A cancelled post is terminal and can never be published; to keep the content, create a new draft.",
+    inputSchema: { post_id: id("Post id") },
+    annotations: { title: "Cancel scheduled post", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    handler: (c, a) => c.request("POST", `/posts/${seg(a.post_id)}/cancel`),
+  }),
+  defineTool({
+    name: "publish_post",
+    title: "Publish post now",
+    scope: "posts:publish",
+    risk: "sensitive",
+    description:
+      "SENSITIVE: publishes the post to the live social networks immediately and cannot be undone by this API. Requires confirm: true; only call after the user has explicitly approved publishing this exact post. Returns immediately; poll get_post_status for the outcome.",
+    inputSchema: { post_id: id("Post id"), confirm },
+    annotations: { title: "Publish post now", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    handler: (c, a) => {
+      requireConfirm(a.confirm, "Publishing a post");
+      return c.request("POST", `/posts/${seg(a.post_id)}/publish`);
+    },
+  }),
+  defineTool({
+    name: "delete_post",
+    title: "Delete post",
+    scope: "posts:delete",
+    risk: "sensitive",
+    description:
+      "SENSITIVE: deletes a post in SocialOS (soft delete). It does not remove already-published copies from the social networks. Requires confirm: true after explicit user approval.",
+    inputSchema: { post_id: id("Post id"), confirm },
+    annotations: { title: "Delete post", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    handler: (c, a) => {
+      requireConfirm(a.confirm, "Deleting a post");
+      return c.request("DELETE", `/posts/${seg(a.post_id)}`);
+    },
+  }),
+  defineTool({
+    name: "disconnect_account",
+    title: "Disconnect social account",
+    scope: "social:disconnect",
+    risk: "critical",
+    description:
+      "CRITICAL: disconnects a social account and discards its stored credentials; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. Requires confirm: true after explicit user approval.",
+    inputSchema: { account_id: id("Social account id"), confirm },
+    annotations: { title: "Disconnect social account", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    handler: (c, a) => {
+      requireConfirm(a.confirm, "Disconnecting an account");
+      return c.request("DELETE", `/social/accounts/${seg(a.account_id)}`);
+    },
+  }),
+];

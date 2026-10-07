@@ -1,0 +1,103 @@
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { createHttpServer } from "../src/http.js";
+
+export interface Recorded {
+  method: string;
+  path: string; // includes query
+  headers: Record<string, string | string[] | undefined>;
+  body: unknown;
+}
+
+export interface FakeReply {
+  status?: number;
+  body?: unknown;
+}
+
+export const ALL_SCOPES = [
+  "social:read", "posts:read", "posts:write", "posts:schedule",
+  "posts:publish", "posts:delete", "social:disconnect", "media:write", "analytics:read",
+];
+
+export const VALID_KEY = "sk_live_testkey123";
+
+/** A fake SocialOS REST API. Keys map to scopes; unknown keys get 401. */
+export class FakeApi {
+  server!: Server;
+  url = "";
+  calls: Recorded[] = [];
+  keys = new Map<string, string[]>([[VALID_KEY, ALL_SCOPES]]);
+  /** Override reply for "METHOD /path" (path without query and without /api/v1). */
+  replies = new Map<string, FakeReply>();
+
+  async start(): Promise<void> {
+    this.server = createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", () => {
+        const raw = Buffer.concat(chunks).toString();
+        const rec: Recorded = { method: req.method ?? "", path: req.url ?? "", headers: req.headers, body: raw ? JSON.parse(raw) : undefined };
+        const send = (status: number, body?: unknown) => {
+          res.writeHead(status, { "Content-Type": "application/json" });
+          res.end(body === undefined ? "" : JSON.stringify(body));
+        };
+        const key = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1];
+        const scopes = key ? this.keys.get(key) : undefined;
+        if (!scopes) return send(401, { error: { code: "UNAUTHENTICATED", message: "bad key", request_id: "r-401" } });
+        const u = new URL(rec.path, "http://x");
+        const route = u.pathname.replace(/^\/api\/v1/, "");
+        if (route === "/me") return send(200, { id: "u1", email: "a@b.c", scopes });
+        this.calls.push({ ...rec, path: route + u.search });
+        const o = this.replies.get(`${rec.method} ${route}`);
+        if (o) return send(o.status ?? 200, o.body);
+        if (rec.method === "DELETE") return send(204);
+        send(200, { ok: true, route });
+      });
+    });
+    await new Promise<void>((r) => this.server.listen(0, "127.0.0.1", r));
+    this.url = `http://127.0.0.1:${(this.server.address() as AddressInfo).port}`;
+  }
+
+  async stop(): Promise<void> {
+    await new Promise<void>((r) => this.server.close(() => r()));
+  }
+}
+
+export interface Stack {
+  api: FakeApi;
+  mcpUrl: string;
+  baseUrl: string;
+  stop: () => Promise<void>;
+}
+
+export async function startStack(): Promise<Stack> {
+  const api = new FakeApi();
+  await api.start();
+  const mcp = createHttpServer({ apiUrl: `${api.url}/api/v1`, port: 0, host: "127.0.0.1", timeoutMs: 3000 });
+  await new Promise<void>((r) => mcp.listen(0, "127.0.0.1", r));
+  const baseUrl = `http://127.0.0.1:${(mcp.address() as AddressInfo).port}`;
+  return {
+    api,
+    baseUrl,
+    mcpUrl: `${baseUrl}/mcp`,
+    stop: async () => {
+      await new Promise<void>((r) => mcp.close(() => r()));
+      await api.stop();
+    },
+  };
+}
+
+export async function connect(mcpUrl: string, key = VALID_KEY): Promise<Client> {
+  const client = new Client({ name: "test", version: "0" });
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(mcpUrl), { requestInit: { headers: { Authorization: `Bearer ${key}` } } }),
+  );
+  return client;
+}
+
+export function text(result: unknown): string {
+  const r = result as { content: { type: string; text: string }[] };
+  return r.content.map((c) => c.text).join("\n");
+}
