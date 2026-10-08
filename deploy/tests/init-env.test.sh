@@ -32,6 +32,7 @@ assert_eq "standalone: DOMAIN" example.com "$(value DOMAIN)"
 assert_eq "standalone: ACME_EMAIL" ops@example.com "$(value ACME_EMAIL)"
 assert_eq "standalone: compose file unchanged" docker-compose.prod.yml "$(value COMPOSE_FILE)"
 assert_eq "standalone: no placeholders left" 0 "$(placeholders)"
+assert_eq "standalone: MCP_GATEWAY_SECRET generated" 1 "$([ -n "$(value MCP_GATEWAY_SECRET)" ] && echo 1 || echo 0)"
 assert_eq "standalone: mode 600" 600 "$(stat -c %a "$SB/app/.env")"
 
 setup
@@ -46,6 +47,7 @@ assert_eq "host-proxy without e-mail: exit" 0 "$rc"
 assert_eq "host-proxy without e-mail: ACME_EMAIL is empty" "" "$(value ACME_EMAIL)"
 assert_eq "host-proxy: both compose files" docker-compose.prod.yml:docker-compose.host-proxy.yml "$(value COMPOSE_FILE)"
 assert_eq "host-proxy without e-mail: no placeholders left" 0 "$(placeholders)"
+assert_eq "host-proxy: MCP_GATEWAY_SECRET generated" 1 "$([ -n "$(value MCP_GATEWAY_SECRET)" ] && echo 1 || echo 0)"
 assert_has "host-proxy: next steps" "$out" "render-caddy.sh"
 
 setup

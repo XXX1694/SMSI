@@ -193,11 +193,11 @@ services:
     environment:
       SOCIALOS_API_URL: http://backend:8080
       PORT: "3333"
-    mem_limit: ${MCP_MEM_LIMIT:-192m}
       MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-}
       # Caddy sits in front of this service as well: same rule as the backend (right-most hop outside TRUSTED_PROXIES).
       TRUST_PROXY: "true"
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+    mem_limit: ${MCP_MEM_LIMIT:-192m}
     # healthcheck: from the image (GET /health)
     depends_on:
       backend: { condition: service_healthy }
