@@ -146,7 +146,7 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	a.Publisher = scheduler.NewPublisher(scheduler.Deps{Targets: postRepo, Posts: postRepo, Jobs: jobRepo,
 		Accounts: accountsAdapter{repo: accountRepo, svc: accountSvc}, Vault: accountSvc.Vault(),
 		Media: mediaAdapter{repo: mediaRepo, storage: a.Storage}, Metrics: analyticsSvc, Registry: a.Registry,
-		Tx: db, Audit: auditSvc, Clock: clk, Log: log,
+		Tx: db, Audit: auditSvc, Clock: clk, Log: log, Queue: a.Queue,
 		OnOutcome: func(prov, outcome string) { a.Metrics.PublishOutcomes.WithLabelValues(prov, outcome).Inc() }})
 	a.Reconciler = scheduler.NewReconciler(a.Publisher, a.Queue)
 	a.APILimiter = middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
