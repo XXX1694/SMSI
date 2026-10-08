@@ -105,7 +105,7 @@ type requireActive bool
 
 // buildTargets resolves accounts and validates content against provider capabilities.
 func (s *Service) buildTargets(ctx context.Context, userID uuid.UUID, accountIDs []uuid.UUID, overrides map[uuid.UUID]string,
-	content string, mediaList []media.Media, strict requireActive) ([]post.Target, error) {
+	title, content string, mediaList []media.Media, strict requireActive) ([]post.Target, error) {
 	targets := make([]post.Target, 0, len(accountIDs))
 	for _, id := range accountIDs {
 		acc, err := s.accounts.Get(ctx, userID, id)
@@ -119,7 +119,7 @@ func (s *Service) buildTargets(ctx context.Context, userID uuid.UUID, accountIDs
 		if o, ok := overrides[id]; ok {
 			text = o
 		}
-		if err := s.checkTarget(acc, text, mediaList, strict); err != nil {
+		if err := s.checkTarget(acc, title, text, mediaList, strict); err != nil {
 			return nil, err
 		}
 		tid := uuid.New()
@@ -131,7 +131,7 @@ func (s *Service) buildTargets(ctx context.Context, userID uuid.UUID, accountIDs
 	return targets, nil
 }
 
-func (s *Service) checkTarget(acc *socialaccount.Account, text string, mediaList []media.Media, strict requireActive) error {
+func (s *Service) checkTarget(acc *socialaccount.Account, title, text string, mediaList []media.Media, strict requireActive) error {
 	switch {
 	case acc.Status == socialaccount.StatusRevoked:
 		return errs.Validationf("social account %s is disconnected", acc.ID).WithField("social_account_ids", "disconnected")
@@ -142,12 +142,17 @@ func (s *Service) checkTarget(acc *socialaccount.Account, text string, mediaList
 	if err != nil {
 		return err
 	}
-	return CheckContent(p.DisplayName(), p.Capabilities(), text, mediaList)
+	return CheckContent(p.DisplayName(), p.Capabilities().WithAccountLimits(acc.Metadata), title, text, mediaList)
 }
 
-// CheckContent validates text and media against provider capabilities.
-func CheckContent(name string, c provider.Capabilities, text string, mediaList []media.Media) error {
+// CheckContent validates title, text and media against provider capabilities.
+// Callers pass capabilities already narrowed by the account's own limits
+// (provider.Capabilities.WithAccountLimits).
+func CheckContent(name string, c provider.Capabilities, title, text string, mediaList []media.Media) error {
 	n := utf8.RuneCountInString(text)
+	if c.RequiresTitle && strings.TrimSpace(title) == "" {
+		return errs.Validationf("%s posts need a title", name).WithField("title", "required")
+	}
 	if strings.TrimSpace(text) == "" && len(mediaList) == 0 {
 		return errs.Validationf("%s post needs content or media", name).WithField("content", "required")
 	}
@@ -166,6 +171,9 @@ func CheckContent(name string, c provider.Capabilities, text string, mediaList [
 	for _, m := range mediaList {
 		if m.Kind == media.KindImage && !c.CanPublishImage {
 			return errs.Validationf("%s does not support images", name).WithField("media_ids", "unsupported")
+		}
+		if m.Kind == media.KindImage && c.MaxImageBytes > 0 && m.SizeBytes > c.MaxImageBytes {
+			return errs.Validationf("%s accepts images up to %d bytes", name, c.MaxImageBytes).WithField("media_ids", "too large")
 		}
 		if m.Kind == media.KindVideo && !c.CanPublishVideo {
 			return errs.Validationf("%s does not support video in this release", name).WithField("media_ids", "unsupported")
