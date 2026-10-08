@@ -47,7 +47,7 @@ jobs:
       - name: Filter changed paths (pull requests)
         id: filter
         if: github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             backend:
@@ -140,11 +140,11 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: backend/go.sum
@@ -164,7 +164,7 @@ jobs:
       # Runs only when a golangci-lint config exists (backend/.golangci.yml is part of the repo).
       - name: golangci-lint
         if: ${{ hashFiles('backend/.golangci.yml', 'backend/.golangci.yaml', 'backend/.golangci.toml', 'backend/.golangci.json') != '' }}
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: backend
@@ -191,10 +191,10 @@ jobs:
       run:
         working-directory: mcp
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -220,10 +220,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -237,7 +237,7 @@ jobs:
         run: npm test
       # Next.js build cache (https://nextjs.org/docs/pages/building-your-application/deploying/ci-build-caching).
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/.next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**', 'frontend/*.config.*') }}
@@ -261,12 +261,12 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.changes.outputs.images) }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build ${{ matrix.image }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           push: false
@@ -289,14 +289,14 @@ jobs:
       # .github/ci/compose.ci.yml points the services at the images built below instead of building again.
       COMPOSE_FILE: docker-compose.yml:.github/ci/compose.ci.yml
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       # Same context, Dockerfile and build args as the docker job, so these are cache hits.
       - name: Build backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           load: true
@@ -304,7 +304,7 @@ jobs:
           provenance: false
           cache-from: type=gha,scope=backend
       - name: Build mcp image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: mcp
           load: true
@@ -312,7 +312,7 @@ jobs:
           provenance: false
           cache-from: type=gha,scope=mcp
       - name: Build frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend
           load: true
@@ -326,7 +326,7 @@ jobs:
       - name: Start the stack and wait until every service is healthy
         run: docker compose up -d --no-build --wait --wait-timeout 240
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -383,7 +383,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
