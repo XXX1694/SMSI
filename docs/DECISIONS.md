@@ -61,3 +61,17 @@ are designed for any S3-compatible bucket.
 
 **Consequences.** Every feature can ship and be tested without the accounts. Each one becomes live in production as
 soon as its key is in `.env`. Until then, the UI and the docs state honestly what is off.
+
+## D-006: Transactional mail through a queued, provider-agnostic port (2026-10-09)
+
+**Context.** Email verification, password reset and account notices need mail. Sending inline in the request is slow, makes
+register fail when the relay is down, and lets response timing reveal whether an address exists.
+
+**Decision.** Services depend on `port.MailQueue`, which enqueues a `mail:send` Asynq task (MaxRetry 5, Retention 0,
+so one-time links do not linger in Redis). The worker runs `port.Mailer`: an SMTP adapter (STARTTLS required on 587,
+or implicit TLS on 465; it never authenticates or sends in clear text) or a log adapter (masked recipient, body only when
+`APP_ENV=development`). Templates are embedded, English, plain, rendered to text plus HTML. `MAIL_PROVIDER` defaults to `log`.
+
+**Consequences.** Any relay works; Resend is the intended one. Resend needs a verified sending domain, so production
+mail stays off while the host uses sslip.io (D-003). `smtp` with a missing field fails at startup; `log` in production
+only logs a warning. A rendered body (with its link) sits in Redis until the worker sends it.

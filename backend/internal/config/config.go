@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"net/netip"
 	"os"
 	"strconv"
@@ -64,7 +65,25 @@ type Config struct {
 	// TelegramWebhookSecret is the secret_token Telegram echoes in the
 	// X-Telegram-Bot-Api-Secret-Token header; required in webhook mode.
 	TelegramWebhookSecret string
+
+	// MailProvider selects how transactional mail leaves the system: "log"
+	// (default; writes to the log, nothing is sent) or "smtp".
+	MailProvider string
+	SMTPHost     string
+	SMTPPort     int
+	SMTPTLS      string // starttls (default, port 587) | implicit (TLS from the first byte, port 465)
+	SMTPUsername string
+	SMTPPassword string
+	MailFrom     string // RFC 5322 address, e.g. "SocialOS <no-reply@example.com>"
 }
+
+// Mail providers and SMTP TLS modes.
+const (
+	MailProviderLog  = "log"
+	MailProviderSMTP = "smtp"
+	SMTPTLSStartTLS  = "starttls"
+	SMTPTLSImplicit  = "implicit"
+)
 
 // Telegram update intake modes.
 const (
@@ -118,9 +137,20 @@ func Load() (*Config, error) {
 
 		TelegramUpdatesMode:   strings.ToLower(env("TELEGRAM_UPDATES_MODE", TelegramModePolling)),
 		TelegramWebhookSecret: env("TELEGRAM_WEBHOOK_SECRET", ""),
+
+		MailProvider: strings.ToLower(env("MAIL_PROVIDER", MailProviderLog)),
+		SMTPHost:     env("SMTP_HOST", ""),
+		SMTPPort:     envInt("SMTP_PORT", 587),
+		SMTPTLS:      strings.ToLower(env("SMTP_TLS", SMTPTLSStartTLS)),
+		SMTPUsername: env("SMTP_USERNAME", ""),
+		SMTPPassword: env("SMTP_PASSWORD", ""),
+		MailFrom:     env("MAIL_FROM", ""),
 	}
 	proxies, warnings, perr := resolveTrustedProxies(c.TrustProxy, env("TRUSTED_PROXIES", ""))
 	c.TrustedProxies, c.Warnings = proxies, warnings
+	if c.Production() && c.MailProvider == MailProviderLog {
+		c.Warnings = append(c.Warnings, "MAIL_PROVIDER=log in production: no email is sent, so verification and password-reset mail never reaches users (set MAIL_PROVIDER=smtp)")
+	}
 	return c, c.validate(perr)
 }
 
@@ -171,6 +201,7 @@ func (c *Config) validate(extra ...error) error {
 	default:
 		problems = append(problems, "TELEGRAM_UPDATES_MODE must be polling or webhook")
 	}
+	problems = append(problems, c.validateMail()...)
 	if c.Production() {
 		if !c.CookieSecure {
 			problems = append(problems, "COOKIE_SECURE must be true in production")
@@ -186,6 +217,35 @@ func (c *Config) validate(extra ...error) error {
 		return errors.New("config: " + strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+func (c *Config) validateMail() []string {
+	switch c.MailProvider {
+	case MailProviderLog:
+		return nil
+	case MailProviderSMTP:
+	default:
+		return []string{"MAIL_PROVIDER must be log or smtp"}
+	}
+	var p []string
+	for _, f := range []struct{ name, val string }{{"SMTP_HOST", c.SMTPHost}, {"SMTP_USERNAME", c.SMTPUsername},
+		{"SMTP_PASSWORD", c.SMTPPassword}, {"MAIL_FROM", c.MailFrom}} {
+		if f.val == "" {
+			p = append(p, f.name+" is required when MAIL_PROVIDER=smtp")
+		}
+	}
+	if c.SMTPPort < 1 || c.SMTPPort > 65535 {
+		p = append(p, "SMTP_PORT must be 1-65535")
+	}
+	if c.SMTPTLS != SMTPTLSStartTLS && c.SMTPTLS != SMTPTLSImplicit {
+		p = append(p, "SMTP_TLS must be starttls or implicit")
+	}
+	if c.MailFrom != "" {
+		if _, err := mail.ParseAddress(c.MailFrom); err != nil {
+			p = append(p, "MAIL_FROM must be an email address, optionally with a display name")
+		}
+	}
+	return p
 }
 
 func validWebhookSecret(s string) bool {
