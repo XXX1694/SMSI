@@ -71,6 +71,12 @@ func (f *usersFake) SetPassword(_ context.Context, id uuid.UUID, h string) error
 	f.byID[id].PasswordHash = h
 	return nil
 }
+func (f *usersFake) RehashPassword(_ context.Context, id uuid.UUID, old, h string) error {
+	if u := f.byID[id]; u.PasswordHash == old {
+		u.PasswordHash = h
+	}
+	return nil
+}
 func (f *usersFake) MarkEmailVerified(_ context.Context, id uuid.UUID, at time.Time) error {
 	if u := f.byID[id]; u.EmailVerifiedAt == nil {
 		u.EmailVerifiedAt = &at

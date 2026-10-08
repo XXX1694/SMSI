@@ -225,7 +225,11 @@ func (s *Service) ChangePassword(ctx context.Context, a actor.Actor, current, ne
 	if err != nil {
 		return err
 	}
-	if ok, err := s.hasher.Verify(ctx, current, u.PasswordHash); err != nil || !ok {
+	ok, err := s.hasher.Verify(ctx, current, u.PasswordHash)
+	if errs.CodeOf(err) == errs.RateLimited {
+		return err
+	}
+	if err != nil || !ok {
 		return errs.Validationf("current password is incorrect").WithField("current_password", "incorrect")
 	}
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {

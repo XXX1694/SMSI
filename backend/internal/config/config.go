@@ -39,9 +39,11 @@ type Config struct {
 	RateLimitRPS   float64
 	RateLimitBurst int
 	AuthRateRPS    float64
-	// PasswordHashConcurrency caps argon2 hash/verify operations running at once (memory bound).
+	AuthRateBurst  int
+	// PasswordHashConcurrency caps argon2 hash/verify operations running at once; PasswordHashMemoryMiB caps their
+	// combined memory (an old 64 MiB hash runs alone).
 	PasswordHashConcurrency int
-	AuthRateBurst           int
+	PasswordHashMemoryMiB   int
 	TrustProxy              bool
 	TrustedProxies          []netip.Prefix // networks whose X-Forwarded-For is believed; empty = ignore the header (see proxies.go)
 	Warnings                []string       // valid but suspicious settings; the binaries log them at startup (LogWarnings)
@@ -122,6 +124,7 @@ func Load() (*Config, error) {
 		AuthRateRPS:             envFloat("AUTH_RATE_LIMIT_RPS", 0.2),
 		AuthRateBurst:           envInt("AUTH_RATE_LIMIT_BURST", 10),
 		PasswordHashConcurrency: envInt("PASSWORD_HASH_CONCURRENCY", 2),
+		PasswordHashMemoryMiB:   envInt("PASSWORD_HASH_MEMORY_MIB", 48),
 		TrustProxy:              envBool("TRUST_PROXY", false),
 		WorkerConc:              envInt("WORKER_CONCURRENCY", 10),
 		ReconcileEvery:          envDuration("RECONCILE_INTERVAL", time.Minute),
@@ -193,6 +196,9 @@ func (c *Config) validate(extra ...error) error {
 	}
 	if c.PasswordHashConcurrency < 1 {
 		problems = append(problems, "PASSWORD_HASH_CONCURRENCY must be at least 1")
+	}
+	if c.PasswordHashMemoryMiB < 1 {
+		problems = append(problems, "PASSWORD_HASH_MEMORY_MIB must be at least 1")
 	}
 	if c.StorageDriver != "s3" && c.StorageDriver != "memory" {
 		problems = append(problems, "STORAGE_DRIVER must be s3 or memory")

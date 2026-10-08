@@ -73,7 +73,7 @@ func newHarness(t *testing.T, o opts) *harness {
 		o.tune(cfg)
 	}
 	a, err := app.Build(context.Background(), cfg, testutil.Logger(), app.Overrides{
-		Storage: store, Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}, 2),
+		Storage: store, Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}, 2, 0),
 	})
 	if err != nil {
 		t.Fatalf("build: %v", err)

@@ -8,7 +8,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Changed
 
-- Password hashing is bounded in memory: at most `PASSWORD_HASH_CONCURRENCY` (default 2) hashes run at once, new hashes use argon2id m=19 MiB, t=2, p=1 (OWASP), and existing hashes are upgraded at the next successful login. Under a burst, logins and registrations may get `429 RATE_LIMITED` and should retry.
+- Password hashing is bounded in memory: at most `PASSWORD_HASH_CONCURRENCY` (default 2) hashes run at once within `PASSWORD_HASH_MEMORY_MIB` (default 48) of argon2 memory, new hashes use argon2id m=19 MiB, t=2, p=1 (OWASP), and existing hashes are upgraded at the next successful login. Under a burst, logins and registrations may get `429 RATE_LIMITED` and should retry.
 
 ### Added
 

@@ -34,6 +34,9 @@ func JSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
+// RetryAfterSeconds is the Retry-After sent with a RATE_LIMITED error that did not set its own.
+const RetryAfterSeconds = "5"
+
 // StatusOf maps an error code to an HTTP status (ARCHITECTURE.md §4).
 func StatusOf(c errs.Code) int {
 	switch c {
@@ -78,6 +81,9 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 	if e.Code == errs.Internal {
 		slog.ErrorContext(r.Context(), "internal error", slog.String("path", r.URL.Path), slog.Any("error", err))
 		body.Message = "internal server error"
+	}
+	if e.Code == errs.RateLimited && w.Header().Get("Retry-After") == "" {
+		w.Header().Set("Retry-After", RetryAfterSeconds)
 	}
 	if slot, ok := r.Context().Value(codeSlotKey{}).(*CodeSlot); ok {
 		slot.set(e.Code)

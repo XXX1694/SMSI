@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/errs"
 )
 
@@ -46,7 +47,7 @@ func TestWrongPasswordDoesNotRehash(t *testing.T) {
 
 type failingSetPassword struct{ Users }
 
-func (failingSetPassword) SetPassword(context.Context, uuid.UUID, string) error {
+func (failingSetPassword) RehashPassword(context.Context, uuid.UUID, string, string) error {
 	return errors.New("db down")
 }
 
@@ -76,5 +77,48 @@ func TestLoginSurfacesBusyHasher(t *testing.T) {
 	_, _, err := r.svc.Login(ctx, r.u.Email, "old password 1", ClientInfo{})
 	if errs.CodeOf(err) != errs.RateLimited {
 		t.Fatalf("want RATE_LIMITED so the client retries, got %v", err)
+	}
+}
+
+func TestSaturatedHasherTreatsKnownAndUnknownEmailsAlike(t *testing.T) {
+	r := newRig(t, false)
+	r.svc.hasher = busyHasher{}
+	for name, email := range map[string]string{"known": r.u.Email, "unknown": "nobody@example.com", "malformed": "not-an-email"} {
+		_, _, err := r.svc.Login(ctx, email, "whatever password", ClientInfo{})
+		if errs.CodeOf(err) != errs.RateLimited {
+			t.Fatalf("%s: want RATE_LIMITED, got %v", name, err)
+		}
+	}
+}
+
+// resetDuringHash simulates a password reset landing while the login is hashing.
+type resetDuringHash struct {
+	plainHasher
+	r *rig
+}
+
+func (h resetDuringHash) Hash(ctx context.Context, p string) (string, error) {
+	h.r.u.PasswordHash = "h:brand new password"
+	return h.plainHasher.Hash(ctx, p)
+}
+
+func TestRehashNeverOverwritesAConcurrentPasswordChange(t *testing.T) {
+	r := newRig(t, false)
+	r.u.PasswordHash = "old:old password 1"
+	r.svc.hasher = resetDuringHash{r: r}
+	if _, _, err := r.svc.Login(ctx, r.u.Email, "old password 1", ClientInfo{}); err != nil {
+		t.Fatal(err)
+	}
+	if r.u.PasswordHash != "h:brand new password" {
+		t.Fatalf("rehash of the old password clobbered the new one: %q", r.u.PasswordHash)
+	}
+}
+
+func TestChangePasswordPassesBusyThroughUnchanged(t *testing.T) {
+	r := newRig(t, false)
+	r.svc.hasher = busyHasher{}
+	err := r.svc.ChangePassword(ctx, actor.Actor{UserID: r.u.ID, Type: actor.TypeUser, SessionID: r.addSession()}, "old password 1", "brand new password", false)
+	if errs.CodeOf(err) != errs.RateLimited {
+		t.Fatalf("busy hasher must not read as a wrong current password, got %v", err)
 	}
 }

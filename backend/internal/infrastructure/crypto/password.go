@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/argon2"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/socialos/backend/internal/domain/errs"
 )
@@ -33,47 +34,59 @@ var DefaultArgon2 = Argon2Params{Memory: 19 * 1024, Time: 2, Threads: 1, KeyLen:
 // DefaultWait is how long a hash or verify waits for a free slot before it gives up with a retryable error.
 const DefaultWait = 5 * time.Second
 
-// PasswordHasher hashes passwords with argon2id in PHC string format. At most `limit` hash or verify operations run at
-// once, so a burst of logins cannot exhaust memory.
+// DefaultMemoryBudgetKiB is the total argon2 memory that may be in use at once (48 MiB): two new hashes, or one 64 MiB
+// legacy verification on its own. It keeps hashing well inside the 160 MB API container.
+const DefaultMemoryBudgetKiB = 48 * 1024
+
+// PasswordHasher hashes passwords with argon2id in PHC string format. At most `limit` operations run at once and
+// their combined argon2 memory stays within a budget, so a burst of logins cannot exhaust RAM. An operation heavier
+// than the whole budget (an old 64 MiB hash) runs alone.
 type PasswordHasher struct {
-	p    Argon2Params
-	slot chan struct{}
-	wait time.Duration
-	kdf  func(password, salt []byte, time, memory uint32, threads uint8, keyLen uint32) []byte
+	p      Argon2Params
+	slot   chan struct{}
+	mem    *semaphore.Weighted
+	budget int64
+	wait   time.Duration
+	kdf    func(password, salt []byte, time, memory uint32, threads uint8, keyLen uint32) []byte
 }
 
-// NewPasswordHasher returns a hasher with the given parameters that runs at most limit operations at once (min 1).
-func NewPasswordHasher(p Argon2Params, limit int) *PasswordHasher {
+// NewPasswordHasher returns a hasher with the given parameters that runs at most limit operations at once (min 1)
+// within budgetKiB of argon2 memory (<= 0 means DefaultMemoryBudgetKiB).
+func NewPasswordHasher(p Argon2Params, limit int, budgetKiB int64) *PasswordHasher {
 	if limit < 1 {
 		limit = 1
 	}
-	return &PasswordHasher{p: p, slot: make(chan struct{}, limit), wait: DefaultWait, kdf: argon2.IDKey}
+	if budgetKiB <= 0 {
+		budgetKiB = DefaultMemoryBudgetKiB
+	}
+	return &PasswordHasher{p: p, slot: make(chan struct{}, limit), mem: semaphore.NewWeighted(budgetKiB), budget: budgetKiB,
+		wait: DefaultWait, kdf: argon2.IDKey}
 }
 
-// acquire takes a slot, waiting until one frees up, ctx ends or the wait budget runs out. Both failures are retryable.
-func (h *PasswordHasher) acquire(ctx context.Context) (release func(), err error) {
+// acquire takes a slot and memoryKiB of the budget, waiting until both free up, ctx ends or the wait budget runs
+// out. Both failures are retryable.
+func (h *PasswordHasher) acquire(ctx context.Context, memoryKiB uint32) (release func(), err error) {
+	ctx, cancel := context.WithTimeout(ctx, h.wait)
+	defer cancel()
+	busy := func() error { return errs.Wrap(errs.RateLimited, "server is busy, retry shortly", ctx.Err()) }
 	select {
 	case h.slot <- struct{}{}:
-		return func() { <-h.slot }, nil
-	default:
-	}
-	t := time.NewTimer(h.wait)
-	defer t.Stop()
-	select {
-	case h.slot <- struct{}{}:
-		return func() { <-h.slot }, nil
 	case <-ctx.Done():
-		return nil, errs.Wrap(errs.RateLimited, "server is busy, retry shortly", ctx.Err())
-	case <-t.C:
-		return nil, errs.New(errs.RateLimited, "server is busy, retry shortly")
+		return nil, busy()
 	}
+	w := min(int64(memoryKiB), h.budget)
+	if err := h.mem.Acquire(ctx, w); err != nil {
+		<-h.slot
+		return nil, busy()
+	}
+	return func() { h.mem.Release(w); <-h.slot }, nil
 }
 
 var errBadHash = errors.New("crypto: malformed password hash")
 
 // Hash returns $argon2id$v=19$m=..,t=..,p=..$salt$hash.
 func (h *PasswordHasher) Hash(ctx context.Context, password string) (string, error) {
-	release, err := h.acquire(ctx)
+	release, err := h.acquire(ctx, h.p.Memory)
 	if err != nil {
 		return "", err
 	}
@@ -103,7 +116,7 @@ func (h *PasswordHasher) Verify(ctx context.Context, password, encoded string) (
 	if err != nil {
 		return false, errBadHash
 	}
-	release, err := h.acquire(ctx)
+	release, err := h.acquire(ctx, p.Memory)
 	if err != nil {
 		return false, err
 	}
