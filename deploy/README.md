@@ -324,7 +324,7 @@ limit when `docker inspect -f '{{.State.OOMKilled}}' <container>` says `true`.
 ### 13.1 DNS
 
 Section 1 applies unchanged: `app.`, `api.`, `mcp.` (and `s3.` with the bundled MinIO) must resolve to the server before the
-host Caddy can get certificates. With no domain yet, `<ip-with-dashes>.sslip.io` (for example `203-0-113-10.sslip.io`) resolves to
+host Caddy can get certificates. With no domain yet, `<ip-with-dashes>.sslip.io` (the server's IPv4 address with dots written as dashes) resolves to
 that IP and works for a trial; its certificates share Let's Encrypt rate limits with everyone else who uses it, so move to a real
 domain for anything lasting.
 
