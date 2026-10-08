@@ -25,6 +25,7 @@ const (
 )
 
 var errInFlight = errors.New("target is being published by another worker")
+var errTooEarly = errors.New("task fired before the job run_at")
 
 // Publisher executes publish:target jobs.
 type Publisher struct {
@@ -41,6 +42,8 @@ type Publisher struct {
 	clock    port.Clock
 	log      *slog.Logger
 	observe  func(provider, outcome string)
+	queue    Queue
+	sleep    func(ctx context.Context, d time.Duration) error
 }
 
 // Deps bundles Publisher dependencies.
@@ -60,6 +63,10 @@ type Deps struct {
 	// OnOutcome (optional) is called after each settled attempt with
 	// outcome published | failed | retry | needs_review (metrics hook).
 	OnOutcome func(provider, outcome string)
+	// Queue (optional) re-enqueues a task that fires more than EarlyWaitMax before its job's run_at.
+	Queue Queue
+	// Sleep (optional) waits d or until ctx ends; tests inject a fake-clock version.
+	Sleep func(ctx context.Context, d time.Duration) error
 }
 
 // NewPublisher creates the publisher.
@@ -67,7 +74,10 @@ func NewPublisher(d Deps) *Publisher {
 	if d.Log == nil {
 		d.Log = slog.Default()
 	}
-	return &Publisher{targets: d.Targets, posts: d.Posts, jobs: d.Jobs, accounts: d.Accounts, vault: d.Vault,
+	if d.Sleep == nil {
+		d.Sleep = sleepCtx
+	}
+	return &Publisher{queue: d.Queue, sleep: d.Sleep, targets: d.Targets, posts: d.Posts, jobs: d.Jobs, accounts: d.Accounts, vault: d.Vault,
 		media: d.Media, metrics: d.Metrics, registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, log: d.Log, observe: d.OnOutcome}
 }
 
@@ -92,6 +102,9 @@ type run struct {
 // Run executes one publish job. It returns nil when the job is finished
 // (success, permanent failure, or no-op) and a *RetryableError to retry.
 func (p *Publisher) Run(ctx context.Context, pl Payload, ri RetryInfo) error {
+	if proceed, err := p.holdUntilDue(ctx, pl); err != nil || !proceed {
+		return err
+	}
 	r, err := p.begin(ctx, pl)
 	if errors.Is(err, errInFlight) {
 		return &RetryableError{Err: err}
