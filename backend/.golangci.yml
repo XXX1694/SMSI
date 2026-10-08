@@ -8,6 +8,18 @@ run:
 linters:
   # standard = errcheck, govet, ineffassign, staticcheck, unused. Add linters here deliberately.
   default: standard
+  enable:
+    # funlen: 80-line ceiling per function (norm 60). Ratchet: lower it, never raise it. Test files are exempt below.
+    - funlen
+  settings:
+    funlen:
+      lines: 80
+      statements: -1
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - funlen
 
 formatters:
   enable:

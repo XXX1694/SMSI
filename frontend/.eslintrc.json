@@ -5,6 +5,42 @@
   ],
   "rules": {
     "@typescript-eslint/no-explicit-any": "error",
-    "@next/next/no-img-element": "off"
-  }
+    "@next/next/no-img-element": "off",
+    "max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": ["error", { "max": 80, "skipBlankLines": true, "skipComments": true }]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "tests/**"],
+      "rules": {
+        "max-lines": "off",
+        "max-lines-per-function": "off"
+      }
+    },
+    {
+    // debt: split by 2026-11. Explicit list; never raise the global limits, shrink this list instead.
+      "files": ["src/lib/demo/engine.ts", "src/lib/demo/seed.ts"],
+      "rules": {
+        "max-lines": "off",
+        "max-lines-per-function": "off"
+      }
+    },
+    {
+      // debt: split by 2026-11. Components over the 80-line function ceiling (file length is fine).
+      "files": [
+        "src/components/auth-form.tsx",
+        "src/components/calendar-view.tsx",
+        "src/components/composer/composer-view.tsx",
+        "src/components/composer/media-section.tsx",
+        "src/components/developer/audit-view.tsx",
+        "src/components/media-view.tsx",
+        "src/components/posts/post-detail.tsx",
+        "src/components/posts/posts-view.tsx",
+        "src/components/telegram-connect.tsx"
+      ],
+      "rules": {
+        "max-lines-per-function": "off"
+      }
+    }
+  ]
 }
