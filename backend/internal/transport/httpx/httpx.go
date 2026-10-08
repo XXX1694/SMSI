@@ -41,7 +41,7 @@ func StatusOf(c errs.Code) int {
 		return http.StatusBadRequest
 	case errs.Unauthenticated:
 		return http.StatusUnauthorized
-	case errs.Forbidden, errs.InsufficientScope:
+	case errs.Forbidden, errs.InsufficientScope, errs.EmailNotVerified:
 		return http.StatusForbidden
 	case errs.NotFound:
 		return http.StatusNotFound

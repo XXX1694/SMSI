@@ -31,6 +31,8 @@ type Data struct {
 	Product   string
 	Link      string
 	ExpiresIn string
+	// KeysRevoked tells the password_changed notice whether API keys and MCP connections were revoked too.
+	KeysRevoked bool
 }
 
 var subjects = map[string]string{

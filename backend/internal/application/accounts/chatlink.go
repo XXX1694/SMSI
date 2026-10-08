@@ -61,6 +61,9 @@ func (s *Service) StartChatLink(ctx context.Context, a actor.Actor, providerName
 	if err := a.RequireSession(); err != nil {
 		return nil, err
 	}
+	if err := a.RequireVerified(); err != nil {
+		return nil, err
+	}
 	_, linker, err := s.chatLinker(providerName)
 	if err != nil {
 		return nil, err

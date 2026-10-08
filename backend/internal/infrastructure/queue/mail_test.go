@@ -42,7 +42,7 @@ func TestMailTaskRoundTripsThroughHandler(t *testing.T) {
 		t.Fatalf("MaxRetry=%d Retention=%ds, want 5 and 0", maxRetry, retention)
 	}
 	m := &fakeMailer{}
-	if err := MailHandler(m)(context.Background(), task); err != nil {
+	if err := MailHandler(m, nil)(context.Background(), task); err != nil {
 		t.Fatal(err)
 	}
 	if len(m.got) != 1 || m.got[0] != in {
@@ -53,11 +53,11 @@ func TestMailTaskRoundTripsThroughHandler(t *testing.T) {
 func TestMailHandlerErrors(t *testing.T) {
 	m := &fakeMailer{err: errors.New("smtp down")}
 	task, _, _ := NewMailTask("q", port.Message{To: "a@example.com"})
-	if err := MailHandler(m)(context.Background(), task); err == nil || errors.Is(err, asynq.SkipRetry) {
+	if err := MailHandler(m, nil)(context.Background(), task); err == nil || errors.Is(err, asynq.SkipRetry) {
 		t.Fatalf("send failures must be retried, got %v", err)
 	}
 	bad := asynq.NewTask(TypeMailSend, []byte("{"))
-	if err := MailHandler(m)(context.Background(), bad); !errors.Is(err, asynq.SkipRetry) {
+	if err := MailHandler(m, nil)(context.Background(), bad); !errors.Is(err, asynq.SkipRetry) {
 		t.Fatalf("a corrupt payload must not be retried, got %v", err)
 	}
 }

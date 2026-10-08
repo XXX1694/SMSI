@@ -62,6 +62,7 @@ type App struct {
 	Reconciler *scheduler.Reconciler
 	APILimiter *middleware.Limiter
 	AuthLimit  *middleware.Limiter
+	MailLimit  *middleware.Limiter
 }
 
 // Build connects to dependencies and wires the application.
@@ -115,6 +116,17 @@ func buildMailer(cfg *config.Config, log *slog.Logger, override port.Mailer) (po
 		Username: cfg.SMTPUsername, Password: cfg.SMTPPassword, From: cfg.MailFrom})
 }
 
+// requireVerification: unverified owners are restricted only when mail can really be
+// delivered. With MAIL_PROVIDER=log nobody could ever receive the link.
+func requireVerification(cfg *config.Config) bool { return cfg.MailProvider == config.MailProviderSMTP }
+
+func mailDelivery(cfg *config.Config) string {
+	if cfg.MailProvider == config.MailProviderSMTP {
+		return config.MailProviderSMTP
+	}
+	return config.MailProviderLog
+}
+
 func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Registry {
 	reg := provider.NewRegistry(stubs.All()...)
 	reg.Register(linkedin.New(linkedin.Config{ClientID: cfg.LinkedInID, ClientSecret: cfg.LinkedInSecret,
@@ -149,12 +161,15 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	mediaRepo, keyRepo, analyticsRepo := postgres.NewMedia(db), postgres.NewAPIKeys(db), postgres.NewAnalytics(db)
 
 	authSvc, err := auth.NewService(auth.Deps{Users: postgres.NewUsers(db), Sessions: postgres.NewSessions(db), APIKeys: keyRepo,
-		Hasher: hasher, Tx: db, Audit: auditSvc, Clock: clk, SessionTTL: cfg.SessionTTL})
+		Hasher: hasher, Tx: db, Audit: auditSvc, Clock: clk, SessionTTL: cfg.SessionTTL,
+		Tokens: postgres.NewEmailTokens(db), Mail: a.MailQueue, Forgot: a.Queue.ForgotQueue(), Log: log, WebBaseURL: cfg.WebBaseURL,
+		RequireVerification: requireVerification(cfg)})
 	if err != nil {
 		return fmt.Errorf("auth service: %w", err)
 	}
 	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Links: postgres.NewLinkCodes(db),
-		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL})
+		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL,
+		Gate: verifiedOwners{users: postgres.NewUsers(db), enforce: requireVerification(cfg)}})
 	analyticsSvc := analytics.NewService(analyticsRepo, clk)
 	a.Services = transport.Services{
 		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc,
@@ -172,6 +187,7 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	a.Reconciler = scheduler.NewReconciler(a.Publisher, a.Queue)
 	a.APILimiter = middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 	a.AuthLimit = middleware.NewLimiter(cfg.AuthRateRPS, cfg.AuthRateBurst)
+	a.MailLimit = middleware.NewLimiter(1.0/60, 3)
 	return nil
 }
 
@@ -203,6 +219,7 @@ func (a *App) Router() http.Handler {
 		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
 		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, GatewaySecret: a.Cfg.GatewaySecret,
 		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
+		MailLimiter: a.MailLimit, MailDelivery: mailDelivery(a.Cfg), RequireVerification: requireVerification(a.Cfg),
 		TelegramWebhookSecret: webhookSecret,
 		Ready: []transport.ReadyCheck{
 			{Name: "postgres", Check: a.DB.Ping},

@@ -26,6 +26,7 @@ type Service struct {
 	clock           port.Clock
 	enc             port.Encryptor
 	redirectBaseURL string
+	gate            OwnerGate
 }
 
 // Deps bundles dependencies.
@@ -41,6 +42,8 @@ type Deps struct {
 	Enc      port.Encryptor
 	// RedirectBaseURL is the public base of the API, e.g. https://app.example.com
 	RedirectBaseURL string
+	// Gate, when set, is consulted before any account is stored (see OwnerGate).
+	Gate OwnerGate
 }
 
 // NewService creates the service.
@@ -50,7 +53,7 @@ func NewService(d Deps) *Service {
 		log = slog.Default()
 	}
 	return &Service{repo: d.Repo, states: d.States, links: d.Links, log: log, vault: NewVault(d.Repo, d.Enc), registry: d.Registry,
-		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL}
+		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL, gate: d.Gate}
 }
 
 // Vault exposes credential storage to other use cases (scheduler).
@@ -125,6 +128,13 @@ func (s *Service) MarkExpired(ctx context.Context, a actor.Actor, acc *socialacc
 }
 
 func (s *Service) connectAccount(ctx context.Context, a actor.Actor, acc *socialaccount.Account, tok *provider.Token) error {
+	// The owner may have been verified when the flow began and not now (verification was switched on in between),
+	// and the system actor of a chat link carries no verification of its own.
+	if s.gate != nil {
+		if err := s.gate.RequireVerifiedOwner(ctx, acc.UserID); err != nil {
+			return err
+		}
+	}
 	return s.tx.InTx(ctx, func(ctx context.Context) error {
 		if err := s.repo.Upsert(ctx, acc); err != nil {
 			return err

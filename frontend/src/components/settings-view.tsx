@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
+import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/states';
 import { Field, Input, Select } from '@/components/ui/input';
 import { browserTimezone, formatDateTime, isValidTimezone } from '@/lib/time';
@@ -29,7 +30,12 @@ export function SettingsView() {
           <dt className="text-muted-foreground">Name</dt>
           <dd>{user?.display_name}</dd>
           <dt className="text-muted-foreground">Email</dt>
-          <dd>{user?.email}</dd>
+          <dd>
+            {user?.email}
+            {user && user.verification_enforced ? (
+              <span className="ml-2 text-xs text-muted-foreground">{user.email_verified ? 'verified' : 'not verified'}</span>
+            ) : null}
+          </dd>
         </dl>
       </Section>
       <Section title="Preferences">
@@ -56,7 +62,9 @@ export function SettingsView() {
         <Field label="Session" htmlFor="sess" hint="You are signed in with a secure session cookie. Sign out from the sidebar.">
           <Input id="sess" value="Active" readOnly disabled />
         </Field>
-        <p className="text-xs text-muted-foreground">Password changes are session-only and not yet available in this build.</p>
+      </Section>
+      <Section title="Password">
+        <PasswordForm />
       </Section>
     </div>
   );

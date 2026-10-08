@@ -17,6 +17,9 @@ import { createServer } from 'node:http';
 import { randomBytes, randomUUID } from 'node:crypto';
 
 const PORT = Number(process.env.PORT ?? 8080);
+// MOCK_VERIFICATION=enforced starts every new user unverified and restricted (the server with MAIL_PROVIDER=smtp);
+// MOCK_VERIFICATION=log mimics MAIL_PROVIDER=log (no restrictions, but the "mail is off" notice shows).
+const VERIFICATION = process.env.MOCK_VERIFICATION ?? '';
 const LINK_DELAY_MS = Number(process.env.MOCK_LINK_DELAY_MS ?? 5000);
 const LINK_TTL_S = Number(process.env.MOCK_LINK_TTL_SECONDS ?? 900);
 const MAX_ACTIVE_LINKS = 3;
@@ -45,7 +48,7 @@ const sessions = new Map();
 const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [], links: [] };
 
 function addUser(email, password, display_name) {
-  const u = { id: randomUUID(), email, password, display_name };
+  const u = { id: randomUUID(), email, password, display_name, verified: VERIFICATION !== 'enforced' };
   users.set(email, u);
   return u;
 }
@@ -109,7 +112,12 @@ const fail = (res, status, code, message) => send(res, status, { error: { code, 
 const cookies = (req) => Object.fromEntries((req.headers.cookie ?? '').split(';').map((c) => c.trim().split('=')).filter((p) => p[0]).map(([k, ...v]) => [k, decodeURIComponent(v.join('='))]));
 const readBody = (req) => new Promise((resolve) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => resolve(Buffer.concat(c))); });
 const sessionCookies = (s) => [`socialos_session=${s.token}; Path=/; HttpOnly; SameSite=Lax`, `socialos_csrf=${s.csrf}; Path=/; SameSite=Lax`];
-const meBody = (u, s) => ({ id: u.id, email: u.email, display_name: u.display_name, csrf_token: s.csrf, scopes: ALL_SCOPES });
+const meBody = (u, s) => ({
+  id: u.id, email: u.email, display_name: u.display_name, csrf_token: s.csrf, scopes: ALL_SCOPES,
+  user: { id: u.id, email: u.email, display_name: u.display_name, email_verified: u.verified !== false, plan: 'free' },
+  verification_enforced: VERIFICATION === 'enforced', mail_delivery: VERIFICATION === 'enforced' ? 'smtp' : 'log',
+});
+const badLink = (res) => fail(res, 400, 'VALIDATION_ERROR', 'link is invalid or has expired');
 
 function newSession(u) {
   const s = { token: randomBytes(24).toString('hex'), csrf: randomBytes(16).toString('hex'), userId: u.id };
@@ -175,6 +183,20 @@ async function handle(req, res) {
     return send(res, 200, meBody(u, s), { 'Set-Cookie': sessionCookies(s) });
   }
 
+  // Mail-driven flows. No mail is sent: the token "valid-token" works, "expired" and anything else is a 400.
+  if (path === '/auth/verify-email' && m === 'POST') {
+    if (body.token !== 'valid-token') return badLink(res);
+    const sessUser = sessions.get(cookies(req).socialos_session ?? '');
+    if (sessUser) [...users.values()].filter((x) => x.id === sessUser.userId).forEach((x) => { x.verified = true; });
+    return send(res, 200, { email_verified: true });
+  }
+  if (path === '/auth/password/forgot' && m === 'POST') return send(res, 202, { status: 'accepted', delivery: VERIFICATION === 'enforced' ? 'smtp' : 'log' });
+  if (path === '/auth/password/reset' && m === 'POST') {
+    if (body.token !== 'valid-token') return badLink(res);
+    if (String(body.password ?? '').length < 8) return fail(res, 400, 'VALIDATION_ERROR', 'password must be 8-128 characters');
+    return send(res, 204);
+  }
+
   // ---- authenticated
   const sess = sessions.get(cookies(req).socialos_session ?? '');
   const bearer = (req.headers.authorization ?? '').startsWith('Bearer sk_');
@@ -186,6 +208,15 @@ async function handle(req, res) {
 
   if (path === '/auth/logout' && m === 'POST') { sessions.delete(sess?.token); return send(res, 204, undefined, { 'Set-Cookie': ['socialos_session=; Path=/; Max-Age=0'] }); }
   if (path === '/me') return send(res, 200, meBody(user, sess ?? { csrf: '' }));
+  if (path === '/auth/verify-email/resend' && m === 'POST') {
+    return user.verified === false ? send(res, 202, { status: 'accepted', delivery: 'smtp' }) : fail(res, 409, 'CONFLICT', 'email is already verified');
+  }
+  if (path === '/auth/password/change' && m === 'POST') {
+    if (body.current_password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'current password is incorrect');
+    if (String(body.new_password ?? '').length < 8) return fail(res, 400, 'VALIDATION_ERROR', 'password must be 8-128 characters');
+    user.password = body.new_password;
+    return send(res, 204);
+  }
 
   if (path === '/social/providers') return send(res, 200, { items: PROVIDERS });
   if (path === '/social/accounts' && m === 'GET') return send(res, 200, { items: mine(db.accounts).map(({ user_id, ...a }) => a), next_cursor: null });

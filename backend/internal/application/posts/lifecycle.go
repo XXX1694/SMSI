@@ -65,6 +65,9 @@ func (s *Service) Schedule(ctx context.Context, a actor.Actor, id uuid.UUID, at 
 	if err := a.Require(apikey.PostsSchedule); err != nil {
 		return nil, err
 	}
+	if err := a.RequireVerified(); err != nil {
+		return nil, err
+	}
 	if err := s.validateScheduleTime(at); err != nil {
 		return nil, err
 	}
@@ -150,6 +153,9 @@ func (s *Service) PublishNow(ctx context.Context, a actor.Actor, id uuid.UUID) (
 	if err := a.Require(apikey.PostsPublish); err != nil {
 		return nil, err
 	}
+	if err := a.RequireVerified(); err != nil {
+		return nil, err
+	}
 	err := s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
 		p, err := s.repo.GetForUpdate(ctx, a.UserID, id)
 		if err != nil {
@@ -205,6 +211,9 @@ func (s *Service) Retry(ctx context.Context, a actor.Actor, id uuid.UUID, in Ret
 		}
 	}
 	if err := a.Require(scope); err != nil {
+		return nil, err
+	}
+	if err := a.RequireVerified(); err != nil {
 		return nil, err
 	}
 	err := s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {

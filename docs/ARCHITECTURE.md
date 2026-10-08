@@ -79,6 +79,8 @@ erDiagram
   users ||--o{ api_keys : owns
   users ||--o{ mcp_connections : owns
   users ||--o{ telegram_link_codes : requests
+  users ||--o{ email_tokens : "is mailed"
+  users ||--o{ data_exports : requests
   telegram_link_codes }o--o| social_accounts : "connected"
   users ||--o{ audit_logs : generates
   social_accounts ||--|| oauth_credentials : "encrypted tokens"
@@ -94,7 +96,11 @@ erDiagram
 ```
 
 ```sql
-users(id, email citext unique, password_hash, display_name, status)
+users(id, email citext unique, password_hash, display_name, status ['active','disabled','deleted'],
+      email_verified_at null, terms_accepted_at null, terms_version, plan default 'free', deleted_at null)   -- migration 00003
+email_tokens(id, user_id FK, purpose ['verify_email','reset_password'], token_hash unique, email citext, expires_at, used_at null)   -- migration 00003; only the SHA-256 of the token is stored; a newer token of the same purpose retires older ones
+data_exports(id, user_id FK, status ['pending','running','ready','failed','expired'], storage_key, size_bytes, error_code, expires_at null)   -- migration 00003, used by the export work; one active export per user
+account_deletions(id, user_id (no FK), requested_at, purged_at null, counts jsonb)   -- migration 00003, used by the deletion work; no PII on purpose
 sessions(id, user_id, token_hash unique, csrf_token, expires_at, user_agent, ip)
 oauth_states(id, user_id, provider, state_hash unique, code_verifier, redirect_after, expires_at, used_at)
 social_accounts(id, user_id, provider, provider_account_id, username, display_name, avatar_url,
@@ -102,7 +108,7 @@ social_accounts(id, user_id, provider, provider_account_id, username, display_na
                 unique(user_id, provider, provider_account_id))
 telegram_link_codes(id, user_id FK, code_hash unique, expires_at, used_at, chat_id, social_account_id FK null, created_at, updated_at)   -- migration 00002; only the SHA-256 of the code is stored
 oauth_credentials(id, social_account_id unique, access_token_enc, refresh_token_enc, expires_at, refresh_expires_at, key_version)
-posts(id, user_id, title, status, scheduled_at, published_at, created_by ['user','api_key'], created_by_ref, deleted_at)
+posts(id, user_id, title, status, scheduled_at, published_at, created_by ['user','api_key'], created_by_ref, deleted_at, quota_counted_at null)   -- quota_counted_at: migration 00003, used by the quota work
 post_targets(id, post_id, user_id, social_account_id, platform, content, status, external_post_id,
              external_url, published_at, error_code, error_message, idempotency_key unique, attempt_count)
 media(id, user_id, kind ['image','video'], mime_type, size_bytes, storage_key, original_name, width, height, status, sha256)
@@ -115,7 +121,7 @@ mcp_connections(id, user_id, api_key_id, name, client_name, last_seen_at, revoke
 audit_logs(id, user_id, actor_type ['user','api_key','scheduler','system'], actor_id, actor_label, action, resource_type, resource_id, metadata jsonb, request_id, ip)
 analytics(id, user_id, social_account_id, post_target_id null, metric, value bigint, captured_at)   -- MVP: table + endpoint, filled by adapters that CanAnalytics (none yet) and by internal counters
 ```
-Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`.
+Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`, `email_tokens(user_id, purpose, created_at desc)`, `email_tokens(expires_at)`.
 
 ## 4. REST API (`/api/v1`)
 
@@ -123,11 +129,28 @@ Error format everywhere:
 ```json
 {"error":{"code":"SOCIAL_ACCOUNT_EXPIRED","message":"LinkedIn authorization has expired","request_id":"…"}}
 ```
-Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
+Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`; also `EMAIL_NOT_VERIFIED` when the server enforces email verification and the owner has not verified, see Auth), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
 Pagination: `?limit=&cursor=` → `{"items":[…],"next_cursor":null|"…"}`. Times are RFC 3339 UTC.
 
 ### Auth
 `POST /auth/register {email,password,display_name}` · `POST /auth/login` · `POST /auth/logout` · `GET /me`
+
+Email verification and password recovery (mail goes through the queued mail port, D-006; links carry the token in the URL fragment, `{WEB_BASE_URL}/verify-email#token=…` and `/reset-password#token=…`):
+
+| Endpoint | Auth | Result |
+|---|---|---|
+| `POST /auth/verify-email {token}` | public | `200 {"email_verified":true}`; unknown, used or expired token: `400 VALIDATION_ERROR` "link is invalid or has expired" |
+| `POST /auth/verify-email/resend` | session | `202 {"status":"accepted","delivery":"log"\|"smtp"}`; already verified `409`; inside the 60 s cooldown `429` |
+| `POST /auth/password/forgot {email}` | public | always `202 {"status":"accepted","delivery":"log"\|"smtp"}`, identical for known, unknown and malformed addresses; the handler only validates and enqueues an `auth:forgot` task, the worker does the lookup and sends the mail |
+| `POST /auth/password/reset {token,password,revoke_keys?}` | public | `204`; sets the password, **revokes every session**, marks the email verified; API keys and MCP connections are revoked only with `revoke_keys: true`; invalid token `400`; a weak password is rejected without burning the token |
+| `POST /auth/password/change {current_password,new_password,revoke_keys?}` | session | `204`; revokes every session **except the current one** (and keys only with `revoke_keys: true`); wrong current password `400` |
+
+Tokens: 32 random bytes, stored as SHA-256, single use (atomic consume), TTL 48 h for verification and 30 min for reset; a new token retires the older ones of the same purpose, and at most 10 are issued per user and purpose per rolling 24 h (extra requests get the same response and no mail). If the last delivery retry fails, the token behind the mail is retired. Public endpoints sit behind the auth limiter plus a mail limiter (1 per minute, burst 3, per client). Audit actions: `user.email_verified`, `user.password_reset`, `user.password_changed` (metadata never contains tokens). A `password_changed` notice mail follows both password changes.
+
+**Gating.** Verification is enforced only when `MAIL_PROVIDER=smtp` (otherwise nobody could receive the link). An unverified owner then gets `403 EMAIL_NOT_VERIFIED` on: starting an OAuth or Telegram connection, completing an OAuth or Telegram connection (the owner is checked at that moment), creating a scheduled post, scheduling, publishing or retrying a post, editing a post that is already scheduled, and creating API keys or MCP connections (sessions and API keys alike). Drafts, reading and everything else stay available. The scheduler and system actors are never blocked, so work a verified user already queued still publishes. Existing users start unverified (`email_verified_at` NULL); with `MAIL_PROVIDER=log` nothing is gated.
+
+`GET /me` (also the body of register and login) adds `user.email_verified` (bool), `user.plan`, and top level `verification_enforced` (bool) and `mail_delivery` (`"log"` or `"smtp"`).
+
 Browser mutating requests need header `X-CSRF-Token` (value returned by `GET /me` / login in `csrf_token`, also in cookie `socialos_csrf`). API-key requests are exempt.
 
 ### Social

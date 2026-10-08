@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -29,6 +30,7 @@ import (
 	"github.com/socialos/backend/internal/infrastructure/queue"
 	"github.com/socialos/backend/internal/infrastructure/storage"
 	"github.com/socialos/backend/internal/testutil"
+	"github.com/socialos/backend/internal/transport/middleware"
 )
 
 type env struct {
@@ -54,6 +56,10 @@ type envOpts struct {
 	storage media.Storage
 	// mailer replaces the log mailer.
 	mailer port.Mailer
+	// logger replaces the discarding test logger (e.g. to assert nothing sensitive is logged).
+	logger *slog.Logger
+	// realMailLimit keeps the production mail-endpoint limiter; by default tests get a permissive one.
+	realMailLimit bool
 }
 
 func newEnv(t *testing.T, o envOpts) *env {
@@ -82,7 +88,11 @@ func newEnv(t *testing.T, o envOpts) *env {
 	if o.mutate != nil {
 		o.mutate(cfg)
 	}
-	a, err := app.Build(context.Background(), cfg, testutil.Logger(), app.Overrides{
+	log := testutil.Logger()
+	if o.logger != nil {
+		log = o.logger
+	}
+	a, err := app.Build(context.Background(), cfg, log, app.Overrides{
 		Storage: store, Providers: o.providers, Mailer: o.mailer,
 		Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}),
 	})
@@ -91,12 +101,15 @@ func newEnv(t *testing.T, o envOpts) *env {
 	}
 	t.Cleanup(a.Close)
 	e.app = a
+	if !o.realMailLimit {
+		a.MailLimit = middleware.NewLimiter(1000, 1000)
+	}
 	e.srv.Config.Handler = a.Router()
 	e.srv.Start()
 	t.Cleanup(e.srv.Close)
 	if o.startWorker {
 		w := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: 4, DelayedCheck: 200 * time.Millisecond,
-			RetryDelay: o.retryDelay, Mailer: a.Mailer}, a.Publisher, testutil.Logger())
+			RetryDelay: o.retryDelay, Mailer: a.Mailer, Auth: a.Services.Auth}, a.Publisher, testutil.Logger())
 		if err := w.Start(); err != nil {
 			t.Fatalf("start worker: %v", err)
 		}

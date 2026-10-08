@@ -42,6 +42,10 @@ type meResp struct {
 	CSRFToken *string   `json:"csrf_token"`
 	AuthType  string    `json:"auth_type"`
 	APIKey    *keyBrief `json:"api_key"`
+	// VerificationEnforced: unverified owners get 403 EMAIL_NOT_VERIFIED on connect, schedule, publish and key creation.
+	VerificationEnforced bool `json:"verification_enforced"`
+	// MailDelivery is "smtp" when mail really leaves the server and "log" when it is only logged.
+	MailDelivery string `json:"mail_delivery"`
 
 	ID          string `json:"id"`
 	Email       string `json:"email"`
@@ -53,9 +57,10 @@ type keyBrief struct {
 	Name string `json:"name"`
 }
 
-func meFor(u *user.User, act actor.Actor, csrf string) meResp {
+func (a *API) meFor(u *user.User, act actor.Actor, csrf string) meResp {
 	resp := meResp{User: toUser(u), AuthType: "session", Scopes: apikey.Strings(act.EffectiveScopes()),
-		ID: u.ID.String(), Email: u.Email, DisplayName: u.DisplayName}
+		ID: u.ID.String(), Email: u.Email, DisplayName: u.DisplayName,
+		VerificationEnforced: a.opt.RequireVerification, MailDelivery: a.opt.MailDelivery}
 	if csrf != "" && act.Type != actor.TypeAPIKey {
 		resp.CSRFToken = &csrf
 	}
@@ -79,7 +84,7 @@ func (a *API) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setSessionCookies(w, sess)
-	httpx.JSON(w, http.StatusCreated, meFor(u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken))
+	httpx.JSON(w, http.StatusCreated, a.meFor(u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken))
 }
 
 func (a *API) login(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +99,7 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setSessionCookies(w, sess)
-	httpx.JSON(w, http.StatusOK, meFor(u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken))
+	httpx.JSON(w, http.StatusOK, a.meFor(u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken))
 }
 
 func (a *API) logout(w http.ResponseWriter, r *http.Request) {
@@ -113,5 +118,5 @@ func (a *API) me(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, meFor(u, act, middleware.CSRFToken(r.Context())))
+	httpx.JSON(w, http.StatusOK, a.meFor(u, act, middleware.CSRFToken(r.Context())))
 }

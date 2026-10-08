@@ -23,6 +23,14 @@ type ServerConfig struct {
 	RetryDelay func(n int, err error) time.Duration
 	// Mailer, when set, makes this worker deliver mail:send tasks.
 	Mailer port.Mailer
+	// Auth, when set, makes this worker run the password-reset lookup and retire the links of undelivered mail.
+	Auth AuthTasks
+}
+
+// AuthTasks is what the worker needs from the auth service.
+type AuthTasks interface {
+	ProcessForgot(ctx context.Context, email string) error
+	RetireMailToken(ctx context.Context, tokenID string) error
 }
 
 // Server runs publish handlers.
@@ -58,7 +66,14 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(TypePublishTarget, Handler(pub))
 	if cfg.Mailer != nil {
-		mux.HandleFunc(TypeMailSend, MailHandler(cfg.Mailer))
+		var retire func(context.Context, string) error
+		if cfg.Auth != nil {
+			retire = cfg.Auth.RetireMailToken
+		}
+		mux.HandleFunc(TypeMailSend, MailHandler(cfg.Mailer, retire))
+	}
+	if cfg.Auth != nil {
+		mux.HandleFunc(TypeAuthForgot, ForgotHandler(cfg.Auth.ProcessForgot))
 	}
 	return &Server{srv: srv, mux: mux}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/socialos/backend/internal/application/accounts"
 	"github.com/socialos/backend/internal/application/media"
 	"github.com/socialos/backend/internal/domain/actor"
+	"github.com/socialos/backend/internal/domain/errs"
 	dmedia "github.com/socialos/backend/internal/domain/media"
 	"github.com/socialos/backend/internal/domain/socialaccount"
 	"github.com/socialos/backend/internal/infrastructure/postgres"
@@ -28,6 +29,26 @@ func (a accountsAdapter) Get(ctx context.Context, userID, id uuid.UUID) (*social
 
 func (a accountsAdapter) MarkExpired(ctx context.Context, act actor.Actor, acc *socialaccount.Account, reason string) error {
 	return a.svc.MarkExpired(ctx, act, acc, reason)
+}
+
+// verifiedOwners satisfies accounts.OwnerGate: with verification enforced, an owner must have a verified address.
+type verifiedOwners struct {
+	users   *postgres.Users
+	enforce bool
+}
+
+func (v verifiedOwners) RequireVerifiedOwner(ctx context.Context, userID uuid.UUID) error {
+	if !v.enforce {
+		return nil
+	}
+	u, err := v.users.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !u.EmailVerified() {
+		return errs.New(errs.EmailNotVerified, "verify your email address to use this feature")
+	}
+	return nil
 }
 
 // mediaAdapter satisfies scheduler.MediaStore.

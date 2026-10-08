@@ -34,6 +34,9 @@ func (s *Service) Create(ctx context.Context, a actor.Actor, in CreateInput) (*p
 		if err := a.Require(apikey.PostsSchedule); err != nil {
 			return nil, err
 		}
+		if err := a.RequireVerified(); err != nil {
+			return nil, err
+		}
 		if err := s.validateScheduleTime(*in.ScheduledAt); err != nil {
 			return nil, err
 		}
@@ -108,6 +111,11 @@ func (s *Service) Update(ctx context.Context, a actor.Actor, id uuid.UUID, in Up
 		}
 		if !p.Status.Editable() {
 			return nil, errs.Newf(errs.InvalidStateTransition, "post in status %s cannot be edited", p.Status)
+		}
+		if p.Status == post.StatusScheduled {
+			if err := a.RequireVerified(); err != nil {
+				return nil, err
+			}
 		}
 		if in.ScheduledAt != nil && p.Status != post.StatusScheduled {
 			return nil, errs.Validationf("use POST /posts/{id}/schedule to schedule a draft").WithField("scheduled_at", "post is not scheduled")

@@ -19,6 +19,7 @@ export function redact(s: string): string {
 
 const HINTS: Record<string, string> = {
   INSUFFICIENT_SCOPE: "The API key lacks the scope this action needs. Ask the user to grant it in the SocialOS developer portal.",
+  EMAIL_NOT_VERIFIED: "The SocialOS account has not verified its email address, so this action is blocked. Ask the user to open the verification link in their email (it can be resent from the SocialOS banner).",
   FORBIDDEN: "The API key is not allowed to do this.",
   UNAUTHENTICATED: "The API key is invalid, expired or revoked.",
   SOCIAL_ACCOUNT_EXPIRED: "The social account's authorization expired. The user must reconnect it in SocialOS (this cannot be done through the API).",

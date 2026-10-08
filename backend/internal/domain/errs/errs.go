@@ -16,6 +16,7 @@ const (
 	Unauthenticated        Code = "UNAUTHENTICATED"
 	Forbidden              Code = "FORBIDDEN"
 	InsufficientScope      Code = "INSUFFICIENT_SCOPE"
+	EmailNotVerified       Code = "EMAIL_NOT_VERIFIED"
 	NotFound               Code = "NOT_FOUND"
 	InvalidStateTransition Code = "INVALID_STATE_TRANSITION"
 	Conflict               Code = "CONFLICT"

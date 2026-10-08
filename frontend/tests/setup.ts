@@ -15,3 +15,12 @@ if (dom) {
 }
 
 afterEach(() => cleanup());
+
+// jsdom has no ResizeObserver; Radix checkboxes inside a <form> measure themselves with it.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

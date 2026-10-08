@@ -11,6 +11,9 @@ type Message struct {
 	Text     string
 	HTML     string
 	Template string
+	// TokenID names the stored one-time token behind the link in the body (never the raw token). It is not sent;
+	// the queue uses it to retire the link when delivery is finally abandoned.
+	TokenID string
 }
 
 // Mailer delivers a message synchronously. It runs in the worker.

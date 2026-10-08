@@ -16,11 +16,12 @@ type Users struct{ db *DB }
 // NewUsers creates the repo.
 func NewUsers(db *DB) *Users { return &Users{db: db} }
 
-const userCols = `id, email, password_hash, display_name, status, created_at`
+const userCols = `id, email, password_hash, display_name, status, created_at, email_verified_at, plan, deleted_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*user.User, error) {
 	var u user.User
-	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.CreatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.CreatedAt,
+		&u.EmailVerifiedAt, &u.Plan, &u.DeletedAt); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -51,6 +52,18 @@ func (r *Users) GetByEmail(ctx context.Context, email string) (*user.User, error
 func (r *Users) GetByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
 	u, err := scanUser(r.db.q(ctx).QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1`, id))
 	return u, mapErr(err, "user")
+}
+
+// SetPassword replaces the user's password hash.
+func (r *Users) SetPassword(ctx context.Context, id uuid.UUID, hash string) error {
+	tag, err := r.db.q(ctx).Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1`, id, hash)
+	return mustAffect(tag, err, "user")
+}
+
+// MarkEmailVerified records the verification time once; later calls keep the first time.
+func (r *Users) MarkEmailVerified(ctx context.Context, id uuid.UUID, at time.Time) error {
+	tag, err := r.db.q(ctx).Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, $2) WHERE id = $1`, id, at)
+	return mustAffect(tag, err, "user")
 }
 
 // Sessions implements auth.Sessions.
@@ -87,5 +100,11 @@ func (r *Sessions) Delete(ctx context.Context, userID, id uuid.UUID) error {
 // DeleteExpired purges expired sessions (system).
 func (r *Sessions) DeleteExpired(ctx context.Context, now time.Time) (int64, error) {
 	tag, err := r.db.q(ctx).Exec(ctx, `DELETE FROM sessions WHERE expires_at <= $1`, now)
+	return tag.RowsAffected(), mapErr(err, "session")
+}
+
+// DeleteAllForUser removes the user's sessions except `except` (uuid.Nil keeps none).
+func (r *Sessions) DeleteAllForUser(ctx context.Context, userID, except uuid.UUID) (int64, error) {
+	tag, err := r.db.q(ctx).Exec(ctx, `DELETE FROM sessions WHERE user_id = $1 AND id <> $2`, userID, except)
 	return tag.RowsAffected(), mapErr(err, "session")
 }
