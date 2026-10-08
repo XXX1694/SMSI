@@ -1,4 +1,5 @@
 /** Timezone helpers built on Intl only (no date library). */
+import { addDays } from '@/lib/calendar';
 
 export function browserTimezone(): string {
   try {
@@ -84,10 +85,8 @@ export function zonedToUtcIso(date: string, time: string, tz: string): string | 
 export function zonedDayRangeIso(from: string, to: string, tz: string): { from?: string; to?: string } {
   const start = from ? zonedToUtcIso(from, '00:00', tz) : null;
   let end: string | null = null;
-  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(to);
-  if (dm) {
-    const next = new Date(Date.UTC(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]) + 1)).toISOString().slice(0, 10);
-    const nextStart = zonedToUtcIso(next, '00:00', tz);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    const nextStart = zonedToUtcIso(addDays(to, 1), '00:00', tz);
     if (nextStart) end = new Date(new Date(nextStart).getTime() - 1000).toISOString().replace('.000Z', 'Z');
   }
   return { from: start ?? undefined, to: end ?? undefined };

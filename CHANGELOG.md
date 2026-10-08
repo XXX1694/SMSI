@@ -13,6 +13,11 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.
 - Database migration `00003` also prepares plans, quotas, data export and account deletion; it needs no manual step.
 
+### Fixed
+
+- The Posts date filter now uses the timezone chosen in Settings instead of the browser's, so "From" and "To" cover whole days where you expect them.
+- Colour contrast: unsupported-network badges and the dark-mode "Scheduled" badge now meet WCAG AA (axe `color-contrast` is clean in light and dark). The dark accent is slightly lighter, in the app and on the site.
+
 ## [0.1.0] - 2026-10-09
 
 First release: the MVP, ready to self-host on one server.
