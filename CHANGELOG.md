@@ -16,6 +16,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Connect a network with a pasted credential: `POST /api/v1/social/accounts/token` and the provider capability fields `connect_fields`, `max_image_bytes` and `requires_title`. It needs the new critical API-key scope `social:connect`, which is never in a default set (D-009).
 - Posts are checked against the stricter of the network limits and the account's own limits, and networks that need a title reject posts without one.
 - SSRF-safe HTTP client for hosts users supply (D-010).
+- Bluesky: connect with a handle and an app password, publish text with link and hashtag facets and up to 4 images, delete, and resolve unknown outcomes through a deterministic record key. See `docs/integrations/bluesky.md`.
 - Stub notes for Reddit, Medium and Hashnode; the X note now says the API is pay-per-use.
 
 ### Changed
