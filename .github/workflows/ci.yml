@@ -397,6 +397,12 @@ jobs:
           scripts=(deploy/*.sh deploy/host-proxy/*.sh deploy/tests/*.sh .github/scripts/*.sh)
           if [ "${#scripts[@]}" -gt 0 ]; then shellcheck "${scripts[@]}"; fi
 
+      - name: shellcheck (.github scripts)
+        run: shellcheck .github/scripts/*.sh
+
+      - name: Uptime script tests (stubbed gh, local HTTP server)
+        run: bash .github/scripts/uptime.test.sh
+
       - name: Deploy script tests (stubbed docker, curl, caddy, systemctl)
         run: bash deploy/tests/run.sh
 

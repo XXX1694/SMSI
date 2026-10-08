@@ -277,6 +277,22 @@ see section 5.
   20-30 minutes with warm caches) and Release adds a few more. Look at *Settings > Billing* after the first week and adjust.
   Dependabot opens a handful of grouped pull requests per week, and each one runs CI.
 
+## Monitoring
+
+The `Uptime` workflow (`.github/workflows/uptime.yml`) probes the public endpoints every 15 minutes and needs no external
+account. Each URL gets 3 attempts with backoff and a 10 s timeout; 2xx and 3xx count as up. It also warns when a TLS
+certificate expires in under 14 days.
+
+- **Outage**: an issue "Uptime: <url> is down" with the label `incident` is opened. Further failures comment on it instead
+  of opening duplicates. When the URL answers again, the workflow comments "recovered after <duration>" and closes it.
+  Watch the repository (Issues) to get the notification by email.
+- **Targets**: by default `${API_PUBLIC_URL}/ready`, the app login (`API_PUBLIC_URL` with `api.` replaced by `app.`, plus
+  `/login`) and `${MCP_PUBLIC_URL%/mcp}/health`, all from repository variables (section 3). To watch other URLs set the
+  repository variable `UPTIME_URLS` to a space-separated list; it replaces the defaults. With neither variable set the run
+  is skipped with a notice.
+- **Delays**: GitHub may delay or drop scheduled runs under load, so 15 minutes is a target, not a guarantee. Run the
+  workflow by hand from the Actions tab (`workflow_dispatch`) for an immediate check.
+
 ## 12. Troubleshooting
 
 | Symptom | Look at |
