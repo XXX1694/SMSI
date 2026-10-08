@@ -16,10 +16,12 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Connect a network with a pasted credential: `POST /api/v1/social/accounts/token` and the provider capability fields `connect_fields`, `max_image_bytes` and `requires_title`. It needs the new critical API-key scope `social:connect`, which is never in a default set (D-009).
 - Posts are checked against the stricter of the network limits and the account's own limits, and networks that need a title reject posts without one.
 - SSRF-safe HTTP client for hosts users supply (D-010).
+- Mastodon (and API-compatible Fediverse servers): connect with an instance URL and an access token, publish text and images (public), delete. Limits are read from the instance. A repeated publish after a timeout is safe because of the `Idempotency-Key`. See `docs/integrations/mastodon.md`.
 - Stub notes for Reddit, Medium and Hashnode; the X note now says the API is pay-per-use.
 
 ### Changed
 
+- The SSRF guard also blocks site-local `fec0::/10`, IPv4-compatible `::/96` and local-use NAT64 `64:ff9b:1::/48` (judged by the IPv4 inside).
 - Browser sessions now hold ten scopes (the new `social:connect`); the "Dangerous" list in the dashboard shows it.
 
 ## [0.1.0] - 2026-10-09

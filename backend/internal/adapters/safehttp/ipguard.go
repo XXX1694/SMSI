@@ -16,12 +16,17 @@ var blockedPrefixes = mustPrefixes(
 	"2001::/32",       // Teredo
 	"2001:db8::/32",   // documentation
 	"100::/64",        // discard-only
+	"fec0::/10",       // deprecated site-local (RFC 3879), still routable on some internal networks
+	"::/96",           // deprecated IPv4-compatible (::7f00:1 would reach 127.0.0.1 on some stacks); also ::, ::1
 )
 
 // Prefixes that embed an IPv4 address: the embedded address is judged instead.
 var (
 	nat64Prefix = netip.MustParsePrefix("64:ff9b::/96")
-	sixToFour   = netip.MustParsePrefix("2002::/16")
+	// Local-use NAT64 (RFC 8215): operator translators; the IPv4 sits at the
+	// RFC 6052 /48 offsets (octets 0-1 in bytes 6-7, octets 2-3 in bytes 9-10).
+	nat64LocalPrefix = netip.MustParsePrefix("64:ff9b:1::/48")
+	sixToFour        = netip.MustParsePrefix("2002::/16")
 )
 
 func mustPrefixes(in ...string) []netip.Prefix {
@@ -56,6 +61,8 @@ func IsBlockedAddr(ip netip.Addr) bool {
 		switch {
 		case nat64Prefix.Contains(ip):
 			return IsBlockedAddr(netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}))
+		case nat64LocalPrefix.Contains(ip):
+			return IsBlockedAddr(netip.AddrFrom4([4]byte{b[6], b[7], b[9], b[10]}))
 		case sixToFour.Contains(ip):
 			return IsBlockedAddr(netip.AddrFrom4([4]byte{b[2], b[3], b[4], b[5]}))
 		}

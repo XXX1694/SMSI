@@ -8,7 +8,7 @@ Legend: **[V]** means checked in the vendor's own docs today. **[U]** comes from
 |---|---|---|---|---|---|---|---|
 | Discord | Webhook URL (channel → Integrations → Webhooks) | none | free | text, ≤10 embeds, files, threads (`thread_id`/`thread_name`), delete via `?wait=true` id [V] | 2000 chars [V]; ~5 req/2 s, file cap 8–10 MB [U] | until the webhook is deleted | 1 |
 | Slack | Incoming-webhook URL (a Slack app with Incoming Webhooks) | none | free | text and Block Kit; no delete, no `ts` returned [V]; no files | ~1 msg/s per channel [V]; ~40k chars / 50 blocks [U] | until revoked | 1 |
-| Mastodon (+ Pixelfed, GoToSocial [U]) | Personal token: Preferences → Development → New application (`write:statuses write:media read:accounts`) | none | free | text, media, replies, delete, `Idempotency-Key` kept 1 h [V] | per instance via `/api/v2/instance` (default 500 chars, 4 media) [U] | until revoked | 1 |
+| Mastodon (+ Pixelfed, GoToSocial [U]) | Personal token: Preferences → Development → New application (`write:statuses write:media read:accounts`) | none | free | text, media, replies, delete, `Idempotency-Key` kept 1 h [V] | per instance via `/api/v2/instance` (default 500 chars, 4 media) [U] | until revoked | 1 (live) |
 | Bluesky | Handle + app password | none | free | text, ≤4 images, replies, delete | 300 graphemes; `createSession` 30/5 min and 300/day; 5000 write points/h [U] | session JWTs are short-lived, the app password lasts until revoked | 1 |
 | Dev.to | API key (Settings → Extensions) | none | free | Markdown article with a required title and ≤4 tags; images by URL only; no delete (unpublish only) | ~10 creates/30 s [U] | until revoked | 1 |
 | VK | Community access key with the `wall` right | none | free | wall text, photos | 10,000 calls/month for unverified partners from 2026-09-07 [V]; `wall.post` with a community key [U] | until revoked | 1 (verify live) |
@@ -118,7 +118,7 @@ Each live test publishes something publicly, so it needs the owner's "yes" and a
 - **PR0a (backend):** port, registry, use case, scope, route, safehttp, worker change, `CheckContent`, providertest, a mock token provider. Add the next free `docs/DECISIONS.md` entries: token connect with the critical `social:connect` scope, and the SSRF guard. Update the stub notes in `adapters/stubs/stubs.go:29-37` (X is now pay-per-use; add Reddit, Medium, Hashnode). Acceptance: connect → publish with the mock works end to end; the scope tests pass.
 - **PR0b (frontend):** `components/accounts-view.tsx:90` branches on `capabilities.connect_method`. A new `token-connect.tsx` renders `connect_fields` (secret fields use `type=password` and `autocomplete=off`). The composer shows a title field when `requires_title` is set. Attach Playwright screenshots.
 - **PR1 Discord:** fixed host; `?wait=true` returns the id needed for delete.
-- **PR2 Mastodon:** the first user-supplied host, so the SSRF guard runs live; also idempotency.
+- **PR2 Mastodon (live):** the first user-supplied host, so the SSRF guard runs live; also idempotency. Setup: [integrations/mastodon.md](integrations/mastodon.md). The same PR closed three guard gaps: site-local `fec0::/10`, IPv4-compatible `::/96` and local-use NAT64 `64:ff9b:1::/48` (judged by its embedded IPv4).
 - **PR3 Bluesky:** link facets (byte offsets), blob upload, `Lookuper`.
 - **PR4 Slack:** text only, `CanDelete=false`. To validate, POST `{}` and expect `400 no_text` [U].
 - **PR5 Dev.to:** title; set `published:false` for the test.
