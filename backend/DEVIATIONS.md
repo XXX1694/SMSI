@@ -68,6 +68,7 @@ server or product).
 ## 4. Operational caveats
 
 - **Rate limiting is in memory per API instance.** With N replicas the effective limit is N times higher (put an edge limiter in front or move buckets to Redis).
+- **Rate-limit keys.** Anonymous callers are keyed by client IP, with IPv6 addresses grouped by /64 (one client usually owns a whole /64). Each limiter tracks at most 50,000 keys (`middleware.MaxTrackedKeys`); at the cap the least recently seen key is dropped and starts over with a full bucket if it returns. New keys are always limited, never skipped.
 - **Every API-key request writes an `api_key.request` audit row** (it powers `/developer/usage`). Plan retention if keys are used heavily.
 - **LinkedIn and Telegram adapters were tested against local fakes only** (`httptest` servers that mimic the documented endpoints, including a fake `getUpdates` with offset confirmation for the link flow). No live credentials were available, so real-network behaviour, LinkedIn app review (`w_member_social`) and Telegram rate limits are unverified.
 - **Unsupported networks** (Instagram, Facebook, TikTok, YouTube, X, Threads, Pinterest) are listed as `status=unsupported`, `requires_approval=true`, with the reason in `notes`. Connecting or publishing returns `501 PROVIDER_NOT_AVAILABLE`; nothing pretends to work.
