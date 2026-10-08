@@ -46,6 +46,11 @@ function localAt(base: Date, days: number, hour: number, minute = 0): number {
   return new Date(base.getFullYear(), base.getMonth(), base.getDate() + days, hour, minute).getTime();
 }
 
+/** Local midnight on the first day of the month containing `base`. */
+function startOfMonth(base: Date): number {
+  return new Date(base.getFullYear(), base.getMonth(), 1).getTime();
+}
+
 /** Local wall-clock time on a given day of next month. */
 function nextMonthAt(base: Date, day: number, hour: number, minute = 0): number {
   return new Date(base.getFullYear(), base.getMonth() + 1, day, hour, minute).getTime();
@@ -121,7 +126,8 @@ function specs(now: Date): PostSpec[] {
       status: 'published',
       nets: ['telegram'],
       text: 'The sync delay reported earlier today is resolved. Everything queued during the incident has been delivered. A short write-up will follow.',
-      at: t - 25 * MIN,
+      // Never before the start of the current month, so "published this month" is never empty.
+      at: Math.max(t - 25 * MIN, startOfMonth(now)),
     },
     // 9 partially published, 10-11 failed
     {
@@ -343,7 +349,7 @@ export function buildSeed(now: Date = new Date()): DemoState {
       const targetId = seedId('f1000000', i * 10 + ti + 1);
       const published = s.status === 'published' || (s.status === 'partially_published' && s.failed !== n);
       const failed = s.status === 'failed' || (s.status === 'partially_published' && s.failed === n);
-      const when = s.at + 2000 * (ti + 1);
+      const when = Math.min(s.at + 2000 * (ti + 1), t);
       const status = published
         ? ('published' as const)
         : failed

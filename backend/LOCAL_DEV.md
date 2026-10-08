@@ -109,7 +109,7 @@ Handy mock-network controls in post text: `#mock-fail` (permanent error), `#mock
 ## Caveats
 
 - **Storage**: `STORAGE_DRIVER=memory` lives inside one process. The API can store and serve uploads, but the **worker cannot read them**. The mock network never reads media bytes, so mock posts with images still publish; Telegram and LinkedIn would fail to find the file. For real media publishing use S3-compatible storage, e.g. MinIO on a machine with Docker:
-  `docker run -d -p 9000:9000 -e MINIO_ROOT_USER=minio -e MINIO_ROOT_PASSWORD=change-me-please minio/minio server /data`
+  `docker run -d -p 9000:9000 -e MINIO_ROOT_USER=minio -e MINIO_ROOT_PASSWORD=change-me-please cgr.dev/chainguard/minio:latest-dev server /data`
   and set `STORAGE_DRIVER=s3`, `S3_ENDPOINT=localhost:9000`, `S3_ACCESS_KEY=minio`, `S3_SECRET_KEY=change-me-please` (the bucket is created automatically).
 - **S3 unreachable** is not fatal: the API starts, logs a warning and `/ready` answers 503 with `{"checks":{"storage":"unavailable"},"errors":{"storage":"..."}}`. Uploads return 500 until it is back.
 - **Reset the dev database**: `psql 'postgres://socialos:socialos@127.0.0.1:5432/postgres' -c 'DROP DATABASE socialos WITH (FORCE)' -c 'CREATE DATABASE socialos' && make migrate`, and `redis-cli -n 0 flushdb` for queued jobs. Postgres is the source of truth for schedules: after a Redis flush the reconciler re-enqueues overdue jobs within a minute.
