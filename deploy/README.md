@@ -470,7 +470,11 @@ boot). Each run:
    `1.9.0`). An older or equal release is refused and logged, so the timer never downgrades; a deployed tag that is not a
    release version (`sha-...`, `main`) is left alone until you deploy a release by hand once (`./deploy.sh X.Y.Z`), after which
    the timer takes over;
-4. runs `./deploy.sh X.Y.Z`: pull, migrate, restart, wait for `/ready`, roll back on failure. `flock` keeps two runs from
+4. checks anonymously, the way a `docker pull` of a public package does (token plus a HEAD on the manifest), that
+   `ghcr.io/<owner>/socialos-{backend,mcp,frontend}:X.Y.Z` all exist. If not, it logs "images not ready", records nothing and
+   looks again at the next run (a release can show up before its images; the Release workflow now publishes the GitHub
+   Release only after the images, so this is a safety net);
+5. runs `./deploy.sh X.Y.Z`: pull, migrate, restart, wait for `/ready`, roll back on failure. `flock` keeps two runs from
    overlapping.
 
 **Trust boundary.** Whoever can publish a `vX.Y.Z` release in the repository decides what runs in production: within about 5
@@ -495,7 +499,9 @@ journalctl -u socialos-autoupdate -n 50  # one short line per run, plus deploy.s
 | Situation | What happens |
 |---|---|
 | `AUTOUPDATE=false` in `.env` (also `0`, `no`, `off`) | the timer keeps running and every run logs "disabled" and does nothing |
-| the release exists but its images are not published yet (the Release workflow takes a while after the tag) | `deploy.sh` changes nothing and exits 75; the next try is 15 minutes later |
+| the release exists but its images are not there yet | "images not ready" is logged, nothing is recorded (no failure marker, no delay), the next run (about 5 minutes) looks again. Private packages cannot be seen anonymously: `AUTOUPDATE_CHECK_IMAGES=false` skips the check |
+| the check passes but `deploy.sh` cannot pull anyway | `deploy.sh` changes nothing and exits 75; the next try is 15 minutes later |
+| ghcr.io cannot be reached or answers with an error | "could not check ghcr.io" is logged, nothing is deployed or recorded, the next run tries again |
 | the deploy fails and is rolled back | `.deploy/autoupdate_failed` records the version and that run exits non-zero (see `systemctl --failed` and the journal). The version is not tried again: later runs only log "skipping", until a newer release appears or you run `rm .deploy/autoupdate_failed` |
 | GitHub is unreachable, rate-limited (60 requests/hour per IP without a token; this uses 12) or has no release yet | logged, nothing deployed, the unit stays green |
 | the latest release is older than or equal to the deployed one | refused and logged ("not newer"), nothing is deployed, nothing is recorded as a failure |
@@ -515,3 +521,27 @@ deploy of an older release it would deploy the latest one.
 
 To run the script tests: `bash tests/run.sh` from `deploy/` on Linux (on macOS: `docker run --rm -v "$PWD:/repo" -w /repo
 ubuntu:24.04 bash deploy/tests/run.sh` from the repository root).
+
+## 15. Releasing
+
+A release is a git tag `vX.Y.Z` on `main`. Everything after the tag is automatic.
+
+1. **Update `CHANGELOG.md`** in a pull request: move the entries from `## [Unreleased]` into a new `## [X.Y.Z] - YYYY-MM-DD`
+   section (Added / Changed / Fixed / Security, written for users), and add the link lines at the bottom (`[X.Y.Z]: .../releases/tag/vX.Y.Z`,
+   and point `[Unreleased]` at `compare/vX.Y.Z...HEAD`). Merge it once CI is green. The Release workflow fails if the section for the
+   tag is missing or empty.
+2. **Tag `main`** at the merge commit: `git tag vX.Y.Z <sha> && git push origin vX.Y.Z`. The `v*` tags are protected, so only an
+   administrator can create them. A pre-release candidate is `vX.Y.Z-rc.N`; it is published as a GitHub pre-release and is never
+   "latest", so servers do not pick it up.
+3. **The images build.** `release.yml` pushes `ghcr.io/<owner>/socialos-{backend,mcp,frontend}` with the tags `X.Y.Z`, `X.Y` and
+   (from 1.0) `X`. Set the repository variables `API_PUBLIC_URL` and `MCP_PUBLIC_URL` first (section 3, *Frontend URLs*): they are baked
+   into the frontend image.
+4. **The GitHub Release is created automatically**, as the last job and only if all three images were pushed. Its notes are the
+   tag's `CHANGELOG.md` section. Re-running the workflow only refreshes the notes of an existing release.
+5. **Servers with pull-based updates (section 14) deploy it** within about 5 minutes: `releases/latest` now names the tag, the images
+   exist, the version is newer than the deployed one. Servers without the timer deploy it by hand (`./deploy.sh X.Y.Z`) or through
+   `deploy.yml` (section 8).
+
+If the Release workflow fails on the CHANGELOG check, fix the changelog on `main`, then move the tag to the fixed commit
+(`git tag -f vX.Y.Z <sha> && git push -f origin vX.Y.Z`; an administrator can do that despite the protection) or delete the tag and
+push it again. No server has seen the release yet, because it does not exist before its images and notes do.
