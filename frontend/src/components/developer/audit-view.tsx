@@ -18,6 +18,7 @@ interface ToolMeta {
   tool: string;
   status: number | null;
   errorCode: string | null;
+  direct: boolean;
 }
 
 function toolMeta(l: AuditLog): ToolMeta | null {
@@ -27,6 +28,7 @@ function toolMeta(l: AuditLog): ToolMeta | null {
     tool: typeof m.tool === 'string' ? m.tool : 'unknown tool',
     status: typeof m.status === 'number' ? m.status : null,
     errorCode: typeof m.error_code === 'string' ? m.error_code : null,
+    direct: m.via_gateway !== true,
   };
 }
 
@@ -37,6 +39,11 @@ function ActionCell({ log }: { log: AuditLog }) {
   return (
     <span className="flex flex-wrap items-center gap-2">
       <span className="font-mono text-xs">{t.tool}</span>
+      {t.direct ? (
+        <Badge tone="warning" title="Sent straight to the API, not through the MCP server">
+          Direct API
+        </Badge>
+      ) : null}
       {t.status !== null ? (
         <Badge tone={failed ? 'danger' : 'success'}>
           {t.status}

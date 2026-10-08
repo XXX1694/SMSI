@@ -20,13 +20,13 @@ const row = (over: Partial<AuditLog>): AuditLog => ({
   created_at: '2026-10-07T12:00:00Z',
   ...over,
 });
-const toolCall = (tool: string, status: number, errorCode?: string): AuditLog =>
+const toolCall = (tool: string, status: number, errorCode?: string, viaGateway = true): AuditLog =>
   row({
     actor_type: 'api_key',
     actor_label: 'MCP: Claude Desktop',
     action: 'mcp.tool_call',
     resource_type: 'api_key',
-    metadata: { tool, status, route: '/api/v1/posts', ...(errorCode ? { error_code: errorCode } : {}) },
+    metadata: { tool, status, via_gateway: viaGateway, route: '/api/v1/posts', ...(errorCode ? { error_code: errorCode } : {}) },
   });
 
 const page = (items: AuditLog[]) => ({ items, next_cursor: null });
@@ -76,6 +76,13 @@ describe('AuditView', () => {
     expect(screen.getByRole('button', { name: 'Agent actions' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('list_posts')).toBeInTheDocument();
+  });
+
+  it('marks tool calls that did not come through the MCP gateway as Direct API', async () => {
+    apiMock.audit.list.mockResolvedValue(page([toolCall('list_posts', 200), toolCall('get_post', 200, undefined, false)]));
+    render(<AuditView />);
+    await screen.findByText('get_post');
+    expect(screen.getAllByText('Direct API')).toHaveLength(1);
   });
 
   it('tolerates tool rows without metadata', async () => {

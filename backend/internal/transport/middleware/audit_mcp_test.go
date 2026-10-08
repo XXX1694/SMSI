@@ -218,3 +218,26 @@ func walk(t *testing.T, path string, v any, visit func(path, s string)) {
 		walk(t, path, generic, visit)
 	}
 }
+
+func TestPanickingHandlerIsAuditedOnceAndStillPanics(t *testing.T) {
+	keyActor := actor.Actor{UserID: uuid.New(), Type: actor.TypeAPIKey, ID: "k1", APIKeyID: uuid.New(), Label: "agent"}
+	rec := &memAudit{}
+	r := chi.NewRouter()
+	r.Use(middleware.Recover, middleware.Authenticate(&fakeAuth{keyActor: keyActor}, nil),
+		middleware.APIKeyAudit(rec, slog.New(slog.NewJSONHandler(&bytes.Buffer{}, nil))))
+	r.Post("/boom", func(http.ResponseWriter, *http.Request) { panic("handler bug") })
+	out := do(r, "POST", "/boom", func(req *http.Request) {
+		req.Header.Set("Authorization", "Bearer sk_live_good")
+		req.Header.Set("X-MCP-Tool", "publish_post")
+	})
+	if out.Code != http.StatusInternalServerError {
+		t.Fatalf("Recover must still render the response: %d", out.Code)
+	}
+	if len(rec.entries) != 1 {
+		t.Fatalf("exactly one row, got %d", len(rec.entries))
+	}
+	e := rec.entries[0]
+	if e.action != "mcp.tool_call" || e.meta["status"] != http.StatusInternalServerError || e.meta["error_code"] != "INTERNAL" {
+		t.Fatalf("entry: %+v", e)
+	}
+}

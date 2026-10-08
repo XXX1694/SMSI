@@ -100,6 +100,9 @@ func WithCodeSlot(ctx context.Context) (context.Context, *CodeSlot) {
 	return context.WithValue(ctx, codeSlotKey{}, s), s
 }
 
+// Set records a code; used by the audit middleware for a handler that panicked.
+func (s *CodeSlot) Set(c errs.Code) { s.set(c) }
+
 func (s *CodeSlot) set(c errs.Code) {
 	s.mu.Lock()
 	s.code = c

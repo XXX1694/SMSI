@@ -13,6 +13,7 @@ import (
 	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/audit"
+	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/transport/httpx"
 )
 
@@ -35,33 +36,48 @@ func APIKeyAudit(rec port.AuditRecorder, log *slog.Logger) func(http.Handler) ht
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			sr := &statusRecorder{ResponseWriter: w}
 			ctx, codes := httpx.WithCodeSlot(r.Context())
+			// Written in a defer so that a panicking handler is still audited (as a 500); the panic goes on to Recover.
+			defer func() {
+				p := recover()
+				if p != nil {
+					sr.status = http.StatusInternalServerError
+					codes.Set(errs.Internal)
+				}
+				writeAudit(rec, log, r, sr, codes)
+				if p != nil {
+					panic(p)
+				}
+			}()
 			next.ServeHTTP(sr, r.WithContext(ctx))
-			a, ok := actor.From(r.Context())
-			if !ok || a.Type != actor.TypeAPIKey {
-				return
-			}
-			if sr.status == 0 {
-				sr.status = http.StatusOK
-			}
-			meta := map[string]any{"method": r.Method, "route": routePattern(r), "status": sr.status}
-			action := audit.ActionAPIRequest
-			if tool := r.Header.Get(ToolHeader); toolNameRe.MatchString(tool) {
-				action = audit.ActionMCPToolCall
-				meta["tool"] = tool
-				meta["client"] = a.Label
-				meta["credential_id"] = a.APIKeyID.String()
-				_, meta["via_gateway"] = gatewayIP(r.Context())
-				if c := codes.Code(); c != "" {
-					meta["error_code"] = string(c)
-				}
-				if ids := targetIDs(r); len(ids) > 0 {
-					meta["target_ids"] = ids
-				}
-			}
-			if err := rec.Record(context.WithoutCancel(r.Context()), a, action, "api_key", a.APIKeyID.String(), meta); err != nil {
-				log.WarnContext(r.Context(), "api key audit failed", slog.Any("error", err))
-			}
 		})
+	}
+}
+
+func writeAudit(rec port.AuditRecorder, log *slog.Logger, r *http.Request, sr *statusRecorder, codes *httpx.CodeSlot) {
+	a, ok := actor.From(r.Context())
+	if !ok || a.Type != actor.TypeAPIKey {
+		return
+	}
+	if sr.status == 0 {
+		sr.status = http.StatusOK
+	}
+	meta := map[string]any{"method": r.Method, "route": routePattern(r), "status": sr.status}
+	action := audit.ActionAPIRequest
+	if tool := r.Header.Get(ToolHeader); toolNameRe.MatchString(tool) {
+		action = audit.ActionMCPToolCall
+		meta["tool"] = tool
+		meta["client"] = a.Label
+		meta["credential_id"] = a.APIKeyID.String()
+		_, meta["via_gateway"] = gatewayIP(r.Context())
+		if c := codes.Code(); c != "" {
+			meta["error_code"] = string(c)
+		}
+		if ids := targetIDs(r); len(ids) > 0 {
+			meta["target_ids"] = ids
+		}
+	}
+	if err := rec.Record(context.WithoutCancel(r.Context()), a, action, "api_key", a.APIKeyID.String(), meta); err != nil {
+		log.WarnContext(r.Context(), "api key audit failed", slog.Any("error", err))
 	}
 }
 
