@@ -1,0 +1,89 @@
+# Host-proxy mode: SocialOS runs behind a reverse proxy that already owns ports 80/443 on the host (for example the
+# host's own Caddy or nginx). Use it as an override on top of docker-compose.prod.yml by setting, in .env:
+#
+#   COMPOSE_FILE=docker-compose.prod.yml:docker-compose.host-proxy.yml
+#
+# What changes compared to the standalone stack:
+#   * the bundled Caddy is not started (its profile is never enabled), so nothing here listens on 80/443;
+#   * frontend, backend, mcp and the bundled MinIO are published on 127.0.0.1 only, on ports that rarely collide.
+#     The host proxy forwards app./api./mcp./s3.<domain> to them: see host-proxy/render-caddy.sh;
+#   * memory limits and Postgres settings are sized so that the whole stack fits in about 1 GB on a small shared host;
+#   * every SocialOS container has oom_score_adj 500: if the HOST runs out of memory, the kernel picks these containers
+#     before the host's Caddy or the other service (their score is around 0).
+#
+# Every number below can be overridden in .env (see .env.prod.example). The limits are hard caps: a container above its
+# limit is OOM-killed and restarted, which is better than starving the other services on the host.
+# The standalone mode (docker-compose.prod.yml alone) is unchanged and remains the default.
+
+services:
+  # Never started: nobody enables this profile. The bundled Caddy would fight the host proxy for ports 80 and 443.
+  # (docker-compose.prod.yml still interpolates its variables, which is why ACME_EMAIL stays required in .env.)
+  caddy:
+    profiles: ["disabled-in-host-proxy-mode"]
+
+  postgres:
+    mem_limit: ${POSTGRES_MEM_LIMIT:-256m}
+    oom_score_adj: 500
+    # /dev/shm is only used for parallel-query segments (the main shared memory is mmap'd and counted in mem_limit). Keep it
+    # at or above shared_buffers so that a different shared_memory_type or a larger buffer pool still fits.
+    shm_size: ${POSTGRES_SHM_SIZE:-64mb}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-64MB}
+      - -c
+      - max_connections=${POSTGRES_MAX_CONNECTIONS:-40}
+      - -c
+      - work_mem=${POSTGRES_WORK_MEM:-4MB}
+
+  redis:
+    mem_limit: ${REDIS_MEM_LIMIT:-64m}
+    oom_score_adj: 500
+
+  minio:
+    mem_limit: ${MINIO_MEM_LIMIT:-160m}
+    oom_score_adj: 500
+    ports:
+      - "127.0.0.1:${MINIO_HOST_PORT:-19000}:9000"
+    environment:
+      GOMEMLIMIT: ${MINIO_GOMEMLIMIT:-128MiB} # soft limit for the Go GC, a bit under mem_limit
+
+  migrate:
+    mem_limit: ${MIGRATE_MEM_LIMIT:-128m}
+    oom_score_adj: 500
+
+  backend:
+    mem_limit: ${BACKEND_MEM_LIMIT:-160m}
+    oom_score_adj: 500
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-18080}:8080"
+    environment:
+      GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-128MiB}
+      DB_MAX_CONNS: ${DB_MAX_CONNS:-10} # per process (backend and worker); keep 2 x this under POSTGRES_MAX_CONNECTIONS
+
+  worker:
+    mem_limit: ${WORKER_MEM_LIMIT:-160m}
+    oom_score_adj: 500
+    environment:
+      GOMEMLIMIT: ${WORKER_GOMEMLIMIT:-128MiB}
+      DB_MAX_CONNS: ${DB_MAX_CONNS:-10}
+
+  mcp:
+    mem_limit: ${MCP_MEM_LIMIT:-96m}
+    oom_score_adj: 500
+    ports:
+      - "127.0.0.1:${MCP_HOST_PORT:-13333}:3333"
+    environment:
+      NODE_OPTIONS: ${MCP_NODE_OPTIONS:---max-old-space-size=48}
+
+  frontend:
+    mem_limit: ${FRONTEND_MEM_LIMIT:-160m}
+    oom_score_adj: 500
+    ports:
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-13000}:3000"
+    environment:
+      NODE_OPTIONS: ${FRONTEND_NODE_OPTIONS:---max-old-space-size=96}
+
+  # Operator tool (profile "tools", never started by `up`).
+  telegram:
+    oom_score_adj: 500

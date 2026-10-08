@@ -3,6 +3,11 @@
 A single VPS runs the whole product with Docker Compose. Caddy terminates HTTPS (Let's Encrypt, automatic) and is the only
 thing that listens on the internet; everything else lives on the internal compose network.
 
+There are two ways to run it. **Standalone** (this page, sections 1-12) is the default: the stack brings its own Caddy and owns
+ports 80/443. **Host-proxy mode** (section 13) is for a server where a reverse proxy already owns 80/443: the stack then listens
+on `127.0.0.1` only and that proxy forwards to it. Updates can be pushed from GitHub (section 8) or pulled by the server from
+GitHub Releases (section 14).
+
 ```
  browser ──► app.example.com  ─┐
  agents  ──► mcp.example.com   ─┤  Caddy :80/:443 ─► frontend :3000 ──(/api/v1/*)──► backend :8080 ─► postgres
@@ -21,6 +26,10 @@ thing that listens on the internet; everything else lives on the internal compos
 |---|---|
 | `docker-compose.prod.yml` | the stack: GHCR images, Postgres, Redis, MinIO, Caddy. No database port is published |
 | `Caddyfile` | hostnames, HTTPS, headers; `/metrics` is not routed publicly |
+| `docker-compose.host-proxy.yml` | override for host-proxy mode: no bundled Caddy, ports on `127.0.0.1`, memory limits for a small host (section 13) |
+| `host-proxy/` | `render-caddy.sh` stages the host Caddy snippet from `.env`; `install-caddy-import.sh` swaps it in, adds the one import line, validates, reloads and rolls everything back on failure (section 13) |
+| `autoupdate.sh`, `systemd/` | pull-based updates: a timer deploys the latest GitHub Release (section 14) |
+| `tests/` | shell tests for the scripts above (`bash tests/run.sh`, needs Linux; no Docker daemon, no network) |
 | `.env.prod.example` | every variable, documented. Copy to `.env` (or use `init-env.sh`) |
 | `init-env.sh` | creates `.env` with freshly generated secrets (`openssl rand`) |
 | `deploy.sh` | pull an image tag, migrate, restart, wait for `/ready`, roll back automatically on failure |
@@ -202,6 +211,8 @@ ssh-copy-id -i ./socialos_deploy.pub deploy@203.0.113.10                        
 # paste the content of ./socialos_deploy into the DEPLOY_SSH_KEY secret, then delete both files
 ```
 
+Prefer to keep every secret off GitHub, or the server cannot accept SSH from the internet? Let the server pull instead: section 14.
+
 The job uses the **`production` environment**: in *Settings > Environments > production* add *Required reviewers* to approve every
 deployment (and, if you like, limit it to the `main` branch). The workflow uploads this folder (never `.env`), runs
 `./deploy.sh <tag>` and shows the result. You can also run it by hand: *Actions > Deploy > Run workflow*, with a tag or empty for
@@ -277,3 +288,230 @@ see section 5.
 | UI shows `localhost` URLs in the MCP config | the frontend image was built without the repo variables (section 3, *Frontend URLs*) |
 | LinkedIn: `?error=UNAUTHENTICATED` after consent | `COOKIE_DOMAIN` was cleared or the redirect URL points at another host than `API_PUBLIC_URL` (section 7) |
 | images of media do not load in the UI | `s3.<domain>` DNS record and certificate; the browser must reach `https://s3.<domain>` |
+| `install-caddy-import.sh` exits 1 and says ROLLED BACK | the message shows the validator output or the URL that stopped answering; fix it (a hostname already defined in the host's Caddyfile is the usual cause of "ambiguous site definition") and run it again. The staged file is still in `caddy/staging/` |
+| `install-caddy-import.sh` exits 4 (ROLLBACK NOT VERIFIED) | read its last messages: either a file could not be restored (the command to copy it back is printed), or Caddy could not be reloaded, or your sites still do not answer: `systemctl status caddy`, `journalctl -u caddy -n 50` |
+| `install-caddy-import.sh` exits 2 | a prerequisite is missing and nothing was changed: not root, nothing staged (run `render-caddy.sh`), no `HOST_PROXY_CHECK_URLS`, or `/opt/socialos/caddy` is not root-owned or is writable by others |
+| `install-caddy-import.sh` exits 3 | one of `HOST_PROXY_CHECK_URLS` was already failing before the change, so nothing was touched: fix that site first |
+| the timer deploys nothing | `journalctl -u socialos-autoupdate -n 30`, `./autoupdate.sh --dry-run` (it says "not newer", "not a release version", "skipping", ...), `systemctl list-timers`, `.deploy/autoupdate_failed` (section 14) |
+
+## 13. Behind an existing reverse proxy (host-proxy mode)
+
+Use this when the server already runs a web server that owns ports 80 and 443 (here: **Caddy running as a systemd service**, not in
+Docker, with its configuration in `/etc/caddy/Caddyfile`). SocialOS then lives in `/opt/socialos`, runs in Docker, publishes
+its ports on `127.0.0.1` only, and the host Caddy serves `app.`, `api.`, `mcp.` and `s3.<domain>` by importing one generated file.
+
+```
+ browser / agents ─► host Caddy :80/:443 ─┬─ app.<domain> ─► 127.0.0.1:13000 frontend ─► backend ─► postgres / redis
+ (its other sites are untouched)          ├─ api.<domain> ─► 127.0.0.1:18080 backend
+                                          ├─ mcp.<domain> ─► 127.0.0.1:13333 mcp
+                                          └─ s3.<domain>  ─► 127.0.0.1:19000 minio   (only with the bundled MinIO)
+```
+
+**What the setup changes on the host, and nothing else:** the Docker packages; the directory `/opt/socialos`; one
+`import /opt/socialos/caddy/*.caddy` line in `/etc/caddy/Caddyfile` (after a timestamped backup of that file, and only after
+`caddy validate` and a check of your other sites); optionally two systemd unit files (section 14). No global Caddy option, no
+firewall rule and no other service is touched. The generated Caddy file is only *staged* until the installer swaps it in, and
+any failure puts the previous state back (13.5).
+
+| In host-proxy mode | Standalone | Host-proxy |
+|---|---|---|
+| Bundled Caddy | runs on 80/443 | not started |
+| Published ports | Caddy only | `127.0.0.1:13000` frontend, `:18080` backend, `:13333` mcp, `:19000` minio (`FRONTEND_HOST_PORT`, `BACKEND_HOST_PORT`, `MCP_HOST_PORT`, `MINIO_HOST_PORT`) |
+| Memory limit (hard cap, override with `<SERVICE>_MEM_LIMIT`) | postgres 768m, redis 192m, minio 512m, backend 384m, worker 384m, mcp 192m, frontend 512m, caddy 192m | postgres 256m, redis 64m, minio 160m, backend 160m, worker 160m, mcp 96m, frontend 160m: about 1 GB of caps, about 0.3 GB in use when idle |
+| PostgreSQL | image defaults | `shared_buffers=64MB`, `max_connections=40`, `work_mem=4MB` (`POSTGRES_SHARED_BUFFERS`, `POSTGRES_MAX_CONNECTIONS`, `POSTGRES_WORK_MEM`), pools of 10 (`DB_MAX_CONNS`) |
+
+All variables are documented in `.env.prod.example`. A container above its cap is OOM-killed and restarted by Docker; it never
+takes memory from the host's other service. Every SocialOS container also has `oom_score_adj: 500`, so if the *host* ever runs
+out of memory the kernel picks these containers before the host's Caddy or the other service, and Postgres gets a 64 MB
+`/dev/shm` (`POSTGRES_SHM_SIZE`, in step with `shared_buffers`). Watch `docker stats --no-stream` and `free -m` during the first days, and raise a
+limit when `docker inspect -f '{{.State.OOMKilled}}' <container>` says `true`.
+
+### 13.1 DNS
+
+Section 1 applies unchanged: `app.`, `api.`, `mcp.` (and `s3.` with the bundled MinIO) must resolve to the server before the
+host Caddy can get certificates. With no domain yet, `<ip-with-dashes>.sslip.io` (the server's IPv4 address with dots written as dashes) resolves to
+that IP and works for a trial; its certificates share Let's Encrypt rate limits with everyone else who uses it, so move to a real
+domain for anything lasting.
+
+### 13.2 Install Docker (official apt repository, Ubuntu 24.04)
+
+Skip this if `docker compose version` already works. As root:
+
+```bash
+apt-get update && apt-get install -y ca-certificates curl
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+cat >/etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+docker compose version
+```
+
+Docker adds its own firewall rules (`iptables`) and sets the `FORWARD` policy to `DROP`; check that nothing else on the host
+depends on forwarding. The SocialOS ports are bound to `127.0.0.1`, so `ufw` and the cloud firewall need no change. If the images
+are private, log in once as root (section 2); public packages need nothing.
+
+### 13.3 Put the files in `/opt/socialos`
+
+The server needs the `deploy/` folder of the release you are installing (the compose files and scripts are versioned with the
+images). As root, with `vX.Y.Z` a release tag and `<owner>/<repo>` the GitHub repository:
+
+```bash
+install -d -m 755 /opt/socialos && cd /opt/socialos
+curl -fsSL "https://codeload.github.com/<owner>/<repo>/tar.gz/refs/tags/vX.Y.Z" |
+  tar -xz --strip-components=2 --wildcards '*/deploy/*'
+ls -A                                   # docker-compose.prod.yml, docker-compose.host-proxy.yml, deploy.sh, host-proxy/, ...
+```
+
+(`scp -r deploy/. root@<server>:/opt/socialos/` from a checkout does the same.) Everything stays owned by root; `.env` is mode
+600 and holds every secret. GitHub holds none of them.
+
+**`/opt/socialos` and `/opt/socialos/caddy` must stay root-owned, mode 755: never `chown` them to a deploy user.** Whatever is in
+`/opt/socialos/caddy` becomes configuration of the host's Caddy, which also serves the other site; anyone who can write there
+could change what that Caddy does. `install-caddy-import.sh` refuses to run when these folders (or the files in them) belong to
+someone else or are writable by group or others.
+
+### 13.4 Create `.env`
+
+```bash
+cd /opt/socialos
+./init-env.sh --host-proxy example.com   # .env (mode 600) with generated secrets and the COMPOSE_FILE below
+grep ^COMPOSE_FILE .env                  # COMPOSE_FILE=docker-compose.prod.yml:docker-compose.host-proxy.yml
+$EDITOR .env
+```
+
+In the editor: set `HOST_PROXY_CHECK_URLS` (next step), add `LINKEDIN_*` and `TELEGRAM_BOT_TOKEN` if you use them, and change a
+`*_HOST_PORT` if something on the host already listens on it (check with `ss -ltn`). `ACME_EMAIL` stays empty: only the bundled
+Caddy uses it, and the host's Caddy handles certificates (an e-mail given as a second argument is stored, but unused).
+Back up `.env` (section 4). `docker compose config -q` must print nothing.
+
+### 13.5 Connect the host Caddy
+
+```bash
+./host-proxy/render-caddy.sh             # reads DOMAIN, S3_SITE and the ports from .env, STAGES /opt/socialos/caddy/staging/socialos.caddy
+less caddy/staging/socialos.caddy        # concrete hostnames, same headers/routes as deploy/Caddyfile
+HOST_PROXY_CHECK_URLS="https://www.example.org/" ./host-proxy/install-caddy-import.sh   # as root
+```
+
+Rendering changes nothing the host's Caddy can see: `caddy/staging/` is not matched by the import line. Only the installer moves
+the staged file into `/opt/socialos/caddy`. `HOST_PROXY_CHECK_URLS` is a space-separated list of sites the host already serves (put
+it in `.env` to avoid typing it); every one must answer with a status below 500 **before** the change (otherwise the script stops,
+says "Nothing was changed" and touches nothing) and **after** it. The installer:
+
+1. checks that the folders are root-owned and not writable by others, and that something is staged;
+2. copies `/etc/caddy/Caddyfile` to `/etc/caddy/Caddyfile.socialos-backup-<UTC time>`;
+3. copies the staged snippet into `/opt/socialos/caddy` (the live set becomes exactly the staged set) and appends
+   `import /opt/socialos/caddy/*.caddy` unless the line is already there;
+4. runs `caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile` (as the `caddy` user when it exists);
+5. runs `systemctl reload caddy`, then re-checks your URLs (a few tries);
+6. if any step fails, or the script is interrupted, it restores the Caddyfile from the backup and the snippet set that Caddy last
+   loaded successfully (files that are not in that set are deleted), reloads Caddy, checks the URLs again and prints which state
+   the host is in: which files were restored, whether Caddy runs the restored configuration (or never loaded the new one) and
+   whether your sites answer. A rollback that could not be completed or verified exits 4 and says **ROLLBACK NOT VERIFIED**; act on
+   its messages first.
+
+Exit codes: 0 done; 1 failed and rolled back, verified; 2 could not start (nothing changed); 3 a check URL was already failing
+(nothing changed); 4 failed, rollback not verified. It is safe to run again, for example after changing a port or the domain and
+running `render-caddy.sh` again. The snippet names its helper `(socialos_common)` and sets no global option, so it cannot collide
+with the host's own snippets or `email`/ACME settings. Undo by hand: `cp -p /etc/caddy/Caddyfile.socialos-backup-<time>
+/etc/caddy/Caddyfile`, delete `/opt/socialos/caddy/*.caddy` and `/opt/socialos/caddy/.applied`, then `systemctl reload caddy`.
+
+The validator runs in your shell, not inside the Caddy service. If the host Caddyfile uses `{$VARIABLES}` that the caddy unit
+defines (an `Environment=` or `EnvironmentFile=` line), export the same variables before running the script, or validation fails
+and the script rolls back (safe, but it changes nothing).
+
+### 13.6 First deploy
+
+```bash
+cd /opt/socialos
+./deploy.sh 1.2.3                        # image tag: the release tag without the "v" (or sha-<7 hex>, section 4)
+./deploy.sh --status                     # tags, the compose files in use, container state
+docker stats --no-stream; free -m
+curl -fsS https://api.example.com/ready; curl -fsSI https://app.example.com/login | head -1
+```
+
+`deploy.sh` uses the `COMPOSE_FILE` of `.env`, so it starts the stack without Caddy, waits for `/ready` inside the network, and
+then checks `https://api.<domain>/ready` and `https://app.<domain>/login` through the host Caddy (informational: a certificate that
+is still being issued does not roll the images back). The plain `docker compose ...` commands of sections 5, 6, 9 and 10 work as
+written.
+
+### 13.7 Telegram webhook
+
+With `TELEGRAM_BOT_TOKEN` set and the stack running:
+
+```bash
+docker compose run --rm telegram webhook-info     # first: does another consumer already use this bot?
+docker compose run --rm telegram set-webhook
+```
+
+### 13.8 Updates
+
+Either push deploys (section 8) or the pull-based timer in section 14. After a release that changes `deploy/` (the release notes
+say so), refresh the files as in 13.3 (`.env`, `.deploy/` and `caddy/` are not part of the archive, so they stay), run
+`./host-proxy/render-caddy.sh` and `./host-proxy/install-caddy-import.sh` again (it swaps in the staged file only if it is valid).
+
+## 14. Pull-based updates
+
+The server polls GitHub and deploys by itself; nothing can reach the server from outside and GitHub needs no secret. A systemd
+timer runs `autoupdate.sh` every 5 minutes (plus up to a minute of random delay; a run missed while the machine was off happens at
+boot). Each run:
+
+1. asks `https://api.github.com/repos/<repo>/releases/latest` (public API, no token; `GITHUB_REPO` in `.env`, default `XXX1694/SMSI`);
+2. accepts only a tag shaped `vX.Y.Z` (pre-releases and drafts are never "latest"; anything else is logged and ignored);
+3. compares it with the tag `deploy.sh` recorded in `.deploy/current_tag` (the image tag is the release tag without the `v`, as
+   `release.yml` names the images) and goes on only for a **strictly newer** version, compared as numbers (`1.10.0` is newer than
+   `1.9.0`). An older or equal release is refused and logged, so the timer never downgrades; a deployed tag that is not a
+   release version (`sha-...`, `main`) is left alone until you deploy a release by hand once (`./deploy.sh X.Y.Z`), after which
+   the timer takes over;
+4. runs `./deploy.sh X.Y.Z`: pull, migrate, restart, wait for `/ready`, roll back on failure. `flock` keeps two runs from
+   overlapping.
+
+**Trust boundary.** Whoever can publish a `vX.Y.Z` release in the repository decides what runs in production: within about 5
+minutes the server pulls that release's images, runs their database migrations and starts them, with no further approval. The
+server trusts GitHub and the repository's release process, nothing else. So keep write access to the repository minimal, protect
+the `v*` tags (a GitHub *tag ruleset* that restricts who can create, update or delete them), and treat a compromised maintainer
+account or release token as a compromised production. The "strictly newer" rule limits the damage of a mistaken or replayed old
+tag; it does not make a malicious newer release safe. If you need a human in the loop, use `deploy.yml` with required reviewers
+(section 8) instead, or set `AUTOUPDATE=false` and deploy by hand.
+
+```bash
+# as root, once
+cd /opt/socialos
+install -m 644 systemd/socialos-autoupdate.service systemd/socialos-autoupdate.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now socialos-autoupdate.timer
+./autoupdate.sh --dry-run                # what would happen right now
+systemctl list-timers socialos-autoupdate.timer
+journalctl -u socialos-autoupdate -n 50  # one short line per run, plus deploy.sh's output when it deploys
+```
+
+| Situation | What happens |
+|---|---|
+| `AUTOUPDATE=false` in `.env` (also `0`, `no`, `off`) | the timer keeps running and every run logs "disabled" and does nothing |
+| the release exists but its images are not published yet (the Release workflow takes a while after the tag) | `deploy.sh` changes nothing and exits 75; the next try is 15 minutes later |
+| the deploy fails and is rolled back | `.deploy/autoupdate_failed` records the version and that run exits non-zero (see `systemctl --failed` and the journal). The version is not tried again: later runs only log "skipping", until a newer release appears or you run `rm .deploy/autoupdate_failed` |
+| GitHub is unreachable, rate-limited (60 requests/hour per IP without a token; this uses 12) or has no release yet | logged, nothing deployed, the unit stays green |
+| the latest release is older than or equal to the deployed one | refused and logged ("not newer"), nothing is deployed, nothing is recorded as a failure |
+| the deployed tag is `sha-...` or `main` (a hand deploy) | the timer does nothing and says why, until you run `./deploy.sh X.Y.Z` for a release once |
+| you rolled back by hand (`./deploy.sh --rollback`) | the latest release is newer than the rolled-back tag, so the next run deploys it again: set `AUTOUPDATE=false` first (`deploy.sh` reminds you) |
+
+It updates the three SocialOS images only. The files in `/opt/socialos` (compose files, scripts, `.env`) are never touched; refresh
+them when a release changes `deploy/` (13.8). Because migrations stay backward compatible (section 5), a rollback to the previous
+tag works against the migrated database.
+
+**Pull or push?** Prefer the pull timer when the secrets must stay off GitHub, the server cannot be reached over SSH from the
+internet, or you want production to follow tagged releases only. Prefer `deploy.yml` (section 8) when you want every merge to
+`main` (`sha-` tags) deployed, a required reviewer approval in GitHub in front of each deployment, an immediate rollout instead of
+one within about 5 minutes, or the deploy output in the Actions log. The two can be combined, but not both on the same tag stream
+without thought: after a push deploy of a `sha-` tag the timer stays idle until a release is deployed by hand, and after a push
+deploy of an older release it would deploy the latest one.
+
+To run the script tests: `bash tests/run.sh` from `deploy/` on Linux (on macOS: `docker run --rm -v "$PWD:/repo" -w /repo
+ubuntu:24.04 bash deploy/tests/run.sh` from the repository root).

@@ -1,0 +1,3 @@
+# Used by shellcheck (CI and locally) for deploy/*.sh, deploy/host-proxy/*.sh and deploy/tests/*.sh.
+external-sources=true
+source-path=SCRIPTDIR

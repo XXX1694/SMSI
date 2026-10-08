@@ -6,6 +6,12 @@
 # Only Caddy publishes ports (80, 443). Postgres, Redis, MinIO, the API, the worker, the MCP server and the frontend
 # are reachable only on the internal compose network. See README.md for the full walkthrough and .env.prod.example for
 # every variable.
+#
+# Behind an existing reverse proxy instead (the host already owns 80/443)? Add docker-compose.host-proxy.yml to
+# COMPOSE_FILE: it turns the bundled Caddy off, publishes the services on 127.0.0.1 and lowers the memory limits.
+#
+# mem_limit is a hard cap per container (the container is OOM-killed above it), not a reservation. The defaults below are
+# generous for a dedicated 2-4 GB server; override them in .env with <SERVICE>_MEM_LIMIT.
 
 name: socialos
 
@@ -89,6 +95,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-socialos}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    mem_limit: ${POSTGRES_MEM_LIMIT:-768m}
     shm_size: 256mb
     stop_grace_period: 30s
     healthcheck:
@@ -108,6 +115,7 @@ services:
     command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
       - redis-data:/data
+    mem_limit: ${REDIS_MEM_LIMIT:-192m}
     healthcheck:
       test: ["CMD-SHELL", "[ \"$$(redis-cli ping)\" = PONG ]"]
       interval: 10s
@@ -126,6 +134,7 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
     volumes:
       - minio-data:/data
+    mem_limit: ${MINIO_MEM_LIMIT:-512m}
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9000/minio/health/live"]
       interval: 10s
@@ -139,6 +148,7 @@ services:
     image: *backend-image
     command: ["/app/migrate", "up"]
     environment: *backend-env
+    mem_limit: ${MIGRATE_MEM_LIMIT:-384m}
     restart: "no"
     healthcheck:
       disable: true
@@ -150,6 +160,7 @@ services:
     image: *backend-image
     command: ["/app/api"]
     environment: *backend-env
+    mem_limit: ${BACKEND_MEM_LIMIT:-384m}
     # healthcheck: from the image (`/app/api healthcheck` -> GET /health)
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -161,6 +172,7 @@ services:
     image: *backend-image
     command: ["/app/worker"]
     environment: *backend-env
+    mem_limit: ${WORKER_MEM_LIMIT:-384m}
     healthcheck:
       test: ["CMD", "/app/api", "healthcheck", "http://127.0.0.1:8081/health"]
       interval: 15s
@@ -178,6 +190,7 @@ services:
     environment:
       SOCIALOS_API_URL: http://backend:8080
       PORT: "3333"
+    mem_limit: ${MCP_MEM_LIMIT:-192m}
     # healthcheck: from the image (GET /health)
     depends_on:
       backend: { condition: service_healthy }
@@ -187,6 +200,7 @@ services:
   frontend:
     <<: *app
     image: ghcr.io/${GHCR_OWNER:-xxx1694}/socialos-frontend:${IMAGE_TAG:-main}
+    mem_limit: ${FRONTEND_MEM_LIMIT:-512m}
     # healthcheck: from the image (GET /login)
     depends_on:
       backend: { condition: service_healthy }
@@ -195,13 +209,16 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     logging: *default-logging
+    mem_limit: ${CADDY_MEM_LIMIT:-192m}
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp" # HTTP/3
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
-      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+      # Needed by this service only, and it is not part of host-proxy mode. Compose interpolates every service, enabled or not,
+      # so a required-variable check here would also demand it there; deploy.sh checks it for the standalone stack instead.
+      ACME_EMAIL: ${ACME_EMAIL:-}
       # Public host for presigned media URLs (bundled MinIO). Use ":8099" (an unpublished, unused port) to turn it off.
       S3_SITE: ${S3_SITE:-s3.${DOMAIN}}
     volumes:

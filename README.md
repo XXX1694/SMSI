@@ -327,7 +327,7 @@ Three GitHub Actions workflows, built to stay inside the 2000 free private-repo 
 
 **Set up:** repository variables `API_PUBLIC_URL` (`https://api.<domain>`) and `MCP_PUBLIC_URL` (`https://mcp.<domain>/mcp`), then, for automatic deploys, the secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (and `DEPLOY_KNOWN_HOSTS`). The frontend image **bakes in** those URLs at build time, so they have to be set *before* the release you deploy; see [`deploy/README.md`](deploy/README.md#frontend-urls-read-this-once).
 
-**Deploy by hand, from zero to HTTPS** (DNS records, server preparation, first deploy, migrations, Telegram webhook, LinkedIn redirect URL, backups with a `pg_dump` cron job, rollback by image tag): [`deploy/README.md`](deploy/README.md). To exercise the same stack locally, `make up` and `make acceptance` do what the e2e job does.
+**Deploy by hand, from zero to HTTPS** (DNS records, server preparation, first deploy, migrations, Telegram webhook, LinkedIn redirect URL, backups with a `pg_dump` cron job, rollback by image tag): [`deploy/README.md`](deploy/README.md). On a server where a reverse proxy already owns ports 80/443, use its [host-proxy mode](deploy/README.md#13-behind-an-existing-reverse-proxy-host-proxy-mode); a server can also [pull releases by itself](deploy/README.md#14-pull-based-updates) instead of receiving pushes. To exercise the same stack locally, `make up` and `make acceptance` do what the e2e job does.
 
 ## 13. Website & demo
 
