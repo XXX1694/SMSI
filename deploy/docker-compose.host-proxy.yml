@@ -34,27 +34,27 @@ services:
     mem_limit: ${REDIS_MEM_LIMIT:-64m}
 
   minio:
-    mem_limit: ${MINIO_MEM_LIMIT:-192m}
+    mem_limit: ${MINIO_MEM_LIMIT:-160m}
     ports:
       - "127.0.0.1:${MINIO_HOST_PORT:-19000}:9000"
     environment:
-      GOMEMLIMIT: ${MINIO_GOMEMLIMIT:-160MiB} # soft limit for the Go GC, a bit under mem_limit
+      GOMEMLIMIT: ${MINIO_GOMEMLIMIT:-128MiB} # soft limit for the Go GC, a bit under mem_limit
 
   migrate:
     mem_limit: ${MIGRATE_MEM_LIMIT:-128m}
 
   backend:
-    mem_limit: ${BACKEND_MEM_LIMIT:-128m}
+    mem_limit: ${BACKEND_MEM_LIMIT:-160m}
     ports:
       - "127.0.0.1:${BACKEND_HOST_PORT:-18080}:8080"
     environment:
-      GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-100MiB}
+      GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-128MiB}
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10} # per process (backend and worker); keep 2 x this under POSTGRES_MAX_CONNECTIONS
 
   worker:
-    mem_limit: ${WORKER_MEM_LIMIT:-128m}
+    mem_limit: ${WORKER_MEM_LIMIT:-160m}
     environment:
-      GOMEMLIMIT: ${WORKER_GOMEMLIMIT:-100MiB}
+      GOMEMLIMIT: ${WORKER_GOMEMLIMIT:-128MiB}
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10}
 
   mcp:

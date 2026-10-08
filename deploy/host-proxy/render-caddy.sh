@@ -13,8 +13,9 @@
 set -Eeuo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-env_file="$script_dir/../.env"
-out_file="$script_dir/../caddy/socialos.caddy"
+root_dir=$(dirname "$script_dir") # /opt/socialos
+env_file="$root_dir/.env"
+out_file="$root_dir/caddy/socialos.caddy"
 template="$script_dir/socialos.caddy.tmpl"
 
 die() {
