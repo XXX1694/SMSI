@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -37,6 +39,8 @@ type Config struct {
 	AuthRateRPS     float64
 	AuthRateBurst   int
 	TrustProxy      bool
+	TrustedProxies  []netip.Prefix // networks whose X-Forwarded-For is believed; empty = ignore the header (see proxies.go)
+	Warnings        []string       // valid but suspicious settings; the binaries log them at startup (LogWarnings)
 	WorkerConc      int
 	ReconcileEvery  time.Duration
 	StorageDriver   string // s3 | memory
@@ -115,14 +119,29 @@ func Load() (*Config, error) {
 		TelegramUpdatesMode:   strings.ToLower(env("TELEGRAM_UPDATES_MODE", TelegramModePolling)),
 		TelegramWebhookSecret: env("TELEGRAM_WEBHOOK_SECRET", ""),
 	}
-	return c, c.validate()
+	proxies, warnings, perr := resolveTrustedProxies(c.TrustProxy, env("TRUSTED_PROXIES", ""))
+	c.TrustedProxies, c.Warnings = proxies, warnings
+	return c, c.validate(perr)
 }
 
 // Production reports whether APP_ENV=production.
 func (c *Config) Production() bool { return c.Env == "production" }
 
-func (c *Config) validate() error {
+// LogWarnings writes the non-fatal configuration warnings found by Load. The logger is built from the loaded
+// configuration, so it cannot be used inside Load itself.
+func (c *Config) LogWarnings(log *slog.Logger) {
+	for _, w := range c.Warnings {
+		log.Warn("configuration: " + w)
+	}
+}
+
+func (c *Config) validate(extra ...error) error {
 	var problems []string
+	for _, e := range extra {
+		if e != nil {
+			problems = append(problems, e.Error())
+		}
+	}
 	if c.DatabaseURL == "" {
 		problems = append(problems, "DATABASE_URL is required")
 	}

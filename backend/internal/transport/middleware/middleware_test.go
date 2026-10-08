@@ -159,7 +159,7 @@ func whoami(w http.ResponseWriter, r *http.Request) {
 
 func TestAuthenticate(t *testing.T) {
 	f := &fakeAuth{csrf: "csrf-1", keyActor: actor.Actor{UserID: uuid.New(), Type: actor.TypeAPIKey, ID: "k"}}
-	h := middleware.RequestID(middleware.Authenticate(f, false)(http.HandlerFunc(whoami)))
+	h := middleware.RequestID(middleware.Authenticate(f, nil)(http.HandlerFunc(whoami)))
 	type who struct {
 		Authenticated bool
 		Type, CSRF    string
@@ -229,7 +229,7 @@ func TestAuthenticate(t *testing.T) {
 
 func TestAuthenticatePassesClientInfo(t *testing.T) {
 	f := &fakeAuth{}
-	h := middleware.RequestID(middleware.Authenticate(f, true)(http.HandlerFunc(whoami)))
+	h := middleware.RequestID(middleware.Authenticate(f, privateProxies)(http.HandlerFunc(whoami)))
 	do(h, "GET", "/", func(r *http.Request) {
 		r.RemoteAddr = "10.0.0.1:5555"
 		r.Header.Set("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
@@ -260,7 +260,7 @@ func TestCSRF(t *testing.T) {
 	session := actor.Actor{UserID: uuid.New(), Type: actor.TypeUser, SessionID: uuid.New()}
 	key := actor.Actor{UserID: uuid.New(), Type: actor.TypeAPIKey}
 	f := &fakeAuth{csrf: "tok-123", keyActor: key}
-	h := middleware.RequestID(middleware.Authenticate(f, false)(middleware.CSRF(http.HandlerFunc(ok))))
+	h := middleware.RequestID(middleware.Authenticate(f, nil)(middleware.CSRF(http.HandlerFunc(ok))))
 	_ = session
 	withSession := func(r *http.Request) {
 		r.AddCookie(&http.Cookie{Name: middleware.SessionCookie, Value: "good-session"})
@@ -337,7 +337,7 @@ func TestLimiterBurstRefillAndSweep(t *testing.T) {
 func TestRateLimitMiddleware(t *testing.T) {
 	m := observability.NewMetrics()
 	l := middleware.NewLimiter(0.001, 2)
-	h := middleware.RequestID(middleware.RateLimit(l, false, m, "t:")(http.HandlerFunc(ok)))
+	h := middleware.RequestID(middleware.RateLimit(l, nil, m, "t:")(http.HandlerFunc(ok)))
 	from := func(ip string) func(*http.Request) { return func(r *http.Request) { r.RemoteAddr = ip + ":1234" } }
 
 	for i := 0; i < 2; i++ {
@@ -392,50 +392,9 @@ func TestRateLimitMiddleware(t *testing.T) {
 		t.Fatalf("rate limited counter %v, want 8", total)
 	}
 	// Different prefixes are different buckets (auth vs api limiter).
-	other := middleware.RequestID(middleware.RateLimit(l, false, nil, "other:")(http.HandlerFunc(ok)))
+	other := middleware.RequestID(middleware.RateLimit(l, nil, nil, "other:")(http.HandlerFunc(ok)))
 	if rec := do(other, "GET", "/", from("192.0.2.1")); rec.Code != 204 {
 		t.Fatalf("prefix isolation: %d", rec.Code)
-	}
-}
-
-func TestRateLimitHonoursTrustedProxy(t *testing.T) {
-	h := middleware.RequestID(middleware.RateLimit(middleware.NewLimiter(0.001, 1), true, nil, "p:")(http.HandlerFunc(ok)))
-	via := func(xff string) func(*http.Request) {
-		return func(r *http.Request) { r.RemoteAddr = "10.0.0.1:1"; r.Header.Set("X-Forwarded-For", xff) }
-	}
-	if do(h, "GET", "/", via("198.51.100.1")).Code != 204 || do(h, "GET", "/", via("198.51.100.1")).Code != 429 {
-		t.Fatal("same client behind the proxy must be limited")
-	}
-	if do(h, "GET", "/", via("198.51.100.2")).Code != 204 {
-		t.Fatal("different clients behind the proxy have their own bucket")
-	}
-}
-
-func TestClientIP(t *testing.T) {
-	for name, tc := range map[string]struct {
-		trust  bool
-		remote string
-		xff    string
-		want   string
-	}{
-		"direct":                     {false, "192.0.2.5:4000", "", "192.0.2.5"},
-		"xff ignored when untrusted": {false, "192.0.2.5:4000", "203.0.113.1", "192.0.2.5"},
-		"xff used when trusted":      {true, "10.0.0.1:4000", "203.0.113.1", "203.0.113.1"},
-		"first hop of a chain":       {true, "10.0.0.1:4000", "203.0.113.1, 10.0.0.2", "203.0.113.1"},
-		"garbage xff falls back":     {true, "10.0.0.1:4000", "not-an-ip", "10.0.0.1"},
-		"empty xff falls back":       {true, "10.0.0.1:4000", "", "10.0.0.1"},
-		"ipv6":                       {false, "[2001:db8::1]:80", "", "2001:db8::1"},
-		"ipv6 xff normalised":        {true, "10.0.0.1:1", "2001:DB8:0:0:0:0:0:1", "2001:db8::1"},
-		"remote without port":        {false, "192.0.2.9", "", "192.0.2.9"},
-	} {
-		r := httptest.NewRequest("GET", "/", nil)
-		r.RemoteAddr = tc.remote
-		if tc.xff != "" {
-			r.Header.Set("X-Forwarded-For", tc.xff)
-		}
-		if got := middleware.ClientIP(r, tc.trust); got != tc.want {
-			t.Errorf("%s: %q, want %q", name, got, tc.want)
-		}
 	}
 }
 
@@ -491,7 +450,7 @@ func TestAccessLogIncludesTheAuthenticatedActor(t *testing.T) {
 	var logs bytes.Buffer
 	f := &fakeAuth{csrf: "c", keyActor: actor.Actor{UserID: uuid.New(), Type: actor.TypeAPIKey, ID: "k"}}
 	// Same order as the real router: the access log is outermost, authentication is inside it.
-	h := middleware.AccessLog(slog.New(slog.NewJSONHandler(&logs, nil)), nil)(middleware.Authenticate(f, false)(http.HandlerFunc(ok)))
+	h := middleware.AccessLog(slog.New(slog.NewJSONHandler(&logs, nil)), nil)(middleware.Authenticate(f, nil)(http.HandlerFunc(ok)))
 	do(h, "GET", "/", func(r *http.Request) { r.Header.Set("Authorization", "Bearer sk_live_good") })
 	do(h, "GET", "/", func(r *http.Request) {
 		r.AddCookie(&http.Cookie{Name: middleware.SessionCookie, Value: "good-session"})
@@ -537,7 +496,7 @@ func TestAPIKeyAudit(t *testing.T) {
 	f := &fakeAuth{csrf: "c", keyActor: keyActor}
 	rec := &memAudit{}
 	r := chi.NewRouter()
-	r.Use(middleware.Authenticate(f, false), middleware.APIKeyAudit(rec, slog.New(slog.NewJSONHandler(&bytes.Buffer{}, nil))))
+	r.Use(middleware.Authenticate(f, nil), middleware.APIKeyAudit(rec, slog.New(slog.NewJSONHandler(&bytes.Buffer{}, nil))))
 	r.Post("/posts/{id}", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusCreated) })
 	r.Get("/missing", func(w http.ResponseWriter, _ *http.Request) { http.Error(w, "nope", http.StatusNotFound) })
 	bearer := func(req *http.Request) { req.Header.Set("Authorization", "Bearer sk_live_good") }

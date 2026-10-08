@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"image"
 	"image/color"
 	"image/png"
@@ -10,6 +11,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/socialos/backend/internal/domain/errs"
+	"github.com/socialos/backend/internal/domain/post"
+	"github.com/socialos/backend/internal/infrastructure/postgres"
 )
 
 func TestAPIKeyScopes(t *testing.T) {
@@ -187,6 +194,74 @@ func TestTenantIsolationHTTP(t *testing.T) {
 	}
 	if n := len(bob.must("GET", "/api/v1/social/accounts", nil, 200)["items"].([]any)); n != 0 {
 		t.Fatalf("bob sees %d accounts", n)
+	}
+}
+
+// A post target is only ever reached through its post, and every route is keyed by the post id. Bob must not be able
+// to read, change or lock Alice's target by any of them, nor by presenting her target id where a post id is expected.
+func TestTargetIsolation(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	alice, bob := e.browser(), e.browser()
+	aliceID := alice.register("alice@target.test")["user"].(map[string]any)["id"].(string)
+	bobID := bob.register("bob@target.test")["user"].(map[string]any)["id"].(string)
+	acc := alice.connectMock()
+	p := alice.must("POST", "/api/v1/posts", map[string]any{"content": "alice only", "social_account_ids": []string{acc}}, 201)
+	postID := p["id"].(string)
+	targetID := p["targets"].([]any)[0].(map[string]any)["id"].(string)
+
+	for _, id := range []string{postID, targetID} { // Alice's post id, and her target id passed as if it were a post id
+		for _, tc := range []struct{ method, path string }{
+			{"GET", "/api/v1/posts/" + id}, {"PATCH", "/api/v1/posts/" + id}, {"DELETE", "/api/v1/posts/" + id},
+			{"GET", "/api/v1/posts/" + id + "/status"}, {"POST", "/api/v1/posts/" + id + "/publish"},
+			{"POST", "/api/v1/posts/" + id + "/schedule"}, {"POST", "/api/v1/posts/" + id + "/unschedule"},
+			{"POST", "/api/v1/posts/" + id + "/cancel"}, {"POST", "/api/v1/posts/" + id + "/retry"},
+		} {
+			// A valid body, so that a 404 can only come from the ownership check.
+			body := map[string]any{"content": "hijack", "scheduled_at": time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339), "confirm": true}
+			if r := bob.do(tc.method, tc.path, body); r.status != http.StatusNotFound {
+				t.Errorf("bob %s %s: want 404 got %d %s", tc.method, tc.path, r.status, r.body)
+			}
+		}
+	}
+	// None of that touched Alice's post or its target.
+	got := alice.must("GET", "/api/v1/posts/"+postID, nil, 200)
+	gt := got["targets"].([]any)[0].(map[string]any)
+	if got["status"] != "draft" || got["content"] != "alice only" || gt["id"] != targetID || gt["status"] != "pending" || gt["content"] != "alice only" {
+		t.Fatalf("alice's post changed: %v", got)
+	}
+	if n := len(bob.must("GET", "/api/v1/posts", nil, 200)["items"].([]any)); n != 0 {
+		t.Fatalf("bob lists %d posts", n)
+	}
+
+	// The same holds below the HTTP layer, for every repository method that takes a user.
+	ctx, repo := context.Background(), postgres.NewPosts(e.app.DB)
+	alicePost, aliceUser, bobUser := uuid.MustParse(postID), uuid.MustParse(aliceID), uuid.MustParse(bobID)
+	tid := uuid.MustParse(targetID)
+	if ts, err := repo.ListTargets(ctx, bobUser, alicePost); err != nil || len(ts) != 0 {
+		t.Fatalf("bob lists alice's targets: %v %v", ts, err)
+	}
+	if as, err := repo.Attempts(ctx, bobUser, alicePost); err != nil || len(as) != 0 {
+		t.Fatalf("bob lists alice's attempts: %v %v", as, err)
+	}
+	if err := repo.LockTargetWait(ctx, bobUser, tid); !errs.Is(err, errs.NotFound) {
+		t.Fatalf("bob locked alice's target: %v", err)
+	}
+	if err := repo.LockTargetWait(ctx, aliceUser, tid); err != nil {
+		t.Fatalf("the owner must be able to lock: %v", err)
+	}
+	ts, err := repo.ListTargets(ctx, aliceUser, alicePost)
+	if err != nil || len(ts) != 1 {
+		t.Fatalf("alice's targets: %v %v", ts, err)
+	}
+	forged := ts[0]
+	forged.UserID, forged.Content, forged.Status = bobUser, "forged", post.TargetPublished
+	if err := repo.UpdateTarget(ctx, &forged); !errs.Is(err, errs.NotFound) {
+		t.Fatalf("bob updated alice's target: %v", err)
+	}
+	var content, status string
+	if err := e.app.DB.Pool.QueryRow(ctx, `SELECT content, status FROM post_targets WHERE id = $1`, tid).Scan(&content, &status); err != nil ||
+		content != "alice only" || status != "pending" {
+		t.Fatalf("alice's target row: %q %q %v", content, status, err)
 	}
 }
 

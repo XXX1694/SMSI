@@ -123,6 +123,11 @@ func (r *Posts) ListTargets(ctx context.Context, userID, postID uuid.UUID) ([]po
 
 // LockTarget locks a target with SKIP LOCKED (system: worker only).
 // ok=false means the row is locked by another transaction or does not exist.
+//
+// It takes no user id on purpose: the worker learns the tenant from this very row (t.UserID) and uses it for every
+// follow-up read and write (posts, accounts). The id is never user input: no HTTP route accepts a target id, and it
+// comes from scheduled_jobs.post_target_id or from a queue payload that only this backend enqueues (the queue lives
+// on the internal network, behind a password in production). Do not call it from a request handler; use ListTargets.
 func (r *Posts) LockTarget(ctx context.Context, id uuid.UUID) (*post.Target, bool, error) {
 	t, err := scanTarget(r.db.q(ctx).QueryRow(ctx, `SELECT `+targetCols+` FROM post_targets t WHERE t.id = $1 FOR UPDATE SKIP LOCKED`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -141,10 +146,12 @@ func (r *Posts) LockTarget(ctx context.Context, id uuid.UUID) (*post.Target, boo
 	return t, true, nil
 }
 
-// LockTargetWait takes a blocking row lock on a target (system: worker only).
-func (r *Posts) LockTargetWait(ctx context.Context, id uuid.UUID) error {
+// LockTargetWait takes a blocking row lock on a target the caller already loaded (system: worker only). It is scoped
+// by the owner's user id like every other query on user data, so a mismatched pair is NotFound, never a lock on
+// someone else's row.
+func (r *Posts) LockTargetWait(ctx context.Context, userID, id uuid.UUID) error {
 	var got uuid.UUID
-	return mapErr(r.db.q(ctx).QueryRow(ctx, `SELECT id FROM post_targets WHERE id = $1 FOR UPDATE`, id).Scan(&got), "post target")
+	return mapErr(r.db.q(ctx).QueryRow(ctx, `SELECT id FROM post_targets WHERE id = $1 AND user_id = $2 FOR UPDATE`, id, userID).Scan(&got), "post target")
 }
 
 // StuckPublishing lists targets in publishing not updated since `before` (system).

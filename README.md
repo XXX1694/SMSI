@@ -99,6 +99,7 @@ Use `make logs`, `make ps` and `make down` to watch, inspect and stop the stack.
 | `TELEGRAM_WEBHOOK_SECRET` | Webhook mode only: secret Telegram echoes in `X-Telegram-Bot-Api-Secret-Token` (1-256 chars of `A-Z a-z 0-9 _ -`; 16+ in production) |
 | `SOCIAL_MOCK_PROVIDERS` | Mock network (development only) |
 | `COOKIE_SECURE`, `METRICS_TOKEN`, `RATE_LIMIT_*` | Hardening |
+| `TRUST_PROXY`, `TRUSTED_PROXIES` | Behind a reverse proxy: `TRUST_PROXY=true` makes the backend read `X-Forwarded-For`, but only from peers in `TRUSTED_PROXIES` (CIDRs; default loopback + private ranges) and only the right-most hop outside that set counts. Invalid CIDRs stop startup |
 
 `JWT_SECRET` is intentionally absent. Sessions are opaque and revocable server-side, which is simpler and safer than JWT refresh logic for an MVP. Real secrets are never committed: `.env` is git-ignored.
 

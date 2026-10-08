@@ -4,6 +4,7 @@ package http
 import (
 	"log/slog"
 	"net/http"
+	"net/netip"
 
 	"github.com/go-chi/chi/v5"
 
@@ -37,13 +38,15 @@ type Options struct {
 	CORSOrigins  []string
 	CookieSecure bool
 	CookieDomain string
-	TrustProxy   bool
-	MetricsToken string
-	Logger       *slog.Logger
-	Metrics      *observability.Metrics
-	Ready        []ReadyCheck
-	APILimiter   *middleware.Limiter
-	AuthLimiter  *middleware.Limiter
+	// TrustedProxies are the proxy networks whose X-Forwarded-For is believed (config TRUSTED_PROXIES); empty means the
+	// header is ignored and the TCP peer is the client.
+	TrustedProxies []netip.Prefix
+	MetricsToken   string
+	Logger         *slog.Logger
+	Metrics        *observability.Metrics
+	Ready          []ReadyCheck
+	APILimiter     *middleware.Limiter
+	AuthLimiter    *middleware.Limiter
 	// TelegramWebhookSecret enables POST /webhooks/telegram (webhook intake
 	// mode); with an empty secret the route does not exist.
 	TelegramWebhookSecret string
@@ -51,8 +54,9 @@ type Options struct {
 
 // API holds handler dependencies.
 type API struct {
-	svc Services
-	opt Options
+	svc     Services
+	opt     Options
+	trusted middleware.TrustedProxies
 }
 
 // NewRouter builds the HTTP handler.
@@ -69,7 +73,7 @@ func NewRouter(svc Services, opt Options) http.Handler {
 	if opt.AuthLimiter == nil {
 		opt.AuthLimiter = middleware.NewLimiter(0.2, 10)
 	}
-	a := &API{svc: svc, opt: opt}
+	a := &API{svc: svc, opt: opt, trusted: middleware.TrustedProxies(opt.TrustedProxies)}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.Recover, middleware.AccessLog(opt.Logger, opt.Metrics), middleware.SecurityHeaders,
 		middleware.CORS(opt.CORSOrigins))
@@ -86,10 +90,10 @@ func NewRouter(svc Services, opt Options) http.Handler {
 			r.Post("/webhooks/telegram", a.telegramWebhook)
 		}
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Authenticate(svc.Auth, opt.TrustProxy), middleware.APIKeyAudit(svc.Audit, opt.Logger),
-				middleware.RateLimit(opt.APILimiter, opt.TrustProxy, opt.Metrics, "api:"), middleware.CSRF)
+			r.Use(middleware.Authenticate(svc.Auth, a.trusted), middleware.APIKeyAudit(svc.Audit, opt.Logger),
+				middleware.RateLimit(opt.APILimiter, a.trusted, opt.Metrics, "api:"), middleware.CSRF)
 			r.Group(func(r chi.Router) {
-				r.Use(middleware.RateLimit(opt.AuthLimiter, opt.TrustProxy, opt.Metrics, "auth:"))
+				r.Use(middleware.RateLimit(opt.AuthLimiter, a.trusted, opt.Metrics, "auth:"))
 				r.Post("/auth/register", a.register)
 				r.Post("/auth/login", a.login)
 			})
@@ -117,7 +121,7 @@ func (a *API) mountAuthenticated(r chi.Router) {
 	r.Get("/social/accounts", a.listAccounts)
 	r.Get("/social/accounts/{id}", a.getAccount)
 	r.Delete("/social/accounts/{id}", a.disconnectAccount)
-	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.opt.TrustProxy, a.opt.Metrics, "link:")).
+	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "link:")).
 		Post("/social/telegram/connect", a.startTelegramLink)
 	r.Get("/social/telegram/connect/{id}", a.telegramLinkStatus)
 	r.Get("/social/{provider}/connect", a.connect)

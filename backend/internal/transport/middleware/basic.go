@@ -5,12 +5,10 @@ package middleware
 import (
 	"context"
 	"log/slog"
-	"net"
 	"net/http"
 	"regexp"
 	"runtime/debug"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -164,21 +162,4 @@ func AccessLog(log *slog.Logger, m *observability.Metrics) func(http.Handler) ht
 			log.Log(r.Context(), level, "http request", attrs...)
 		})
 	}
-}
-
-// ClientIP extracts the caller IP; X-Forwarded-For is honoured only behind a trusted proxy.
-func ClientIP(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			first, _, _ := strings.Cut(xff, ",")
-			if ip := net.ParseIP(strings.TrimSpace(first)); ip != nil {
-				return ip.String()
-			}
-		}
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

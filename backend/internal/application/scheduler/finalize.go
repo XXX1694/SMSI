@@ -19,7 +19,7 @@ const (
 // (target → post) matches begin, so the two paths cannot deadlock; the post
 // lock serialises sibling targets settling the same post.
 func (p *Publisher) relock(ctx context.Context, r *run) error {
-	if err := p.targets.LockTargetWait(ctx, r.target.ID); err != nil {
+	if err := p.targets.LockTargetWait(ctx, r.target.UserID, r.target.ID); err != nil {
 		return err
 	}
 	ps, err := p.posts.GetForUpdate(ctx, r.target.UserID, r.target.PostID)

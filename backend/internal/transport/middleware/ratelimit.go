@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"container/list"
 	"math"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"sync"
 	"time"
@@ -15,33 +17,61 @@ import (
 	"github.com/socialos/backend/internal/transport/httpx"
 )
 
-// Limiter is an in-memory token bucket per key (per API instance).
+// MaxTrackedKeys is how many keys a Limiter tracks at once. A caller that rotates keys (addresses, or anything else an
+// attacker controls) could otherwise grow the map until the process runs out of memory.
+const MaxTrackedKeys = 50_000
+
+// Limiter is an in-memory token bucket per key (per API instance). It tracks at most maxKeys keys: when a new key
+// arrives at the cap, the least recently seen key is dropped (it simply starts over with a full bucket if it returns).
+// A new key is always limited like any other; the cap never lets a request skip the limit.
 type Limiter struct {
-	rps   rate.Limit
-	burst int
-	mu    sync.Mutex
-	keys  map[string]*bucket
-	idle  time.Duration
+	rps     rate.Limit
+	burst   int
+	maxKeys int
+	mu      sync.Mutex
+	keys    map[string]*list.Element // key -> element of order holding a *bucket
+	order   *list.List               // most recently seen at the front
+	idle    time.Duration
 }
 
 type bucket struct {
+	key  string
 	lim  *rate.Limiter
 	seen time.Time
 }
 
-// NewLimiter creates a limiter with rps tokens/second and burst capacity.
+// NewLimiter creates a limiter with rps tokens/second and burst capacity that tracks up to MaxTrackedKeys keys.
 func NewLimiter(rps float64, burst int) *Limiter {
-	return &Limiter{rps: rate.Limit(rps), burst: burst, keys: map[string]*bucket{}, idle: 10 * time.Minute}
+	return NewLimiterWithCap(rps, burst, MaxTrackedKeys)
+}
+
+// NewLimiterWithCap is NewLimiter with an explicit cap on the number of tracked keys (minimum 1).
+func NewLimiterWithCap(rps float64, burst, maxKeys int) *Limiter {
+	return &Limiter{rps: rate.Limit(rps), burst: burst, maxKeys: max(maxKeys, 1), keys: map[string]*list.Element{},
+		order: list.New(), idle: 10 * time.Minute}
+}
+
+// Len is the number of keys currently tracked.
+func (l *Limiter) Len() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.keys)
 }
 
 // Allow consumes a token for key; it returns the suggested retry delay when denied.
 func (l *Limiter) Allow(key string) (bool, time.Duration) {
 	now := time.Now()
 	l.mu.Lock()
-	b, ok := l.keys[key]
-	if !ok {
-		b = &bucket{lim: rate.NewLimiter(l.rps, l.burst)}
-		l.keys[key] = b
+	var b *bucket
+	if el, ok := l.keys[key]; ok {
+		l.order.MoveToFront(el)
+		b = el.Value.(*bucket)
+	} else {
+		for len(l.keys) >= l.maxKeys {
+			l.drop(l.order.Back())
+		}
+		b = &bucket{key: key, lim: rate.NewLimiter(l.rps, l.burst)}
+		l.keys[key] = l.order.PushFront(b)
 	}
 	b.seen = now
 	l.mu.Unlock()
@@ -56,23 +86,28 @@ func (l *Limiter) Allow(key string) (bool, time.Duration) {
 	return true, 0
 }
 
-// Sweep drops idle buckets; call periodically.
+// drop forgets one tracked key; the caller holds l.mu.
+func (l *Limiter) drop(el *list.Element) {
+	delete(l.keys, el.Value.(*bucket).key)
+	l.order.Remove(el)
+}
+
+// Sweep drops idle buckets; call periodically. The list is ordered by last use, so it stops at the first fresh one.
 func (l *Limiter) Sweep() {
 	cutoff := time.Now().Add(-l.idle)
 	l.mu.Lock()
-	for k, b := range l.keys {
-		if b.seen.Before(cutoff) {
-			delete(l.keys, k)
-		}
+	for el := l.order.Back(); el != nil && el.Value.(*bucket).seen.Before(cutoff); el = l.order.Back() {
+		l.drop(el)
 	}
 	l.mu.Unlock()
 }
 
-// RateLimit applies the limiter keyed by actor (user/API key) or client IP.
-func RateLimit(l *Limiter, trustProxy bool, m *observability.Metrics, prefix string) func(http.Handler) http.Handler {
+// RateLimit applies the limiter keyed by actor (user/API key) or, for anonymous callers, the client IP as resolved by
+// ClientIP (so a forged X-Forwarded-For cannot pick the bucket).
+func RateLimit(l *Limiter, trusted TrustedProxies, m *observability.Metrics, prefix string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			key := prefix + "ip:" + ClientIP(r, trustProxy)
+			key := prefix + "ip:" + bucketAddr(ClientIP(r, trusted))
 			if a, ok := actor.From(r.Context()); ok {
 				key = prefix + string(a.Type) + ":" + a.ID
 			}
@@ -87,4 +122,19 @@ func RateLimit(l *Limiter, trustProxy bool, m *observability.Metrics, prefix str
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// bucketAddr maps a client address to the unit that shares a bucket: an IPv4 address is its own unit, but an IPv6
+// client normally owns a whole /64, so it could mint a fresh /128 per request and never be throttled. Only the
+// limiter uses this; audit logs and sessions keep the full address.
+func bucketAddr(ip string) string {
+	a, err := netip.ParseAddr(ip)
+	if err != nil {
+		return ip
+	}
+	a = a.Unmap()
+	if a.Is6() && !a.Is4In6() {
+		return netip.PrefixFrom(a, 64).Masked().Addr().String()
+	}
+	return a.String()
 }
