@@ -1,0 +1,21 @@
+# gitleaks configuration: the default ruleset plus a narrow allowlist for placeholder values in tests.
+# Every entry names the exact value AND restricts it to test files (condition = "AND"), so a real secret
+# committed elsewhere is still reported.
+title = "SocialOS gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Fake credentials used as fixtures in tests (none of them is a real secret)"
+condition = "AND"
+paths = [
+  '''(^|/)[^/]+_test\.go$''',
+  '''^mcp/test/''',
+]
+regexes = [
+  # Obvious sequential placeholder used as a Telegram webhook secret in config and e2e tests.
+  '''(whsec_)?0123456789abcdef0123456789abcdef''',
+  # Fake API keys that only prove the backend / MCP server reject unknown keys.
+  '''sk_live_(notarealkey|testkey123)''',
+]

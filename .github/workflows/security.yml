@@ -1,0 +1,190 @@
+name: Security
+
+# Free scanners only (the repository is public, so GitHub code scanning is free):
+#   * govulncheck   - Go vulnerabilities that the backend code can actually reach;
+#   * npm audit     - high/critical advisories in production dependencies (mcp, frontend, site);
+#   * gitleaks      - committed secrets (full history on push/schedule, the PR's own commits on pull requests);
+#   * Trivy         - OS and library CVEs in the three built images, results go to the Security tab;
+#   * CodeQL        - static analysis of the Go and TypeScript code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Mondays 03:00 UTC: new advisories appear without any code change.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Same Go line as ci.yml and backend/Dockerfile: the latest patch of 1.26 carries the standard-library fixes.
+  GO_VERSION: "1.26"
+  # Pinned so that a new scanner release cannot turn the workflow red by itself; bump deliberately
+  # (Dependabot does not track these two).
+  GOVULNCHECK_VERSION: v1.8.0
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  govulncheck:
+    name: govulncheck (backend)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+      # Exits non-zero only for vulnerabilities whose vulnerable symbol is reachable from the code.
+      - name: govulncheck
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+  npm-audit:
+    name: npm audit (${{ matrix.package }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [mcp, frontend, site]
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # Reads package-lock.json, so no install is needed. devDependencies are out of scope on purpose.
+      - name: npm audit (production dependencies, high and above)
+        run: npm audit --omit=dev --audit-level=high
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # The binary is used directly: it is free for every repository and needs no licence key, unlike
+      # gitleaks-action, which requires one for organisations. The download is checked against a pinned hash.
+      - name: Install gitleaks
+        run: |
+          set -eu
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$file" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$file"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$file" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$file" -C "$RUNNER_TEMP" gitleaks
+      - name: Scan commits
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          if [ "$EVENT" = pull_request ]; then
+            range="${BASE_SHA}..${HEAD_SHA}"   # only the commits this pull request adds
+          else
+            range="--all"                      # whole history (push to main, weekly schedule)
+          fi
+          "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --log-opts="$range" .
+
+  trivy:
+    name: Trivy (${{ matrix.image }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [backend, mcp, frontend]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4
+      # Same context and Dockerfile as the docker job in ci.yml; shares its layer cache (read-only here).
+      - name: Build ${{ matrix.image }}
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image }}
+          load: true
+          tags: socialos-${{ matrix.image }}:scan
+          provenance: false
+          cache-from: type=gha,scope=${{ matrix.image }}
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: socialos-${{ matrix.image }}:scan
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+          format: sarif
+          output: trivy-${{ matrix.image }}.sarif
+          exit-code: "1"
+      # Pull requests from forks get a read-only token and cannot upload.
+      - name: Upload results to code scanning
+        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: autobuild
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        if: matrix.language == 'go'
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

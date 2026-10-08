@@ -40,6 +40,9 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
+# npm, npx and corepack are only needed to build; the image runs plain `node`. Dropping them removes the
+# npm-bundled packages (brace-expansion, pacote, sigstore, ...) that image scanners report.
+RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn*
 USER node
 EXPOSE 3000
 # /login is a public page that renders without the backend, so this checks the Next server only.
