@@ -37,6 +37,7 @@ func run() error {
 	}
 	log := observability.NewLogger(cfg.LogLevel, cfg.LogFormat)
 	slog.SetDefault(log)
+	cfg.LogWarnings(log)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

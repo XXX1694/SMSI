@@ -1,6 +1,9 @@
 package config
 
 import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
 	"net/netip"
 	"strconv"
 	"strings"
@@ -93,5 +96,69 @@ func TestTrustedProxiesErrorIsReportedWithOtherProblems(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error should mention %s: %v", want, err)
 		}
+	}
+}
+
+func TestTrustedProxiesWarnings(t *testing.T) {
+	for name, tc := range map[string]struct {
+		trust bool
+		raw   string // "-" leaves TRUSTED_PROXIES unset
+		want  []string
+	}{
+		"nothing set, proxy off":          {false, "-", nil},
+		"nothing set, proxy on":           {true, "-", nil},
+		"valid list, proxy on":            {true, "10.0.0.0/8", nil},
+		"list ignored while proxy is off": {false, "10.0.0.0/8", []string{"ignored because TRUST_PROXY"}},
+		"only commas, proxy on":           {true, ",", []string{`lists no network`}},
+		"commas and spaces, proxy on":     {true, " , ,", []string{`lists no network`}},
+		"only commas, proxy off":          {false, ",", []string{"ignored because TRUST_PROXY", "lists no network"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			validEnv(t)
+			t.Setenv("TRUST_PROXY", strconv.FormatBool(tc.trust))
+			if tc.raw != "-" {
+				t.Setenv("TRUSTED_PROXIES", tc.raw)
+			}
+			c, err := Load()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(c.Warnings) != len(tc.want) {
+				t.Fatalf("warnings = %q, want %d containing %q", c.Warnings, len(tc.want), tc.want)
+			}
+			for i, w := range tc.want {
+				if !strings.Contains(c.Warnings[i], w) {
+					t.Errorf("warning %d = %q, want it to contain %q", i, c.Warnings[i], w)
+				}
+			}
+		})
+	}
+}
+
+func TestLogWarnings(t *testing.T) {
+	validEnv(t)
+	t.Setenv("TRUST_PROXY", "false")
+	t.Setenv("TRUSTED_PROXIES", "10.0.0.0/8")
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	c.LogWarnings(slog.New(slog.NewJSONHandler(&out, nil)))
+	var rec struct{ Level, Msg string }
+	if err := json.Unmarshal(out.Bytes(), &rec); err != nil {
+		t.Fatalf("not one JSON log line: %q: %v", out.String(), err)
+	}
+	if rec.Level != "WARN" || !strings.Contains(rec.Msg, "TRUSTED_PROXIES") {
+		t.Fatalf("log record %+v", rec)
+	}
+	out.Reset()
+	validEnv(t)
+	t.Setenv("TRUST_PROXY", "true")
+	t.Setenv("TRUSTED_PROXIES", "10.0.0.0/8")
+	quiet, _ := Load()
+	quiet.LogWarnings(slog.New(slog.NewJSONHandler(&out, nil)))
+	if out.Len() != 0 {
+		t.Fatalf("a sane configuration logged %q", out.String())
 	}
 }

@@ -51,13 +51,25 @@ func ParseTrustedProxies(s string) ([]netip.Prefix, error) {
 // resolveTrustedProxies applies the TRUST_PROXY switch: with it off nobody is trusted (X-Forwarded-For is ignored);
 // with it on, an empty TRUSTED_PROXIES means the loopback + private defaults. The list is parsed even when the switch
 // is off so that a malformed value fails at startup instead of on the day someone enables the proxy.
-func resolveTrustedProxies(trustProxy bool, raw string) ([]netip.Prefix, error) {
+//
+// The warnings are for values that are valid but almost certainly not what the operator meant: a list that is
+// ignored, or one that holds no network at all (for example ",").
+func resolveTrustedProxies(trustProxy bool, raw string) (nets []netip.Prefix, warnings []string, err error) {
 	parsed, err := ParseTrustedProxies(raw)
-	if err != nil || !trustProxy {
-		return nil, err
+	if err != nil {
+		return nil, nil, err
 	}
-	if len(parsed) == 0 {
-		return DefaultTrustedProxies(), nil
+	if raw != "" && !trustProxy {
+		warnings = append(warnings, "TRUSTED_PROXIES is set but ignored because TRUST_PROXY is not true: X-Forwarded-For is never read")
 	}
-	return parsed, nil
+	if raw != "" && len(parsed) == 0 {
+		warnings = append(warnings, fmt.Sprintf("TRUSTED_PROXIES %q lists no network; treating it as unset", raw))
+	}
+	switch {
+	case !trustProxy:
+		return nil, warnings, nil
+	case len(parsed) == 0:
+		return DefaultTrustedProxies(), warnings, nil
+	}
+	return parsed, warnings, nil
 }
