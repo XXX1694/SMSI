@@ -6,6 +6,7 @@ import { usePrefs } from '@/components/prefs-provider';
 import { ErrorState, LoadingRows } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { postHref } from '@/lib/demo/config';
 import { dayNumber, monthGrid, shift, titleFor, visibleRange, weekdayShort, weekDays, type CalendarView } from '@/lib/calendar';
 import { postLabel, postTime } from '@/lib/format';
 import { postStatusView } from '@/lib/status';
@@ -28,7 +29,7 @@ function PostChip({ post, timezone }: { post: Post; timezone: string }) {
   const time = utcToZonedInputs(postTime(post), timezone).time;
   return (
     <Link
-      href={`/posts/${post.id}`}
+      href={postHref(post.id)}
       title={`${v.label}: ${postLabel(post)}`}
       className={cn('block truncate rounded-sm border-l-2 px-1.5 py-0.5 text-xs hover:opacity-80', TONE_CLASS[v.tone])}
     >

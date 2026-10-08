@@ -10,18 +10,29 @@
 #
 # The runtime stage is distroless "static:nonroot": no shell, no package manager,
 # uid/gid 65532. HEALTHCHECK uses `api healthcheck` because there is no curl.
+#
+# Multi-arch: the build stage always runs on the builder's own architecture and
+# cross-compiles with GOARCH=$TARGETARCH, so `--platform linux/amd64,linux/arm64`
+# needs no QEMU emulation (CGO is off, the binaries are fully static).
 
-ARG GO_VERSION=1.24
+# go.mod only states the minimum language version (1.24); images are built with a supported toolchain so that they carry
+# the current standard-library security fixes. Keep GO_VERSION in .github/workflows/ci.yml on the same minor version.
+ARG GO_VERSION=1.26
 
-FROM golang:${GO_VERSION}-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS build
+ARG TARGETOS=linux
+ARG TARGETARCH
 WORKDIR /src
-# Dependencies first so they stay cached until go.mod/go.sum change.
+# Dependencies first so they stay cached until go.mod/go.sum change. The module cache is deliberately
+# NOT a cache mount: it must end up in the layer, otherwise CI (which only persists layers, not
+# mounts) would download every module again on each source change.
 COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod go mod download && go mod verify
+RUN go mod download && go mod verify
 COPY . .
-ENV CGO_ENABLED=0 GOOS=linux
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+ENV CGO_ENABLED=0
+RUN --mount=type=cache,target=/root/.cache/go-build \
     set -eu; \
+    export GOOS="${TARGETOS}" GOARCH="${TARGETARCH:-$(go env GOARCH)}"; \
     for cmd in api worker migrate telegram; do \
       go build -trimpath -ldflags="-s -w" -o "/out/${cmd}" "./cmd/${cmd}"; \
     done
@@ -33,5 +44,7 @@ COPY --from=build /out/api /out/worker /out/migrate /out/telegram /app/
 USER 65532:65532
 ENV APP_ENV=production HTTP_ADDR=:8080 LOG_FORMAT=json
 EXPOSE 8080 8081
+# Applies to the API. The worker and one-shot containers override or disable it in compose
+# (the worker serves /health on :8081, see docker-compose.yml).
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD ["/app/api", "healthcheck"]
 CMD ["/app/api"]

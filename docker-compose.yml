@@ -1,5 +1,9 @@
 # SocialOS local development stack: `docker compose up` (or `make up`).
 # Configuration comes from .env (copy .env.example; `make env` does it and generates ENCRYPTION_KEY).
+# Every long-running service has a healthcheck, so `docker compose up -d --wait` blocks until the stack is
+# usable: postgres, redis, minio and worker are defined below; backend, mcp and frontend use the HEALTHCHECK
+# baked into their images (backend/Dockerfile, mcp/Dockerfile, frontend/Dockerfile).
+# The production stack (published GHCR images, Caddy, HTTPS) is deploy/docker-compose.prod.yml.
 name: socialos
 
 x-backend-env: &backend-env
@@ -57,7 +61,8 @@ services:
       retries: 20
 
   minio:
-    image: minio/minio:latest
+    # Pinned so a new upstream release cannot break CI or your local stack (the healthcheck needs the bundled `mc`).
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-04-22T22-12-26Z}
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-socialos}
@@ -74,6 +79,8 @@ services:
     build: ./backend
     command: ["/app/migrate", "up"]
     environment: *backend-env
+    healthcheck:
+      disable: true # one-shot: the image's HEALTHCHECK probes the API port, which a migration run never opens
     depends_on:
       postgres: { condition: service_healthy }
     restart: "no"

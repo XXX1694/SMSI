@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { PostStatusBadge } from '@/components/status-badge';
 import { usePrefs } from '@/components/prefs-provider';
+import { postHref } from '@/lib/demo/config';
 import { postLabel, postPlatforms, postTime } from '@/lib/format';
 import { formatDateTime } from '@/lib/time';
 import type { Post } from '@/lib/types';
@@ -11,7 +12,7 @@ export function PostRow({ post }: { post: Post }) {
   return (
     <li>
       <Link
-        href={`/posts/${post.id}`}
+        href={postHref(post.id)}
         className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 py-3 hover:bg-muted/60 sm:px-3"
       >
         <div className="min-w-0 flex-1">

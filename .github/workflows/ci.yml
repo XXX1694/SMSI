@@ -1,0 +1,407 @@
+name: CI
+
+# Lean on purpose (GitHub Free = 2000 private Actions minutes/month):
+#   * pull requests only run the jobs whose paths changed; pushes to main run everything;
+#   * a newer push cancels the run it supersedes;
+#   * Go modules, npm, Next.js and Docker layers are cached.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Go toolchain for CI and for the backend image (ARG GO_VERSION in backend/Dockerfile): keep both on the same minor
+  # version. go.mod only states the minimum (1.24).
+  GO_VERSION: "1.26"
+  # Pinned so that a new linter release cannot turn CI red by itself; bump it deliberately.
+  GOLANGCI_LINT_VERSION: v2.14.0
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Which parts of the repo changed? (always "everything" outside pull requests)
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.decide.outputs.backend }}
+      mcp: ${{ steps.decide.outputs.mcp }}
+      frontend: ${{ steps.decide.outputs.frontend }}
+      e2e: ${{ steps.decide.outputs.e2e }}
+      lint: ${{ steps.decide.outputs.lint }}
+      images: ${{ steps.decide.outputs.images }}
+    steps:
+      - name: Filter changed paths (pull requests)
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            mcp:
+              - 'mcp/**'
+            frontend:
+              - 'frontend/**'
+            stack:
+              - 'docker-compose.yml'
+              - 'Makefile'
+              - '.env.example'
+              - '.github/workflows/ci.yml'
+              - '.github/ci/**'
+            lint:
+              - '.github/**'
+              - 'deploy/**'
+
+      - name: Decide what to run
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          F_BACKEND: ${{ steps.filter.outputs.backend }}
+          F_MCP: ${{ steps.filter.outputs.mcp }}
+          F_FRONTEND: ${{ steps.filter.outputs.frontend }}
+          F_STACK: ${{ steps.filter.outputs.stack }}
+          F_LINT: ${{ steps.filter.outputs.lint }}
+        run: |
+          pick() { if [ "$EVENT" != pull_request ] || [ "$1" = true ]; then echo true; else echo false; fi; }
+          backend=$(pick "$F_BACKEND")
+          mcp=$(pick "$F_MCP")
+          frontend=$(pick "$F_FRONTEND")
+          stack=$(pick "$F_STACK")
+          lint=$(pick "$F_LINT")
+
+          # A shared change (compose file, Makefile, this workflow) rebuilds every image.
+          build() { if [ "$1" = true ] || [ "$stack" = true ]; then echo true; else echo false; fi; }
+          images=$(jq -nc \
+            --arg b "$(build "$backend")" --arg m "$(build "$mcp")" --arg f "$(build "$frontend")" \
+            '[ (if $b == "true" then {image: "backend",  context: "backend"}  else empty end),
+               (if $m == "true" then {image: "mcp",      context: "mcp"}      else empty end),
+               (if $f == "true" then {image: "frontend", context: "frontend"} else empty end) ]')
+
+          e2e=false
+          if [ "$backend" = true ] || [ "$mcp" = true ] || [ "$frontend" = true ] || [ "$stack" = true ]; then e2e=true; fi
+
+          {
+            echo "backend=$backend"
+            echo "mcp=$mcp"
+            echo "frontend=$frontend"
+            echo "e2e=$e2e"
+            echo "lint=$lint"
+            echo "images=$images"
+          } >> "$GITHUB_OUTPUT"
+          echo "backend=$backend mcp=$mcp frontend=$frontend e2e=$e2e lint=$lint images=$images"
+
+  # ---------------------------------------------------------------------------
+  # Backend: format, vet, lint, unit tests, then integration + e2e on real Postgres/Redis.
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (Go)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    # Exactly what backend/LOCAL_DEV.md expects: role socialos/socialos (superuser, so the tests can create their
+    # throw-away socialos_it_* databases), database socialos_test, Redis DB 15.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: socialos
+          POSTGRES_PASSWORD: socialos
+          POSTGRES_DB: socialos_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U socialos -d socialos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+
+      - name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "::error title=gofmt::these files need gofmt -w:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      # Runs only when a golangci-lint config exists (backend/.golangci.yml is part of the repo).
+      - name: golangci-lint
+        if: ${{ hashFiles('backend/.golangci.yml', 'backend/.golangci.yaml', 'backend/.golangci.toml', 'backend/.golangci.json') != '' }}
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: backend
+
+      - name: Unit tests
+        run: make test
+
+      - name: Integration + e2e tests (Postgres 16, Redis 7)
+        env:
+          TEST_DATABASE_URL: postgres://socialos:socialos@127.0.0.1:5432/socialos_test?sslmode=disable
+          TEST_REDIS_URL: redis://127.0.0.1:6379/15
+        run: make test-integration
+
+  # ---------------------------------------------------------------------------
+  # MCP server
+  # ---------------------------------------------------------------------------
+  mcp:
+    name: MCP server (Node 22)
+    needs: changes
+    if: needs.changes.outputs.mcp == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (Next.js)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      # Next.js build cache (https://nextjs.org/docs/pages/building-your-application/deploying/ci-build-caching).
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**', 'frontend/*.config.*') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-
+      - name: Build
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Docker: every image must build from its Dockerfile (no push). Layers go to the GitHub Actions cache,
+  # which the e2e job below and the release workflow reuse.
+  # ---------------------------------------------------------------------------
+  docker:
+    name: Docker build (${{ matrix.image }})
+    needs: changes
+    if: needs.changes.outputs.images != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.images) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: false
+          tags: socialos-${{ matrix.image }}:ci
+          provenance: false
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # ---------------------------------------------------------------------------
+  # End to end: the real compose stack + the MVP acceptance flow (register -> connect -> MCP agent
+  # drafts and schedules -> worker publishes) and a smoke test of the frontend.
+  # ---------------------------------------------------------------------------
+  e2e-compose:
+    name: E2E (docker compose)
+    needs: [changes, docker]
+    if: ${{ !cancelled() && needs.changes.outputs.e2e == 'true' && needs.docker.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # .github/ci/compose.ci.yml points the services at the images built below instead of building again.
+      COMPOSE_FILE: docker-compose.yml:.github/ci/compose.ci.yml
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+
+      # Same context, Dockerfile and build args as the docker job, so these are cache hits.
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: socialos-backend:ci
+          provenance: false
+          cache-from: type=gha,scope=backend
+      - name: Build mcp image
+        uses: docker/build-push-action@v6
+        with:
+          context: mcp
+          load: true
+          tags: socialos-mcp:ci
+          provenance: false
+          cache-from: type=gha,scope=mcp
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          load: true
+          tags: socialos-frontend:ci
+          provenance: false
+          cache-from: type=gha,scope=frontend
+
+      - name: Create .env (fresh ENCRYPTION_KEY)
+        run: make env
+
+      - name: Start the stack and wait until every service is healthy
+        run: docker compose up -d --no-build --wait --wait-timeout 240
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+      - name: Install MCP dependencies (the acceptance script uses the MCP SDK client)
+        working-directory: mcp
+        run: npm ci --no-audit --no-fund
+
+      - name: Acceptance flow (API + worker + MCP)
+        working-directory: mcp
+        env:
+          SOCIALOS_API_URL: http://127.0.0.1:8080
+          MCP_URL: http://127.0.0.1:3333/mcp
+        run: node scripts/acceptance.mjs
+
+      - name: Smoke test
+        run: |
+          set -eu
+          curl -fsS http://127.0.0.1:8080/ready
+          echo
+          curl -fsS http://127.0.0.1:3333/health
+          echo
+          # The frontend serves the login page ...
+          page="$(curl -fsS --retry 5 --retry-connrefused --retry-delay 2 http://127.0.0.1:3000/login)"
+          if ! grep -qi 'sign in' <<<"$page"; then
+            echo "::error title=frontend smoke test::/login did not contain 'Sign in'"
+            exit 1
+          fi
+          # ... and proxies /api/v1 to the backend (baked-in API_INTERNAL_URL): anonymous /me must be a JSON 401.
+          code="$(curl -s -o /tmp/me.json -w '%{http_code}' http://127.0.0.1:3000/api/v1/me)"
+          cat /tmp/me.json; echo
+          if [ "$code" != 401 ]; then
+            echo "::error title=frontend smoke test::GET /api/v1/me through the frontend returned $code, expected 401"
+            exit 1
+          fi
+
+      - name: Dump compose state and logs
+        if: failure()
+        run: |
+          docker compose ps -a || true
+          docker compose logs --no-color --timestamps --tail=300 || true
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v --remove-orphans || true
+
+  # ---------------------------------------------------------------------------
+  # Workflow files, deploy scripts, production compose file and Caddyfile.
+  # ---------------------------------------------------------------------------
+  repo-lint:
+    name: Lint workflows & deploy files
+    needs: changes
+    if: needs.changes.outputs.lint == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+
+      - name: shellcheck
+        run: |
+          shopt -s nullglob
+          scripts=(deploy/*.sh)
+          if [ "${#scripts[@]}" -gt 0 ]; then shellcheck "${scripts[@]}"; fi
+
+      - name: Production compose file resolves with the example environment
+        run: docker compose --env-file deploy/.env.prod.example -f deploy/docker-compose.prod.yml config -q
+
+      - name: Caddyfile is valid
+        run: |
+          docker run --rm \
+            -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -e DOMAIN=example.com -e ACME_EMAIL=ops@example.com -e S3_SITE=s3.example.com \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

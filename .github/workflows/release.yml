@@ -1,0 +1,200 @@
+name: Release
+
+# Builds the three images and pushes them to GHCR:
+#   ghcr.io/<owner>/socialos-backend | socialos-mcp | socialos-frontend      (owner is lower-cased)
+#
+#   * every commit on main whose CI run succeeded  ->  sha-<7 hex> and main
+#   * a tag vX.Y.Z (or vX.Y.Z-rc.1)                ->  sha-<7 hex>, X.Y.Z, X.Y (and X from 1.0 on)
+#   * manual run (Run workflow)                    ->  rebuild a ref, e.g. after changing the frontend URL variables
+#
+# After a successful main release the Deploy workflow is started (skipped unless the DEPLOY_* secrets exist).
+#
+# Repository variables (Settings > Secrets and variables > Actions > Variables), all optional:
+#   API_PUBLIC_URL     public URL of the API, baked into the frontend       default http://localhost:8080
+#   MCP_PUBLIC_URL     public URL of the MCP endpoint, baked into frontend  default http://localhost:3333/mcp
+#   API_INTERNAL_URL   backend address inside the compose network           default http://backend:8080
+#   RELEASE_PLATFORMS  image platforms                                      default linux/amd64,linux/arm64
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PLATFORMS: ${{ vars.RELEASE_PLATFORMS || 'linux/amd64,linux/arm64' }}
+
+jobs:
+  images:
+    name: Push ${{ matrix.image }}
+    # For workflow_run: only successful CI runs triggered by a push (never a pull request).
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: backend
+            context: backend
+          - image: mcp
+            context: mcp
+          # API_INTERNAL_URL and NEXT_PUBLIC_* are baked into the frontend image at build time: they must be the
+          # production values, so they come from repository variables. See deploy/README.md, "Frontend URLs".
+          - image: frontend
+            context: frontend
+            build_args: |
+              API_INTERNAL_URL=${{ vars.API_INTERNAL_URL || 'http://backend:8080' }}
+              NEXT_PUBLIC_API_URL=${{ vars.API_PUBLIC_URL || 'http://localhost:8080' }}
+              NEXT_PUBLIC_MCP_URL=${{ vars.MCP_PUBLIC_URL || 'http://localhost:3333/mcp' }}
+    steps:
+      - name: Frontend URLs are not configured
+        if: matrix.image == 'frontend' && (vars.API_PUBLIC_URL == '' || vars.MCP_PUBLIC_URL == '')
+        run: >-
+          echo "::warning title=Frontend built with localhost URLs::Repository variable API_PUBLIC_URL and/or
+          MCP_PUBLIC_URL is not set, so the frontend image points at localhost. That is fine for a smoke test and wrong
+          for production. Set the variables (https://api.<domain>, https://mcp.<domain>/mcp) and run this workflow again."
+
+      - uses: actions/checkout@v5
+        with:
+          # For workflow_run, github.sha is the latest commit of main, not the commit CI verified.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Work out the tags
+        id: meta
+        env:
+          EVENT: ${{ github.event_name }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          IMAGE: ${{ matrix.image }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="${RUN_SHA:-$GITHUB_SHA}"
+          short="${sha:0:7}"
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          repo="ghcr.io/${owner}/socialos-${IMAGE}"
+          tags=("${repo}:sha-${short}")
+          version=""
+
+          # "main" must follow the tip of main. A slower CI run for an older commit must not move it backwards.
+          candidate=false
+          if [ "$EVENT" = workflow_run ]; then candidate=true; fi
+          if [ "$EVENT" = workflow_dispatch ] && [ "$REF_TYPE" = branch ] && [ "$REF_NAME" = main ]; then candidate=true; fi
+          if [ "$candidate" = true ]; then
+            tip="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+            if [ "$tip" = "$sha" ]; then
+              tags+=("${repo}:main")
+            else
+              echo "::notice title=main tag not moved::${short} is no longer the tip of main (${tip:0:7}); only the sha tag is pushed."
+            fi
+          fi
+
+          if [ "$REF_TYPE" = tag ]; then
+            if [[ "$REF_NAME" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?$ ]]; then
+              major="${BASH_REMATCH[1]}"
+              minor="${BASH_REMATCH[2]}"
+              pre="${BASH_REMATCH[4]}"
+              version="${major}.${minor}.${BASH_REMATCH[3]}${pre}"
+              tags+=("${repo}:${version}")
+              if [ -z "$pre" ]; then
+                tags+=("${repo}:${major}.${minor}")
+                if [ "$major" != 0 ]; then tags+=("${repo}:${major}"); fi
+              fi
+            else
+              echo "::warning title=Not a semver tag::${REF_NAME} does not look like vMAJOR.MINOR.PATCH; only the sha tag is pushed."
+            fi
+          fi
+
+          {
+            echo "sha=${sha}"
+            echo "short=${short}"
+            echo "version=${version:-sha-${short}}"
+            echo "tags<<EOF"
+            printf '%s\n' "${tags[@]}"
+            echo "EOF"
+          } >>"$GITHUB_OUTPUT"
+          {
+            echo "### socialos-${IMAGE}"
+            for t in "${tags[@]}"; do echo "- \`${t}\`"; done
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: ${{ matrix.build_args }}
+          labels: |
+            org.opencontainers.image.title=socialos-${{ matrix.image }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+          provenance: false
+          cache-from: |
+            type=gha,scope=release-${{ matrix.image }}
+            type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.image }}
+
+  # Hands the exact commit that was just released to the Deploy workflow. It is a dispatch (not a workflow_run
+  # trigger) on purpose: the run that Deploy would see as "triggering" is stamped with the latest commit of main,
+  # which can already be newer than the one that was released.
+  trigger-deploy:
+    name: Trigger deploy
+    needs: images
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch the Deploy workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "::notice title=Deploy skipped::DEPLOY_HOST, DEPLOY_USER and DEPLOY_SSH_KEY are not all set as repository secrets, so nothing is deployed automatically. See deploy/README.md."
+            exit 0
+          fi
+          tip="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${DEFAULT_BRANCH}" --jq .sha)"
+          if [ "$tip" != "$SHA" ]; then
+            echo "::notice title=Deploy skipped::${SHA:0:7} is no longer the tip of ${DEFAULT_BRANCH} (${tip:0:7}); the newer commit will be released and deployed instead."
+            exit 0
+          fi
+          gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f "tag=sha-${SHA:0:7}"
+          echo "Started the Deploy workflow for sha-${SHA:0:7}"

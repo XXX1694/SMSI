@@ -1,0 +1,14 @@
+# golangci-lint v2 configuration. CI (.github/workflows/ci.yml) runs it only when this file exists and pins the
+# version, so a new linter release can never turn the build red on its own. `make lint` uses the same file.
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # standard = errcheck, govet, ineffassign, staticcheck, unused. Add linters here deliberately.
+  default: standard
+
+formatters:
+  enable:
+    - gofmt

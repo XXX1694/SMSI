@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { validateComposer, type ComposerState, type ValidationIssue } from '@/lib/composer';
+import { postHref } from '@/lib/demo/config';
 import { zonedToUtcIso } from '@/lib/time';
 import type { CreatePostInput } from '@/lib/types';
 import { errorMessage, useAsync } from '@/hooks';
@@ -93,7 +94,7 @@ export function ComposerView() {
       const post = await api.posts.create(buildInput(state, title, action));
       if (action === 'publish') await api.posts.publish(post.id);
       toast.success(action === 'draft' ? 'Draft saved' : action === 'schedule' ? 'Post scheduled' : 'Publishing started');
-      router.push(`/posts/${post.id}`);
+      router.push(postHref(post.id));
     } catch (e) {
       setApiError(errorMessage(e));
       setBusy(false);

@@ -1,0 +1,223 @@
+# SocialOS production stack for a single server: Caddy (automatic HTTPS) in front of the published GHCR images.
+#
+#   cd /opt/socialos && ./deploy.sh sha-1a2b3c4      # normal path: pull, migrate, restart, health-check, roll back on failure
+#   docker compose -f docker-compose.prod.yml ps     # plain compose works too: configuration comes from ./.env
+#
+# Only Caddy publishes ports (80, 443). Postgres, Redis, MinIO, the API, the worker, the MCP server and the frontend
+# are reachable only on the internal compose network. See README.md for the full walkthrough and .env.prod.example for
+# every variable.
+
+name: socialos
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# Hardening shared by the SocialOS containers (not applied to postgres/redis/minio/caddy, which need their defaults).
+x-app: &app
+  restart: unless-stopped
+  logging: *default-logging
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+
+# Images are built and pushed by .github/workflows/release.yml. GHCR_OWNER must be lowercase.
+# IMAGE_TAG is written by deploy.sh (sha-<7 hex>, main, vX.Y.Z). Do not point production at a moving tag by hand.
+x-backend-image: &backend-image ghcr.io/${GHCR_OWNER:-xxx1694}/socialos-backend:${IMAGE_TAG:-main}
+
+x-backend-env: &backend-env
+  APP_ENV: production # the backend refuses insecure cookies, the in-memory storage driver and the mock provider here
+  LOG_FORMAT: json
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DATABASE_URL: postgres://${POSTGRES_USER:-socialos}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-socialos}?sslmode=disable
+  REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}@redis:6379/0
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env (openssl rand -base64 32)}
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
+
+  # Public URLs. Browsers talk to app.<domain>; /api/v1/* is proxied to the backend by the frontend (same origin).
+  # api.<domain> serves API-key clients, the Telegram webhook and OAuth callbacks.
+  API_PUBLIC_URL: https://api.${DOMAIN:?set DOMAIN in .env}
+  WEB_BASE_URL: https://app.${DOMAIN}
+  CORS_ALLOWED_ORIGINS: https://app.${DOMAIN}
+  MCP_PUBLIC_URL: https://mcp.${DOMAIN}/mcp
+  COOKIE_SECURE: "true"
+  # The OAuth callback lands on api.<domain>, the login cookie is issued via app.<domain>: share it across the subdomains.
+  COOKIE_DOMAIN: ${COOKIE_DOMAIN:-${DOMAIN}}
+  TRUST_PROXY: "true" # Caddy sets X-Forwarded-For; nothing else can reach the backend
+
+  # Object storage. Default: the bundled MinIO ("minio" profile). For S3/R2 set S3_ENDPOINT, S3_USE_SSL=true and
+  # S3_PUBLIC_ENDPOINT= (empty) in .env, and drop the minio profile.
+  STORAGE_DRIVER: s3
+  S3_ENDPOINT: ${S3_ENDPOINT:-minio:9000}
+  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT-s3.${DOMAIN}}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+  S3_BUCKET: ${S3_BUCKET:-socialos-media}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_USE_SSL: ${S3_USE_SSL:-false}
+  S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-true}
+
+  # Social networks.
+  SOCIAL_MOCK_PROVIDERS: "false"
+  LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID:-}
+  LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET:-}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_UPDATES_MODE: webhook
+  TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?set TELEGRAM_WEBHOOK_SECRET in .env (openssl rand -hex 24)}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-socialos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-socialos}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    shm_size: 256mb
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "[ \"$$(redis-cli ping)\" = PONG ]"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Bundled S3-compatible storage. Enabled by COMPOSE_PROFILES=minio in .env (the default in .env.prod.example).
+  minio:
+    profiles: ["minio"]
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-04-22T22-12-26Z}
+    restart: unless-stopped
+    logging: *default-logging
+    command: ["server", "/data", "--console-address", ":9001"] # the console port is not published; use an SSH tunnel
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # One-shot: applies pending SQL migrations, then exits. deploy.sh also runs it explicitly before the restart.
+  migrate:
+    <<: *app
+    image: *backend-image
+    command: ["/app/migrate", "up"]
+    environment: *backend-env
+    restart: "no"
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  backend:
+    <<: *app
+    image: *backend-image
+    command: ["/app/api"]
+    environment: *backend-env
+    # healthcheck: from the image (`/app/api healthcheck` -> GET /health)
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy, required: false }
+
+  worker:
+    <<: *app
+    image: *backend-image
+    command: ["/app/worker"]
+    environment: *backend-env
+    healthcheck:
+      test: ["CMD", "/app/api", "healthcheck", "http://127.0.0.1:8081/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy, required: false }
+
+  mcp:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:-xxx1694}/socialos-mcp:${IMAGE_TAG:-main}
+    environment:
+      SOCIALOS_API_URL: http://backend:8080
+      PORT: "3333"
+    # healthcheck: from the image (GET /health)
+    depends_on:
+      backend: { condition: service_healthy }
+
+  # API_INTERNAL_URL and NEXT_PUBLIC_* are baked into this image at build time (release workflow, from the repo
+  # variables API_PUBLIC_URL / MCP_PUBLIC_URL). Nothing set here can change them: see README.md, "Frontend URLs".
+  frontend:
+    <<: *app
+    image: ghcr.io/${GHCR_OWNER:-xxx1694}/socialos-frontend:${IMAGE_TAG:-main}
+    # healthcheck: from the image (GET /login)
+    depends_on:
+      backend: { condition: service_healthy }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+      # Public host for presigned media URLs (bundled MinIO). Use ":8099" (an unpublished, unused port) to turn it off.
+      S3_SITE: ${S3_SITE:-s3.${DOMAIN}}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # certificates and ACME account: keep this volume
+      - caddy-config:/config
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:2019/config/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Operator tool, never started by `up`:
+  #   docker compose -f docker-compose.prod.yml run --rm telegram set-webhook     (also: webhook-info, delete-webhook)
+  # It is `make -C backend telegram-set-webhook` for the production stack.
+  telegram:
+    profiles: ["tools"]
+    image: *backend-image
+    entrypoint: ["/app/telegram"]
+    environment: *backend-env
+    restart: "no"
+    healthcheck:
+      disable: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  caddy-data:
+  caddy-config:

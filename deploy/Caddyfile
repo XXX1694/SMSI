@@ -1,0 +1,60 @@
+# Caddy: automatic HTTPS (Let's Encrypt) and reverse proxy for SocialOS.
+# Environment (set on the caddy container by docker-compose.prod.yml): DOMAIN, ACME_EMAIL, S3_SITE.
+# Requirements: DNS A/AAAA records for app., api., mcp. (and s3. with the bundled MinIO) pointing at this
+# server, and ports 80 and 443 (tcp) / 443 (udp) open. Certificates live in the caddy-data volume.
+{
+	email {$ACME_EMAIL}
+	# While testing DNS/firewall, use the staging CA to avoid Let's Encrypt rate limits (then remove it and
+	# `docker compose -f docker-compose.prod.yml down caddy && docker volume rm socialos_caddy-data` to get real certificates):
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+(common) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Web UI. /api/v1/* is proxied to the backend by the Next.js server itself, so browsers only ever talk to this origin.
+app.{$DOMAIN} {
+	import common
+	encode zstd gzip
+	header {
+		X-Frame-Options "DENY"
+		# Media previews use presigned URLs minted for the bundled MinIO; they are http:// URLs on s3.<domain>.
+		# This makes the browser fetch them over https (the signature does not cover the scheme).
+		Content-Security-Policy "upgrade-insecure-requests"
+	}
+	reverse_proxy frontend:3000
+}
+
+# REST API for API-key clients, OAuth callbacks (LinkedIn) and the Telegram webhook.
+api.{$DOMAIN} {
+	import common
+	encode zstd gzip
+	# Prometheus metrics are for the internal network only.
+	@metrics path /metrics /metrics/*
+	respond @metrics 404
+	reverse_proxy backend:8080
+}
+
+# MCP server (stateless Streamable HTTP, POST /mcp, Authorization: Bearer sk_live_...). Compression is skipped on purpose.
+mcp.{$DOMAIN} {
+	import common
+	reverse_proxy mcp:3333 {
+		flush_interval -1
+	}
+}
+
+# Presigned media URLs of the bundled MinIO. Host and path are part of the S3 signature, so the request is
+# forwarded untouched. S3_SITE defaults to s3.<domain>. With external S3/R2 set S3_SITE=:8099 in .env (an
+# unpublished port nothing connects to) so that no certificate is requested for a host you do not use.
+{$S3_SITE} {
+	import common
+	reverse_proxy minio:9000 {
+		flush_interval -1
+	}
+}

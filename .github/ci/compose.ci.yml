@@ -1,0 +1,20 @@
+# CI-only override for docker-compose.yml (see the e2e-compose job in .github/workflows/ci.yml).
+# The images were already built (and loaded into the runner's Docker daemon) from the GitHub Actions layer
+# cache, so the stack is started with `up --no-build` and uses them instead of building a second time.
+# Locally you do not need this file: `make up` builds from source.
+services:
+  migrate:
+    image: socialos-backend:ci
+    pull_policy: never
+  backend:
+    image: socialos-backend:ci
+    pull_policy: never
+  worker:
+    image: socialos-backend:ci
+    pull_policy: never
+  mcp:
+    image: socialos-mcp:ci
+    pull_policy: never
+  frontend:
+    image: socialos-frontend:ci
+    pull_policy: never

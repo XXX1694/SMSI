@@ -1,0 +1,175 @@
+name: Deploy
+
+# Deploys a released image tag to the production server over SSH (deploy/deploy.sh does the work there).
+#   * automatically: the Release workflow starts this after every successful release of main;
+#   * manually: Actions > Deploy > Run workflow. Leave "tag" empty for the latest commit on main, or enter a
+#     tag to roll forward/back (sha-1a2b3c4, v1.2.3, ...).
+#
+# Nothing happens unless these REPOSITORY secrets exist (not environment secrets: they are checked before the
+# environment is entered, so that a missing configuration skips the run instead of waiting for an approval):
+#   DEPLOY_HOST        server name or IP
+#   DEPLOY_USER        SSH user (needs permission to run docker)
+#   DEPLOY_SSH_KEY     private key (OpenSSH format) whose public key is in the user's authorized_keys
+# Optional secret:  DEPLOY_KNOWN_HOSTS  output of `ssh-keyscan -t ed25519 <host>` (otherwise the key is scanned, which
+#                   is trust-on-first-use on every run)
+# Optional variables: DEPLOY_PATH (default /opt/socialos), DEPLOY_PORT (default 22)
+#
+# The job runs in the "production" environment: add required reviewers there (Settings > Environments) to put a
+# manual approval in front of every deployment.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (sha-1a2b3c4, main, v1.2.3). Empty = the latest commit on main."
+        type: string
+        required: false
+        default: ""
+
+# Deployments never overlap and never cancel each other.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check deploy secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      enabled: ${{ steps.secrets.outputs.enabled }}
+    steps:
+      - name: Are the DEPLOY_* secrets set?
+        id: secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          missing=()
+          if [ -z "$DEPLOY_HOST" ]; then missing+=(DEPLOY_HOST); fi
+          if [ -z "$DEPLOY_USER" ]; then missing+=(DEPLOY_USER); fi
+          if [ -z "$DEPLOY_SSH_KEY" ]; then missing+=(DEPLOY_SSH_KEY); fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            msg="Deploy skipped: repository secret(s) not set: ${missing[*]}. See deploy/README.md, \"Automatic deploys\"."
+            echo "::notice title=Deploy skipped::${msg}"
+            echo "$msg" >>"$GITHUB_STEP_SUMMARY"
+            echo "enabled=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >>"$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Deploy to production
+    needs: check
+    if: needs.check.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+    permissions:
+      contents: read
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/socialos' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve the image tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          tag="$INPUT_TAG"
+          if [ -z "$tag" ]; then
+            sha="$(git rev-parse "origin/${DEFAULT_BRANCH}")"
+            tag="sha-${sha:0:7}"
+          fi
+          if ! [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
+            echo "::error title=Invalid tag::'${tag}' is not a valid image tag"
+            exit 1
+          fi
+          echo "tag=${tag}" >>"$GITHUB_OUTPUT"
+          echo "Deploying ${tag}"
+
+      # The compose file, Caddyfile and scripts are versioned with the images: use the ones from the released commit.
+      - name: Use deploy/ from the released commit
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if [[ "$TAG" =~ ^sha-([0-9a-f]{7})$ ]]; then
+            commit="${BASH_REMATCH[1]}"
+            if git cat-file -e "${commit}^{commit}" 2>/dev/null && [ -n "$(git ls-tree --name-only "$commit" deploy/)" ]; then
+              git checkout "$commit" -- deploy
+              echo "Using deploy/ from commit ${commit}"
+              exit 0
+            fi
+          fi
+          echo "Using deploy/ from ${GITHUB_REF_NAME} (${GITHUB_SHA:0:7})"
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9._:-]+$ ]] || { echo "::error::DEPLOY_HOST contains unexpected characters"; exit 1; }
+          [[ "$DEPLOY_USER" =~ ^[A-Za-z_][A-Za-z0-9_.-]*$ ]] || { echo "::error::DEPLOY_USER contains unexpected characters"; exit 1; }
+          [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]] || { echo "::error::DEPLOY_PORT must be a number"; exit 1; }
+          [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]] || { echo "::error::DEPLOY_PATH must be an absolute path without spaces"; exit 1; }
+
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" >~/.ssh/deploy_key
+          if [ -n "$DEPLOY_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$DEPLOY_KNOWN_HOSTS" >~/.ssh/known_hosts
+          else
+            echo "::warning title=SSH host key not pinned::Secret DEPLOY_KNOWN_HOSTS is not set; the host key is scanned on every run (trust on first use). Pin it: ssh-keyscan -t ed25519 ${DEPLOY_HOST}"
+            ssh-keyscan -T 15 -p "$DEPLOY_PORT" "$DEPLOY_HOST" >~/.ssh/known_hosts
+          fi
+          cat >~/.ssh/config <<EOF
+          Host deploy
+            HostName ${DEPLOY_HOST}
+            User ${DEPLOY_USER}
+            Port ${DEPLOY_PORT}
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            ServerAliveInterval 30
+            ServerAliveCountMax 10
+          EOF
+
+      - name: Upload deploy/ to the server
+        run: |
+          set -euo pipefail
+          # .env lives only on the server and is never part of the upload.
+          # shellcheck disable=SC2029 # DEPLOY_PATH is validated above and is meant to expand on this side
+          tar -czf - --exclude='.env' -C deploy . |
+            ssh deploy "mkdir -p '${DEPLOY_PATH}' && tar -xzf - -C '${DEPLOY_PATH}' && chmod +x '${DEPLOY_PATH}'/*.sh"
+
+      - name: Deploy ${{ steps.tag.outputs.tag }}
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2029 # DEPLOY_PATH and TAG are validated and are meant to expand on this side
+          ssh deploy "cd '${DEPLOY_PATH}' && ./deploy.sh '${TAG}'"
+          {
+            echo "### Deployed \`${TAG}\`"
+            echo
+            echo "Roll back on the server with \`./deploy.sh --rollback\` or deploy an older tag with this workflow."
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/known_hosts ~/.ssh/config

@@ -102,6 +102,14 @@ export function buildQuery(query?: Query): string {
 
 async function request(path: string, opts: RequestOptions = {}): Promise<unknown> {
   const method = opts.method ?? 'GET';
+  // Demo build only (`npm run build:demo`): answer from the in-browser mock instead of the network.
+  // The condition is a literal so the normal build drops this branch and never ships the mock.
+  if (process.env.NEXT_PUBLIC_DEMO === 'true') {
+    const { demoFetch } = await import('./demo');
+    const res = await demoFetch({ method, path, query: opts.query, body: opts.body, form: opts.form });
+    if (res.status >= 400) throw parseErrorBody(res.status, res.body);
+    return res.body ?? null;
+  }
   const headers: Record<string, string> = { Accept: 'application/json' };
   let body: BodyInit | undefined;
   if (opts.form) {
@@ -187,6 +195,10 @@ export const api = {
     },
     async disconnect(id: string): Promise<void> {
       await request(`/social/accounts/${enc(id)}`, { method: 'DELETE' });
+    },
+    /** Demo build only: OAuth cannot run in a static site, so this adds a sample account right away. */
+    async connectDemo(provider: string): Promise<SocialAccount> {
+      return (await request(`/social/${enc(provider)}/connect`, { method: 'POST' })) as SocialAccount;
     },
   },
   posts: {

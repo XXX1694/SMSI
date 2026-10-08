@@ -5,14 +5,16 @@ import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { DEMO, DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/demo/config';
 import { errorMessage } from '@/hooks';
 
 export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const { login, register } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // The demo has a single built-in user, so its credentials are pre-filled.
+  const [email, setEmail] = useState(DEMO && mode === 'login' ? DEMO_EMAIL : '');
+  const [password, setPassword] = useState(DEMO && mode === 'login' ? DEMO_PASSWORD : '');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -44,6 +46,11 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         <p className="mt-1 text-sm text-muted-foreground">
           {isLogin ? 'Welcome back.' : 'Start composing and scheduling in a minute.'}
         </p>
+        {DEMO ? (
+          <p className="mt-3 rounded-md border bg-muted px-3 py-2 text-xs text-muted-foreground">
+            This is a demo with a built-in account, so the form is already filled in. Just press Sign in.
+          </p>
+        ) : null}
         <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
           {!isLogin ? (
             <Field label="Name" htmlFor="name">

@@ -51,3 +51,10 @@
   }
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
 }
+
+/* Demo build only (html[data-demo]): leave room for the fixed 1.75rem banner so the page never gets a stray scrollbar. */
+html[data-demo] body { padding-top: 1.75rem; }
+html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
+@media (min-width: 768px) {
+  html[data-demo] #sidebar { top: 1.75rem; height: calc(100vh - 1.75rem); }
+}

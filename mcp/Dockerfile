@@ -1,8 +1,15 @@
-# syntax=docker/dockerfile:1
-FROM node:22-alpine AS build
+# syntax=docker/dockerfile:1.7
+#
+# MCP server (Streamable HTTP on :3333, POST /mcp, GET /health).
+#
+# The build stage runs on the builder's own architecture ($BUILDPLATFORM): the production
+# dependencies are pure JavaScript (no native addons), so the node_modules produced there are
+# valid for every target architecture and multi-arch builds need no QEMU emulation.
+
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN npm run build && npm prune --omit=dev
@@ -10,10 +17,13 @@ RUN npm run build && npm prune --omit=dev
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production PORT=3333
 WORKDIR /app
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY package.json ./
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+# "type": "module" in package.json is what makes dist/*.js load as ES modules.
+COPY --chown=node:node package.json ./
 USER node
 EXPOSE 3333
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:3333/health || exit 1
+# busybox wget exits non-zero on connection errors and on 4xx/5xx. ${PORT} follows the runtime setting.
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-3333}/health" || exit 1
 CMD ["node", "dist/index.js"]

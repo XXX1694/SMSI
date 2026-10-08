@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
+import { DEMO, DEMO_CHANGE_EVENT } from '@/lib/demo/config';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -36,6 +37,14 @@ export function useAsync<T>(fn: () => Promise<T>): AsyncState<T> {
       cancelled = true;
     };
   }, [fn, tick]);
+
+  // Demo only: reload when the simulated scheduler published something in the background.
+  useEffect(() => {
+    if (!DEMO) return undefined;
+    const onChange = () => setTick((t) => t + 1);
+    window.addEventListener(DEMO_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(DEMO_CHANGE_EVENT, onChange);
+  }, []);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);
   return { data, error, loading, reload };

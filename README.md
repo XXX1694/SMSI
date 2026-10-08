@@ -1,5 +1,11 @@
 # SocialOS
 
+[![CI](https://github.com/XXX1694/SMSI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/XXX1694/SMSI/actions/workflows/ci.yml)
+[![Release](https://github.com/XXX1694/SMSI/actions/workflows/release.yml/badge.svg)](https://github.com/XXX1694/SMSI/actions/workflows/release.yml)
+[![Deploy](https://github.com/XXX1694/SMSI/actions/workflows/deploy.yml/badge.svg)](https://github.com/XXX1694/SMSI/actions/workflows/deploy.yml)
+
+> The repository is private, so these badges (and the links) only render for logged-in members with access to it.
+
 SocialOS is one place to connect social accounts, compose posts once, tailor them per platform, and publish or schedule them. It also ships an **MCP server**, so external AI agents can manage a user's accounts through scoped, revocable credentials. For example: *"write a post about my new Flutter project and schedule it for tomorrow 12:00 on LinkedIn and Telegram"*.
 
 SocialOS is a single abstraction layer over social-media APIs. Neither agents nor the UI ever talk to LinkedIn, Telegram or any other network directly.
@@ -304,9 +310,44 @@ Tools without a granted scope are not even listed. The REST API enforces scopes 
 
 With real LinkedIn and Telegram credentials, the same flow runs with those providers instead of the mock.
 
+## 12. CI/CD & deployment
+
+Three GitHub Actions workflows, built to stay inside the 2000 free private-repo minutes per month, and a single-server deployment kit:
+
+| Workflow | Runs on | What it does |
+|---|---|---|
+| [`ci.yml`](.github/workflows/ci.yml) | pull requests, pushes to `main` | Backend (gofmt, vet, golangci-lint, unit tests, integration + e2e on real Postgres 16 and Redis 7), MCP (typecheck, test, build), frontend (lint, typecheck, test, build), a Docker build of all three images, and the compose stack with `mcp/scripts/acceptance.mjs`. Pull requests run only the jobs whose paths changed; `main` runs everything; a newer push cancels the run it replaces |
+| [`release.yml`](.github/workflows/release.yml) | green CI on `main`, tags `v*`, manual | Pushes multi-arch (amd64 + arm64) images to `ghcr.io/xxx1694/socialos-{backend,mcp,frontend}` tagged `sha-<7 hex>`, `main` and, for `vX.Y.Z` tags, `X.Y.Z` / `X.Y` / `X` |
+| [`deploy.yml`](.github/workflows/deploy.yml) | after a main release, manual | SSHes to the server, uploads [`deploy/`](deploy/), runs `deploy.sh <tag>` (pull, migrate, restart, wait for `/ready`, automatic rollback). Skipped unless the `DEPLOY_*` secrets exist; runs in the `production` environment, where you can add required reviewers |
+
+[`.github/dependabot.yml`](.github/dependabot.yml) opens grouped weekly update pull requests for Go, npm, Actions and Docker images.
+
+**Set up:** repository variables `API_PUBLIC_URL` (`https://api.<domain>`) and `MCP_PUBLIC_URL` (`https://mcp.<domain>/mcp`), then, for automatic deploys, the secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (and `DEPLOY_KNOWN_HOSTS`). The frontend image **bakes in** those URLs at build time, so they have to be set *before* the release you deploy; see [`deploy/README.md`](deploy/README.md#frontend-urls-read-this-once).
+
+**Deploy by hand, from zero to HTTPS** (DNS records, server preparation, first deploy, migrations, Telegram webhook, LinkedIn redirect URL, backups with a `pg_dump` cron job, rollback by image tag): [`deploy/README.md`](deploy/README.md). To exercise the same stack locally, `make up` and `make acceptance` do what the e2e job does.
+
+## 13. Website & demo
+
+The landing page, the docs (rendered from this README, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`mcp/README.md`](mcp/README.md)) and a **browser-only demo of the real app** are published to GitHub Pages by [`pages.yml`](.github/workflows/pages.yml): <https://xxx1694.github.io/SMSI/>, with the demo at <https://xxx1694.github.io/SMSI/demo/>. The sources are in [`site/`](site/) (plain HTML and CSS plus a small Node build script) and in the demo mode of [`frontend/`](frontend/).
+
+> **Pages needs a public repository, or a paid plan.** GitHub Pages is not available for private repositories on the Free plan, so until the repository is made public (or the account is on Pro, Team or Enterprise) the workflow notices that, prints a note and skips the deployment instead of failing. Once you can: Settings, Pages, Source: **GitHub Actions**, then re-run the *Pages* workflow. Pushes to `main` that touch `frontend/`, `site/`, `docs/`, `README.md` or `mcp/README.md` redeploy it.
+
+**How the demo works.** It is the production frontend built with `NEXT_PUBLIC_DEMO=true` as a static export. A typed in-browser backend ([`frontend/src/lib/demo/`](frontend/src/lib/demo/), a port of `frontend/scripts/mock-api.mjs` that shares the real API types) answers every API call: a demo user who is already signed in, LinkedIn, Telegram and mock accounts, drafts, scheduled, published and failed posts across this and next month, API keys, MCP connections and an audit log. The scheduler is simulated client-side, state lives in `localStorage` (the banner's **Reset** restores the seed) and nothing leaves the browser. Actions that need a real network, such as LinkedIn OAuth and the Telegram link code, are simulated and say so. The demo is not part of the production build: `npm run build` is unchanged.
+
+**Build and preview it locally** (Node 20+; `build` and `build:demo` share `frontend/.next`, so run them one after the other):
+
+```bash
+(cd frontend && npm ci && npm run build:demo)   # static demo -> frontend/out
+(cd site && npm ci && npm run build)            # site + demo  -> site/dist
+(cd site && npm run preview)                    # http://localhost:4173/SMSI/
+(cd site && npm run check && npm run smoke)     # link check + browser smoke test (needs Chrome or Chromium)
+```
+
+The landing page screenshots are real captures of the demo and are committed; after a visible UI change, re-capture them with `(cd site && npm run screenshots)`. The site serves from `/SMSI/` by default; `SITE_BASE` (site) and `NEXT_PUBLIC_BASE_PATH` (demo, `<SITE_BASE>demo`) change that, which the workflow derives from the repository name.
+
 ## Production notes
 
 - Set `APP_ENV=production`. Startup then refuses insecure cookies, the in-memory storage driver and the mock provider.
-- Point `S3_*` at Cloudflare R2 or S3, and put the API, MCP and frontend behind TLS (`mcp.socialos.com`, …).
+- Point `S3_*` at Cloudflare R2 or S3, and put the API, MCP and frontend behind TLS (`mcp.socialos.com`, …). [`deploy/`](deploy/) does exactly that with Caddy and automatic certificates.
 - The rate limiter is per instance. Move it to Redis when you scale horizontally.
 - Metrics are Prometheus text format. OpenTelemetry tracing can wrap the existing request-ID and correlation-ID middleware.

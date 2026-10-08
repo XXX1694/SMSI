@@ -6,6 +6,7 @@ import { Notice } from '@/components/states';
 import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { ApiError, api } from '@/lib/api';
+import { DEMO } from '@/lib/demo/config';
 import {
   LINK_POLL_INTERVAL_MS,
   formatCountdown,
@@ -260,6 +261,11 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
                 ? 'Having trouble reaching the server. Retrying…'
                 : 'We check every 2 seconds. Keep this page open; the bot deletes the code message once you are connected.'}
             </p>
+            {DEMO ? (
+              <p className="text-xs text-muted-foreground">
+                Demo: no real Telegram chat is needed. The code is recognised automatically after a few seconds.
+              </p>
+            ) : null}
           </div>
         </li>
       </ol>

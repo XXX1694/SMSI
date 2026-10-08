@@ -11,9 +11,10 @@ import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { DEMO } from '@/lib/demo/config';
 import { formatDateTime } from '@/lib/time';
 import type { Provider, SocialAccount } from '@/lib/types';
-import { useAsync } from '@/hooks';
+import { errorMessage, useAsync } from '@/hooks';
 
 function unavailableReason(p: Provider): string {
   if (p.unsupported || p.capabilities.requiresApproval) return 'Not supported yet. Requires platform approval.';
@@ -53,6 +54,23 @@ function ProviderRow({
   onConnected: () => void;
 }) {
   const caps = provider.capabilities;
+  const toast = useToast();
+  const [connecting, setConnecting] = useState(false);
+
+  /** Demo only: there is no OAuth server to talk to, so the sample account appears immediately. */
+  async function connectDemo() {
+    setConnecting(true);
+    try {
+      const account = await api.social.connectDemo(provider.id);
+      toast.success(`Connected ${account.display_name} (demo account, no real sign-in)`);
+      onConnected();
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   if (!provider.available) {
     return (
       <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
@@ -70,13 +88,22 @@ function ProviderRow({
           {provider.id === 'mock' ? <Badge tone="outline">Mock · for testing</Badge> : null}
         </div>
         {provider.id !== 'telegram' ? (
-          <Button asChild variant="secondary" size="sm">
-            <a href={api.social.connectUrl(provider.id)}>{accounts.length ? 'Connect another' : 'Connect'}</a>
-          </Button>
+          DEMO ? (
+            <Button variant="secondary" size="sm" onClick={() => void connectDemo()} disabled={connecting}>
+              {accounts.length ? 'Connect another' : 'Connect'}
+            </Button>
+          ) : (
+            <Button asChild variant="secondary" size="sm">
+              <a href={api.social.connectUrl(provider.id)}>{accounts.length ? 'Connect another' : 'Connect'}</a>
+            </Button>
+          )
         ) : null}
       </div>
       <CapabilityBadges caps={caps} />
       {caps.notes ? <p className="text-xs text-muted-foreground">{caps.notes}</p> : null}
+      {DEMO && provider.id !== 'telegram' ? (
+        <p className="text-xs text-muted-foreground">Demo: the real {provider.name} sign-in is skipped; Connect adds a sample account.</p>
+      ) : null}
       {caps.requiresApproval ? (
         <p className="text-xs text-muted-foreground">Some features (e.g. company pages) require platform approval.</p>
       ) : null}

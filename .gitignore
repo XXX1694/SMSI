@@ -1,6 +1,9 @@
 .env
 .env.*
 !.env.example
+!.env.prod.example
 dump.rdb
 .DS_Store
 *.log
+# deploy.sh state (current/previous tag, history) when it is run from a checkout
+.deploy/

@@ -1,0 +1,110 @@
+# Dependabot: one weekly pull request per ecosystem and directory instead of one per package.
+# Minor and patch updates are grouped; a major update arrives as its own pull request so it can be reviewed alone.
+# Each pull request runs the CI workflow, so a breaking bump shows up there (and costs Actions minutes: that is why
+# the limits below are low).
+version: 2
+
+updates:
+  # --- Go (backend) -------------------------------------------------------------------------------------------
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Almaty
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      go-minor-patch:
+        update-types: [minor, patch]
+
+  # --- npm (MCP server, frontend) -------------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /mcp
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Almaty
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      mcp-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Almaty
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+
+  # --- GitHub Actions used by .github/workflows ---------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Almaty
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # --- Docker base images in the Dockerfiles ------------------------------------------------------------------
+  - package-ecosystem: docker
+    directories:
+      - /backend
+      - /mcp
+      - /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Almaty
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(docker)"
+    groups:
+      docker-base-images:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # The Node major (LTS) is a deliberate decision: it must match "engines" in the package.json files.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+
+  # --- Images pinned in the compose files (postgres, redis, minio, caddy) --------------------------------------
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /deploy
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Almaty
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(docker)"
+    groups:
+      compose-images:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # A PostgreSQL major upgrade needs a dump/restore (or pg_upgrade) and must never arrive as an automatic bump.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
