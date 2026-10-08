@@ -70,4 +70,14 @@ assert_eq "file mode is 644" 644 "$(stat -c %a "$SB/new/dir/socialos.caddy")"
 assert_eq "file equals stdout" "$(bash "$REPO_DEPLOY/host-proxy/render-caddy.sh" --env "$SB/env" --out -)" "$(cat "$SB/new/dir/socialos.caddy")"
 assert_eq "no temp files left" "socialos.caddy" "$(ls "$SB/new/dir")"
 
+# default location: the staging folder, never the folder the host's import line matches
+new_sb
+mkdir -p "$SB/root/host-proxy"
+cp "$REPO_DEPLOY/host-proxy/render-caddy.sh" "$REPO_DEPLOY/host-proxy/socialos.caddy.tmpl" "$SB/root/host-proxy/"
+printf 'DOMAIN=example.com\nCOMPOSE_PROFILES=minio\n' >"$SB/root/.env"
+out=$(bash "$SB/root/host-proxy/render-caddy.sh" 2>&1)
+assert_file "default output is staged" "$SB/root/caddy/staging/socialos.caddy"
+assert_eq "nothing matches the import glob" "" "$(ls "$SB"/root/caddy/*.caddy 2>/dev/null || true)"
+assert_has "says it is only staged" "$out" "staged only, nothing is live yet"
+
 finish

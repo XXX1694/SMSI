@@ -1,28 +1,29 @@
 #!/usr/bin/env bash
 # Render the Caddy sites for host-proxy mode from .env, with concrete hostnames and ports.
 #
-#   ./host-proxy/render-caddy.sh                  # .env -> /opt/socialos/caddy/socialos.caddy
+#   ./host-proxy/render-caddy.sh                  # .env -> /opt/socialos/caddy/staging/socialos.caddy
 #   ./host-proxy/render-caddy.sh --out -          # print instead of writing
 #   ./host-proxy/render-caddy.sh --env FILE --out FILE
 #
 # Reads from .env: DOMAIN (required), S3_SITE (default s3.$DOMAIN; a value starting with ":" turns the s3 site off),
 # COMPOSE_PROFILES (the s3 site is also left out when "minio" is not in it and S3_SITE is unset), and the host ports
 # FRONTEND_HOST_PORT=13000, BACKEND_HOST_PORT=18080, MCP_HOST_PORT=13333, MINIO_HOST_PORT=19000.
-# The template is socialos.caddy.tmpl next to this script. Nothing is changed on the host Caddy: the result is only
-# imported once install-caddy-import.sh has added the import line.
+# The template is socialos.caddy.tmpl next to this script. The result is only STAGED: /opt/socialos/caddy/staging/ is not
+# matched by the host's `import /opt/socialos/caddy/*.caddy`, so nothing reaches the host Caddy until install-caddy-import.sh
+# has validated it, swapped it in and reloaded Caddy (and it puts the previous version back if any step fails).
 set -Eeuo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 root_dir=$(dirname "$script_dir") # /opt/socialos
 env_file="$root_dir/.env"
-out_file="$root_dir/caddy/socialos.caddy"
+out_file="$root_dir/caddy/staging/socialos.caddy"
 template="$script_dir/socialos.caddy.tmpl"
 
 die() {
   echo "render-caddy: $*" >&2
   exit 1
 }
-usage() { sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -133,3 +134,6 @@ chmod 644 "$tmp" # the host's caddy user must be able to read it; it holds no se
 mv -f "$tmp" "$out_file"
 trap - EXIT
 echo "render-caddy: wrote $out_file ($domain; frontend :$frontend_port, backend :$backend_port, mcp :$mcp_port$([ "$s3_enabled" = 1 ] && echo ", s3 $s3_site :$minio_port" || echo ", s3 site off"))"
+if [ "$out_file" = "$root_dir/caddy/staging/socialos.caddy" ]; then
+  echo "render-caddy: staged only, nothing is live yet. Next: ./host-proxy/install-caddy-import.sh"
+fi
