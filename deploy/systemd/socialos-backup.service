@@ -1,0 +1,25 @@
+# Daily backup of SocialOS: database dump (+ media archive), 14 days of retention, optional encrypted off-site copy, and on
+# Sundays a restore drill. Started by socialos-backup.timer. Install: README, section 9.
+# Runs as root on purpose: the backups are mode 600 root and backup.sh needs the Docker socket (root-equivalent anyway).
+# Output goes to the journal: journalctl -u socialos-backup.
+[Unit]
+Description=SocialOS: database and media backup
+After=docker.service
+Wants=docker.service
+ConditionPathExists=/opt/socialos/.env
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/socialos
+Environment=BACKUP_MEDIA=1
+# Sundays only; a failed drill makes the unit (and `systemctl --failed`) fail. Use RESTORE_TEST=0 to turn the drill off.
+Environment=RESTORE_TEST=weekly
+ExecStart=/opt/socialos/backup.sh
+SyslogIdentifier=socialos-backup
+# A dump of a small database takes seconds; the limit only stops a hung job from piling up behind the next one.
+TimeoutStartSec=2h
+# Keep the app and the host's other service responsive while the archive is compressed and written.
+Nice=15
+IOSchedulingClass=idle
+PrivateTmp=yes
+NoNewPrivileges=yes

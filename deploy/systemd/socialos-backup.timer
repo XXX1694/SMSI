@@ -1,0 +1,14 @@
+# Backs up SocialOS once a day at about 03:15 local time. Install: README, section 9.
+[Unit]
+Description=SocialOS: daily backup around 03:15
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+# Anywhere in 03:15 to 03:45, so that this does not start at the same second as the host's other jobs.
+RandomizedDelaySec=30min
+# Run once after boot or downtime if the night's backup was missed.
+Persistent=true
+Unit=socialos-backup.service
+
+[Install]
+WantedBy=timers.target
