@@ -9,6 +9,11 @@ name: Release
 #
 # After a successful main release the Deploy workflow is started (skipped unless the DEPLOY_* secrets exist).
 #
+# A tag push ALSO creates the GitHub Release of that tag, as the last step and only when all three images were pushed
+# (job github-release). That is what servers with deploy/autoupdate.sh poll (releases/latest), so a release can never be
+# visible before its images exist. The notes are the "## [X.Y.Z]" section of CHANGELOG.md; the run fails if it is missing.
+# vX.Y.Z-rc.N tags become pre-releases and never "latest". Re-running updates the notes of an existing release.
+#
 # Repository variables (Settings > Secrets and variables > Actions > Variables), all optional:
 #   API_PUBLIC_URL     public URL of the API, baked into the frontend       default http://localhost:8080
 #   MCP_PUBLIC_URL     public URL of the MCP endpoint, baked into frontend  default http://localhost:3333/mcp
@@ -163,6 +168,41 @@ jobs:
             type=gha,scope=release-${{ matrix.image }}
             type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=release-${{ matrix.image }}
+
+  # The GitHub Release of a tag, created only after every image was pushed. Idempotent: an existing release only gets
+  # its notes updated. Tag protection (who may create v* tags) is a repository setting, not part of this job.
+  github-release:
+    name: GitHub Release
+    needs: images
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          if ! [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+            echo "::error title=Not a version tag::${TAG} is not vMAJOR.MINOR.PATCH[-pre]"
+            exit 1
+          fi
+          if ! .github/scripts/changelog-section.sh "${BASH_REMATCH[1]}" CHANGELOG.md >"$RUNNER_TEMP/notes.md"; then
+            echo "::error title=CHANGELOG.md::No non-empty '## [${BASH_REMATCH[1]}]' section. Add it and move the entries out of [Unreleased], then move the tag (or delete it and tag again)."
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/notes.md"
+
+      - name: Create the release (or update its notes)
+        run: .github/scripts/publish-release.sh "$TAG" "$RUNNER_TEMP/notes.md"
 
   # Hands the exact commit that was just released to the Deploy workflow. It is a dispatch (not a workflow_run
   # trigger) on purpose: the run that Deploy would see as "triggering" is stamped with the latest commit of main,
