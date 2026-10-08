@@ -8,7 +8,9 @@
 # Reads from .env: AUTOUPDATE (false/0/no/off = do nothing), GITHUB_REPO (default XXX1694/SMSI).
 # Asks https://api.github.com/repos/<repo>/releases/latest (no token). Only a tag shaped vX.Y.Z is accepted; the image tag
 # is the same without the "v" (that is how release.yml names it), and the deployed tag is what deploy.sh recorded in
-# .deploy/current_tag. A new tag is handed to ./deploy.sh, which pulls, migrates, waits for /ready and rolls back on failure.
+# .deploy/current_tag. Only a STRICTLY NEWER version is deployed: an older or equal release is refused and logged, and when
+# the deployed tag is not a release version (sha-..., main) nothing is done until a release was deployed by hand once.
+# A new tag is handed to ./deploy.sh, which pulls, migrates, waits for /ready and rolls back on failure.
 # A tag whose deploy failed is remembered in .deploy/autoupdate_failed and not tried again until a newer release appears
 # (delete that file to retry; a manual `./deploy.sh <tag>` that succeeds makes it irrelevant). Output goes to the journal:
 #   journalctl -u socialos-autoupdate
@@ -22,7 +24,26 @@ RETRY_DELAY=${AUTOUPDATE_RETRY_DELAY:-900} # seconds to wait after "nothing was 
 
 log() { printf 'autoupdate: %s\n' "$*"; }
 warn() { printf 'autoupdate: %s\n' "$*" >&2; }
-usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+# version_gt A B: is release version A strictly newer than B? Both are MAJOR.MINOR.PATCH (digits only). Compared field by
+# field as numbers without arithmetic, so a long number cannot overflow, and 1.10.0 is newer than 1.9.0.
+version_gt() {
+  local -a a b
+  local i x y
+  IFS=. read -r -a a <<<"$1"
+  IFS=. read -r -a b <<<"$2"
+  for i in 0 1 2; do
+    x=${a[i]}
+    y=${b[i]}
+    while [ "${#x}" -gt 1 ] && [ "${x:0:1}" = 0 ]; do x=${x:1}; done
+    while [ "${#y}" -gt 1 ] && [ "${y:0:1}" = 0 ]; do y=${y:1}; done
+    if [ "${#x}" -ne "${#y}" ]; then [ "${#x}" -gt "${#y}" ]; return; fi
+    if [[ "$x" > "$y" ]]; then return 0; fi
+    if [[ "$x" < "$y" ]]; then return 1; fi
+  done
+  return 1
+}
 
 dry_run=false
 while [ $# -gt 0 ]; do
@@ -122,6 +143,20 @@ current=$(read_state current_tag)
 if [ "$current" = "$version" ] || [ "$current" = "$tag" ]; then
   log "up to date: $current"
   exit 0
+fi
+
+# Never a downgrade, never a sidestep: whoever can publish a release decides what runs here, so the one thing the timer
+# must not do is move production backwards or sideways because of a tag that is older, equal or odd.
+if [ -n "$current" ]; then
+  deployed=${current#v}
+  if ! [[ "$deployed" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    warn "not deploying $tag: the deployed tag '$current' is not a release version, so 'newer' is undefined. Deploy a release by hand once (./deploy.sh $version); after that the timer takes over"
+    exit 0
+  fi
+  if ! version_gt "$version" "$deployed"; then
+    warn "refusing $tag: it is not newer than the deployed $current. The timer never downgrades; to go back on purpose, run ./deploy.sh <tag> by hand"
+    exit 0
+  fi
 fi
 
 failed=$(read_state autoupdate_failed)

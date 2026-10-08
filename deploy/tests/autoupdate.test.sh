@@ -145,4 +145,35 @@ assert_eq "dry run: exit" 0 "$rc"
 assert_eq "dry run: no deploy" "" "$(calls)"
 assert_has "dry run: says what it would do" "$out" "would deploy v1.2.3 as image tag 1.2.3"
 
+# 11. only a strictly newer release is deployed: numeric, field by field, no downgrades, nothing sideways
+deployed_then_latest() { # deployed_then_latest DEPLOYED LATEST: sets $out, $rc; the stub deploy.sh records its calls
+  setup
+  mkdir -p "$SB/app/.deploy" && echo "$1" >"$SB/app/.deploy/current_tag"
+  api_release "$2"
+  run
+}
+for pair in "1.2.3 v1.2.4" "1.2.3 v1.3.0" "1.2.3 v2.0.0" "1.9.0 v1.10.0" "1.2.3 v1.2.10" "0.9.9 v1.0.0" "v1.2.3 v1.2.4" "1.0.0 v99999999999999999999.0.0"; do
+  read -r have want <<<"$pair"
+  deployed_then_latest "$have" "$want"
+  assert_eq "newer ($have -> $want): exit" 0 "$rc"
+  assert_eq "newer ($have -> $want): deployed" "${want#v}" "$(calls)"
+done
+for pair in "1.2.4 v1.2.3" "2.0.0 v1.9.9" "1.10.0 v1.9.0" "1.2.10 v1.2.9" "1.0.0 v0.9.9" "1.2.3 v1.2.03" "99999999999999999999.0.0 v1.0.0" "v1.2.4 v1.2.3"; do
+  read -r have want <<<"$pair"
+  deployed_then_latest "$have" "$want"
+  assert_eq "not newer ($have -> $want): exit" 0 "$rc"
+  assert_eq "not newer ($have -> $want): not deployed" "" "$(calls)"
+  assert_has "not newer ($have -> $want): logged" "$out" "refusing $want: it is not newer than the deployed"
+done
+for have in sha-1a2b3c4 main v1.2 1.2.3-rc.1; do
+  deployed_then_latest "$have" v9.9.9
+  assert_eq "deployed '$have' is not a release: exit" 0 "$rc"
+  assert_eq "deployed '$have' is not a release: not deployed" "" "$(calls)"
+  assert_has "deployed '$have' is not a release: explained" "$out" "is not a release version"
+done
+# a refused downgrade is not recorded as a failed deploy
+deployed_then_latest 2.0.0 v1.9.9
+assert_no_file "downgrade is not a failure" "$SB/app/.deploy/autoupdate_failed"
+assert_no_file "downgrade leaves no retry marker" "$SB/app/.deploy/autoupdate_retry"
+
 finish
