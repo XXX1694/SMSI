@@ -147,6 +147,8 @@ rollback restarts the old images **against the already migrated database**; it d
 
 ## 6. Telegram webhook
 
+Full bot setup (admin rights, link codes, limits): [docs/integrations/telegram.md](../docs/integrations/telegram.md). Run `webhook-info` before `set-webhook` so you do not take over a bot that another service uses.
+
 Production runs `TELEGRAM_UPDATES_MODE=webhook` (the worker does not long-poll). With `TELEGRAM_BOT_TOKEN` and
 `TELEGRAM_WEBHOOK_SECRET` set in `.env` and the stack running, register the webhook once (this is `make -C backend
 telegram-set-webhook` for the production stack):
@@ -162,6 +164,8 @@ API containers pick up the new value). Telegram only delivers to https on port 4
 if link codes are not picked up.
 
 ## 7. LinkedIn
+
+Full walkthrough (Page verification, products, token lifetime, troubleshooting): [docs/integrations/linkedin.md](../docs/integrations/linkedin.md).
 
 In your app at <https://www.linkedin.com/developers/apps>: *Products*: **Sign In with LinkedIn using OpenID Connect** and **Share on
 LinkedIn**; *Auth* > *Authorized redirect URLs for your app*:

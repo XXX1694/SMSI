@@ -204,6 +204,8 @@ No core business logic changes.
 
 ## 8. OAuth setup
 
+Integrations: step-by-step operator guides for [LinkedIn](docs/integrations/linkedin.md) and [Telegram](docs/integrations/telegram.md).
+
 **LinkedIn**
 
 1. Create an app at <https://www.linkedin.com/developers/apps>.
