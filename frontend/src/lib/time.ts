@@ -77,6 +77,22 @@ export function zonedToUtcIso(date: string, time: string, tz: string): string | 
   return result.toISOString().replace('.000Z', 'Z');
 }
 
+/**
+ * UTC bounds of whole calendar days ("YYYY-MM-DD") in `tz`: the start of `from` and the last second of `to`.
+ * An empty or malformed day gives `undefined` for that bound.
+ */
+export function zonedDayRangeIso(from: string, to: string, tz: string): { from?: string; to?: string } {
+  const start = from ? zonedToUtcIso(from, '00:00', tz) : null;
+  let end: string | null = null;
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(to);
+  if (dm) {
+    const next = new Date(Date.UTC(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]) + 1)).toISOString().slice(0, 10);
+    const nextStart = zonedToUtcIso(next, '00:00', tz);
+    if (nextStart) end = new Date(new Date(nextStart).getTime() - 1000).toISOString().replace('.000Z', 'Z');
+  }
+  return { from: start ?? undefined, to: end ?? undefined };
+}
+
 export function utcToZonedInputs(iso: string, tz: string): { date: string; time: string } {
   const p = zonedParts(new Date(iso), tz);
   const pad = (n: number) => String(n).padStart(2, '0');
