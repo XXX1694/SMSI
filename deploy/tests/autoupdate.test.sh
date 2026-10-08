@@ -4,7 +4,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # setup [ENV_LINES]: sandbox with autoupdate.sh, a stub deploy.sh (records its arguments, exits with the code in
-# $SB/deploy.rc) and a stub curl (answers with $SB/api.code and $SB/api.json, records the URL).
+# $SB/deploy.rc) and a stub curl (GitHub API and ghcr.io answers from files in $SB, records every URL).
 setup() {
   new_sb
   mkdir -p "$SB/app"
@@ -18,22 +18,51 @@ setup() {
 echo "\$*" >>"$SB/deploy.calls"
 exit "\$(cat "$SB/deploy.rc")"
 STUB
-  cat >"$SB/bin/curl" <<STUB
+  cat >"$SB/bin/curl" <<'STUB'
 #!/usr/bin/env bash
+# Routes by URL: the GitHub API ($STUB_DIR/api.{json,code}), the ghcr.io token endpoint (token.<image>.{json,code}) and
+# the ghcr.io manifest HEAD (manifest.<image>.code). Unset files mean "fine": a token and 200.
 out=""
-while [ \$# -gt 0 ]; do
-  case "\$1" in -o) out=\$2; shift ;; http*) echo "\$1" >>"$SB/curl.calls" ;; esac
+url=""
+echo "$*" >>"$STUB_DIR/curl.argv"
+while [ $# -gt 0 ]; do
+  case "$1" in -o) out=$2; shift ;; http*) url=$1 ;; esac
   shift
 done
-cp "$SB/api.json" "\$out"
-cat "$SB/api.code"
+echo "$url" >>"$STUB_DIR/curl.calls"
+body=""
+case "$url" in
+  *api.github.com*)
+    body=$(cat "$STUB_DIR/api.json")
+    code=$(cat "$STUB_DIR/api.code")
+    ;;
+  *ghcr.io/token*)
+    name=${url##*socialos-}
+    name=${name%%:*}
+    code=200
+    [ ! -e "$STUB_DIR/token.$name.code" ] || code=$(cat "$STUB_DIR/token.$name.code")
+    body="{\"token\":\"tok-$name\"}"
+    [ ! -e "$STUB_DIR/token.$name.json" ] || body=$(cat "$STUB_DIR/token.$name.json")
+    ;;
+  *ghcr.io/v2/*)
+    name=${url#*socialos-}
+    name=${name%%/*}
+    code=200
+    [ ! -e "$STUB_DIR/manifest.$name.code" ] || code=$(cat "$STUB_DIR/manifest.$name.code")
+    ;;
+  *)
+    code=000
+    ;;
+esac
+if [ -n "$out" ] && [ "$out" != /dev/null ]; then printf '%s' "$body" >"$out"; fi
+printf '%s' "$code"
 STUB
   chmod +x "$SB/app/deploy.sh" "$SB/bin/curl"
 }
 api_release() { printf '{\n  "url": "x",\n  "author": {"login": "someone"},\n  "tag_name": "%s",\n  "name": "release",\n  "body": "\\"tag_name\\": \\"v9.9.9\\""\n}\n' "$1" >"$SB/api.json"; }
 run() { # run [ARGS]: sets $out and $rc
   rc=0
-  out=$(cd "$SB/app" && PATH="$SB/bin:$PATH" bash ./autoupdate.sh "$@" 2>&1) || rc=$?
+  out=$(cd "$SB/app" && STUB_DIR="$SB" PATH="$SB/bin:$PATH" bash ./autoupdate.sh "$@" 2>&1) || rc=$?
 }
 calls() { cat "$SB/deploy.calls" 2>/dev/null || true; }
 
@@ -175,5 +204,97 @@ done
 deployed_then_latest 2.0.0 v1.9.9
 assert_no_file "downgrade is not a failure" "$SB/app/.deploy/autoupdate_failed"
 assert_no_file "downgrade leaves no retry marker" "$SB/app/.deploy/autoupdate_retry"
+
+# 12. the images must exist in ghcr.io before deploy.sh is called; "not there yet" is neither a failure nor a retry marker
+ghcr_calls() { grep -c 'ghcr.io' "$SB/curl.calls" || true; }
+markers() { # how many of the failed/retry markers exist
+  local n=0 f
+  for f in "$SB/app/.deploy/autoupdate_failed" "$SB/app/.deploy/autoupdate_retry"; do
+    if [ -e "$f" ]; then n=$((n + 1)); fi
+  done
+  echo "$n"
+}
+
+setup # all three present: asked anonymously, one token and one HEAD per image, for the image tag without the "v"
+run
+assert_eq "images ready: deployed" "1.2.3" "$(calls)"
+for name in backend mcp frontend; do
+  assert_has "token requested for $name" "$(cat "$SB/curl.calls")" "https://ghcr.io/token?service=ghcr.io&scope=repository:xxx1694/socialos-$name:pull"
+  assert_has "manifest of $name asked at 1.2.3" "$(cat "$SB/curl.calls")" "https://ghcr.io/v2/xxx1694/socialos-$name/manifests/1.2.3"
+  assert_has "manifest HEAD of $name carries that image's token" "$(cat "$SB/curl.argv")" "Authorization: Bearer tok-$name"
+done
+assert_has "the manifest check is a HEAD" "$(grep 'manifests' "$SB/curl.argv" | head -n 1)" "-I"
+
+for missing in backend mcp frontend; do
+  setup
+  echo 404 >"$SB/manifest.$missing.code"
+  run
+  assert_eq "$missing missing: exit" 0 "$rc"
+  assert_eq "$missing missing: deploy.sh not called" "" "$(calls)"
+  assert_has "$missing missing: logged" "$out" "images not ready"
+  assert_has "$missing missing: names the image" "$out" "socialos-{$missing}:1.2.3"
+  assert_eq "$missing missing: nothing recorded (no failed, no retry marker)" 0 "$(markers)"
+done
+setup # the next tick: the images are there now
+echo 404 >"$SB/manifest.mcp.code"
+run
+assert_eq "retry: first tick, no deploy" "" "$(calls)"
+rm "$SB/manifest.mcp.code"
+run
+assert_eq "retry: next tick deploys" "1.2.3" "$(calls)"
+assert_eq "retry: nothing recorded" 0 "$(markers)"
+
+setup # private or unknown package: not visible anonymously
+echo 403 >"$SB/token.backend.code"
+echo '{"errors":[{"code":"DENIED"}]}' >"$SB/token.backend.json"
+run
+assert_eq "denied: exit" 0 "$rc"
+assert_eq "denied: deploy.sh not called" "" "$(calls)"
+assert_has "denied: logged" "$out" "images not ready"
+assert_has "denied: hint for private packages" "$out" "AUTOUPDATE_CHECK_IMAGES=false"
+assert_eq "denied: nothing recorded" 0 "$(markers)"
+
+setup # registry trouble: not a verdict about the images
+echo 503 >"$SB/manifest.frontend.code"
+run
+assert_eq "registry error: exit" 0 "$rc"
+assert_eq "registry error: deploy.sh not called" "" "$(calls)"
+assert_has "registry error: logged" "$out" "could not check ghcr.io for frontend"
+assert_eq "registry error: nothing recorded" 0 "$(markers)"
+setup
+echo 500 >"$SB/token.mcp.code"
+run
+assert_has "token endpoint error: logged" "$out" "could not check ghcr.io for mcp"
+assert_eq "token endpoint error: deploy.sh not called" "" "$(calls)"
+
+setup 'AUTOUPDATE_CHECK_IMAGES=false'
+echo 404 >"$SB/manifest.backend.code"
+run
+assert_eq "check switched off: deploys anyway" "1.2.3" "$(calls)"
+assert_eq "check switched off: ghcr.io not asked" 0 "$(ghcr_calls)"
+
+setup 'GHCR_OWNER=Acme-Corp'
+run
+assert_has "owner from .env, lower-cased" "$(cat "$SB/curl.calls")" "/v2/acme-corp/socialos-backend/manifests/1.2.3"
+
+setup # --dry-run reports the missing images too
+echo 404 >"$SB/manifest.mcp.code"
+run --dry-run
+assert_has "dry run: images not ready" "$out" "images not ready"
+assert_lacks "dry run: does not claim it would deploy" "$out" "would deploy"
+
+# ghcr.io is only asked for a release that would be deployed: not for refused, up-to-date, failed or backing-off tags
+setup
+mkdir -p "$SB/app/.deploy" && echo 2.0.0 >"$SB/app/.deploy/current_tag"
+run
+assert_eq "refused downgrade: ghcr.io not asked" 0 "$(ghcr_calls)"
+setup
+mkdir -p "$SB/app/.deploy" && echo 1.2.3 >"$SB/app/.deploy/current_tag"
+run
+assert_eq "up to date: ghcr.io not asked" 0 "$(ghcr_calls)"
+setup
+mkdir -p "$SB/app/.deploy" && echo "1.2.3 2026-10-09T00:00:00Z" >"$SB/app/.deploy/autoupdate_failed"
+run
+assert_eq "failed earlier: ghcr.io not asked" 0 "$(ghcr_calls)"
 
 finish

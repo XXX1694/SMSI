@@ -10,6 +10,9 @@
 # is the same without the "v" (that is how release.yml names it), and the deployed tag is what deploy.sh recorded in
 # .deploy/current_tag. Only a STRICTLY NEWER version is deployed: an older or equal release is refused and logged, and when
 # the deployed tag is not a release version (sha-..., main) nothing is done until a release was deployed by hand once.
+# Before it deploys, it asks ghcr.io anonymously (token + HEAD on the manifest, like a docker pull) whether the three images
+# exist for that version. A release can be published before its images are built: then it logs "images not ready", records
+# nothing and tries again at the next tick. (AUTOUPDATE_CHECK_IMAGES=false skips the check, e.g. for private packages.)
 # A new tag is handed to ./deploy.sh, which pulls, migrates, waits for /ready and rolls back on failure.
 # A tag whose deploy failed is remembered in .deploy/autoupdate_failed and not tried again until a newer release appears
 # (delete that file to retry; a manual `./deploy.sh <tag>` that succeeds makes it irrelevant). Output goes to the journal:
@@ -24,7 +27,44 @@ RETRY_DELAY=${AUTOUPDATE_RETRY_DELAY:-900} # seconds to wait after "nothing was 
 
 log() { printf 'autoupdate: %s\n' "$*"; }
 warn() { printf 'autoupdate: %s\n' "$*" >&2; }
-usage() { sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+# image_state NAME VERSION: is ghcr.io/<owner>/socialos-NAME:VERSION there? Anonymously, as `docker pull` of a public package
+# does it. Prints ready, missing (no such tag), denied (private or unknown package: not visible without a login) or error.
+image_state() {
+  local name=$1 version=$2 tok_body tok_code token code
+  tok_body=$(mktemp)
+  tok_code=$(curl -sS --max-time 20 -o "$tok_body" -w '%{http_code}' \
+    "https://ghcr.io/token?service=ghcr.io&scope=repository:$ghcr_owner/socialos-$name:pull" 2>/dev/null || true)
+  token=""
+  token_re='"token"[[:space:]]*:[[:space:]]*"([^"]*)"'
+  if [ "$tok_code" = 200 ] && [[ "$(<"$tok_body")" =~ $token_re ]]; then token=${BASH_REMATCH[1]}; fi
+  rm -f "$tok_body"
+  case "$tok_code" in
+    200) ;;
+    401 | 403)
+      echo denied
+      return 0
+      ;;
+    *)
+      echo error
+      return 0
+      ;;
+  esac
+  [ -n "$token" ] || {
+    echo error
+    return 0
+  }
+  code=$(curl -sS -I -o /dev/null --max-time 20 -w '%{http_code}' -H "Authorization: Bearer $token" \
+    -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+    "https://ghcr.io/v2/$ghcr_owner/socialos-$name/manifests/$version" 2>/dev/null || true)
+  case "$code" in
+    200) echo ready ;;
+    404) echo missing ;;
+    401 | 403) echo denied ;;
+    *) echo error ;;
+  esac
+}
 
 # version_gt A B: is release version A strictly newer than B? Both are MAJOR.MINOR.PATCH (digits only). Compared field by
 # field as numbers without arithmetic, so a long number cannot overflow, and 1.10.0 is newer than 1.9.0.
@@ -170,6 +210,39 @@ if [ "${retry%% *}" = "$version" ] && [ "$(date +%s)" -lt "${retry#* }" ]; then
   log "waiting to retry $tag (nothing was changed last time)"
   exit 0
 fi
+
+# ---- are the images there? --------------------------------------------------------------------------------------------
+# Not a failure and not recorded anywhere: the release is just ahead of its images. The next tick looks again.
+ghcr_owner=$(env_get GHCR_OWNER)
+ghcr_owner=$(printf '%s' "${ghcr_owner:-xxx1694}" | tr '[:upper:]' '[:lower:]')
+case "$(printf '%s' "$(env_get AUTOUPDATE_CHECK_IMAGES)" | tr '[:upper:]' '[:lower:]')" in
+  false | 0 | no | off) ;;
+  *)
+    not_ready=""
+    unknown=""
+    denied=""
+    for name in backend mcp frontend; do
+      case "$(image_state "$name" "$version")" in
+        ready) ;;
+        missing) not_ready+="${not_ready:+, }$name" ;;
+        denied) denied+="${denied:+, }$name" ;;
+        *) unknown+="${unknown:+, }$name" ;;
+      esac
+    done
+    if [ -n "$unknown" ]; then
+      warn "could not check ghcr.io for $unknown (network or registry trouble); will try again"
+      exit 0
+    fi
+    if [ -n "$denied" ]; then
+      log "images not ready: ghcr.io/$ghcr_owner/socialos-{$denied}:$version are not visible without a login (not published yet, or private packages: set AUTOUPDATE_CHECK_IMAGES=false to skip this check); will try again"
+      exit 0
+    fi
+    if [ -n "$not_ready" ]; then
+      log "images not ready: ghcr.io/$ghcr_owner/socialos-{$not_ready}:$version do not exist yet (the Release workflow may still be building them); will try again"
+      exit 0
+    fi
+    ;;
+esac
 
 if [ "$dry_run" = true ]; then
   log "would deploy $tag as image tag $version (running: ${current:-nothing recorded})"
