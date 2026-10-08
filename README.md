@@ -316,7 +316,7 @@ Three GitHub Actions workflows, built to stay inside the 2000 free private-repo 
 
 | Workflow | Runs on | What it does |
 |---|---|---|
-| [`ci.yml`](.github/workflows/ci.yml) | pull requests, pushes to `main` | Backend (gofmt, vet, golangci-lint, unit tests, integration + e2e on real Postgres 16 and Redis 7), MCP (typecheck, test, build), frontend (lint, typecheck, test, build), a Docker build of all three images, and the compose stack with `mcp/scripts/acceptance.mjs`. Pull requests run only the jobs whose paths changed; `main` runs everything; a newer push cancels the run it replaces |
+| [`ci.yml`](.github/workflows/ci.yml) | pull requests, pushes to `main` | Backend (gofmt, vet, golangci-lint, unit tests, integration + e2e on real Postgres 16 and Redis 8), MCP (typecheck, test, build), frontend (lint, typecheck, test, build), a Docker build of all three images, and the compose stack with `mcp/scripts/acceptance.mjs`. Pull requests run only the jobs whose paths changed; `main` runs everything; a newer push cancels the run it replaces |
 | [`release.yml`](.github/workflows/release.yml) | green CI on `main`, tags `v*`, manual | Pushes multi-arch (amd64 + arm64) images to `ghcr.io/xxx1694/socialos-{backend,mcp,frontend}` tagged `sha-<7 hex>`, `main` and, for `vX.Y.Z` tags, `X.Y.Z` / `X.Y` / `X` |
 | [`deploy.yml`](.github/workflows/deploy.yml) | after a main release, manual | SSHes to the server, uploads [`deploy/`](deploy/), runs `deploy.sh <tag>` (pull, migrate, restart, wait for `/ready`, automatic rollback). Skipped unless the `DEPLOY_*` secrets exist; runs in the `production` environment, where you can add required reviewers |
 

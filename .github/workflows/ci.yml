@@ -132,7 +132,7 @@ jobs:
           --health-timeout 5s
           --health-retries 12
       redis:
-        image: redis:7-alpine
+        image: redis:8-alpine
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
@@ -172,7 +172,7 @@ jobs:
       - name: Unit tests
         run: make test
 
-      - name: Integration + e2e tests (Postgres 16, Redis 7)
+      - name: Integration + e2e tests (Postgres 16, Redis 8)
         env:
           TEST_DATABASE_URL: postgres://socialos:socialos@127.0.0.1:5432/socialos_test?sslmode=disable
           TEST_REDIS_URL: redis://127.0.0.1:6379/15
