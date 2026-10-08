@@ -20,7 +20,7 @@ updates:
       go-minor-patch:
         update-types: [minor, patch]
 
-  # --- npm (MCP server, frontend) -------------------------------------------------------------------------------
+  # --- npm (MCP server, frontend, GitHub Pages site) -------------------------------------------------------------------------------
   - package-ecosystem: npm
     directory: /mcp
     schedule:
@@ -47,6 +47,20 @@ updates:
       prefix: "chore(deps)"
     groups:
       frontend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Almaty
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      site-minor-patch:
         update-types: [minor, patch]
 
   # --- GitHub Actions used by .github/workflows ---------------------------------------------------------------
