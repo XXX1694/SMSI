@@ -203,6 +203,8 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
+      - name: Size ceilings
+        run: npm run lint
       - name: Tests
         run: npm test
       - name: Build
