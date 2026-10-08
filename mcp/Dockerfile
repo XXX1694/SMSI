@@ -21,6 +21,9 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 # "type": "module" in package.json is what makes dist/*.js load as ES modules.
 COPY --chown=node:node package.json ./
+# npm, npx and corepack are only needed to build; the image runs plain `node`. Dropping them removes the
+# npm-bundled packages (brace-expansion, pacote, sigstore, ...) that image scanners report.
+RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn*
 USER node
 EXPOSE 3333
 # busybox wget exits non-zero on connection errors and on 4xx/5xx. ${PORT} follows the runtime setting.
