@@ -147,6 +147,6 @@ off-site backups, Terms and Privacy, and support.
 - [ ] Data export and account deletion (#78); Terms and Privacy pages.
 - [ ] At least Discord, Mastodon and Bluesky live (#79, #80), so the product is useful without developer apps.
 - [ ] MCP setup without the unpublished npm package (#77), or `socialos-mcp` published with the owner's "yes".
-- [ ] A real domain, production mail on, off-site backups with a tested restore.
+- [ ] A real domain, production mail on, and off-site backups switched on with a restore drill passed.
 - [ ] The acceptance scenario passed in production with real networks.
 - [ ] The owner's "yes" for every announcement (AGENTS.md section 9).

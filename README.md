@@ -255,10 +255,11 @@ The product view, competitors and the prioritised backlog: [PRODUCT](docs/PRODUC
 ## Contributing
 
 Issues and pull requests are welcome. [AGENTS.md](AGENTS.md) is the rulebook for human and AI contributors alike: how work
-is planned, the architecture rules, size limits, tests and the review checklist. Before you push, run:
+is planned, the architecture rules, tests and the review checklist. [CONTRIBUTING.md](CONTRIBUTING.md) explains the size
+ceilings that CI enforces. Before you push, run:
 
 ```bash
-make lint
+make lint    # linters, typecheck, size ceilings and layer rules
 make test    # backend, MCP and frontend unit tests; no services needed
 ```
 
