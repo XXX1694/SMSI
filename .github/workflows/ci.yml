@@ -19,7 +19,7 @@ permissions:
 
 env:
   # Go toolchain for CI and for the backend image (ARG GO_VERSION in backend/Dockerfile): keep both on the same minor
-  # version. go.mod only states the minimum (1.24).
+  # version. go.mod states the minimum (1.26.0); CI and the image use the latest patch of the 1.26 line.
   GO_VERSION: "1.26"
   # Pinned so that a new linter release cannot turn CI red by itself; bump it deliberately.
   GOLANGCI_LINT_VERSION: v2.14.0

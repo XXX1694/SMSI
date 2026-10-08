@@ -15,7 +15,7 @@
 # cross-compiles with GOARCH=$TARGETARCH, so `--platform linux/amd64,linux/arm64`
 # needs no QEMU emulation (CGO is off, the binaries are fully static).
 
-# go.mod only states the minimum language version (1.24); images are built with a supported toolchain so that they carry
+# go.mod states the minimum Go version (1.26.0); images are built with the latest patch of that line so that they carry
 # the current standard-library security fixes. Keep GO_VERSION in .github/workflows/ci.yml on the same minor version.
 ARG GO_VERSION=1.26
 
