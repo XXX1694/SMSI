@@ -36,8 +36,8 @@ type Targets interface {
 	// LockTarget locks a target row with FOR UPDATE SKIP LOCKED.
 	// It returns (nil, false, nil) when another transaction holds the lock.
 	LockTarget(ctx context.Context, id uuid.UUID) (*post.Target, bool, error)
-	// LockTargetWait locks a target row, waiting for other holders (finalize path).
-	LockTargetWait(ctx context.Context, id uuid.UUID) error
+	// LockTargetWait locks a target row of the given owner, waiting for other holders (finalize path).
+	LockTargetWait(ctx context.Context, userID, id uuid.UUID) error
 	UpdateTarget(ctx context.Context, t *post.Target) error
 	ListTargets(ctx context.Context, userID, postID uuid.UUID) ([]post.Target, error)
 	LatestAttempt(ctx context.Context, targetID uuid.UUID) (*post.Attempt, error)
