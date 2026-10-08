@@ -25,7 +25,7 @@ make acceptance           # MVP flow against a running stack (mcp/scripts/accept
 cd frontend && npm run build:demo && cd ../site && npm run build && npm run check   # Pages site
 ```
 
-- CI uses Node 22. On Node 25+ jsdom tests need `NODE_OPTIONS=--no-experimental-webstorage`.
+- CI uses Node 22 (local Node 25+ works: `frontend/tests/setup.ts` restores jsdom storage).
 - Browser scripts (`npm run smoke`, `frontend/scripts/e2e-real.mjs`) take `CHROMIUM_PATH`. On macOS, point it at Google Chrome.
 - If `:5432` or `:6379` is taken on the host, run throwaway Postgres 16 / Redis 7 containers on other ports for integration tests.
 
