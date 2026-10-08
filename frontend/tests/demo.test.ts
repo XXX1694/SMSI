@@ -423,6 +423,20 @@ describe('media, analytics, audit and developer endpoints', () => {
     expect(r.call('GET', '/audit-logs', undefined, { limit: 3, cursor: '3' }).body.items).toHaveLength(3);
   });
 
+  it('filters the audit log by action: seeded agent tool calls carry tool, status and agent label', () => {
+    const r = rig();
+    const page = r.call('GET', '/audit-logs', undefined, { action: 'mcp.tool_call', limit: 50 }).body;
+    expect(page.items.length).toBeGreaterThanOrEqual(3);
+    for (const l of page.items) {
+      expect(l).toMatchObject({ action: 'mcp.tool_call', actor_type: 'api_key' });
+      expect(l.actor_label).toMatch(/^MCP: /);
+      expect(typeof l.metadata.tool).toBe('string');
+      expect(typeof l.metadata.status).toBe('number');
+    }
+    expect(page.items.some((l: { metadata: { error_code?: string } }) => l.metadata.error_code === 'INSUFFICIENT_SCOPE')).toBe(true);
+    expect(r.call('GET', '/audit-logs', undefined, { action: 'nope' }).body.items).toEqual([]);
+  });
+
   it('creates API keys and MCP connections; the raw key is returned once and never listed', () => {
     const r = rig();
     const k = r.call('POST', '/developer/api-keys', { name: 'Zapier', scopes: ['posts:read', 'social:read'] });

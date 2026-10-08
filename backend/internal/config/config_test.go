@@ -203,3 +203,18 @@ func TestTelegramUpdatesModeRejectsUnknownValues(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestMCPGatewaySecret(t *testing.T) {
+	validEnv(t)
+	if c, err := Load(); err != nil || c.GatewaySecret != "" {
+		t.Fatalf("unset secret is valid and means never trust the header: %v %q", err, c.GatewaySecret)
+	}
+	t.Setenv("MCP_GATEWAY_SECRET", "short")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "MCP_GATEWAY_SECRET") {
+		t.Fatalf("a short secret must stop startup: %v", err)
+	}
+	t.Setenv("MCP_GATEWAY_SECRET", strings.Repeat("a", 32))
+	if c, err := Load(); err != nil || c.GatewaySecret == "" {
+		t.Fatalf("32 chars are fine: %v", err)
+	}
+}

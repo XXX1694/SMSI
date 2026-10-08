@@ -42,11 +42,13 @@ type Options struct {
 	// header is ignored and the TCP peer is the client.
 	TrustedProxies []netip.Prefix
 	MetricsToken   string
-	Logger         *slog.Logger
-	Metrics        *observability.Metrics
-	Ready          []ReadyCheck
-	APILimiter     *middleware.Limiter
-	AuthLimiter    *middleware.Limiter
+	// GatewaySecret is MCP_GATEWAY_SECRET: with it, X-SocialOS-Client-IP from the MCP server is believed. Empty = never.
+	GatewaySecret string
+	Logger        *slog.Logger
+	Metrics       *observability.Metrics
+	Ready         []ReadyCheck
+	APILimiter    *middleware.Limiter
+	AuthLimiter   *middleware.Limiter
 	// TelegramWebhookSecret enables POST /webhooks/telegram (webhook intake
 	// mode); with an empty secret the route does not exist.
 	TelegramWebhookSecret string
@@ -90,7 +92,7 @@ func NewRouter(svc Services, opt Options) http.Handler {
 			r.Post("/webhooks/telegram", a.telegramWebhook)
 		}
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Authenticate(svc.Auth, a.trusted), middleware.APIKeyAudit(svc.Audit, opt.Logger),
+			r.Use(middleware.Gateway(opt.GatewaySecret), middleware.Authenticate(svc.Auth, a.trusted), middleware.APIKeyAudit(svc.Audit, opt.Logger),
 				middleware.RateLimit(opt.APILimiter, a.trusted, opt.Metrics, "api:"), middleware.CSRF)
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RateLimit(opt.AuthLimiter, a.trusted, opt.Metrics, "auth:"))

@@ -68,6 +68,7 @@ set_var S3_ACCESS_KEY "$(openssl rand -hex 8)"
 set_var S3_SECRET_KEY "$(openssl rand -hex 24)"
 set_var TELEGRAM_WEBHOOK_SECRET "$(openssl rand -hex 24)"
 if [ "$host_proxy" = true ]; then set_var COMPOSE_FILE "docker-compose.prod.yml:docker-compose.host-proxy.yml"; fi
+set_var MCP_GATEWAY_SECRET "$(openssl rand -hex 32)"
 
 echo "wrote $(pwd)/.env (mode 600) with fresh secrets for ${domain}."
 echo "Back it up somewhere safe: ENCRYPTION_KEY cannot be recovered, and without it stored social-account tokens are lost."

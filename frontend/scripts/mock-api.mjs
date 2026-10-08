@@ -304,7 +304,10 @@ async function handle(req, res) {
     const items = acc ? Array.from({ length: 14 }, (_, i) => ({ metric: 'impressions', value: 100 + ((i * 37) % 90) + i * 5, captured_at: inPast((14 - i) * 24), social_account_id: acc.id })) : [];
     return send(res, 200, { items });
   }
-  if (path === '/audit-logs') return send(res, 200, paginate(db.audit, url));
+  if (path === '/audit-logs') {
+    const action = url.searchParams.get('action');
+    return send(res, 200, paginate(action ? db.audit.filter((a) => a.action === action) : db.audit, url));
+  }
 
   // ---- developer
   if (path === '/developer/api-keys' && m === 'GET') return send(res, 200, { items: mine(db.keys).map(({ user_id, ...k }) => k) });

@@ -103,3 +103,16 @@ func TestRequestIDRoundTrip(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 }
+
+func TestCodeSlotSeesTheRenderedErrorCode(t *testing.T) {
+	ctx, slot := WithCodeSlot(context.Background())
+	r := httptest.NewRequest("GET", "/", nil).WithContext(ctx)
+	JSON(httptest.NewRecorder(), 200, nil)
+	if slot.Code() != "" {
+		t.Fatalf("no error rendered yet: %q", slot.Code())
+	}
+	ErrorCode(httptest.NewRecorder(), r, errs.NotFound, "nope")
+	if slot.Code() != errs.NotFound {
+		t.Fatalf("code %q", slot.Code())
+	}
+}

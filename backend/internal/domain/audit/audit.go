@@ -50,4 +50,5 @@ const (
 	ActionMCPCreated       = "mcp_connection.created"
 	ActionMCPRevoked       = "mcp_connection.revoked"
 	ActionAPIRequest       = "api_key.request"
+	ActionMCPToolCall      = "mcp.tool_call" // one MCP tool call made with an API key (X-MCP-Tool header)
 )

@@ -18,17 +18,18 @@ type fakeClock struct{ now time.Time }
 func (c fakeClock) Now() time.Time { return c.now }
 
 type fakeRepo struct {
-	inserted []domain.Entry
-	listed   []domain.Entry
-	gotPage  port.Page
+	inserted  []domain.Entry
+	listed    []domain.Entry
+	gotPage   port.Page
+	gotAction string
 }
 
 func (f *fakeRepo) Insert(_ context.Context, e *domain.Entry) error {
 	f.inserted = append(f.inserted, *e)
 	return nil
 }
-func (f *fakeRepo) List(_ context.Context, _ uuid.UUID, p port.Page) ([]domain.Entry, error) {
-	f.gotPage = p
+func (f *fakeRepo) List(_ context.Context, _ uuid.UUID, action string, p port.Page) ([]domain.Entry, error) {
+	f.gotPage, f.gotAction = p, action
 	return f.listed, nil
 }
 
@@ -59,7 +60,7 @@ func TestListIsSessionOnlyAndPaginates(t *testing.T) {
 		repo.listed = append(repo.listed, domain.Entry{ID: uuid.New(), CreatedAt: now.Add(-time.Duration(i) * time.Minute)})
 	}
 	sess := actor.Actor{UserID: uuid.New(), Type: actor.TypeUser, SessionID: uuid.New()}
-	res, err := s.List(context.Background(), sess, port.Page{Limit: 3})
+	res, err := s.List(context.Background(), sess, "", port.Page{Limit: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,15 +75,19 @@ func TestListIsSessionOnlyAndPaginates(t *testing.T) {
 		t.Fatalf("cursor must point at the last returned row: %+v %v", cur, err)
 	}
 	repo.listed = repo.listed[:2]
-	if res, _ := s.List(context.Background(), sess, port.Page{Limit: 3}); len(res.Items) != 2 || res.NextCursor != "" {
+	if res, _ := s.List(context.Background(), sess, "", port.Page{Limit: 3}); len(res.Items) != 2 || res.NextCursor != "" {
 		t.Fatalf("last page: %+v", res)
 	}
 
+	if _, err := s.List(context.Background(), sess, "mcp.tool_call", port.Page{Limit: 3}); err != nil || repo.gotAction != "mcp.tool_call" {
+		t.Fatalf("the action filter must reach the repo: %q %v", repo.gotAction, err)
+	}
+
 	key := actor.Actor{UserID: uuid.New(), Type: actor.TypeAPIKey}
-	if _, err := s.List(context.Background(), key, port.Page{Limit: 3}); !errs.Is(err, errs.Forbidden) {
+	if _, err := s.List(context.Background(), key, "", port.Page{Limit: 3}); !errs.Is(err, errs.Forbidden) {
 		t.Fatalf("API keys must not read the audit log: %v", err)
 	}
-	if _, err := s.List(context.Background(), actor.Actor{}, port.Page{Limit: 3}); !errs.Is(err, errs.Unauthenticated) {
+	if _, err := s.List(context.Background(), actor.Actor{}, "", port.Page{Limit: 3}); !errs.Is(err, errs.Unauthenticated) {
 		t.Fatalf("anonymous: %v", err)
 	}
 }

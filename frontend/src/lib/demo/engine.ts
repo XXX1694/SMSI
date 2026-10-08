@@ -332,7 +332,7 @@ export class DemoEngine {
     // ---- dashboard, analytics, audit
     if (path === '/dashboard/summary' && m === 'GET') return ok(200, this.summary());
     if (path === '/analytics' && m === 'GET') return ok(200, { items: this.analytics(query) });
-    if (path === '/audit-logs' && m === 'GET') return ok(200, paginate(s.audit, query));
+    if (path === '/audit-logs' && m === 'GET') return ok(200, paginate(query?.action ? s.audit.filter((a) => a.action === query.action) : s.audit, query));
 
     // ---- developer
     if (path === '/developer/api-keys' && m === 'GET') return ok(200, { items: s.api_keys });

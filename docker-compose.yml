@@ -17,6 +17,7 @@ x-backend-env: &backend-env
   WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
   MCP_PUBLIC_URL: ${MCP_PUBLIC_URL:-http://localhost:3333/mcp}
+  MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-} # shared with the mcp service; empty = the client IP forwarded by MCP is ignored
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
   STORAGE_DRIVER: s3
   S3_ENDPOINT: minio:9000
@@ -126,6 +127,7 @@ services:
     environment:
       SOCIALOS_API_URL: http://backend:8080
       PORT: "3333"
+      MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-}
     ports: ["127.0.0.1:3333:3333"]
     depends_on:
       backend: { condition: service_healthy }

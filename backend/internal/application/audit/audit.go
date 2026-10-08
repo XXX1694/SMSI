@@ -13,7 +13,7 @@ import (
 // Repo persists audit entries. All reads are tenant-scoped.
 type Repo interface {
 	Insert(ctx context.Context, e *domain.Entry) error
-	List(ctx context.Context, userID uuid.UUID, page port.Page) ([]domain.Entry, error)
+	List(ctx context.Context, userID uuid.UUID, action string, page port.Page) ([]domain.Entry, error)
 }
 
 // Service implements port.AuditRecorder and the audit-log listing.
@@ -46,12 +46,12 @@ func (s *Service) Record(ctx context.Context, a actor.Actor, action, resourceTyp
 	return s.repo.Insert(ctx, e)
 }
 
-// List returns the tenant's audit log, newest first. Browser sessions only.
-func (s *Service) List(ctx context.Context, a actor.Actor, page port.Page) (port.Result[domain.Entry], error) {
+// List returns the tenant's audit log, newest first, optionally only entries of one action. Browser sessions only.
+func (s *Service) List(ctx context.Context, a actor.Actor, action string, page port.Page) (port.Result[domain.Entry], error) {
 	if err := a.RequireSession(); err != nil {
 		return port.Result[domain.Entry]{}, err
 	}
-	items, err := s.repo.List(ctx, a.UserID, port.Page{Limit: page.Limit + 1, Cursor: page.Cursor})
+	items, err := s.repo.List(ctx, a.UserID, action, port.Page{Limit: page.Limit + 1, Cursor: page.Cursor})
 	if err != nil {
 		return port.Result[domain.Entry]{}, err
 	}

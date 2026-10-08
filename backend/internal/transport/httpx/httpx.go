@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/socialos/backend/internal/domain/errs"
 )
@@ -78,7 +79,38 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 		slog.ErrorContext(r.Context(), "internal error", slog.String("path", r.URL.Path), slog.Any("error", err))
 		body.Message = "internal server error"
 	}
+	if slot, ok := r.Context().Value(codeSlotKey{}).(*CodeSlot); ok {
+		slot.set(e.Code)
+	}
 	JSON(w, StatusOf(e.Code), map[string]any{"error": body})
+}
+
+type codeSlotKey struct{}
+
+// CodeSlot lets an outer middleware (the audit trail) learn the error code a handler rendered: request contexts only
+// flow inwards, the response body is never re-read.
+type CodeSlot struct {
+	mu   sync.Mutex
+	code errs.Code
+}
+
+// WithCodeSlot returns ctx carrying a fresh slot that Error fills in.
+func WithCodeSlot(ctx context.Context) (context.Context, *CodeSlot) {
+	s := &CodeSlot{}
+	return context.WithValue(ctx, codeSlotKey{}, s), s
+}
+
+func (s *CodeSlot) set(c errs.Code) {
+	s.mu.Lock()
+	s.code = c
+	s.mu.Unlock()
+}
+
+// Code returns the error code rendered through Error (empty when the request succeeded).
+func (s *CodeSlot) Code() errs.Code {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.code
 }
 
 // ErrorCode renders an error from a code and message.

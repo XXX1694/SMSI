@@ -75,3 +75,22 @@ or implicit TLS on 465; it never authenticates or sends in clear text) or a log 
 **Consequences.** Any relay works; Resend is the intended one. Resend needs a verified sending domain, so production
 mail stays off while the host uses sslip.io (D-003). `smtp` with a missing field fails at startup; `log` in production
 only logs a warning. A rendered body (with its link) sits in Redis until the worker sends it.
+
+## D-007: Audit MCP tool calls in the backend (2026-10-09)
+
+**Context.** Agents act on a user's accounts through MCP. The user needs to see what an agent did, with the outcome,
+and the log must not be forgeable by the client or leak content.
+
+**Decision.** The backend writes the audit row, not the MCP server. The MCP server tags every tool call with
+`X-MCP-Tool: <name>`; the API-key audit middleware records a request with a valid tag as one `mcp.tool_call` row (instead
+of `api_key.request`) with the status and error code the backend itself produced. Metadata is an allow-list (tool,
+route pattern, status, error code, URL ids, key label and id, client IP). The client IP comes from
+`X-SocialOS-Client-IP` only when `X-SocialOS-Gateway` equals `MCP_GATEWAY_SECRET` (constant-time compare); otherwise it
+is the caller's own address. The tool name is descriptive, not a security input.
+
+**Alternatives.** The MCP server POSTs its own audit events: it would assert the outcome itself and cost an extra call
+per tool. Trusting the client-IP header without a secret: anyone could forge the address in the log.
+
+**Consequences.** Calls that bypass the MCP server (plain REST with a key) stay `api_key.request`. A key holder can
+mislabel the tool name of their own calls; the route and status are still the backend's. `MCP_GATEWAY_SECRET` is a new
+shared secret that must be set on both services, otherwise the audit IP is the MCP server's.

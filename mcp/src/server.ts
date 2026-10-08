@@ -28,7 +28,7 @@ export function buildServer(client: SocialOSClient, scopes: readonly string[]): 
       },
       async (args: unknown): Promise<CallToolResult> => {
         try {
-          return jsonResult(await tool.handler(client, args as never));
+          return jsonResult(await tool.handler(client.withTool(tool.name), args as never));
         } catch (err) {
           if (err instanceof ConfirmationRequired) return errorResult(err.message);
           if (err instanceof Error && err.message.startsWith("VALIDATION_ERROR:")) return errorResult(err.message);

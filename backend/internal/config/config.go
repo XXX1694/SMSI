@@ -26,6 +26,7 @@ type Config struct {
 	APIPublicURL    string // public base of the API (OAuth redirect base)
 	WebBaseURL      string // frontend base for post-connect redirects
 	MCPPublicURL    string
+	GatewaySecret   string // MCP_GATEWAY_SECRET, shared with the MCP server; empty = never trust X-SocialOS-Client-IP
 	CORSOrigins     []string
 	CookieSecure    bool
 	CookieDomain    string
@@ -104,6 +105,7 @@ func Load() (*Config, error) {
 		APIPublicURL:    strings.TrimRight(env("API_PUBLIC_URL", "http://localhost:8080"), "/"),
 		WebBaseURL:      strings.TrimRight(env("WEB_BASE_URL", "http://localhost:3000"), "/"),
 		MCPPublicURL:    env("MCP_PUBLIC_URL", "http://localhost:3333/mcp"),
+		GatewaySecret:   env("MCP_GATEWAY_SECRET", ""),
 		CORSOrigins:     list(env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
 		CookieSecure:    envBool("COOKIE_SECURE", false),
 		CookieDomain:    env("COOKIE_DOMAIN", ""),
@@ -182,6 +184,9 @@ func (c *Config) validate(extra ...error) error {
 		if o == "*" {
 			problems = append(problems, "CORS_ALLOWED_ORIGINS must list explicit origins; \"*\" cannot be combined with credentialed requests")
 		}
+	}
+	if n := len(c.GatewaySecret); n > 0 && n < 32 {
+		problems = append(problems, "MCP_GATEWAY_SECRET must be at least 32 characters (openssl rand -hex 32)")
 	}
 	if c.StorageDriver != "s3" && c.StorageDriver != "memory" {
 		problems = append(problems, "STORAGE_DRIVER must be s3 or memory")

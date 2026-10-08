@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { ApiError, SocialOSClient } from "./api-client.js";
+import { clientIp } from "./client-ip.js";
 import type { Config } from "./config.js";
+import { registerSecret } from "./errors.js";
 import { log } from "./log.js";
 import { buildServer } from "./server.js";
 
@@ -35,6 +37,7 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
 }
 
 export function createHttpServer(config: Config): Server {
+  registerSecret(config.gatewaySecret);
   return createServer((req, res) => {
     handle(req, res, config).catch((err: unknown) => {
       log("error", "unhandled request error", { error: err instanceof Error ? err.name : "unknown" });
@@ -78,7 +81,14 @@ async function handle(req: IncomingMessage, res: ServerResponse, config: Config)
     return;
   }
 
-  const client = new SocialOSClient({ baseUrl: config.apiUrl, apiKey, timeoutMs: config.timeoutMs, requestId });
+  const client = new SocialOSClient({
+    baseUrl: config.apiUrl,
+    apiKey,
+    timeoutMs: config.timeoutMs,
+    requestId,
+    gatewaySecret: config.gatewaySecret,
+    clientIp: config.gatewaySecret && config.trustedProxies ? clientIp(req, config.trustedProxies) : undefined,
+  });
   let scopes: string[];
   try {
     scopes = (await client.me()).scopes;
