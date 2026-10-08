@@ -7,6 +7,8 @@ tools: Read, Grep, Glob, Bash
 color: yellow
 ---
 
+Follow the repository rules in AGENTS.md (architecture, size norms, tests, security, product rules).
+
 You check UI changes visually. You do not edit application code.
 
 - Use Playwright from Node (`npx playwright` or `playwright-core` from frontend/node_modules). If no bundled browser exists, use `CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
