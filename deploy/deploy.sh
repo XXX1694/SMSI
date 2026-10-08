@@ -113,6 +113,16 @@ cleanup_images() {
   done < <(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E "^ghcr\.io/${owner}/socialos-(backend|mcp|frontend):" || true)
 }
 
+# Untagged leftovers of the SocialOS images only (a moving tag such as main leaves them behind). Never a bare
+# `docker image prune`: on a shared host that would also delete other workloads' untagged images. release.yml labels the
+# images org.opencontainers.image.title=socialos-<name>.
+prune_socialos_images() {
+  local name
+  for name in backend mcp frontend; do
+    docker image prune -f --filter "label=org.opencontainers.image.title=socialos-$name" >/dev/null 2>&1 || true
+  done
+}
+
 diagnose() {
   local services=(migrate backend worker mcp frontend)
   if has_service caddy; then services+=(caddy); fi
@@ -201,11 +211,17 @@ fi
   die "missing image tag"
 }
 [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] || die "invalid image tag: $tag"
-if grep -qE '^[A-Za-z_][A-Za-z0-9_]*=.*CHANGE_ME' .env; then
-  grep -nE '^[A-Za-z_][A-Za-z0-9_]*=.*CHANGE_ME' .env | sed 's/=.*/=.../' >&2
+# ACME_EMAIL belongs to the bundled Caddy only: without that service (host-proxy mode) it may be empty or a placeholder.
+placeholders=$(grep -nE '^[A-Za-z_][A-Za-z0-9_]*=.*CHANGE_ME' .env || true)
+if ! has_service caddy; then placeholders=$(grep -vE '^[0-9]+:ACME_EMAIL=' <<<"$placeholders" || true); fi
+if [ -n "$placeholders" ]; then
+  while IFS= read -r line; do printf '%s=...\n' "${line%%=*}" >&2; done <<<"$placeholders"
   die ".env still contains CHANGE_ME placeholders (see the variables above)"
 fi
 dc config -q || die "the compose files ($COMPOSE_FILE) do not resolve with the current .env (see the error above)"
+if has_service caddy && [ -z "${ACME_EMAIL:-$(env_get ACME_EMAIL)}" ]; then
+  die "ACME_EMAIL is empty in .env, and the bundled Caddy needs it. (Behind a reverse proxy that owns ports 80/443 use host-proxy mode instead: README section 13.)"
+fi
 
 command -v flock >/dev/null 2>&1 || die "flock is required (util-linux)"
 exec 9>"$STATE_DIR/lock"
@@ -223,9 +239,12 @@ if deploy "$tag" "$skip_migrate"; then
   fi
   printf '%s %s ok\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tag" >>"$STATE_DIR/history.log"
   cleanup_images "$tag" "$(read_state previous_tag)"
-  docker image prune -f >/dev/null 2>&1 || true
+  prune_socialos_images
   public_check
   log "DEPLOYED $tag (previous: $(read_state previous_tag)). Roll back with: ./deploy.sh --rollback"
+  if [ "$mode" = rollback ]; then
+    warn "If the autoupdate timer is installed, set AUTOUPDATE=false in .env now: it deploys the latest release again, which is newer than $tag."
+  fi
   dc ps
 else
   printf '%s %s FAILED\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tag" >>"$STATE_DIR/history.log"

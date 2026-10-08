@@ -13,7 +13,7 @@ setup() {
   new_sb
   mkdir -p "$SB/app"
   cp "$REPO_DEPLOY/deploy.sh" "$SB/app/"
-  printf 'DOMAIN=example.com\nIMAGE_TAG=main\n%s\n' "${1-}" >"$SB/app/.env"
+  printf 'DOMAIN=example.com\nACME_EMAIL=ops@example.com\nIMAGE_TAG=main\n%s\n' "${1-}" >"$SB/app/.env"
   tr ' ' '\n' <<<"${2-postgres redis migrate backend worker mcp frontend caddy}" >"$SB/services"
   cat >"$SB/bin/docker" <<STUB
 #!/usr/bin/env bash
@@ -104,5 +104,48 @@ setup '' 'postgres redis migrate backend worker mcp frontend'
 run --status
 assert_eq "status: exit" 0 "$rc"
 assert_has "status: compose files" "$out" "compose files: docker-compose.prod.yml"
+
+# 8. ACME_EMAIL belongs to the bundled Caddy: required there, not in host-proxy mode (no caddy service)
+NOCADDY='postgres redis migrate backend worker mcp frontend'
+setup 'ACME_EMAIL='
+run 1.0.0
+assert_eq "standalone, empty ACME_EMAIL: refused" 1 "$rc"
+assert_has "standalone, empty ACME_EMAIL: explained" "$out" "ACME_EMAIL is empty"
+assert_lacks "standalone, empty ACME_EMAIL: nothing pulled" "$(calls)" ":: compose pull"
+setup 'ACME_EMAIL=CHANGE_ME_you@example.com'
+run 1.0.0
+assert_eq "standalone, placeholder ACME_EMAIL: refused" 1 "$rc"
+assert_has "standalone, placeholder ACME_EMAIL: listed" "$out" "ACME_EMAIL=..."
+setup 'ACME_EMAIL=' "$NOCADDY"
+run 1.0.0
+assert_eq "host-proxy, empty ACME_EMAIL: deploys" 0 "$rc"
+setup 'ACME_EMAIL=CHANGE_ME_you@example.com' "$NOCADDY"
+run 1.0.0
+assert_eq "host-proxy, placeholder ACME_EMAIL: deploys" 0 "$rc"
+setup $'ACME_EMAIL=CHANGE_ME_you@example.com\nPOSTGRES_PASSWORD=CHANGE_ME_openssl_rand_hex_24' "$NOCADDY"
+run 1.0.0
+assert_eq "host-proxy, another placeholder: refused" 1 "$rc"
+assert_has "host-proxy, another placeholder: listed" "$out" "POSTGRES_PASSWORD=..."
+assert_lacks "host-proxy, another placeholder: ACME_EMAIL is not listed" "$out" "ACME_EMAIL=..."
+
+# 9. image cleanup touches SocialOS images only: every prune carries a SocialOS label filter, never a bare prune
+setup
+run 1.0.0
+assert_eq "deploy for the prune check: exit" 0 "$rc"
+assert_has "prune: it does clean up" "$(calls)" ":: image prune"
+assert_eq "prune: no call without a SocialOS label filter" 0 \
+  "$(calls | grep ' :: image prune' | grep -vc 'label=org.opencontainers.image.title=socialos-' || true)"
+
+# 10. after a manual rollback the operator is told the timer would undo it
+setup
+mkdir -p "$SB/app/.deploy"
+echo 1.0.0 >"$SB/app/.deploy/current_tag"
+echo 0.9.0 >"$SB/app/.deploy/previous_tag"
+run --rollback
+assert_eq "rollback: exit" 0 "$rc"
+assert_has "rollback: autoupdate hint" "$out" "set AUTOUPDATE=false in .env now"
+setup
+run 1.0.0
+assert_lacks "plain deploy: no rollback hint" "$out" "AUTOUPDATE=false"
 
 finish
