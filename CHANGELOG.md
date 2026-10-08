@@ -40,6 +40,7 @@ First release: the MVP, ready to self-host on one server.
 - Rate limits group IPv6 clients by /64 and track a bounded number of keys.
 - Post targets are locked and read per user, with tests that no other user can read, change or lock them.
 - A Telegram channel can only be connected by proving ownership with a one-time link code.
+- CI scans every change: govulncheck, npm audit, gitleaks over the history, Trivy on the images and CodeQL; the runtime images no longer ship npm.
 
 [Unreleased]: https://github.com/XXX1694/SMSI/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/XXX1694/SMSI/releases/tag/v0.1.0
