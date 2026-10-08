@@ -40,6 +40,12 @@ export interface Me {
   display_name: string;
   csrf_token: string;
   scopes?: string[];
+  /** False until the mailed link is opened. Servers that predate verification report true. */
+  email_verified: boolean;
+  /** True when unverified owners are blocked from connecting, scheduling, publishing and creating keys. */
+  verification_enforced: boolean;
+  /** "log" means mail is only written to the server log, so nobody receives it. */
+  mail_delivery: 'log' | 'smtp';
 }
 
 export interface Capabilities {

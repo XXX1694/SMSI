@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ComponentType, type ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
+import { EmailBanner } from '@/components/email-banner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -107,6 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
+        <EmailBanner />
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">{children}</div>
       </main>
     </div>

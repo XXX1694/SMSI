@@ -151,6 +151,7 @@ describe("confirm enforcement", () => {
 describe("error mapping", () => {
   const errs: [number, string, string][] = [
     [403, "INSUFFICIENT_SCOPE", "scope"],
+    [403, "EMAIL_NOT_VERIFIED", "verification link"],
     [422, "SOCIAL_ACCOUNT_EXPIRED", "reconnect"],
     [409, "INVALID_STATE_TRANSITION", "get_post_status"],
     [404, "NOT_FOUND", "does not exist"],

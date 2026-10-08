@@ -94,3 +94,23 @@ per tool. Trusting the client-IP header without a secret: anyone could forge the
 **Consequences.** Calls that bypass the MCP server (plain REST with a key) stay `api_key.request`. A key holder can
 mislabel the tool name of their own calls; the route and status are still the backend's. `MCP_GATEWAY_SECRET` is a new
 shared secret that must be set on both services, otherwise the audit IP is the MCP server's.
+
+## D-008: Email verification and password reset use single-use hashed tokens in the URL fragment (2026-10-09)
+
+**Context.** Users need to prove they own an address and recover a lost password. Verification must not lock out
+self-hosters who have no mail relay, and the endpoints must not reveal which addresses are registered.
+
+**Decision.** One `email_tokens` table serves both purposes. A token is 32 random bytes; only its SHA-256 is stored.
+Redeeming it is one atomic `UPDATE … WHERE used_at IS NULL AND expires_at > now() RETURNING`, so a link works once even
+under concurrent clicks. Lifetimes are 48 h (verify) and 30 min (reset); issuing a new token retires the older ones.
+Links use the URL fragment, which browsers send neither to the server nor in `Referer`, so tokens stay out of access
+logs; the frontend reads the fragment and clears it with `history.replaceState`. A reset revokes all sessions and
+marks the address verified; a change keeps only the current session. `forgot` always answers `202` with the same body
+and only enqueues mail, so neither status nor timing depends on whether the address exists. Verification is enforced
+(`403 EMAIL_NOT_VERIFIED`) only when `MAIL_PROVIDER=smtp`; with the log provider nothing is gated and the UI says mail is off.
+Rejected: signed JWT links (cannot be revoked one by one), tokens in the query string (end up in logs), and enforcing
+verification unconditionally (blocks every self-hoster without SMTP).
+
+**Consequences.** `register` still answers `409` for an existing address, so existence can be probed there (accepted,
+the same as most sign-up forms). Existing users are unverified and must verify once mail is switched on. The rendered
+mail, with its link, sits in Redis until the worker sends it (D-006). The mail limiter is in memory and per instance.

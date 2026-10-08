@@ -104,3 +104,52 @@ describe('telegram link flow', () => {
     await expect(api.social.telegramLinkStatus('other')).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe('auth recovery endpoints', () => {
+  const lastCall = (fn: ReturnType<typeof mockFetch>) => {
+    const call = fn.mock.calls[0] as unknown as [string, RequestInit];
+    return { url: call[0], init: call[1], body: JSON.parse(String(call[1].body ?? 'null')) as unknown };
+  };
+
+  it('verifies, resends, requests and completes a reset, and changes the password', async () => {
+    setCsrfToken('csrf-1');
+    let fn = mockFetch(200, { email_verified: true });
+    await api.auth.verifyEmail('tok');
+    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/verify-email', body: { token: 'tok' } });
+    expect(lastCall(fn).init.method).toBe('POST');
+
+    fn = mockFetch(202, { status: 'accepted', delivery: 'smtp' });
+    await api.auth.resendVerification();
+    expect(lastCall(fn).url).toBe('/api/v1/auth/verify-email/resend');
+
+    fn = mockFetch(202, { status: 'accepted', delivery: 'log' });
+    await expect(api.auth.forgotPassword('a@example.com')).resolves.toEqual({ delivery: 'log' });
+    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/password/forgot', body: { email: 'a@example.com' } });
+
+    fn = mockFetch(204, undefined);
+    await api.auth.resetPassword('tok', 'new password');
+    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/password/reset', body: { token: 'tok', password: 'new password' } });
+
+    fn = mockFetch(204, undefined);
+    await api.auth.changePassword('old', 'new password');
+    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/password/change', body: { current_password: 'old', new_password: 'new password' } });
+    expect((lastCall(fn).init.headers as Record<string, string>)['X-CSRF-Token']).toBe('csrf-1');
+  });
+
+  it('turns the server /me shape into Me, defaulting to "nothing restricted" for older servers', async () => {
+    mockFetch(200, {
+      id: 'u', email: 'a@example.com', display_name: 'A', csrf_token: 'c', scopes: ['posts:read'],
+      user: { email_verified: false, plan: 'free' }, verification_enforced: true, mail_delivery: 'smtp',
+    });
+    await expect(api.auth.me()).resolves.toMatchObject({ email_verified: false, verification_enforced: true, mail_delivery: 'smtp' });
+    mockFetch(200, { id: 'u', email: 'a@example.com', display_name: 'A', csrf_token: 'c' });
+    await expect(api.auth.me()).resolves.toMatchObject({ email_verified: true, verification_enforced: false, mail_delivery: 'smtp' });
+    mockFetch(200, { id: 'u', email: 'a@example.com', display_name: 'A', csrf_token: 'c', mail_delivery: 'log' });
+    await expect(api.auth.me()).resolves.toMatchObject({ mail_delivery: 'log' });
+  });
+
+  it('surfaces the 403 EMAIL_NOT_VERIFIED code', async () => {
+    mockFetch(403, { error: { code: 'EMAIL_NOT_VERIFIED', message: 'verify your email address to use this feature', request_id: 'r1' } });
+    await expect(api.posts.publish('p1')).rejects.toMatchObject({ status: 403, code: 'EMAIL_NOT_VERIFIED' });
+  });
+});

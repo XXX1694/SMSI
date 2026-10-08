@@ -4,6 +4,7 @@ import type {
   CreatedMcpConnection,
   McpConfigSnippets,
   McpConnection,
+  Me,
   ApiKey,
   Page,
   Provider,
@@ -25,6 +26,22 @@ function pick(rec: Rec, name: string): unknown {
   const pascal = name.charAt(0).toUpperCase() + name.slice(1);
   for (const k of [name, snake, pascal]) if (k in rec) return rec[k];
   return undefined;
+}
+
+export function normalizeMe(raw: unknown): Me {
+  const r = isRec(raw) ? raw : {};
+  const user = isRec(r.user) ? r.user : {};
+  return {
+    id: str(r.id),
+    email: str(r.email),
+    display_name: str(r.display_name),
+    csrf_token: str(r.csrf_token),
+    scopes: Array.isArray(r.scopes) ? r.scopes.filter((s): s is string => typeof s === 'string') : undefined,
+    // Absent fields mean an older server or the demo, which never restrict anything.
+    email_verified: user.email_verified !== false,
+    verification_enforced: r.verification_enforced === true,
+    mail_delivery: r.mail_delivery === 'log' ? 'log' : 'smtp',
+  };
 }
 
 const bool = (v: unknown): boolean => v === true;

@@ -70,6 +70,13 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
+          {isLogin && !DEMO ? (
+            <p className="-mt-2 text-right text-xs">
+              <Link href="/forgot-password" className="text-accent hover:underline">
+                Forgot password?
+              </Link>
+            </p>
+          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-danger">
               {error}

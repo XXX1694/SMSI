@@ -598,3 +598,40 @@ describe('API client in demo mode', () => {
     expect((await api.auth.login({ email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD })).email).toBe(DEMO_USER_EMAIL);
   });
 });
+
+describe('demo: mail-driven account flows', () => {
+  it('accepts any token except "expired" for verification and reset', () => {
+    const r = rig();
+    expect(r.call('POST', '/auth/verify-email', { token: 'abc' })).toMatchObject({ status: 200, body: { email_verified: true } });
+    expect(r.call('POST', '/auth/verify-email', { token: 'expired' }).status).toBe(400);
+    expect(r.call('POST', '/auth/verify-email', {}).body.error.code).toBe('VALIDATION_ERROR');
+    expect(r.call('POST', '/auth/password/reset', { token: 'abc', password: 'short' }).status).toBe(400);
+    expect(r.call('POST', '/auth/password/reset', { token: 'expired', password: 'long enough password' }).status).toBe(400);
+    expect(r.call('POST', '/auth/password/reset', { token: 'abc', password: 'long enough password' }).status).toBe(204);
+    expect(r.engine.state.user.password).toBe('long enough password');
+  });
+
+  it('answers forgot-password the same for every address, honestly saying nothing is mailed', () => {
+    const r = rig();
+    const known = r.call('POST', '/auth/password/forgot', { email: DEMO_USER_EMAIL });
+    const unknown = r.call('POST', '/auth/password/forgot', { email: 'nobody@example.com' });
+    expect(known).toEqual(unknown);
+    expect(known).toMatchObject({ status: 202, body: { status: 'accepted', delivery: 'log' } });
+  });
+
+  it('changes the password only with the right current one', () => {
+    const r = rig();
+    r.call('POST', '/auth/login', { email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD });
+    expect(r.call('POST', '/auth/password/change', { current_password: 'wrong', new_password: 'long enough password' }).status).toBe(400);
+    expect(r.call('POST', '/auth/password/change', { current_password: DEMO_USER_PASSWORD, new_password: 'short' }).status).toBe(400);
+    expect(r.call('POST', '/auth/password/change', { current_password: DEMO_USER_PASSWORD, new_password: 'long enough password' }).status).toBe(204);
+    expect(r.call('POST', '/auth/login', { email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD }).status).toBe(401);
+  });
+
+  it('reports a verified demo user and refuses to resend', () => {
+    const r = rig();
+    r.call('POST', '/auth/login', { email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD });
+    expect(r.call('GET', '/me').body).toMatchObject({ user: { email_verified: true }, verification_enforced: false });
+    expect(r.call('POST', '/auth/verify-email/resend').status).toBe(409);
+  });
+});

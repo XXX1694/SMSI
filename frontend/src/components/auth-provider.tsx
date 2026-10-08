@@ -9,6 +9,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-reads /me, e.g. after the email was verified. A failure keeps the current user. */
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -63,7 +65,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [adopt]);
 
-  const value = useMemo(() => ({ user, loading, login, register, logout }), [user, loading, login, register, logout]);
+  const refresh = useCallback(async () => {
+    try {
+      adopt(await api.auth.me());
+    } catch {
+      /* keep the current user; the next request surfaces a real sign-out */
+    }
+  }, [adopt]);
+
+  const value = useMemo(
+    () => ({ user, loading, login, register, logout, refresh }),
+    [user, loading, login, register, logout, refresh],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

@@ -2,6 +2,7 @@ import {
   buildMcpConfig,
   normalizeCreatedApiKey,
   normalizeCreatedMcp,
+  normalizeMe,
   normalizePage,
   normalizeTelegramLink,
   normalizeTelegramLinkState,
@@ -159,17 +160,39 @@ export interface PostFilters {
 export const api = {
   auth: {
     async register(input: { email: string; password: string; display_name: string }): Promise<Me> {
-      const me = (await request('/auth/register', { method: 'POST', body: input })) as Me;
-      return me;
+      return normalizeMe(await request('/auth/register', { method: 'POST', body: input }));
     },
     async login(input: { email: string; password: string }): Promise<Me> {
-      return (await request('/auth/login', { method: 'POST', body: input })) as Me;
+      return normalizeMe(await request('/auth/login', { method: 'POST', body: input }));
     },
     async logout(): Promise<void> {
       await request('/auth/logout', { method: 'POST' });
     },
     async me(): Promise<Me> {
-      return (await request('/me')) as Me;
+      return normalizeMe(await request('/me'));
+    },
+    /** Redeems the token from a mailed link. An unknown, used or expired token is a 400. */
+    async verifyEmail(token: string): Promise<void> {
+      await request('/auth/verify-email', { method: 'POST', body: { token } });
+    },
+    /** Mails a new verification link to the signed-in user (429 inside the one-minute cooldown). */
+    async resendVerification(): Promise<void> {
+      await request('/auth/verify-email/resend', { method: 'POST' });
+    },
+    /** Always succeeds the same way for any address; `delivery` says whether mail can actually leave the server. */
+    async forgotPassword(email: string): Promise<{ delivery: 'log' | 'smtp' }> {
+      const r = (await request('/auth/password/forgot', { method: 'POST', body: { email } })) as { delivery?: string } | null;
+      return { delivery: r?.delivery === 'log' ? 'log' : 'smtp' };
+    },
+    async resetPassword(token: string, password: string): Promise<void> {
+      await request('/auth/password/reset', { method: 'POST', body: { token, password } });
+    },
+    /** Signs every other session out. A wrong current password is a 400. */
+    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+      await request('/auth/password/change', {
+        method: 'POST',
+        body: { current_password: currentPassword, new_password: newPassword },
+      });
     },
   },
   social: {

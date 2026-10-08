@@ -270,6 +270,18 @@ export class DemoEngine {
       return ok(200, this.me());
     }
 
+    // Mail-driven flows. The demo sends no mail, so any token works except "expired".
+    if (path === '/auth/verify-email' && m === 'POST') return this.redeemToken(str(body.token), () => ok(200, { email_verified: true }));
+    if (path === '/auth/password/forgot' && m === 'POST') return ok(202, { status: 'accepted', delivery: 'log' });
+    if (path === '/auth/password/reset' && m === 'POST') {
+      return this.redeemToken(str(body.token), () => {
+        const password = str(body.password);
+        if (password.length < 8) return fail(400, 'VALIDATION_ERROR', 'password must be 8-128 characters');
+        s.user.password = password;
+        return ok(204);
+      });
+    }
+
     // ---- everything below needs a session
     if (!s.signed_in) return fail(401, 'UNAUTHENTICATED', 'Authentication required');
 
@@ -279,6 +291,8 @@ export class DemoEngine {
       return ok(204);
     }
     if (path === '/me' && m === 'GET') return ok(200, this.me());
+    if (path === '/auth/verify-email/resend' && m === 'POST') return fail(409, 'CONFLICT', 'email is already verified');
+    if (path === '/auth/password/change' && m === 'POST') return this.changePassword(body);
 
     // ---- social
     if (path === '/social/providers' && m === 'GET') return ok(200, { items: PROVIDERS });
@@ -362,7 +376,27 @@ export class DemoEngine {
 
   private me(): unknown {
     const { id, email, display_name } = this.state.user;
-    return { id, email, display_name, csrf_token: 'demo', scopes: ALL_SCOPES };
+    // The demo user is always verified and nothing is restricted.
+    return {
+      id, email, display_name, csrf_token: 'demo', scopes: ALL_SCOPES,
+      user: { id, email, display_name, email_verified: true, plan: 'free' },
+      verification_enforced: false, mail_delivery: 'log',
+    };
+  }
+
+  private redeemToken(token: string, ok200: () => DemoResponse): DemoResponse {
+    if (!token || token === 'expired') return fail(400, 'VALIDATION_ERROR', 'link is invalid or has expired');
+    return ok200();
+  }
+
+  private changePassword(body: Record<string, unknown>): DemoResponse {
+    const user = this.state.user;
+    if (str(body.current_password) !== user.password) return fail(400, 'VALIDATION_ERROR', 'current password is incorrect');
+    const next = str(body.new_password);
+    if (next.length < 8 || next.length > 128) return fail(400, 'VALIDATION_ERROR', 'password must be 8-128 characters');
+    user.password = next;
+    this.audit(this.user, 'user.password_changed', 'user', user.id);
+    return ok(204);
   }
 
   // ---------------------------------------------------------------- accounts
