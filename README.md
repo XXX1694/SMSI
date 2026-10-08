@@ -15,7 +15,7 @@ SocialOS is a single abstraction layer over social-media APIs. Neither agents no
 | Backend | Go 1.26 · chi · pgx · PostgreSQL 16 · Redis + Asynq · S3 (MinIO / R2 / S3) |
 | MCP | TypeScript · official `@modelcontextprotocol/sdk` · Streamable HTTP + stdio |
 | Frontend | Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui-style components |
-| Networks (MVP) | **LinkedIn** (real adapter), **Telegram** (real adapter), **Mock** (dev/test). Instagram, Facebook, TikTok, YouTube, X, Threads and Pinterest are honest "not available" stubs |
+| Networks (MVP) | **LinkedIn** (real adapter), **Telegram** (real adapter), **Discord** (webhook, real adapter), **Mock** (dev/test). Instagram, Facebook, TikTok, YouTube, X, Threads and Pinterest are honest "not available" stubs |
 
 The full design is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): ERD, state machine, API contract, scheduler and idempotency, OAuth flow and decisions. Deviations from it are listed in [`backend/DEVIATIONS.md`](backend/DEVIATIONS.md).
 

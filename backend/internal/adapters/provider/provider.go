@@ -59,6 +59,10 @@ type ConnectField struct {
 	// Kind is FieldText, FieldSecret (rendered as a password input) or FieldURL (https only).
 	Kind     string `json:"kind"`
 	Required bool   `json:"required"`
+	// Secret marks a value that is a credential whatever its Kind (a webhook
+	// URL is a url field and a password). Secret fields are never echoed,
+	// logged or allowed in the profile, and forms render them as password inputs.
+	Secret bool `json:"secret,omitempty"`
 }
 
 // Provider is the base contract of every registered network.
