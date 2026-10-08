@@ -23,6 +23,7 @@ export function PostsView() {
   const [loading, setLoading] = useState(true);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [moreError, setMoreError] = useState<string | null>(null);
 
   const fetchPage = useCallback(
     async (after?: string) => {
@@ -36,6 +37,7 @@ export function PostsView() {
   const reload = useCallback(() => {
     setLoading(true);
     setError(null);
+    setMoreError(null);
     fetchPage().then(
       (p) => {
         setItems(p.items);
@@ -56,12 +58,14 @@ export function PostsView() {
   async function loadMore() {
     if (!cursor) return;
     setMore(true);
+    setMoreError(null);
     try {
       const p = await fetchPage(cursor);
       setItems((cur) => [...cur, ...p.items]);
       setCursor(p.next_cursor);
     } catch (e) {
-      setError(errorMessage(e));
+      // Keep the page that is already on screen; only the next page failed.
+      setMoreError(errorMessage(e));
     } finally {
       setMore(false);
     }
@@ -119,7 +123,15 @@ export function PostsView() {
       ) : (
         <>
           <PostList posts={items} />
-          {cursor ? (
+          {moreError ? (
+            <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm">
+              <span>Could not load more posts. {moreError}</span>
+              <Button variant="secondary" size="sm" onClick={() => void loadMore()} disabled={more}>
+                Try again
+              </Button>
+            </div>
+          ) : null}
+          {cursor && !moreError ? (
             <div className="text-center">
               <Button variant="secondary" onClick={() => void loadMore()} disabled={more}>
                 {more ? 'Loading…' : 'Load more'}

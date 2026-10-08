@@ -66,16 +66,20 @@ export function AuditView() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [moreError, setMoreError] = useState<string | null>(null);
 
   const load = useCallback(async (after?: string) => {
     setLoading(true);
     setError(null);
+    setMoreError(null);
     try {
       const p = await api.audit.list(25, after, filter === 'agents' ? TOOL_CALL_ACTION : undefined);
       setItems((cur) => (after ? [...cur, ...p.items] : p.items));
       setCursor(p.next_cursor);
     } catch (e) {
-      setError(errorMessage(e));
+      // A failed next page keeps the rows already shown; only a failed first page replaces the list.
+      if (after) setMoreError(errorMessage(e));
+      else setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -125,7 +129,14 @@ export function AuditView() {
           </tbody>
         </table>
       </div>
-      {cursor ? (
+      {moreError ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm">
+          <span>Could not load more events. {moreError}</span>
+          <Button variant="secondary" size="sm" onClick={() => void load(cursor ?? undefined)} disabled={loading}>
+            Try again
+          </Button>
+        </div>
+      ) : cursor ? (
         <Button variant="secondary" onClick={() => void load(cursor)} disabled={loading}>
           {loading ? 'Loading…' : 'Load more'}
         </Button>

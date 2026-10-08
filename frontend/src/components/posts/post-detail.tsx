@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { describeErrorCode } from '@/lib/errors';
 import { postLabel } from '@/lib/format';
 import { providerLabel } from '@/lib/normalize';
 import { postActions } from '@/lib/status';
@@ -31,7 +32,7 @@ function Targets({ post }: { post: Post }) {
           <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{t.content}</p>
           {t.error_message ? (
             <Notice tone="danger">
-              <span className="font-medium">{t.error_code ?? 'Error'}:</span> {t.error_message}
+              <span className="font-medium">{describeErrorCode(t.error_code)}</span> {t.error_message}
             </Notice>
           ) : null}
           {t.status === 'needs_review' ? (
