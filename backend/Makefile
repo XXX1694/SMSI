@@ -38,10 +38,11 @@ cover: ## Coverage report (integration enabled) -> coverage.out
 	@TEST_DATABASE_URL='$(TEST_DATABASE_URL)' TEST_REDIS_URL='$(TEST_REDIS_URL)' $(GO) test ./... -count=1 -p 1 -coverpkg=./internal/... -coverprofile=coverage.out
 	@$(GO) tool cover -func=coverage.out | tail -1
 
-lint: ## gofmt check, go vet and golangci-lint
+lint: ## gofmt check, go vet, golangci-lint and architecture/size tests
 	@out="$$(gofmt -l .)"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
 	@$(GO) vet ./...
 	@$(GOLANGCI) run ./...
+	@$(GO) test ./internal/archtest -count=1
 
 fmt: ## Format all Go files
 	@gofmt -w .

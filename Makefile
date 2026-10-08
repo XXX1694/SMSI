@@ -53,5 +53,5 @@ dev: env ## Infra in Docker, apps on the host with hot reload
 
 lint: ## Lint everything
 	$(MAKE) -C backend lint
-	cd mcp && npm run typecheck
+	cd mcp && npm run typecheck && npm run lint
 	cd frontend && npm run lint
