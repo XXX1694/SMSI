@@ -63,6 +63,15 @@ func (c *Client) Reenqueue(ctx context.Context, j post.Job) (string, error) {
 	return c.enqueue(ctx, j, TaskID(j)+":r"+strconv.FormatInt(time.Now().UnixNano(), 36))
 }
 
+// ProcessAtFor rounds t up to the next whole second. Asynq scores delayed tasks
+// by Unix seconds (floor), so a sub-second run_at would otherwise fire early.
+func ProcessAtFor(t time.Time) time.Time {
+	if t.Nanosecond() == 0 {
+		return t
+	}
+	return time.Unix(t.Unix()+1, 0)
+}
+
 func (c *Client) enqueue(ctx context.Context, j post.Job, id string) (string, error) {
 	payload, err := json.Marshal(scheduler.Payload{TargetID: j.PostTargetID, JobID: j.ID})
 	if err != nil {
@@ -70,7 +79,7 @@ func (c *Client) enqueue(ctx context.Context, j post.Job, id string) (string, er
 	}
 	task := asynq.NewTask(TypePublishTarget, payload)
 	_, err = c.client.EnqueueContext(ctx, task,
-		asynq.TaskID(id), asynq.Queue(c.queue), asynq.ProcessAt(j.RunAt), asynq.MaxRetry(scheduler.MaxRetry),
+		asynq.TaskID(id), asynq.Queue(c.queue), asynq.ProcessAt(ProcessAtFor(j.RunAt)), asynq.MaxRetry(scheduler.MaxRetry),
 		asynq.Timeout(taskTimeout), asynq.Retention(taskRetention))
 	if errors.Is(err, asynq.ErrTaskIDConflict) {
 		return id, nil
