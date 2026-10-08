@@ -69,6 +69,15 @@ x-backend-env: &backend-env
   TELEGRAM_UPDATES_MODE: webhook
   TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?set TELEGRAM_WEBHOOK_SECRET in .env (openssl rand -hex 24)}
 
+  # Transactional email (see backend/.env.example).
+  MAIL_PROVIDER: ${MAIL_PROVIDER:-log}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_TLS: ${SMTP_TLS:-starttls}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  MAIL_FROM: ${MAIL_FROM:-}
+
 services:
   postgres:
     image: postgres:16-alpine

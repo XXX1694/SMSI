@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/socialos/backend/internal/adapters/linkedin"
+	"github.com/socialos/backend/internal/adapters/mail"
 	"github.com/socialos/backend/internal/adapters/mock"
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/adapters/stubs"
@@ -40,6 +41,8 @@ type Overrides struct {
 	Clock     port.Clock
 	Providers []provider.Provider
 	Hasher    auth.PasswordHasher
+	// Mailer replaces the configured mail adapter (tests).
+	Mailer port.Mailer
 }
 
 // App holds every wired component.
@@ -49,6 +52,8 @@ type App struct {
 	DB         *postgres.DB
 	Redis      *redis.Conn
 	Queue      *queue.Client
+	Mailer     port.Mailer    // sends mail; used by the worker
+	MailQueue  port.MailQueue // enqueues mail; used by the API
 	Storage    media.Storage
 	Registry   *provider.Registry
 	Metrics    *observability.Metrics
@@ -75,6 +80,11 @@ func Build(ctx context.Context, cfg *config.Config, log *slog.Logger, ov Overrid
 		a.Close()
 		return nil, err
 	}
+	if a.Mailer, err = buildMailer(cfg, log, ov.Mailer); err != nil {
+		a.Close()
+		return nil, err
+	}
+	a.MailQueue = a.Queue.MailQueue()
 	a.Registry = buildRegistry(cfg, ov.Providers)
 	if err := a.wire(cfg, log, ov); err != nil {
 		a.Close()
@@ -92,6 +102,17 @@ func buildStorage(ctx context.Context, cfg *config.Config, override media.Storag
 	}
 	return storage.NewS3(ctx, storage.S3Config{Endpoint: cfg.S3Endpoint, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey,
 		Bucket: cfg.S3Bucket, Region: cfg.S3Region, UseSSL: cfg.S3UseSSL, PublicEndpoint: cfg.S3PublicURL, AutoCreate: cfg.S3AutoCreate})
+}
+
+func buildMailer(cfg *config.Config, log *slog.Logger, override port.Mailer) (port.Mailer, error) {
+	if override != nil {
+		return override, nil
+	}
+	if cfg.MailProvider != config.MailProviderSMTP {
+		return mail.NewLog(log, cfg.Env), nil
+	}
+	return mail.NewSMTP(mail.SMTPConfig{Host: cfg.SMTPHost, Port: cfg.SMTPPort, TLS: cfg.SMTPTLS,
+		Username: cfg.SMTPUsername, Password: cfg.SMTPPassword, From: cfg.MailFrom})
 }
 
 func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Registry {

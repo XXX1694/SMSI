@@ -23,6 +23,7 @@ import (
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/app"
 	"github.com/socialos/backend/internal/application/media"
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/config"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 	"github.com/socialos/backend/internal/infrastructure/queue"
@@ -51,6 +52,8 @@ type envOpts struct {
 	mutate func(*config.Config)
 	// storage replaces the in-memory object store (e.g. a failing one).
 	storage media.Storage
+	// mailer replaces the log mailer.
+	mailer port.Mailer
 }
 
 func newEnv(t *testing.T, o envOpts) *env {
@@ -80,7 +83,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 		o.mutate(cfg)
 	}
 	a, err := app.Build(context.Background(), cfg, testutil.Logger(), app.Overrides{
-		Storage: store, Providers: o.providers,
+		Storage: store, Providers: o.providers, Mailer: o.mailer,
 		Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}),
 	})
 	if err != nil {
@@ -93,7 +96,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 	t.Cleanup(e.srv.Close)
 	if o.startWorker {
 		w := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: 4, DelayedCheck: 200 * time.Millisecond,
-			RetryDelay: o.retryDelay}, a.Publisher, testutil.Logger())
+			RetryDelay: o.retryDelay, Mailer: a.Mailer}, a.Publisher, testutil.Logger())
 		if err := w.Start(); err != nil {
 			t.Fatalf("start worker: %v", err)
 		}

@@ -33,6 +33,7 @@ func run() error {
 	}
 	log := observability.NewLogger(cfg.LogLevel, cfg.LogFormat).With(slog.String("component", "worker"))
 	slog.SetDefault(log)
+	cfg.LogWarnings(log)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -42,7 +43,7 @@ func run() error {
 	}
 	defer a.Close()
 
-	srv := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: cfg.WorkerConc}, a.Publisher, log)
+	srv := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: cfg.WorkerConc, Mailer: a.Mailer}, a.Publisher, log)
 	if err := srv.Start(); err != nil {
 		return err
 	}

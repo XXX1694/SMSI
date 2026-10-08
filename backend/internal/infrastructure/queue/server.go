@@ -9,6 +9,7 @@ import (
 
 	"github.com/hibiken/asynq"
 
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/application/scheduler"
 )
 
@@ -20,6 +21,8 @@ type ServerConfig struct {
 	DelayedCheck time.Duration
 	// RetryDelay overrides the retry backoff (default scheduler.RetryDelay: 30s·2^n ±20%). Tests only.
 	RetryDelay func(n int, err error) time.Duration
+	// Mailer, when set, makes this worker deliver mail:send tasks.
+	Mailer port.Mailer
 }
 
 // Server runs publish handlers.
@@ -54,6 +57,9 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	})
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(TypePublishTarget, Handler(pub))
+	if cfg.Mailer != nil {
+		mux.HandleFunc(TypeMailSend, MailHandler(cfg.Mailer))
+	}
 	return &Server{srv: srv, mux: mux}
 }
 
