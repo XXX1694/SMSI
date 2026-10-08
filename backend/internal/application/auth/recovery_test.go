@@ -85,7 +85,7 @@ func TestVerifyEmailRejectsGarbageAndWrongPurpose(t *testing.T) {
 	wantCode(t, r.svc.VerifyEmail(ctx, strings.Repeat("a", 500), ClientInfo{}), errs.Validation)
 	wantCode(t, r.svc.VerifyEmail(ctx, "nope", ClientInfo{}), errs.Validation)
 	// A reset token cannot verify an email, and a verification token cannot reset a password.
-	if err := r.svc.ForgotPassword(ctx, r.u.Email); err != nil {
+	if err := r.forgot(r.u.Email); err != nil {
 		t.Fatal(err)
 	}
 	reset := tokenFrom(t, r.mail.got[0])
@@ -93,7 +93,7 @@ func TestVerifyEmailRejectsGarbageAndWrongPurpose(t *testing.T) {
 	r.clock.now = r.clock.now.Add(time.Minute * 2)
 	r.svc.IssueVerification(ctx, r.u)
 	verify := tokenFrom(t, r.mail.got[1])
-	wantCode(t, r.svc.ResetPassword(ctx, verify, "brand new password", ClientInfo{}), errs.Validation)
+	wantCode(t, r.svc.ResetPassword(ctx, verify, "brand new password", false, ClientInfo{}), errs.Validation)
 	if r.u.PasswordHash != "h:old password 1" {
 		t.Fatal("password changed by a verification token")
 	}
@@ -131,7 +131,7 @@ func TestResendVerification(t *testing.T) {
 func TestForgotPasswordRevealsNothing(t *testing.T) {
 	r := newRig(t, true)
 	for _, email := range []string{"nobody@example.com", "not an email", "", r.u.Email} {
-		if err := r.svc.ForgotPassword(ctx, email); err != nil {
+		if err := r.forgot(email); err != nil {
 			t.Fatalf("%q: %v", email, err)
 		}
 	}
@@ -139,19 +139,19 @@ func TestForgotPasswordRevealsNothing(t *testing.T) {
 		t.Fatalf("mail: %+v", r.mail.got)
 	}
 	// Cooldown: a second request within a minute is silently dropped.
-	if err := r.svc.ForgotPassword(ctx, r.u.Email); err != nil || len(r.mail.got) != 1 {
+	if err := r.forgot(r.u.Email); err != nil || len(r.mail.got) != 1 {
 		t.Fatalf("cooldown: %v %d", err, len(r.mail.got))
 	}
 	// A failing queue is invisible to the caller too.
 	r.clock.now = r.clock.now.Add(time.Hour)
 	r.mail.fail = errors.New("redis down")
-	if err := r.svc.ForgotPassword(ctx, r.u.Email); err != nil {
+	if err := r.forgot(r.u.Email); err != nil {
 		t.Fatalf("enqueue failure leaked: %v", err)
 	}
 	r.u.Status = user.StatusDisabled
 	r.mail.fail = nil
 	r.clock.now = r.clock.now.Add(time.Hour)
-	_ = r.svc.ForgotPassword(ctx, r.u.Email)
+	_ = r.forgot(r.u.Email)
 	if len(r.mail.got) != 1 {
 		t.Fatal("mail sent to a disabled account")
 	}
@@ -160,9 +160,9 @@ func TestForgotPasswordRevealsNothing(t *testing.T) {
 func TestResetPasswordRevokesEverySession(t *testing.T) {
 	r := newRig(t, true)
 	s1, s2 := r.addSession(), r.addSession()
-	_ = r.svc.ForgotPassword(ctx, r.u.Email)
+	_ = r.forgot(r.u.Email)
 	raw := tokenFrom(t, r.mail.got[0])
-	if err := r.svc.ResetPassword(ctx, raw, "brand new password", ClientInfo{}); err != nil {
+	if err := r.svc.ResetPassword(ctx, raw, "brand new password", false, ClientInfo{}); err != nil {
 		t.Fatal(err)
 	}
 	if r.u.PasswordHash != "h:brand new password" {
@@ -180,7 +180,7 @@ func TestResetPasswordRevokesEverySession(t *testing.T) {
 	if last := r.mail.got[len(r.mail.got)-1]; last.Template != "password_changed" || last.To != r.u.Email {
 		t.Fatalf("no notice: %+v", last)
 	}
-	wantCode(t, r.svc.ResetPassword(ctx, raw, "another password", ClientInfo{}), errs.Validation) // single use
+	wantCode(t, r.svc.ResetPassword(ctx, raw, "another password", false, ClientInfo{}), errs.Validation) // single use
 	if a := r.audit.got[len(r.audit.got)-1]; a.action != audit.ActionPasswordReset || a.meta["sessions_revoked"] != int64(2) {
 		t.Fatalf("audit: %+v", a)
 	}
@@ -188,33 +188,33 @@ func TestResetPasswordRevokesEverySession(t *testing.T) {
 
 func TestResetPasswordWeakPasswordKeepsTheLink(t *testing.T) {
 	r := newRig(t, true)
-	_ = r.svc.ForgotPassword(ctx, r.u.Email)
+	_ = r.forgot(r.u.Email)
 	raw := tokenFrom(t, r.mail.got[0])
-	wantCode(t, r.svc.ResetPassword(ctx, raw, "short", ClientInfo{}), errs.Validation)
-	if err := r.svc.ResetPassword(ctx, raw, "long enough password", ClientInfo{}); err != nil {
+	wantCode(t, r.svc.ResetPassword(ctx, raw, "short", false, ClientInfo{}), errs.Validation)
+	if err := r.svc.ResetPassword(ctx, raw, "long enough password", false, ClientInfo{}); err != nil {
 		t.Fatalf("link burned by a weak password: %v", err)
 	}
 }
 
 func TestResetPasswordExpiresAndRefusesInactiveUsers(t *testing.T) {
 	r := newRig(t, true)
-	_ = r.svc.ForgotPassword(ctx, r.u.Email)
+	_ = r.forgot(r.u.Email)
 	raw := tokenFrom(t, r.mail.got[0])
 	r.clock.now = r.clock.now.Add(emailtoken.ResetTTL + time.Second)
-	wantCode(t, r.svc.ResetPassword(ctx, raw, "long enough password", ClientInfo{}), errs.Validation)
+	wantCode(t, r.svc.ResetPassword(ctx, raw, "long enough password", false, ClientInfo{}), errs.Validation)
 
 	r.clock.now = r.clock.now.Add(time.Hour)
-	_ = r.svc.ForgotPassword(ctx, r.u.Email)
+	_ = r.forgot(r.u.Email)
 	raw = tokenFrom(t, r.mail.got[1])
 	r.u.Status = user.StatusDeleted
-	wantCode(t, r.svc.ResetPassword(ctx, raw, "long enough password", ClientInfo{}), errs.Validation)
+	wantCode(t, r.svc.ResetPassword(ctx, raw, "long enough password", false, ClientInfo{}), errs.Validation)
 }
 
 func TestChangePasswordKeepsOnlyTheCurrentSession(t *testing.T) {
 	r := newRig(t, true)
 	cur, other := r.addSession(), r.addSession()
 	a := actor.Actor{UserID: r.u.ID, Type: actor.TypeUser, SessionID: cur}
-	if err := r.svc.ChangePassword(ctx, a, "old password 1", "brand new password"); err != nil {
+	if err := r.svc.ChangePassword(ctx, a, "old password 1", "brand new password", false); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := r.sessions.ids[cur]; !ok {
@@ -234,9 +234,9 @@ func TestChangePasswordKeepsOnlyTheCurrentSession(t *testing.T) {
 func TestChangePasswordChecksCurrentPasswordAndKind(t *testing.T) {
 	r := newRig(t, true)
 	a := actor.Actor{UserID: r.u.ID, Type: actor.TypeUser, SessionID: r.addSession()}
-	wantCode(t, r.svc.ChangePassword(ctx, a, "wrong", "brand new password"), errs.Validation)
-	wantCode(t, r.svc.ChangePassword(ctx, a, "old password 1", "short"), errs.Validation)
-	wantCode(t, r.svc.ChangePassword(ctx, actor.Actor{UserID: r.u.ID, Type: actor.TypeAPIKey}, "old password 1", "brand new password"), errs.Forbidden)
+	wantCode(t, r.svc.ChangePassword(ctx, a, "wrong", "brand new password", false), errs.Validation)
+	wantCode(t, r.svc.ChangePassword(ctx, a, "old password 1", "short", false), errs.Validation)
+	wantCode(t, r.svc.ChangePassword(ctx, actor.Actor{UserID: r.u.ID, Type: actor.TypeAPIKey}, "old password 1", "brand new password", false), errs.Forbidden)
 	if r.u.PasswordHash != "h:old password 1" {
 		t.Fatal("password changed on a failed attempt")
 	}
@@ -245,10 +245,10 @@ func TestChangePasswordChecksCurrentPasswordAndKind(t *testing.T) {
 func TestSecretsStayOutOfAuditAndLogs(t *testing.T) {
 	r := newRig(t, true)
 	r.svc.IssueVerification(ctx, r.u)
-	_ = r.svc.ForgotPassword(ctx, r.u.Email)
+	_ = r.forgot(r.u.Email)
 	raws := []string{tokenFrom(t, r.mail.got[0]), tokenFrom(t, r.mail.got[1])}
 	_ = r.svc.VerifyEmail(ctx, raws[0], ClientInfo{})
-	_ = r.svc.ResetPassword(ctx, raws[1], "brand new password", ClientInfo{})
+	_ = r.svc.ResetPassword(ctx, raws[1], "brand new password", false, ClientInfo{})
 	dump := fmt.Sprintf("%+v", r.audit.got)
 	for _, raw := range append(raws, "brand new password", "h:") {
 		if strings.Contains(dump, raw) {

@@ -355,3 +355,14 @@ func TestMailEndpointsAreRateLimited(t *testing.T) {
 		t.Fatalf("statuses %v", statuses)
 	}
 }
+
+func contains(s, sub string) bool { return strings.Contains(s, sub) }
+
+// loginAs returns a fresh browser signed in as the user.
+func (e *env) loginAs(email, password string) *client {
+	c := e.browser()
+	if r := c.login(email, password); r.status != http.StatusOK {
+		e.t.Fatalf("login %s: %d %s", email, r.status, r.body)
+	}
+	return c
+}

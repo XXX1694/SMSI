@@ -94,12 +94,24 @@ func (f *sessionsFake) DeleteAllForUser(_ context.Context, uid, except uuid.UUID
 	return n, nil
 }
 
-type keysFake struct{}
+type keysFake struct{ revoked int64 }
 
-func (keysFake) GetByHash(context.Context, string) (*apikey.Key, error) {
+func (*keysFake) GetByHash(context.Context, string) (*apikey.Key, error) {
 	return nil, errs.NotFoundf("key")
 }
-func (keysFake) TouchLastUsed(context.Context, uuid.UUID, time.Time) error { return nil }
+func (*keysFake) TouchLastUsed(context.Context, uuid.UUID, time.Time) error { return nil }
+func (k *keysFake) RevokeAllForUser(context.Context, uuid.UUID, time.Time) (int64, error) {
+	k.revoked += 3 // pretend the user owns three keys and connections
+	return 3, nil
+}
+
+// forgotFake records what the HTTP side queued, like the real queue.
+type forgotFake struct{ emails []string }
+
+func (f *forgotFake) EnqueueForgot(_ context.Context, e string) error {
+	f.emails = append(f.emails, e)
+	return nil
+}
 
 // tokensFake keeps the documented EmailTokens semantics: newest-wins, single use, expiry, purpose.
 type tokensFake struct {
@@ -115,6 +127,7 @@ func (f *tokensFake) Create(_ context.Context, t *emailtoken.Token) error {
 			r.UsedAt = &t.CreatedAt
 		}
 	}
+	t.ID = uuid.New()
 	c := *t
 	f.rows = append(f.rows, &c)
 	return nil
@@ -151,6 +164,24 @@ func (f *tokensFake) LatestCreatedAt(_ context.Context, uid uuid.UUID, p emailto
 	return last, nil
 }
 
+func (f *tokensFake) CountSince(_ context.Context, uid uuid.UUID, p emailtoken.Purpose, since time.Time) (int, error) {
+	n := 0
+	for _, r := range f.rows {
+		if r.UserID == uid && r.Purpose == p && !r.CreatedAt.Before(since) {
+			n++
+		}
+	}
+	return n, nil
+}
+func (f *tokensFake) RetireByID(_ context.Context, id uuid.UUID, now time.Time) error {
+	for _, r := range f.rows {
+		if r.ID == id && r.UsedAt == nil {
+			r.UsedAt = &now
+		}
+	}
+	return nil
+}
+
 type mailFake struct {
 	got  []port.Message
 	fail error
@@ -181,6 +212,8 @@ type rig struct {
 	tokens   *tokensFake
 	mail     *mailFake
 	audit    *auditFake
+	keys     *keysFake
+	forgotQ  *forgotFake
 	clock    *clockFake
 	u        *user.User
 }
@@ -188,9 +221,9 @@ type rig struct {
 func newRig(t testing.TB, enforce bool) *rig {
 	t.Helper()
 	r := &rig{users: &usersFake{byID: map[uuid.UUID]*user.User{}}, sessions: &sessionsFake{ids: map[uuid.UUID]uuid.UUID{}},
-		tokens: &tokensFake{}, mail: &mailFake{}, audit: &auditFake{}, clock: &clockFake{now: time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)}}
-	svc, err := NewService(Deps{Users: r.users, Sessions: r.sessions, APIKeys: keysFake{}, Hasher: plainHasher{}, Tx: inlineTx{},
-		Audit: r.audit, Clock: r.clock, Tokens: r.tokens, Mail: r.mail, WebBaseURL: "https://app.example/", RequireVerification: enforce})
+		tokens: &tokensFake{}, mail: &mailFake{}, audit: &auditFake{}, keys: &keysFake{}, forgotQ: &forgotFake{}, clock: &clockFake{now: time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)}}
+	svc, err := NewService(Deps{Users: r.users, Sessions: r.sessions, APIKeys: r.keys, Hasher: plainHasher{}, Tx: inlineTx{},
+		Audit: r.audit, Clock: r.clock, Tokens: r.tokens, Mail: r.mail, Forgot: r.forgotQ, WebBaseURL: "https://app.example/", RequireVerification: enforce})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,4 +237,19 @@ func (r *rig) addSession() uuid.UUID {
 	id := uuid.New()
 	r.sessions.ids[id] = r.u.ID
 	return id
+}
+
+// forgot runs the HTTP side of "forgot password" and then the worker side for whatever it queued.
+func (r *rig) forgot(email string) error {
+	if err := r.svc.ForgotPassword(ctx, email); err != nil {
+		return err
+	}
+	queued := r.forgotQ.emails
+	r.forgotQ.emails = nil
+	for _, e := range queued {
+		if err := r.svc.ProcessForgot(ctx, e); err != nil {
+			return err
+		}
+	}
+	return nil
 }

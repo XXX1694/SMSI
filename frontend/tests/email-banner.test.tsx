@@ -95,9 +95,18 @@ describe('PasswordForm', () => {
     apiMock.auth.changePassword.mockResolvedValue(undefined);
     setup();
     await fill('old password', 'a brand new password', 'a brand new password');
-    expect(apiMock.auth.changePassword).toHaveBeenCalledWith('old password', 'a brand new password');
-    expect(await screen.findByRole('status')).toHaveTextContent('Password changed');
+    expect(apiMock.auth.changePassword).toHaveBeenCalledWith('old password', 'a brand new password', false);
+    expect(await screen.findByRole('status')).toHaveTextContent('API keys and MCP connections were not revoked');
     expect(screen.getByLabelText('Current password')).toHaveValue('');
+  });
+
+  it('revokes keys and connections only when the box is ticked', async () => {
+    apiMock.auth.changePassword.mockResolvedValue(undefined);
+    setup();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Also revoke all API keys and MCP connections' }));
+    await fill('old password', 'a brand new password', 'a brand new password');
+    expect(apiMock.auth.changePassword).toHaveBeenCalledWith('old password', 'a brand new password', true);
+    expect(await screen.findByRole('status')).toHaveTextContent('API keys and MCP connections were revoked');
   });
 
   it('shows a wrong current password from the server', async () => {

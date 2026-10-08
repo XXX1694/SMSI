@@ -66,3 +66,11 @@ type LinkCodes interface {
 	// account. NOT_FOUND when it was used or expired in the meantime.
 	MarkUsed(ctx context.Context, id uuid.UUID, now time.Time, chatID string, accountID uuid.UUID) error
 }
+
+// OwnerGate checks, at connection time, that the account's owner may connect networks. It covers the paths that
+// finish without the owner's own request (OAuth callback, chat-link proof), whose actor says nothing about
+// verification. RequireVerifiedOwner returns EMAIL_NOT_VERIFIED when the server enforces verification and the
+// owner has not verified.
+type OwnerGate interface {
+	RequireVerifiedOwner(ctx context.Context, userID uuid.UUID) error
+}

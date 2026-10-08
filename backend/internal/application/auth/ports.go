@@ -55,6 +55,10 @@ type EmailTokens interface {
 	RetireAll(ctx context.Context, userID uuid.UUID, purpose emailtoken.Purpose, now time.Time) error
 	// LatestCreatedAt is when the user's newest token of a purpose was made (zero if none).
 	LatestCreatedAt(ctx context.Context, userID uuid.UUID, purpose emailtoken.Purpose) (time.Time, error)
+	// CountSince counts the user's tokens of a purpose created at or after `since`.
+	CountSince(ctx context.Context, userID uuid.UUID, purpose emailtoken.Purpose, since time.Time) (int, error)
+	// RetireByID invalidates one unused token (used when its mail could not be delivered).
+	RetireByID(ctx context.Context, id uuid.UUID, now time.Time) error
 }
 
 // APIKeys is the read side needed for authentication.
@@ -62,6 +66,14 @@ type APIKeys interface {
 	GetByHash(ctx context.Context, hash string) (*apikey.Key, error)
 	// TouchLastUsed updates last_used_at (and the MCP connection's last_seen_at), throttled.
 	TouchLastUsed(ctx context.Context, keyID uuid.UUID, now time.Time) error
+	// RevokeAllForUser revokes every API key and MCP connection of the user and returns how many keys it revoked.
+	RevokeAllForUser(ctx context.Context, userID uuid.UUID, at time.Time) (int64, error)
+}
+
+// ForgotQueue hands a password-reset request to the worker, so the HTTP request does the same
+// work for every address (validate, enqueue, answer) and its timing reveals nothing.
+type ForgotQueue interface {
+	EnqueueForgot(ctx context.Context, email string) error
 }
 
 // PasswordHasher hashes and verifies passwords.

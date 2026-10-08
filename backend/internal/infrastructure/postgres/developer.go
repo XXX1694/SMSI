@@ -58,6 +58,19 @@ func (r *APIKeys) Revoke(ctx context.Context, userID, id uuid.UUID, at time.Time
 	return mustAffect(tag, err, "api key")
 }
 
+// RevokeAllForUser revokes the user's keys and MCP connections; already revoked ones keep their time.
+func (r *APIKeys) RevokeAllForUser(ctx context.Context, userID uuid.UUID, at time.Time) (int64, error) {
+	q := r.db.q(ctx)
+	tag, err := q.Exec(ctx, `UPDATE api_keys SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`, userID, at)
+	if err != nil {
+		return 0, mapErr(err, "api key")
+	}
+	if _, err := q.Exec(ctx, `UPDATE mcp_connections SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`, userID, at); err != nil {
+		return 0, mapErr(err, "mcp connection")
+	}
+	return tag.RowsAffected(), nil
+}
+
 // GetByHash looks up a key by SHA-256 hash (authentication).
 func (r *APIKeys) GetByHash(ctx context.Context, hash string) (*apikey.Key, error) {
 	k, err := scanKey(r.db.q(ctx).QueryRow(ctx, `SELECT `+keyCols+` FROM api_keys WHERE key_hash = $1`, hash))

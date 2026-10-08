@@ -184,14 +184,14 @@ export const api = {
       const r = (await request('/auth/password/forgot', { method: 'POST', body: { email } })) as { delivery?: string } | null;
       return { delivery: r?.delivery === 'log' ? 'log' : 'smtp' };
     },
-    async resetPassword(token: string, password: string): Promise<void> {
-      await request('/auth/password/reset', { method: 'POST', body: { token, password } });
+    async resetPassword(token: string, password: string, revokeKeys = false): Promise<void> {
+      await request('/auth/password/reset', { method: 'POST', body: { token, password, revoke_keys: revokeKeys } });
     },
-    /** Signs every other session out. A wrong current password is a 400. */
-    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    /** Signs every other session out; API keys and MCP connections are revoked only with `revokeKeys`. A wrong current password is a 400. */
+    async changePassword(currentPassword: string, newPassword: string, revokeKeys = false): Promise<void> {
       await request('/auth/password/change', {
         method: 'POST',
-        body: { current_password: currentPassword, new_password: newPassword },
+        body: { current_password: currentPassword, new_password: newPassword, revoke_keys: revokeKeys },
       });
     },
   },

@@ -134,9 +134,22 @@ describe('ResetPasswordView', () => {
     render(<ResetPasswordView />);
     expect(window.location.hash).toBe('');
     await fill('a brand new password', 'a brand new password');
-    expect(apiMock.auth.resetPassword).toHaveBeenCalledWith('tok_1', 'a brand new password');
+    expect(apiMock.auth.resetPassword).toHaveBeenCalledWith('tok_1', 'a brand new password', false);
     expect(await screen.findByRole('heading', { name: 'Password updated' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+    expect(document.body).toHaveTextContent('API keys and MCP connections were not revoked');
+    expect(screen.getByRole('link', { name: 'Developer page' })).toHaveAttribute('href', '/developer');
+  });
+
+  it('can revoke keys and connections too, and says so', async () => {
+    apiMock.auth.resetPassword.mockResolvedValue(undefined);
+    open('/reset-password#token=tok_2');
+    render(<ResetPasswordView />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Also revoke all API keys and MCP connections' }));
+    await fill('a brand new password', 'a brand new password');
+    expect(apiMock.auth.resetPassword).toHaveBeenCalledWith('tok_2', 'a brand new password', true);
+    expect(await screen.findByText('Your API keys and MCP connections were revoked too.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Developer page' })).not.toBeInTheDocument();
   });
 
   it('validates length and confirmation locally without spending the link', async () => {

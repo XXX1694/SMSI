@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AuthShell } from '@/components/auth-shell';
+import { RevokeKeysOption } from '@/components/revoke-keys-option';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { errorMessage } from '@/hooks';
@@ -16,6 +17,8 @@ export function ResetPasswordView() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [revokeKeys, setRevokeKeys] = useState(false);
+  const [revoked, setRevoked] = useState(false);
   const token = useRef<string | null>(null);
 
   useEffect(() => {
@@ -36,7 +39,8 @@ export function ResetPasswordView() {
     }
     setBusy(true);
     try {
-      await api.auth.resetPassword(token.current ?? '', password);
+      await api.auth.resetPassword(token.current ?? '', password, revokeKeys);
+      setRevoked(revokeKeys);
       forgetHashToken();
       token.current = null;
       setState('success');
@@ -56,7 +60,20 @@ export function ResetPasswordView() {
 
   if (state === 'success') {
     return (
-      <AuthShell title="Password updated" description="You were signed out everywhere. Sign in with your new password.">
+      <AuthShell title="Password updated" description="Every browser session was signed out. Sign in with your new password.">
+        <p className="mb-4 text-sm text-muted-foreground">
+          {revoked ? (
+            'Your API keys and MCP connections were revoked too.'
+          ) : (
+            <>
+              Your API keys and MCP connections were <strong>not</strong> revoked. If you think someone else had access, review them on the{' '}
+              <Link href="/developer" className="text-accent hover:underline">
+                Developer page
+              </Link>
+              .
+            </>
+          )}
+        </p>
         <Button asChild className="w-full">
           <Link href="/login">Sign in</Link>
         </Button>
@@ -73,7 +90,7 @@ export function ResetPasswordView() {
     );
   }
   return (
-    <AuthShell title="Choose a new password" description="Every device will be signed out once you save it.">
+    <AuthShell title="Choose a new password" description="Every browser session will be signed out once you save it.">
       <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="New password" htmlFor="password" hint="At least 8 characters.">
           <Input id="password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -81,6 +98,7 @@ export function ResetPasswordView() {
         <Field label="Repeat the new password" htmlFor="confirm">
           <Input id="confirm" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
+        <RevokeKeysOption id="revoke-keys" checked={revokeKeys} onChange={setRevokeKeys} />
         {error ? (
           <p role="alert" className="text-sm text-danger">
             {error}

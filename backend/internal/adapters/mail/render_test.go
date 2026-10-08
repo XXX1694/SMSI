@@ -56,3 +56,19 @@ func TestRenderUnknownTemplate(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestPasswordChangedSaysWhatHappenedToKeys(t *testing.T) {
+	kept, err := Render(PasswordChanged, "a@b.c", Data{Link: "https://app.example/developer"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, body := range []string{kept.Text, kept.HTML} {
+		if !strings.Contains(body, "were not revoked") || !strings.Contains(body, "https://app.example/developer") {
+			t.Fatalf("keys-kept notice must say so and link to the developer page: %s", body)
+		}
+	}
+	gone, _ := Render(PasswordChanged, "a@b.c", Data{Link: "https://app.example/developer", KeysRevoked: true})
+	if !strings.Contains(gone.Text, "were revoked too") || strings.Contains(gone.Text, "not revoked") {
+		t.Fatalf("keys-revoked notice: %s", gone.Text)
+	}
+}

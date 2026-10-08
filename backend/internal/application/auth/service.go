@@ -30,6 +30,7 @@ type Service struct {
 
 	tokens EmailTokens
 	mail   port.MailQueue
+	forgot ForgotQueue
 	log    *slog.Logger
 	webURL string
 	// requireVerified makes unverified owners fail RequireVerified guards.
@@ -49,6 +50,7 @@ type Deps struct {
 
 	Tokens EmailTokens
 	Mail   port.MailQueue
+	Forgot ForgotQueue
 	Log    *slog.Logger
 	// WebBaseURL is the frontend origin that mailed links point to.
 	WebBaseURL string
@@ -61,8 +63,8 @@ func NewService(d Deps) (*Service, error) {
 	if d.SessionTTL == 0 {
 		d.SessionTTL = 7 * 24 * time.Hour
 	}
-	if d.Tokens == nil || d.Mail == nil {
-		return nil, errors.New("auth: Tokens and Mail are required")
+	if d.Tokens == nil || d.Mail == nil || d.Forgot == nil {
+		return nil, errors.New("auth: Tokens, Mail and Forgot are required")
 	}
 	dummy, err := d.Hasher.Hash("timing-equalizer-password")
 	if err != nil {
@@ -73,7 +75,7 @@ func NewService(d Deps) (*Service, error) {
 	}
 	return &Service{users: d.Users, sessions: d.Sessions, keys: d.APIKeys, hasher: d.Hasher, tx: d.Tx,
 		audit: d.Audit, clock: d.Clock, sessionTTL: d.SessionTTL, dummyHash: dummy,
-		tokens: d.Tokens, mail: d.Mail, log: d.Log, webURL: strings.TrimRight(d.WebBaseURL, "/"),
+		tokens: d.Tokens, mail: d.Mail, forgot: d.Forgot, log: d.Log, webURL: strings.TrimRight(d.WebBaseURL, "/"),
 		requireVerified: d.RequireVerification}, nil
 }
 

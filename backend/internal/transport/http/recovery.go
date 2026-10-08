@@ -18,11 +18,14 @@ type forgotReq struct {
 type resetReq struct {
 	Token    string `json:"token"`
 	Password string `json:"password"`
+	// RevokeKeys also revokes every API key and MCP connection (opt-in).
+	RevokeKeys bool `json:"revoke_keys"`
 }
 
 type changePasswordReq struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
+	RevokeKeys      bool   `json:"revoke_keys"`
 }
 
 // verifyEmail redeems a mailed verification token.
@@ -69,7 +72,7 @@ func (a *API) resetPassword(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	if err := a.svc.Auth.ResetPassword(r.Context(), req.Token, req.Password, middleware.ClientInfoFrom(r, a.trusted)); err != nil {
+	if err := a.svc.Auth.ResetPassword(r.Context(), req.Token, req.Password, req.RevokeKeys, middleware.ClientInfoFrom(r, a.trusted)); err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
@@ -82,7 +85,7 @@ func (a *API) changePassword(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	if err := a.svc.Auth.ChangePassword(r.Context(), actorOf(r), req.CurrentPassword, req.NewPassword); err != nil {
+	if err := a.svc.Auth.ChangePassword(r.Context(), actorOf(r), req.CurrentPassword, req.NewPassword, req.RevokeKeys); err != nil {
 		httpx.Error(w, r, err)
 		return
 	}

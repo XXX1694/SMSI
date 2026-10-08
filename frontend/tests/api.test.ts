@@ -128,12 +128,16 @@ describe('auth recovery endpoints', () => {
 
     fn = mockFetch(204, undefined);
     await api.auth.resetPassword('tok', 'new password');
-    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/password/reset', body: { token: 'tok', password: 'new password' } });
+    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/password/reset', body: { token: 'tok', password: 'new password', revoke_keys: false } });
 
     fn = mockFetch(204, undefined);
     await api.auth.changePassword('old', 'new password');
-    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/password/change', body: { current_password: 'old', new_password: 'new password' } });
+    expect(lastCall(fn)).toMatchObject({ url: '/api/v1/auth/password/change', body: { current_password: 'old', new_password: 'new password', revoke_keys: false } });
     expect((lastCall(fn).init.headers as Record<string, string>)['X-CSRF-Token']).toBe('csrf-1');
+
+    fn = mockFetch(204, undefined);
+    await api.auth.changePassword('old', 'new password', true);
+    expect(lastCall(fn).body).toMatchObject({ revoke_keys: true });
   });
 
   it('turns the server /me shape into Me, defaulting to "nothing restricted" for older servers', async () => {

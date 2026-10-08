@@ -74,3 +74,17 @@ func (r *EmailTokens) LatestCreatedAt(ctx context.Context, userID uuid.UUID, pur
 	}
 	return *at, nil
 }
+
+// CountSince counts the user's tokens of a purpose created at or after `since`.
+func (r *EmailTokens) CountSince(ctx context.Context, userID uuid.UUID, purpose emailtoken.Purpose, since time.Time) (int, error) {
+	var n int
+	err := r.db.q(ctx).QueryRow(ctx, `SELECT count(*) FROM email_tokens WHERE user_id = $1 AND purpose = $2 AND created_at >= $3`,
+		userID, purpose, since).Scan(&n)
+	return n, mapErr(err, "email token")
+}
+
+// RetireByID marks one unused token as used. An unknown or already used id is not an error.
+func (r *EmailTokens) RetireByID(ctx context.Context, id uuid.UUID, now time.Time) error {
+	_, err := r.db.q(ctx).Exec(ctx, `UPDATE email_tokens SET used_at = $2 WHERE id = $1 AND used_at IS NULL`, id, now)
+	return mapErr(err, "email token")
+}

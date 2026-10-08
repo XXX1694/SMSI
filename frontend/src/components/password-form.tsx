@@ -1,5 +1,6 @@
 'use client';
 import { useState, type FormEvent } from 'react';
+import { RevokeKeysOption } from '@/components/revoke-keys-option';
 import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ export function PasswordForm() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [revokeKeys, setRevokeKeys] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -28,11 +30,16 @@ export function PasswordForm() {
     }
     setBusy(true);
     try {
-      await api.auth.changePassword(current, next);
+      await api.auth.changePassword(current, next, revokeKeys);
       setCurrent('');
       setNext('');
       setConfirm('');
-      toast.success('Password changed. Your other sessions were signed out.');
+      toast.success(
+        revokeKeys
+          ? 'Password changed. Your other sessions, API keys and MCP connections were revoked.'
+          : 'Password changed. Your other sessions were signed out; API keys and MCP connections were not revoked.',
+      );
+      setRevokeKeys(false);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -45,12 +52,13 @@ export function PasswordForm() {
       <Field label="Current password" htmlFor="pw-current">
         <Input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
       </Field>
-      <Field label="New password" htmlFor="pw-new" hint="At least 8 characters. Other devices are signed out when you save.">
+      <Field label="New password" htmlFor="pw-new" hint="At least 8 characters. Your other browser sessions are signed out when you save.">
         <Input id="pw-new" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
       </Field>
       <Field label="Repeat the new password" htmlFor="pw-confirm">
         <Input id="pw-confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
       </Field>
+      <RevokeKeysOption id="pw-revoke-keys" checked={revokeKeys} onChange={setRevokeKeys} />
       {error ? (
         <p role="alert" className="text-sm text-danger">
           {error}

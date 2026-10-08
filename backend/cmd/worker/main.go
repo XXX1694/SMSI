@@ -43,7 +43,7 @@ func run() error {
 	}
 	defer a.Close()
 
-	srv := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: cfg.WorkerConc, Mailer: a.Mailer}, a.Publisher, log)
+	srv := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: cfg.WorkerConc, Mailer: a.Mailer, Auth: a.Services.Auth}, a.Publisher, log)
 	if err := srv.Start(); err != nil {
 		return err
 	}

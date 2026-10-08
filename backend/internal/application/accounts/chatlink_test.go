@@ -593,3 +593,24 @@ func TestUnverifiedOwnerCannotStartChatLink(t *testing.T) {
 		t.Fatal("a code was created")
 	}
 }
+
+type closedGate struct{}
+
+func (closedGate) RequireVerifiedOwner(context.Context, uuid.UUID) error {
+	return errs.New(errs.EmailNotVerified, "verify your email address to use this feature")
+}
+
+// A code started while verification was off must not connect a channel once the owner is unverified under enforcement.
+func TestChatLinkCompletionChecksTheOwnersVerification(t *testing.T) {
+	r, alice := newRig(t), uuid.New()
+	ls := r.start(t, alice)
+	r.svc.gate = closedGate{}
+	if err := r.deliver("-100", "*", ls.Code); err == nil || r.accountsOf(alice) != 0 {
+		t.Fatalf("an unverified owner connected a channel: err=%v accounts=%d", err, r.accountsOf(alice))
+	}
+	r.svc.gate = nil
+	ls = r.start(t, alice)
+	if err := r.deliver("-100", "*", ls.Code); err != nil || r.accountsOf(alice) != 1 {
+		t.Fatalf("without a gate the link must work: err=%v accounts=%d", err, r.accountsOf(alice))
+	}
+}

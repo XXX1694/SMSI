@@ -22,6 +22,9 @@ const (
 	ResetTTL  = 30 * time.Minute
 	// Cooldown is the minimum gap between two mails of the same purpose to one user.
 	Cooldown = 60 * time.Second
+	// MaxPerDay caps the tokens (and so the mails) one user can be sent per purpose in a rolling Window.
+	MaxPerDay = 10
+	Window    = 24 * time.Hour
 )
 
 // TTL returns the lifetime of a token of this purpose.

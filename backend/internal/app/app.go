@@ -162,13 +162,14 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 
 	authSvc, err := auth.NewService(auth.Deps{Users: postgres.NewUsers(db), Sessions: postgres.NewSessions(db), APIKeys: keyRepo,
 		Hasher: hasher, Tx: db, Audit: auditSvc, Clock: clk, SessionTTL: cfg.SessionTTL,
-		Tokens: postgres.NewEmailTokens(db), Mail: a.MailQueue, Log: log, WebBaseURL: cfg.WebBaseURL,
+		Tokens: postgres.NewEmailTokens(db), Mail: a.MailQueue, Forgot: a.Queue.ForgotQueue(), Log: log, WebBaseURL: cfg.WebBaseURL,
 		RequireVerification: requireVerification(cfg)})
 	if err != nil {
 		return fmt.Errorf("auth service: %w", err)
 	}
 	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Links: postgres.NewLinkCodes(db),
-		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL})
+		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL,
+		Gate: verifiedOwners{users: postgres.NewUsers(db), enforce: requireVerification(cfg)}})
 	analyticsSvc := analytics.NewService(analyticsRepo, clk)
 	a.Services = transport.Services{
 		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc,
