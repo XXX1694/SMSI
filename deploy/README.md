@@ -33,7 +33,7 @@ GitHub Releases (section 14).
 | `.env.prod.example` | every variable, documented. Copy to `.env` (or use `init-env.sh`) |
 | `init-env.sh` | creates `.env` with freshly generated secrets (`openssl rand`) |
 | `deploy.sh` | pull an image tag, migrate, restart, wait for `/ready`, roll back automatically on failure |
-| `backup.sh` | `pg_dump` (+ optional media archive) with retention, for cron |
+| `backup.sh`, `restore-test.sh` | `pg_dump` (+ media archive, optional encrypted off-site copy) with retention, and the restore drill; `systemd/socialos-backup.*` schedule them (section 9) |
 
 Images are built by `.github/workflows/release.yml` and published as `ghcr.io/<owner>/socialos-{backend,mcp,frontend}`.
 Tags: `sha-<7 hex>` (every merge to `main`, immutable, what you deploy), `main` (moves), `X.Y.Z` / `X.Y` / `X` for `vX.Y.Z` git tags.
@@ -228,23 +228,85 @@ you back up on the provider's side).
 BACKUP_MEDIA=1 ./backup.sh      # also socialos-media-<time>.tar.gz of the bundled MinIO volume
 ```
 
-Cron example (`crontab -e` as the deploy user; `BACKUP_DIR` / `KEEP_DAYS` can be set in the line):
+The directory is mode 700 and every file in it mode 600 (the dump holds encrypted OAuth tokens and e-mail addresses, the media
+are user uploads). `BACKUP_DIR` and `KEEP_DAYS` can be set in the environment.
 
-```cron
-17 3 * * *  /opt/socialos/backup.sh >>/var/log/socialos-backup.log 2>&1
-```
+### 9.1 Daily timer
 
-Copy `/var/backups/socialos` off the machine (rsync/rclone/restic to another provider); a backup on the same disk is not a
-backup. Restore into a fresh or emptied stack:
+Run as root in `/opt/socialos`. The timer backs up the database and the media every day at 03:15 to 03:45 local time (`Persistent=true`:
+a night missed while the machine was off runs at the next boot), at low CPU and I/O priority. Output goes to the journal.
 
 ```bash
-docker compose stop backend worker mcp frontend
-docker compose exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" --if-exists "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
-docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' < /var/backups/socialos/socialos-db-<time>.dump
-docker compose up -d
+cd /opt/socialos
+install -m 644 systemd/socialos-backup.* /etc/systemd/system/ && systemctl enable --now socialos-backup.timer
+systemctl list-timers socialos-backup.timer       # next run
+systemctl start socialos-backup.service           # run one now
+journalctl -u socialos-backup -n 50               # what happened
 ```
 
-Test a restore once on a spare machine; an untested backup is a hope.
+Without bundled MinIO (external S3) remove the `BACKUP_MEDIA=1` line from the unit (`systemctl edit socialos-backup.service`).
+To remove the schedule: `systemctl disable --now socialos-backup.timer && rm /etc/systemd/system/socialos-backup.*`.
+
+### 9.2 Off-site copy (optional)
+
+A backup on the same disk is not a backup. Set these in `.env` (documented in `.env.prod.example`):
+
+```
+BACKUP_S3_URL=s3://my-bucket/socialos        # bucket and prefix
+BACKUP_S3_ACCESS_KEY=...
+BACKUP_S3_SECRET_KEY=...
+BACKUP_S3_ENDPOINT=https://s3.eu-central-003.backblazeb2.com   # B2 / R2 / MinIO; empty for AWS
+BACKUP_AGE_RECIPIENT=age1...                 # PUBLIC key
+```
+
+After each backup, every new artifact is encrypted with [age](https://age-encryption.org) for `BACKUP_AGE_RECIPIENT` and the
+`.age` file is uploaded with rclone; the local `.age` copy is then deleted. Both tools run in containers (rclone pinned by
+digest, age from a pinned Alpine image) and receive the keys through the environment, so they never show up in logs or process
+lists. With any of the four required variables empty, the run logs one `off-site copy: skipped` line and succeeds. A failed
+upload fails the run (the unit shows as failed) but never removes the local backup.
+
+Make the key pair on **your own computer**, never on the server: `age-keygen -o socialos-backup.key`, copy only the printed
+`age1...` public key into `.env`, and keep the key file (password manager, offline). Without it the off-site copies cannot be
+read. Use a bucket key that can only write, and set a lifecycle rule on the bucket to expire old objects (the script prunes only
+local files). Decrypt on your computer: `age -d -i socialos-backup.key socialos-db-<time>.dump.age > socialos-db-<time>.dump`.
+
+### 9.3 Restore drill
+
+An untested backup is a hope. `./restore-test.sh` (root, in `/opt/socialos`) restores the newest dump (or the file you pass) into
+a throwaway `postgres:16-alpine` container with `--network none`, compares the number of tables and the goose version with the
+live database, prints PASS or FAIL and always removes the container:
+
+```bash
+./restore-test.sh                                   # newest dump
+./restore-test.sh /var/backups/socialos/socialos-db-<time>.dump
+```
+
+The daily service sets `RESTORE_TEST=weekly`, so `backup.sh` runs the same drill on the fresh dump every Sunday (one timer, no
+second unit); a FAIL makes the run fail, which `systemctl --failed` shows. `RESTORE_TEST=1` drills after every backup and
+`RESTORE_TEST=0` turns it off. A dump made before a migration and compared with a database migrated since will correctly FAIL on the
+goose version: that is the signal to take a fresh backup, not a broken backup.
+
+### 9.4 Restore for real
+
+Downtime lasts from step 1 to step 4. Pick the dump first (`ls -t /var/backups/socialos`; from the off-site copy: decrypt it,
+9.2) and, if the data is still readable, take a fresh `./backup.sh` before you overwrite it.
+
+```bash
+cd /opt/socialos
+./restore-test.sh /var/backups/socialos/socialos-db-<time>.dump     # 0. a dump that fails here is not worth restoring
+docker compose stop backend worker mcp frontend                     # 1. stop everything that writes (postgres, redis stay up)
+docker compose exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" --if-exists "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --exit-on-error' < /var/backups/socialos/socialos-db-<time>.dump   # 2.
+docker compose up -d                                                # 3. start the app
+curl -fsS "https://api.<domain>/ready" && docker compose ps         # 4. verify: ready, all services Up
+docker compose logs --since 5m backend worker | grep -i error       # nothing alarming; then log in and open the calendar
+```
+
+If `dropdb` complains about open connections, the app containers are still running: check `docker compose ps`. Restoring media:
+`docker run --rm -v <project>_minio-data:/data -v /var/backups/socialos:/b alpine:3 sh -c 'cd /data && tar -xzf /b/socialos-media-<time>.tar.gz'`
+with minio stopped (`docker compose stop minio`). The restored database needs the `ENCRYPTION_KEY` that was current when the dump
+was taken; restore `.env` from your copy if the server itself was lost. The next `./deploy.sh` or the autoupdate timer re-runs
+migrations if the dump is older than the deployed release.
 
 ## 10. Rollback
 
