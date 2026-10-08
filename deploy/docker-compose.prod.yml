@@ -216,7 +216,9 @@ services:
       - "443:443/udp" # HTTP/3
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
-      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+      # Needed by this service only, and it is not part of host-proxy mode. Compose interpolates every service, enabled or not,
+      # so a required-variable check here would also demand it there; deploy.sh checks it for the standalone stack instead.
+      ACME_EMAIL: ${ACME_EMAIL:-}
       # Public host for presigned media URLs (bundled MinIO). Use ":8099" (an unpublished, unused port) to turn it off.
       S3_SITE: ${S3_SITE:-s3.${DOMAIN}}
     volumes:
