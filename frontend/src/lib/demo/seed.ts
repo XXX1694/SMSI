@@ -321,6 +321,7 @@ export function buildSeed(now: Date = new Date()): DemoState {
     action: string,
     resource_type: string,
     resource_id: string | null,
+    metadata?: Record<string, unknown>,
   ): void => {
     auditN += 1;
     audit.push({
@@ -333,6 +334,7 @@ export function buildSeed(now: Date = new Date()): DemoState {
       request_id: hex(auditN * 2654435761 >>> 0),
       ip: actor_type === 'user' ? '203.0.113.24' : actor_type === 'api_key' ? '198.51.100.7' : null,
       created_at: iso(at),
+      ...(metadata ? { metadata } : {}),
     });
   };
 
@@ -512,6 +514,22 @@ export function buildSeed(now: Date = new Date()): DemoState {
   log(t - 18 * DAY, 'user', 'Demo User', 'mcp_connection.revoked', 'mcp_connection', SEED_ID.mcp[2]);
   log(t - 3 * HOUR, 'api_key', 'Claude Desktop', 'api_key.request', 'post', null);
   log(t - 2 * HOUR, 'api_key', 'CI reader', 'api_key.request', 'post', null);
+  // Tool calls made by MCP agents (what the backend records for X-MCP-Tool requests).
+  const toolCall = (at: number, client: string, tool: string, route: string, method: string, status: number, errorCode?: string, direct = false): void =>
+    log(at, 'api_key', client, 'mcp.tool_call', 'api_key', SEED_ID.apiKey[0], {
+      tool,
+      via_gateway: !direct,
+      method,
+      route,
+      status,
+      client,
+      ...(errorCode ? { error_code: errorCode } : {}),
+    });
+  toolCall(t - 3 * HOUR - 5 * MIN, 'MCP: Claude Desktop', 'list_posts', '/api/v1/posts', 'GET', 200);
+  toolCall(t - 3 * HOUR - 2 * MIN, 'MCP: Claude Desktop', 'create_draft', '/api/v1/posts', 'POST', 201);
+  toolCall(t - 90 * MIN, 'MCP: Claude Desktop', 'publish_post', '/api/v1/posts/{id}/publish', 'POST', 403, 'INSUFFICIENT_SCOPE');
+  toolCall(t - 55 * MIN, 'MCP: Cursor', 'get_post_status', '/api/v1/posts/{id}/status', 'GET', 200);
+  toolCall(t - 70 * MIN, 'MCP: Script', 'list_posts', '/api/v1/posts', 'GET', 200, undefined, true);
   log(t - 40 * MIN, 'user', 'Demo User', 'user.login', 'user', SEED_ID.user);
   audit.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id));
 

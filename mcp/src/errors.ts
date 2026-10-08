@@ -3,9 +3,18 @@ import { ApiError } from "./api-client.js";
 
 const SECRET_PATTERNS: RegExp[] = [/sk_live_[A-Za-z0-9_\-]+/g, /Bearer\s+[A-Za-z0-9._\-~+/=]+/gi];
 
-/** Strips anything that looks like an API key / bearer token. */
+const exactSecrets = new Set<string>();
+
+/** Registers a secret with no recognisable shape (the gateway secret) so redact() removes its exact value. */
+export function registerSecret(secret: string | undefined): void {
+  if (secret) exactSecrets.add(secret);
+}
+
+/** Strips anything that looks like an API key / bearer token, and every registered secret. */
 export function redact(s: string): string {
-  return SECRET_PATTERNS.reduce((acc, re) => acc.replace(re, "[redacted]"), s);
+  let out = SECRET_PATTERNS.reduce((acc, re) => acc.replace(re, "[redacted]"), s);
+  for (const secret of exactSecrets) out = out.split(secret).join("[redacted]");
+  return out;
 }
 
 const HINTS: Record<string, string> = {

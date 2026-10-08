@@ -33,9 +33,14 @@ func CSRFToken(ctx context.Context) string {
 	return s
 }
 
-// ClientInfoFrom builds auth.ClientInfo for a request.
+// ClientInfoFrom builds auth.ClientInfo for a request. The address is the one the MCP gateway vouched for (see
+// Gateway) or, failing that, ClientIP.
 func ClientInfoFrom(r *http.Request, trusted TrustedProxies) auth.ClientInfo {
-	return auth.ClientInfo{UserAgent: r.UserAgent(), IP: ClientIP(r, trusted), RequestID: httpx.RequestID(r.Context())}
+	ip, ok := gatewayIP(r.Context())
+	if !ok {
+		ip = ClientIP(r, trusted)
+	}
+	return auth.ClientInfo{UserAgent: r.UserAgent(), IP: ip, RequestID: httpx.RequestID(r.Context())}
 }
 
 // Authenticate resolves a Bearer API key or the session cookie. Invalid bearer

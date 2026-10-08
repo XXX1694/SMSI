@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/transport/httpx"
 )
 
@@ -71,7 +72,12 @@ func (a *API) auditLogs(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	res, err := a.svc.Audit.List(r.Context(), actorOf(r), pg)
+	action := r.URL.Query().Get("action")
+	if len(action) > 64 {
+		httpx.ErrorCode(w, r, errs.Validation, "action filter too long")
+		return
+	}
+	res, err := a.svc.Audit.List(r.Context(), actorOf(r), action, pg)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return

@@ -47,6 +47,9 @@ x-backend-env: &backend-env
   WEB_BASE_URL: https://app.${DOMAIN}
   CORS_ALLOWED_ORIGINS: https://app.${DOMAIN}
   MCP_PUBLIC_URL: https://mcp.${DOMAIN}/mcp
+  # Shared with the mcp service. With it the backend believes the client IP the MCP server forwards (X-SocialOS-Client-IP)
+  # and writes it to the audit log of MCP tool calls; empty = the header is ignored (init-env.sh generates it).
+  MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-}
   COOKIE_SECURE: "true"
   # The OAuth callback lands on api.<domain>, the login cookie is issued via app.<domain>: share it across the subdomains.
   COOKIE_DOMAIN: ${COOKIE_DOMAIN:-${DOMAIN}}
@@ -190,6 +193,10 @@ services:
     environment:
       SOCIALOS_API_URL: http://backend:8080
       PORT: "3333"
+      MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-}
+      # Caddy sits in front of this service as well: same rule as the backend (right-most hop outside TRUSTED_PROXIES).
+      TRUST_PROXY: "true"
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
     mem_limit: ${MCP_MEM_LIMIT:-192m}
     # healthcheck: from the image (GET /health)
     depends_on:

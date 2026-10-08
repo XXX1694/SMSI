@@ -263,8 +263,9 @@ export const api = {
     },
   },
   audit: {
-    async list(limit = 50, cursor?: string): Promise<Page<AuditLog>> {
-      return normalizePage<AuditLog>(await request('/audit-logs', { query: { limit, cursor } }));
+    /** `action` keeps only entries of that action, e.g. `mcp.tool_call` for agent actions. */
+    async list(limit = 50, cursor?: string, action?: string): Promise<Page<AuditLog>> {
+      return normalizePage<AuditLog>(await request('/audit-logs', { query: { limit, cursor, action } }));
     },
   },
   developer: {

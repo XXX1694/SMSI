@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"image"
 	"image/color"
 	"image/png"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/socialos/backend/internal/config"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/post"
 	"github.com/socialos/backend/internal/infrastructure/postgres"
@@ -319,3 +321,76 @@ func TestMediaUploadAndPublish(t *testing.T) {
 	c.must("POST", "/api/v1/posts/"+p["id"].(string)+"/publish", nil, 202)
 	c.waitStatus(p["id"].(string), "published", 15*time.Second)
 }
+
+// toolCall performs a request the way the MCP server forwards a tool call.
+func (c *client) toolCall(tool, method, path, gateway, ip string) resp {
+	c.e.t.Helper()
+	req, err := http.NewRequest(method, c.e.srv.URL+path, nil)
+	if err != nil {
+		c.e.t.Fatal(err)
+	}
+	req.Header.Set("X-MCP-Tool", tool)
+	if gateway != "" {
+		req.Header.Set("X-SocialOS-Gateway", gateway)
+		req.Header.Set("X-SocialOS-Client-IP", ip)
+	}
+	return c.send(req)
+}
+
+func TestMCPToolCallAuditIsTenantScoped(t *testing.T) {
+	const secret = "e2e-gateway-secret-0123456789abcdef0123456789"
+	e := newEnv(t, envOpts{mutate: func(c *config.Config) { c.GatewaySecret = secret }})
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice-audit@tenant.test")
+	bob.register("bob-audit@tenant.test")
+	ak := e.apiKeyClient(alice.createKey("alice agent", "posts:read"))
+	bk := e.apiKeyClient(bob.createKey("bob agent", "posts:read"))
+
+	if r := ak.toolCall("list_posts", "GET", "/api/v1/posts?limit=5&q=private", secret, "203.0.113.50"); r.status != 200 {
+		t.Fatalf("tool call: %d %s", r.status, r.body)
+	}
+	ak.toolCall("list_posts", "GET", "/api/v1/posts", "", "")                                                  // direct: header absent, IP is the peer
+	ak.toolCall("list_posts", "GET", "/api/v1/posts", "wrong-secret-0123456789abcdef01234567", "203.0.113.99") // forged
+	bk.toolCall("bobs_tool", "GET", "/api/v1/posts", secret, "203.0.113.77")
+
+	rows := func(c *client, query string) []map[string]any {
+		var out []map[string]any
+		for _, it := range c.must("GET", "/api/v1/audit-logs?limit=100"+query, nil, 200)["items"].([]any) {
+			out = append(out, it.(map[string]any))
+		}
+		return out
+	}
+	mine := rows(alice, "&action=mcp.tool_call")
+	if len(mine) != 3 {
+		t.Fatalf("alice should see her 3 tool calls, got %d", len(mine))
+	}
+	ips := map[string]bool{}
+	for _, r := range mine {
+		meta := r["metadata"].(map[string]any)
+		if r["action"] != "mcp.tool_call" || meta["tool"] != "list_posts" || meta["route"] != "/api/v1/posts" || r["actor_type"] != "api_key" ||
+			r["actor_label"] != "alice agent" || meta["status"] != float64(200) {
+			t.Fatalf("row: %v", r)
+		}
+		ips[r["ip"].(string)] = true
+		if strings.Contains(string(mustMarshal(r)), "private") || strings.Contains(string(mustMarshal(r)), "sk_live_") {
+			t.Fatalf("request data or key leaked into the row: %v", r)
+		}
+	}
+	if !ips["203.0.113.50"] || ips["203.0.113.99"] || ips["203.0.113.77"] || len(ips) != 2 {
+		t.Fatalf("only the correctly authenticated gateway header may set the ip: %v", ips)
+	}
+	for _, r := range rows(bob, "") {
+		if r["action"] == "mcp.tool_call" && r["actor_label"] != "bob agent" {
+			t.Fatalf("bob sees another tenant's tool call: %v", r)
+		}
+	}
+	theirs := rows(bob, "&action=mcp.tool_call")
+	if len(theirs) != 1 || theirs[0]["metadata"].(map[string]any)["tool"] != "bobs_tool" {
+		t.Fatalf("bob must see exactly his own tool call: %v", theirs)
+	}
+	if n := len(rows(alice, "&action=nonexistent.action")); n != 0 {
+		t.Fatalf("filter must be exact, got %d rows", n)
+	}
+}
+
+func mustMarshal(v any) []byte { b, _ := json.Marshal(v); return b }

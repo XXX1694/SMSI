@@ -28,16 +28,16 @@ func (r *Audit) Insert(ctx context.Context, e *audit.Entry) error {
 		e.UserID, e.ActorType, e.ActorID, e.ActorLabel, e.Action, e.ResourceType, e.ResourceID, meta, e.RequestID, e.IP, e.CreatedAt).Scan(&e.ID), "audit log")
 }
 
-// List pages the user's audit log, newest first.
-func (r *Audit) List(ctx context.Context, userID uuid.UUID, page port.Page) ([]audit.Entry, error) {
-	const cols = `SELECT id, user_id, actor_type, actor_id, actor_label, action, resource_type, resource_id, metadata, request_id, ip, created_at FROM audit_logs`
-	var sql string
-	args := []any{userID}
+// List pages the user's audit log, newest first; a non-empty action keeps only entries of that action.
+func (r *Audit) List(ctx context.Context, userID uuid.UUID, action string, page port.Page) ([]audit.Entry, error) {
+	sql := `SELECT id, user_id, actor_type, actor_id, actor_label, action, resource_type, resource_id, metadata, request_id, ip, created_at
+		FROM audit_logs WHERE user_id = $1 AND ($2 = '' OR action = $2)`
+	args := []any{userID, action}
 	if page.Cursor != nil {
-		sql = cols + ` WHERE user_id = $1 AND (created_at, id) < ($2, $3) ORDER BY created_at DESC, id DESC LIMIT $4`
+		sql += ` AND (created_at, id) < ($3, $4) ORDER BY created_at DESC, id DESC LIMIT $5`
 		args = append(args, page.Cursor.At, page.Cursor.ID, page.Limit)
 	} else {
-		sql = cols + ` WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2`
+		sql += ` ORDER BY created_at DESC, id DESC LIMIT $3`
 		args = append(args, page.Limit)
 	}
 	rows, err := r.db.q(ctx).Query(ctx, sql, args...)
@@ -64,7 +64,7 @@ func (r *Audit) List(ctx context.Context, userID uuid.UUID, page port.Page) ([]a
 func (r *Audit) KeyUsage(ctx context.Context, userID uuid.UUID, since time.Time) ([]developer.KeyUsage, error) {
 	rows, err := r.db.q(ctx).Query(ctx, `SELECT k.id, k.name, k.prefix, k.last_used_at,
 		(SELECT count(*) FROM audit_logs a WHERE a.user_id = $1 AND a.actor_type = 'api_key' AND a.actor_id = k.id::text
-		   AND a.action = 'api_key.request' AND a.created_at >= $2)
+		   AND a.action IN ('api_key.request','mcp.tool_call') AND a.created_at >= $2)
 		FROM api_keys k WHERE k.user_id = $1 ORDER BY k.created_at DESC`, userID, since)
 	if err != nil {
 		return nil, err

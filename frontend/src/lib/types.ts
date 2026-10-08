@@ -231,4 +231,6 @@ export interface AuditLog {
   request_id: string | null;
   ip: string | null;
   created_at: string;
+  /** Allow-listed details; for `mcp.tool_call`: tool, route, status, error_code, client. */
+  metadata?: Record<string, unknown>;
 }

@@ -43,6 +43,9 @@ api.{$DOMAIN} {
 	# Prometheus metrics are for the internal network only.
 	@metrics path /metrics /metrics/*
 	respond @metrics 404
+	# Only the MCP server (internal network) may speak for a client IP: drop whatever a caller sends here.
+	request_header -X-SocialOS-Gateway
+	request_header -X-SocialOS-Client-IP
 	reverse_proxy backend:8080
 }
 

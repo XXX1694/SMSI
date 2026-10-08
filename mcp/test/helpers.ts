@@ -2,6 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Config } from "../src/config.js";
 import { createHttpServer } from "../src/http.js";
 
 export interface Recorded {
@@ -28,6 +29,8 @@ export class FakeApi {
   server!: Server;
   url = "";
   calls: Recorded[] = [];
+  /** Requests to GET /me (the per-request key check), kept apart from tool calls. */
+  meCalls: Recorded[] = [];
   keys = new Map<string, string[]>([[VALID_KEY, ALL_SCOPES]]);
   /** Override reply for "METHOD /path" (path without query and without /api/v1). */
   replies = new Map<string, FakeReply>();
@@ -48,7 +51,10 @@ export class FakeApi {
         if (!scopes) return send(401, { error: { code: "UNAUTHENTICATED", message: "bad key", request_id: "r-401" } });
         const u = new URL(rec.path, "http://x");
         const route = u.pathname.replace(/^\/api\/v1/, "");
-        if (route === "/me") return send(200, { id: "u1", email: "a@b.c", scopes });
+        if (route === "/me") {
+          this.meCalls.push({ ...rec, path: route });
+          return send(200, { id: "u1", email: "a@b.c", scopes });
+        }
         this.calls.push({ ...rec, path: route + u.search });
         const o = this.replies.get(`${rec.method} ${route}`);
         if (o) return send(o.status ?? 200, o.body);
@@ -72,10 +78,10 @@ export interface Stack {
   stop: () => Promise<void>;
 }
 
-export async function startStack(): Promise<Stack> {
+export async function startStack(cfg: Partial<Config> = {}): Promise<Stack> {
   const api = new FakeApi();
   await api.start();
-  const mcp = createHttpServer({ apiUrl: `${api.url}/api/v1`, port: 0, host: "127.0.0.1", timeoutMs: 3000 });
+  const mcp = createHttpServer({ apiUrl: `${api.url}/api/v1`, port: 0, host: "127.0.0.1", timeoutMs: 3000, ...cfg });
   await new Promise<void>((r) => mcp.listen(0, "127.0.0.1", r));
   const baseUrl = `http://127.0.0.1:${(mcp.address() as AddressInfo).port}`;
   return {
