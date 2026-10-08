@@ -26,10 +26,13 @@ func (inlineTx) InTx(ctx context.Context, fn func(context.Context) error) error 
 
 type plainHasher struct{}
 
-func (plainHasher) Hash(p string) (string, error) { return "h:" + p, nil }
-func (plainHasher) Verify(p, enc string) (bool, error) {
-	return enc == "h:"+p, nil
+func (plainHasher) Hash(_ context.Context, p string) (string, error) { return "h:" + p, nil }
+func (plainHasher) Verify(_ context.Context, p, enc string) (bool, error) {
+	return enc == "h:"+p || enc == "old:"+p, nil
 }
+
+// NeedsRehash treats the "old:" prefix as outdated parameters.
+func (plainHasher) NeedsRehash(enc string) bool { return strings.HasPrefix(enc, "old:") }
 
 type auditEntry struct {
 	action string

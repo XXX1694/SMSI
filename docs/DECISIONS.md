@@ -129,3 +129,25 @@ self-hoster without SMTP).
 the same as most sign-up forms). Existing users are unverified and must verify once mail is switched on. The rendered
 mail, with its link, sits in Redis until the worker sends it (D-006), and the forgot task holds the address until
 it runs. The mail limiter is in memory and per instance.
+
+## D-011: Bound password hashing in memory (2026-10-09)
+
+**Context.** Every argon2id hash used 64 MiB and nothing limited how many ran at once. The production API container has a
+160 MB cap and the auth limiter allows bursts of 10 per IP, so a few parallel logins or registrations could get the API
+OOM-killed.
+
+**Decision.**
+- At most `PASSWORD_HASH_CONCURRENCY` (default 2) hash or verify operations run at once, in the `crypto` hasher. A caller
+  waits for a slot until its context ends or 5 s pass, then gets `429 RATE_LIMITED` ("server is busy, retry shortly"),
+  which clients already treat as retryable. No new error code.
+- New hashes use the OWASP minimum argon2id configuration, m=19 MiB, t=2, p=1
+  ([Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)),
+  about 20 MB per hash. Stored hashes keep verifying, because their parameters are read from the PHC string.
+- A successful login with a hash made under other parameters rehashes the password. This is best effort: a failure is
+  logged and never fails the login.
+
+Rejected: raising the container limit (hides the burst), and a new 503 code (needs contract, MCP and docs changes for no
+client benefit).
+
+**Consequences.** Under a burst the third concurrent login waits for one of two slots; beyond 5 s it is told to retry.
+Peak hashing memory is about 2 x 20 MB regardless of load. Rehash means the first login after deploy costs one extra hash.

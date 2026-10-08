@@ -152,7 +152,7 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	}
 	hasher := ov.Hasher
 	if hasher == nil {
-		hasher = crypto.NewPasswordHasher(crypto.DefaultArgon2)
+		hasher = crypto.NewPasswordHasher(crypto.DefaultArgon2, cfg.PasswordHashConcurrency)
 	}
 	db := a.DB
 	auditRepo := postgres.NewAudit(db)

@@ -225,7 +225,7 @@ func (s *Service) ChangePassword(ctx context.Context, a actor.Actor, current, ne
 	if err != nil {
 		return err
 	}
-	if ok, err := s.hasher.Verify(current, u.PasswordHash); err != nil || !ok {
+	if ok, err := s.hasher.Verify(ctx, current, u.PasswordHash); err != nil || !ok {
 		return errs.Validationf("current password is incorrect").WithField("current_password", "incorrect")
 	}
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -247,7 +247,7 @@ func (s *Service) ChangePassword(ctx context.Context, a actor.Actor, current, ne
 // except `keep` (uuid.Nil keeps none). With revokeKeys it also revokes every API key and MCP connection;
 // otherwise those survive, which the notice mail and the UI say. It returns the sessions and keys removed.
 func (s *Service) replacePassword(ctx context.Context, uid uuid.UUID, password string, keep uuid.UUID, revokeKeys bool) (sessions, keys int64, err error) {
-	hash, err := s.hasher.Hash(password)
+	hash, err := s.hasher.Hash(ctx, password)
 	if err != nil {
 		return 0, 0, err
 	}

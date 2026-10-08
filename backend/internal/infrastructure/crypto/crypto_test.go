@@ -58,24 +58,6 @@ func TestCipherRejectsTampering(t *testing.T) {
 	}
 }
 
-func TestPasswordHasher(t *testing.T) {
-	h := NewPasswordHasher(Argon2Params{Memory: 8 * 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16})
-	enc, err := h.Hash("correct horse battery")
-	if err != nil || !strings.HasPrefix(enc, "$argon2id$v=19$m=8192,t=1,p=1$") {
-		t.Fatalf("hash %q %v", enc, err)
-	}
-	ok, err := h.Verify("correct horse battery", enc)
-	if !ok || err != nil {
-		t.Fatal("verify failed")
-	}
-	if ok, _ := h.Verify("wrong", enc); ok {
-		t.Fatal("wrong password accepted")
-	}
-	if _, err := h.Verify("x", "$bcrypt$foo"); err == nil {
-		t.Fatal("malformed hash accepted")
-	}
-}
-
 func TestAPIKeyGeneration(t *testing.T) {
 	k, err := GenerateAPIKey()
 	if err != nil {

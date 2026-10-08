@@ -66,7 +66,7 @@ func NewService(d Deps) (*Service, error) {
 	if d.Tokens == nil || d.Mail == nil || d.Forgot == nil {
 		return nil, errors.New("auth: Tokens, Mail and Forgot are required")
 	}
-	dummy, err := d.Hasher.Hash("timing-equalizer-password")
+	dummy, err := d.Hasher.Hash(context.Background(), "timing-equalizer-password")
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, ci ClientInfo)
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
-	hash, err := s.hasher.Hash(in.Password)
+	hash, err := s.hasher.Hash(ctx, in.Password)
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
@@ -125,21 +125,25 @@ func (s *Service) Login(ctx context.Context, email, password string, ci ClientIn
 	invalid := errs.New(errs.Unauthenticated, "invalid email or password")
 	norm, err := user.NormalizeEmail(email)
 	if err != nil {
-		_, _ = s.hasher.Verify(password, s.dummyHash)
+		_, _ = s.hasher.Verify(ctx, password, s.dummyHash)
 		return nil, IssuedSession{}, invalid
 	}
 	u, err := s.users.GetByEmail(ctx, norm)
 	if errs.Is(err, errs.NotFound) {
-		_, _ = s.hasher.Verify(password, s.dummyHash)
+		_, _ = s.hasher.Verify(ctx, password, s.dummyHash)
 		return nil, IssuedSession{}, invalid
 	}
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
-	ok, err := s.hasher.Verify(password, u.PasswordHash)
+	ok, err := s.hasher.Verify(ctx, password, u.PasswordHash)
+	if errs.CodeOf(err) == errs.RateLimited {
+		return nil, IssuedSession{}, err
+	}
 	if err != nil || !ok || u.Status != user.StatusActive {
 		return nil, IssuedSession{}, invalid
 	}
+	s.rehashIfOutdated(ctx, u, password)
 	var issued IssuedSession
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
@@ -149,6 +153,21 @@ func (s *Service) Login(ctx context.Context, email, password string, ci ClientIn
 		return s.audit.Record(ctx, userActor(u, ci), audit.ActionUserLogin, "user", u.ID.String(), nil)
 	})
 	return u, issued, err
+}
+
+// rehashIfOutdated upgrades a stored hash made with older argon2 parameters. It is best effort: a failure is logged and
+// never fails the login that triggered it.
+func (s *Service) rehashIfOutdated(ctx context.Context, u *user.User, password string) {
+	if !s.hasher.NeedsRehash(u.PasswordHash) {
+		return
+	}
+	hash, err := s.hasher.Hash(ctx, password)
+	if err == nil {
+		err = s.users.SetPassword(ctx, u.ID, hash)
+	}
+	if err != nil {
+		s.log.WarnContext(ctx, "password rehash failed", slog.String("user_id", u.ID.String()), slog.Any("error", err))
+	}
 }
 
 func (s *Service) newSession(ctx context.Context, userID uuid.UUID, ci ClientInfo) (IssuedSession, error) {

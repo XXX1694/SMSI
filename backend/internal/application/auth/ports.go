@@ -78,8 +78,10 @@ type ForgotQueue interface {
 
 // PasswordHasher hashes and verifies passwords.
 type PasswordHasher interface {
-	Hash(password string) (string, error)
-	Verify(password, encoded string) (bool, error)
+	Hash(ctx context.Context, password string) (string, error)
+	Verify(ctx context.Context, password, encoded string) (bool, error)
+	// NeedsRehash reports whether a valid stored hash uses outdated parameters.
+	NeedsRehash(encoded string) bool
 }
 
 // ClientInfo describes the caller for session metadata and audit.
