@@ -69,7 +69,9 @@ port_of() { # port_of KEY DEFAULT
   local value
   value=$(env_get "$1")
   value=${value:-$2}
-  [[ "$value" =~ ^[0-9]{1,5}$ ]] && [ "$value" -ge 1 ] && [ "$value" -le 65535 ] || die "$1 is not a port number: $value"
+  if ! [[ "$value" =~ ^[0-9]{1,5}$ ]] || [ "$value" -lt 1 ] || [ "$value" -gt 65535 ]; then
+    die "$1 is not a port number: $value"
+  fi
   printf '%s' "$value"
 }
 frontend_port=$(port_of FRONTEND_HOST_PORT 13000)
