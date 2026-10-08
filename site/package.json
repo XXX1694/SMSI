@@ -18,6 +18,6 @@
     "marked-highlight": "^2.2.4"
   },
   "devDependencies": {
-    "playwright-core": "1.56.0"
+    "playwright-core": "1.63.0"
   }
 }
