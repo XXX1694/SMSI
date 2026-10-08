@@ -12,20 +12,21 @@ Documentation=file:/opt/socialos/README.md
 # CPUs are contended.
 CPUQuota=100%
 CPUWeight=50
-# Memory: the slice is throttled and reclaimed from 544M on, and OOM-killed inside the slice (never elsewhere) at 600M.
-# 600M plus the soft caps of dockerd (128M) and containerd (256M) is half of the 1.97 GB of RAM.
+# Memory: throttled and reclaimed from 616M on, OOM-killed inside the slice (never elsewhere) at 664M. 664M plus the soft
+# caps of dockerd (192M) and containerd (128M) is 984M, half of the 1.97 GB of RAM. The per-container caps add up to more
+# (README, "Sharing a host safely": the trade-off).
 MemoryAccounting=yes
-MemoryHigh=544M
-MemoryMax=600M
+MemoryHigh=616M
+MemoryMax=664M
 # No swap: a leak ends in an OOM kill inside the slice instead of swap traffic that slows the whole disk.
 MemorySwapMax=0
 # Fork bombs: the whole stack runs about 60 tasks; the host allows about 15000 threads in total.
 TasksAccounting=yes
 TasksMax=512
 # Disk IO. The host disk uses the "none" scheduler without io.cost, so IOWeight is recorded but has no effect there; the
-# bandwidth caps (io.max) work with any scheduler. They are conservative placeholders until the disk has been measured;
-# a path stands for the block device that holds it.
+# read cap (io.max) works with any scheduler (a path stands for the block device that holds it). There is deliberately no
+# write cap until the disk has been measured: throttled writeback can hold up ext4 journal commits, and with them the
+# fsync of the other services on the same filesystem.
 IOAccounting=yes
 IOWeight=50
 IOReadBandwidthMax=/var/lib/docker 60M
-IOWriteBandwidthMax=/var/lib/docker 30M

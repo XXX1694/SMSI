@@ -7,12 +7,14 @@
 #   * the bundled Caddy is not started (its profile is never enabled), so nothing here listens on 80/443;
 #   * frontend, backend, mcp and the bundled MinIO are published on 127.0.0.1 only, on ports that rarely collide.
 #     The host proxy forwards app./api./mcp./s3.<domain> to them: see host-proxy/render-caddy.sh;
-#   * memory limits and Postgres settings are sized so that the whole stack fits in about 1 GB on a small shared host;
+#   * memory limits and Postgres settings are sized for a small shared host (caps: postgres 128m, redis 32m, minio 80m,
+#     backend 160m, worker 160m, mcp 64m, frontend 160m, migrate 64m during a deploy);
 #   * every SocialOS container has oom_score_adj 500: if the HOST runs out of memory, the kernel picks these containers
 #     before the host's Caddy or the other service (their score is around 0);
 #   * every SocialOS container runs in the systemd slice socialos.slice, which caps the whole stack (systemd/socialos.slice:
-#     1 CPU, 600 MB of RAM, no swap, 512 tasks); each container may not swap (memswap_limit = mem_limit) and runs at most
-#     SOCIALOS_PIDS_LIMIT processes. Install the slice unit before the first `up` with this file, otherwise systemd creates
+#     1 CPU, 664 MB of RAM, no swap, 512 tasks); each container may not swap (memswap_limit = mem_limit) and runs at most
+#     SOCIALOS_PIDS_LIMIT processes. The caps above add up to 784m (848m during a deploy), more than the slice: about 0.3 GB
+#     is in use, so the slice only binds when several containers peak at once, and then the OOM kill stays inside it. Install the slice unit before the first `up` with this file, otherwise systemd creates
 #     the slice without limits (README, "Sharing a host safely"). SOCIALOS_CGROUP_PARENT= (empty) in .env puts the containers
 #     back under Docker's default parent.
 #
@@ -34,8 +36,8 @@ services:
 
   postgres:
     <<: *host-guard
-    mem_limit: ${POSTGRES_MEM_LIMIT:-256m}
-    memswap_limit: ${POSTGRES_MEM_LIMIT:-256m} # no swap: a leak ends in an OOM kill, not in disk thrash
+    mem_limit: ${POSTGRES_MEM_LIMIT:-128m}
+    memswap_limit: ${POSTGRES_MEM_LIMIT:-128m} # no swap: a leak ends in an OOM kill, not in disk thrash
     # /dev/shm is only used for parallel-query segments (the main shared memory is mmap'd and counted in mem_limit). Keep it
     # at or above shared_buffers so that a different shared_memory_type or a larger buffer pool still fits.
     shm_size: ${POSTGRES_SHM_SIZE:-64mb}
@@ -50,22 +52,22 @@ services:
 
   redis:
     <<: *host-guard
-    mem_limit: ${REDIS_MEM_LIMIT:-64m}
-    memswap_limit: ${REDIS_MEM_LIMIT:-64m}
+    mem_limit: ${REDIS_MEM_LIMIT:-32m}
+    memswap_limit: ${REDIS_MEM_LIMIT:-32m}
 
   minio:
     <<: *host-guard
-    mem_limit: ${MINIO_MEM_LIMIT:-160m}
-    memswap_limit: ${MINIO_MEM_LIMIT:-160m}
+    mem_limit: ${MINIO_MEM_LIMIT:-80m}
+    memswap_limit: ${MINIO_MEM_LIMIT:-80m}
     ports:
       - "127.0.0.1:${MINIO_HOST_PORT:-19000}:9000"
     environment:
-      GOMEMLIMIT: ${MINIO_GOMEMLIMIT:-128MiB} # soft limit for the Go GC, a bit under mem_limit
+      GOMEMLIMIT: ${MINIO_GOMEMLIMIT:-56MiB} # soft limit for the Go GC, under mem_limit
 
   migrate:
     <<: *host-guard
-    mem_limit: ${MIGRATE_MEM_LIMIT:-128m}
-    memswap_limit: ${MIGRATE_MEM_LIMIT:-128m}
+    mem_limit: ${MIGRATE_MEM_LIMIT:-64m}
+    memswap_limit: ${MIGRATE_MEM_LIMIT:-64m}
 
   backend:
     <<: *host-guard
@@ -74,7 +76,7 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_HOST_PORT:-18080}:8080"
     environment:
-      GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-128MiB}
+      GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-100MiB} # leaves about 60 MiB of the cap for non-heap memory (multipart and upload buffers)
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10} # per process (backend and worker); keep 2 x this under POSTGRES_MAX_CONNECTIONS
 
   worker:
@@ -82,22 +84,22 @@ services:
     mem_limit: ${WORKER_MEM_LIMIT:-160m}
     memswap_limit: ${WORKER_MEM_LIMIT:-160m}
     environment:
-      GOMEMLIMIT: ${WORKER_GOMEMLIMIT:-128MiB}
+      GOMEMLIMIT: ${WORKER_GOMEMLIMIT:-100MiB}
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10}
 
   mcp:
     <<: *host-guard
-    mem_limit: ${MCP_MEM_LIMIT:-96m}
-    memswap_limit: ${MCP_MEM_LIMIT:-96m}
+    mem_limit: ${MCP_MEM_LIMIT:-64m}
+    memswap_limit: ${MCP_MEM_LIMIT:-64m}
     ports:
       - "127.0.0.1:${MCP_HOST_PORT:-13333}:3333"
     environment:
-      NODE_OPTIONS: ${MCP_NODE_OPTIONS:---max-old-space-size=48}
+      NODE_OPTIONS: ${MCP_NODE_OPTIONS:---max-old-space-size=40}
 
   frontend:
     <<: *host-guard
-    mem_limit: ${FRONTEND_MEM_LIMIT:-192m}
-    memswap_limit: ${FRONTEND_MEM_LIMIT:-192m}
+    mem_limit: ${FRONTEND_MEM_LIMIT:-160m}
+    memswap_limit: ${FRONTEND_MEM_LIMIT:-160m}
     ports:
       - "127.0.0.1:${FRONTEND_HOST_PORT:-13000}:3000"
     environment:

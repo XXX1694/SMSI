@@ -48,14 +48,18 @@ load_settings() {
   HOST_MEM_PSI_CRIT=$(cfg_int GUARD_HOST_MEM_PSI_CRIT 30)
   UNIT_PSI_WARN=$(cfg_int GUARD_UNIT_PSI_WARN 20)     # same, for the protected units (cpu, io, memory)
   UNIT_PSI_CRIT=$(cfg_int GUARD_UNIT_PSI_CRIT 50)
-  DISK_WARN=$(cfg_int GUARD_DISK_WARN 80)             # % of the disk in use: alert
-  DISK_CRIT=$(cfg_int GUARD_DISK_CRIT 92)             # ... and shed (stop the writers)
+  DISK_WARN=$(cfg_int GUARD_DISK_WARN 80)             # % of the disk in use: alert (stopping containers frees no space)
   DATA_BUDGET_GB=$(cfg_int GUARD_DATA_BUDGET_GB 15)   # SocialOS data on disk: alert above this
+  SLICE_MEM_MB=$(cfg_int GUARD_SLICE_MEM_MB 400)     # SocialOS counts as a contributor from this much memory ...
+  SLICE_CPU_PCT=$(cfg_int GUARD_SLICE_CPU_PCT 40)     # ... or this % of one CPU since the last run ...
+  SLICE_IO_MBPS=$(cfg_int GUARD_SLICE_IO_MBPS 10)     # ... or this many MB/s of disk IO since the last run
   CRIT_RUNS=$(cfg_int GUARD_CRIT_RUNS 2)              # consecutive critical runs before containers are stopped
-  RESUME_AFTER=$(cfg_int GUARD_RESUME_AFTER 3)        # consecutive calm runs before a paused worker is resumed
+  RESUME_AFTER=$(cfg_int GUARD_RESUME_AFTER 3)        # consecutive calm runs before a level 1 is undone
+  RESUME_AFTER_CRIT=$(cfg_int GUARD_RESUME_AFTER_CRIT 5) # ... a level 2; doubled for each level 2 within a day
+  RESUME_AFTER_MAX=$(cfg_int GUARD_RESUME_AFTER_MAX 60)  # ... but never more than this (60 runs = 2 hours)
 }
 
-LEVEL=0      # 0 calm, 1 pressure (pause the worker), 2 critical (stop the shed services)
+LEVEL=0      # 0 calm, 1 pressure (stop the worker), 2 critical (stop the shed services)
 REASONS=()
 
 raise() { # LEVEL REASON
@@ -115,16 +119,46 @@ assess_units() {
   done
 }
 
-# assess: sets LEVEL and REASONS from the current host state.
+# assess: sets LEVEL and REASONS from the current host state, and DISK_PCT.
 assess() {
-  local disk
   LEVEL=0
   REASONS=()
   assess_memory
   assess_units
-  disk=$(disk_used_pct)
-  if ((disk >= DISK_CRIT)); then raise 2 "disk ${disk}% >= ${DISK_CRIT}%"; fi
-  DISK_PCT=$disk
+  DISK_PCT=$(disk_used_pct)
+}
+
+# counter_rate NAME VALUE: per-second growth of a counter since the previous run (kept in $STATE_DIR/NAME.prev when
+# WRITE_STATE=true). Empty on the first run, after a counter reset or when no time has passed.
+counter_rate() {
+  local now prev_t="" prev_v=""
+  now=${GUARD_NOW:-$(date +%s)}
+  if [ -r "$STATE_DIR/$1.prev" ]; then read -r prev_t prev_v <"$STATE_DIR/$1.prev" || true; fi
+  if [ "${WRITE_STATE:-false}" = true ]; then printf '%s %s\n' "$now" "$2" >"$STATE_DIR/$1.prev"; fi
+  if [ -z "$prev_t" ] || [ -z "$prev_v" ] || ((now <= prev_t || $2 < prev_v)); then return 0; fi
+  printf '%s' $((($2 - prev_v) / (now - prev_t)))
+}
+
+# assess_socialos: is SocialOS a real contributor to the pressure? Sets CONTRIBUTES (true/false) and SOCIALOS_USAGE.
+# Without the slice's cgroup files (slice not installed) it cannot tell, and assumes yes: the guard then keeps protecting.
+assess_socialos() {
+  local cg=$CGROUP_ROOT/socialos.slice mem cpu io cpu_rate io_rate
+  if [ ! -r "$cg/memory.current" ]; then
+    CONTRIBUTES=true
+    SOCIALOS_USAGE="socialos.slice not found"
+    return 0
+  fi
+  mem=$(($(cat "$cg/memory.current") / 1048576))
+  cpu=$(awk '$1 == "usage_usec" { print $2 }' "$cg/cpu.stat" 2>/dev/null || true)
+  io=$(awk '{ for (i = 2; i <= NF; i++) if ($i ~ /^[rw]bytes=/) { split($i, a, "="); s += a[2] } } END { print s + 0 }' \
+    "$cg/io.stat" 2>/dev/null || true)
+  cpu_rate=$(counter_rate slice-cpu "${cpu:-0}") # microseconds of CPU per second
+  io_rate=$(counter_rate slice-io "${io:-0}")    # bytes per second
+  cpu=$((${cpu_rate:-0} / 10000))                # % of one CPU
+  io=$((${io_rate:-0} / 1048576))                # MB/s
+  SOCIALOS_USAGE="SocialOS uses ${mem} MB, ${cpu}% CPU, ${io} MB/s IO"
+  CONTRIBUTES=false
+  if ((mem >= SLICE_MEM_MB || cpu >= SLICE_CPU_PCT || io >= SLICE_IO_MBPS)); then CONTRIBUTES=true; fi
 }
 
 # data_used_gb: SocialOS data on disk (images, volumes, logs, backups, /opt/socialos), whole GB. -x: stays on the

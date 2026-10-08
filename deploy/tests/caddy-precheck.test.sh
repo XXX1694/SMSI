@@ -75,4 +75,31 @@ assert_eq "hang: exit 0" 0 "$rc"
 assert_eq "hang: snippet stays" socialos.caddy "$(live)"
 assert_has "hang: explained" "$out" "timed out"
 
+# 6. a run interrupted while the snippets were aside: the next run puts them back first, then decides again
+setup
+mkdir -p "$LIVE/quarantine/20261009T000000Z"
+mv "$LIVE/socialos.caddy" "$LIVE/quarantine/20261009T000000Z/"
+touch "$LIVE/quarantine/20261009T000000Z/.in-progress"
+precheck
+assert_eq "interrupted run: exit" 0 "$rc"
+assert_eq "interrupted run: snippet back in place" socialos.caddy "$(live)"
+assert_no_file "interrupted run: folder removed" "$LIVE/quarantine/20261009T000000Z"
+assert_has "interrupted run: explained" "$out" "put back the snippets of an interrupted run"
+assert_has "interrupted run: then validated as usual" "$out" "is valid"
+
+# 7. a finished quarantine without its alert (alert file deleted): alerted again; no marker, no move back
+setup
+mkdir -p "$LIVE/quarantine/20261009T000000Z"
+echo INVALID >"$LIVE/quarantine/20261009T000000Z/old.caddy"
+precheck
+assert_file "finished quarantine: alert" "$SB/opt/.deploy/guard/alerts/caddy-quarantine"
+assert_eq "finished quarantine: stays aside" 1 "$(quarantined)"
+assert_eq "finished quarantine: the live snippet is untouched" socialos.caddy "$(live)"
+
+# 8. a quarantine run leaves no in-progress marker behind
+setup
+echo INVALID >>"$LIVE/socialos.caddy"
+precheck
+assert_eq "no marker left after a quarantine" "" "$(find "$LIVE/quarantine" -name .in-progress)"
+
 finish
