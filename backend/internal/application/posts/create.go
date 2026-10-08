@@ -34,6 +34,9 @@ func (s *Service) Create(ctx context.Context, a actor.Actor, in CreateInput) (*p
 		if err := a.Require(apikey.PostsSchedule); err != nil {
 			return nil, err
 		}
+		if err := a.RequireVerified(); err != nil {
+			return nil, err
+		}
 		if err := s.validateScheduleTime(*in.ScheduledAt); err != nil {
 			return nil, err
 		}

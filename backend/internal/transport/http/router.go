@@ -49,6 +49,12 @@ type Options struct {
 	Ready         []ReadyCheck
 	APILimiter    *middleware.Limiter
 	AuthLimiter   *middleware.Limiter
+	// MailLimiter throttles endpoints that send or redeem mail (default 1 per minute, burst 3, per client).
+	MailLimiter *middleware.Limiter
+	// MailDelivery is the configured mail provider ("log" or "smtp"); /me and the mail endpoints report it.
+	MailDelivery string
+	// RequireVerification mirrors auth.Deps.RequireVerification for /me.
+	RequireVerification bool
 	// TelegramWebhookSecret enables POST /webhooks/telegram (webhook intake
 	// mode); with an empty secret the route does not exist.
 	TelegramWebhookSecret string
@@ -75,6 +81,9 @@ func NewRouter(svc Services, opt Options) http.Handler {
 	if opt.AuthLimiter == nil {
 		opt.AuthLimiter = middleware.NewLimiter(0.2, 10)
 	}
+	if opt.MailLimiter == nil {
+		opt.MailLimiter = middleware.NewLimiter(1.0/60, 3)
+	}
 	a := &API{svc: svc, opt: opt, trusted: middleware.TrustedProxies(opt.TrustedProxies)}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.Recover, middleware.AccessLog(opt.Logger, opt.Metrics), middleware.SecurityHeaders,
@@ -98,6 +107,12 @@ func NewRouter(svc Services, opt Options) http.Handler {
 				r.Use(middleware.RateLimit(opt.AuthLimiter, a.trusted, opt.Metrics, "auth:"))
 				r.Post("/auth/register", a.register)
 				r.Post("/auth/login", a.login)
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RateLimit(opt.MailLimiter, a.trusted, opt.Metrics, "mail:"))
+					r.Post("/auth/verify-email", a.verifyEmail)
+					r.Post("/auth/password/forgot", a.forgotPassword)
+					r.Post("/auth/password/reset", a.resetPassword)
+				})
 			})
 			r.Get("/social/{provider}/callback", a.callback)
 			r.Group(func(r chi.Router) {
@@ -117,6 +132,10 @@ func (a *API) mountOps(r chi.Router) {
 
 func (a *API) mountAuthenticated(r chi.Router) {
 	r.Post("/auth/logout", a.logout)
+	r.With(middleware.RateLimit(a.opt.MailLimiter, a.trusted, a.opt.Metrics, "mail:")).
+		Post("/auth/verify-email/resend", a.resendVerification)
+	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "reauth:")).
+		Post("/auth/password/change", a.changePassword)
 	r.Get("/me", a.me)
 
 	r.Get("/social/providers", a.listProviders)

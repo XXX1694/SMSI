@@ -41,6 +41,9 @@ func (s *Service) BeginOAuth(ctx context.Context, a actor.Actor, providerName, r
 	if err := a.RequireSession(); err != nil {
 		return "", err
 	}
+	if err := a.RequireVerified(); err != nil {
+		return "", err
+	}
 	if loginHint != "" && !loginHintRe.MatchString(loginHint) {
 		return "", errs.Validationf("account hint must be 1-32 characters of a-z, 0-9, _ or -")
 	}

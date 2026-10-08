@@ -36,7 +36,7 @@ func (s *Service) AuthenticateSession(ctx context.Context, rawToken string, ci C
 	}
 	a := actor.Actor{
 		UserID: u.ID, Type: actor.TypeUser, ID: u.ID.String(), Label: u.Email,
-		SessionID: sess.ID, RequestID: ci.RequestID, IP: ci.IP,
+		SessionID: sess.ID, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u),
 	}
 	return a, sess.CSRFToken, nil
 }
@@ -66,6 +66,13 @@ func (s *Service) AuthenticateAPIKey(ctx context.Context, raw string, ci ClientI
 	}
 	return actor.Actor{
 		UserID: k.UserID, Type: actor.TypeAPIKey, ID: k.ID.String(), Label: k.Name,
-		Scopes: k.Scopes, APIKeyID: k.ID, RequestID: ci.RequestID, IP: ci.IP,
+		Scopes: k.Scopes, APIKeyID: k.ID, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u),
 	}, nil
 }
+
+// verified is the actor's EmailVerified: true when the owner verified the
+// address or when this server does not enforce verification.
+func (s *Service) verified(u *user.User) bool { return !s.requireVerified || u.EmailVerified() }
+
+// VerificationEnforced reports whether unverified owners are restricted.
+func (s *Service) VerificationEnforced() bool { return s.requireVerified }

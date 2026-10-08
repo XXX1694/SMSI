@@ -40,10 +40,14 @@ type userDTO struct {
 	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
 	CreatedAt   time.Time `json:"created_at"`
+	// EmailVerified is false until the owner opens the mailed link.
+	EmailVerified bool   `json:"email_verified"`
+	Plan          string `json:"plan"`
 }
 
 func toUser(u *user.User) userDTO {
-	return userDTO{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, CreatedAt: utc(u.CreatedAt)}
+	return userDTO{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, CreatedAt: utc(u.CreatedAt),
+		EmailVerified: u.EmailVerified(), Plan: u.Plan}
 }
 
 type accountDTO struct {

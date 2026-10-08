@@ -101,7 +101,7 @@ func newSvc() (*Service, *memKeys, *memConns, *memUsage, *auditRec) {
 }
 
 func session() actor.Actor {
-	return actor.Actor{UserID: uuid.New(), Type: actor.TypeUser, ID: "u", SessionID: uuid.New()}
+	return actor.Actor{UserID: uuid.New(), Type: actor.TypeUser, ID: "u", SessionID: uuid.New(), EmailVerified: true}
 }
 
 func TestCreateKeyReturnsRawSecretOnceAndStoresOnlyHash(t *testing.T) {
@@ -271,5 +271,20 @@ func TestUsageWindowAndTotals(t *testing.T) {
 	usage.err = errors.New("db down")
 	if _, err := s.Usage(context.Background(), session()); err == nil {
 		t.Fatal("repo errors must propagate")
+	}
+}
+
+func TestUnverifiedOwnerCannotCreateKeysOrConnections(t *testing.T) {
+	s, keys, conns, _, _ := newSvc()
+	a := session()
+	a.EmailVerified = false
+	if _, _, err := s.CreateKey(context.Background(), a, CreateKeyInput{Name: "k"}); !errs.Is(err, errs.EmailNotVerified) {
+		t.Fatalf("CreateKey: %v", err)
+	}
+	if _, err := s.CreateMCPConnection(context.Background(), a, CreateMCPInput{Name: "c"}); !errs.Is(err, errs.EmailNotVerified) {
+		t.Fatalf("CreateMCPConnection: %v", err)
+	}
+	if len(keys.keys) != 0 || len(conns.conns) != 0 {
+		t.Fatal("something was created")
 	}
 }

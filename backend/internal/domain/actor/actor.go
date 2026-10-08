@@ -30,6 +30,10 @@ type Actor struct {
 	APIKeyID  uuid.UUID
 	RequestID string
 	IP        string
+	// EmailVerified is set by authentication: true when the owner verified the
+	// address, or when the server does not enforce verification (no mail
+	// delivery). Scheduler and system actors need no flag (see RequireVerified).
+	EmailVerified bool
 }
 
 // IsSession reports whether the actor authenticated with a browser session.
@@ -68,6 +72,19 @@ func (a Actor) RequireSession() error {
 		return errs.New(errs.Forbidden, "this action requires a browser session")
 	}
 	return nil
+}
+
+// RequireVerified returns EMAIL_NOT_VERIFIED when the owner has not verified
+// their email address on a server that enforces it. Background actors act on
+// work a verified user already started, so they always pass.
+func (a Actor) RequireVerified() error {
+	if a.UserID == uuid.Nil {
+		return errs.New(errs.Unauthenticated, "authentication required")
+	}
+	if a.Type == TypeScheduler || a.Type == TypeSystem || a.EmailVerified {
+		return nil
+	}
+	return errs.New(errs.EmailNotVerified, "verify your email address to use this feature")
 }
 
 // EffectiveScopes returns the scopes the actor holds.

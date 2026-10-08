@@ -29,6 +29,9 @@ func (s *Service) CreateMCPConnection(ctx context.Context, a actor.Actor, in Cre
 	if err := a.RequireSession(); err != nil {
 		return nil, err
 	}
+	if err := a.RequireVerified(); err != nil {
+		return nil, err
+	}
 	name, scopes, err := s.validateKeyInput(CreateKeyInput{Name: in.Name, Scopes: in.Scopes})
 	if err != nil {
 		return nil, err

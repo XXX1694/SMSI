@@ -394,3 +394,56 @@ func TestMCPToolCallAuditIsTenantScoped(t *testing.T) {
 }
 
 func mustMarshal(v any) []byte { b, _ := json.Marshal(v); return b }
+
+// A mailed token belongs to the user it was issued for, to one purpose, and works once.
+func TestEmailTokensAreBoundToOwnerAndPurpose(t *testing.T) {
+	cm := &captureMailer{}
+	e := newEnv(t, envOpts{startWorker: true, mailer: cm, mutate: enforce})
+	a, b := e.browser(), e.browser()
+	a.register("tok-a@example.com")
+	b.register("tok-b@example.com")
+	cm.waitMail(t, 2)
+	var verifyA string
+	for _, m := range cm.got {
+		if m.To == "tok-a@example.com" {
+			verifyA = token(t, m)
+		}
+	}
+	e.browser().must("POST", "/api/v1/auth/password/forgot", map[string]any{"email": "tok-a@example.com"}, 202)
+	cm.waitMail(t, 3)
+	resetA := token(t, cm.last(t, "reset_password"))
+
+	// Purposes do not mix.
+	if r := b.do("POST", "/api/v1/auth/verify-email", map[string]any{"token": resetA}); r.status != 400 {
+		t.Fatalf("reset token verified an email: %d %s", r.status, r.body)
+	}
+	if r := b.do("POST", "/api/v1/auth/password/reset", map[string]any{"token": verifyA, "password": "attacker chosen password"}); r.status != 400 {
+		t.Fatalf("verification token reset a password: %d %s", r.status, r.body)
+	}
+
+	// B redeeming A's link verifies A's address, never B's, and never changes who B is.
+	b.must("POST", "/api/v1/auth/verify-email", map[string]any{"token": verifyA}, 200)
+	if got := userField(t, b.do("GET", "/api/v1/me", nil), "email_verified"); got != false {
+		t.Fatalf("B was verified through A's token: %v", got)
+	}
+	if got := userField(t, a.do("GET", "/api/v1/me", nil), "email_verified"); got != true {
+		t.Fatalf("A not verified: %v", got)
+	}
+	// Reuse is refused, for the same and for a different session.
+	for _, c := range []*client{a, b, e.browser()} {
+		if r := c.do("POST", "/api/v1/auth/verify-email", map[string]any{"token": verifyA}); r.status != 400 {
+			t.Fatalf("reused token accepted: %d %s", r.status, r.body)
+		}
+	}
+	// B stays gated and B's password is untouched by A's reset flow.
+	if r := b.do("POST", "/api/v1/developer/api-keys", map[string]any{"name": "k", "scopes": []string{"posts:read"}}); r.status != 403 {
+		t.Fatalf("B ungated: %d", r.status)
+	}
+	e.browser().must("POST", "/api/v1/auth/password/reset", map[string]any{"token": resetA, "password": "a brand new password"}, 204)
+	if r := e.browser().login("tok-b@example.com", goodPassword); r.status != 200 {
+		t.Fatalf("B's password changed by A's reset: %d", r.status)
+	}
+	if r := e.browser().login("tok-a@example.com", "a brand new password"); r.status != 200 {
+		t.Fatalf("A's reset failed: %d", r.status)
+	}
+}

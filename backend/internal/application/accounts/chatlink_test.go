@@ -260,7 +260,7 @@ func newRig(t *testing.T) *rig {
 }
 
 func session(user uuid.UUID) actor.Actor {
-	return actor.Actor{UserID: user, Type: actor.TypeUser, ID: user.String(), SessionID: uuid.New()}
+	return actor.Actor{UserID: user, Type: actor.TypeUser, ID: user.String(), SessionID: uuid.New(), EmailVerified: true}
 }
 
 func (r *rig) start(t *testing.T, user uuid.UUID) *LinkStart {
@@ -579,5 +579,17 @@ func TestHandleChatUpdateWithUnconfiguredProviderIsANoop(t *testing.T) {
 	}
 	if err := r.svc.HandleChatUpdate(context.Background(), "linkedin", []byte("x")); err != nil {
 		t.Fatal("an unknown provider must be ignored")
+	}
+}
+
+func TestUnverifiedOwnerCannotStartChatLink(t *testing.T) {
+	r := newRig(t)
+	a := session(uuid.New())
+	a.EmailVerified = false
+	if _, err := r.svc.StartChatLink(context.Background(), a, "telegram"); !errs.Is(err, errs.EmailNotVerified) {
+		t.Fatalf("want EMAIL_NOT_VERIFIED, got %v", err)
+	}
+	if len(r.links.byID) != 0 {
+		t.Fatal("a code was created")
 	}
 }

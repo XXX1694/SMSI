@@ -2,6 +2,9 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +27,13 @@ type Service struct {
 	clock      port.Clock
 	sessionTTL time.Duration
 	dummyHash  string
+
+	tokens EmailTokens
+	mail   port.MailQueue
+	log    *slog.Logger
+	webURL string
+	// requireVerified makes unverified owners fail RequireVerified guards.
+	requireVerified bool
 }
 
 // Deps bundles Service dependencies.
@@ -36,6 +46,14 @@ type Deps struct {
 	Audit      port.AuditRecorder
 	Clock      port.Clock
 	SessionTTL time.Duration
+
+	Tokens EmailTokens
+	Mail   port.MailQueue
+	Log    *slog.Logger
+	// WebBaseURL is the frontend origin that mailed links point to.
+	WebBaseURL string
+	// RequireVerification enforces email verification (set when mail can really be delivered).
+	RequireVerification bool
 }
 
 // NewService creates the auth service.
@@ -43,12 +61,20 @@ func NewService(d Deps) (*Service, error) {
 	if d.SessionTTL == 0 {
 		d.SessionTTL = 7 * 24 * time.Hour
 	}
+	if d.Tokens == nil || d.Mail == nil {
+		return nil, errors.New("auth: Tokens and Mail are required")
+	}
 	dummy, err := d.Hasher.Hash("timing-equalizer-password")
 	if err != nil {
 		return nil, err
 	}
+	if d.Log == nil {
+		d.Log = slog.Default()
+	}
 	return &Service{users: d.Users, sessions: d.Sessions, keys: d.APIKeys, hasher: d.Hasher, tx: d.Tx,
-		audit: d.Audit, clock: d.Clock, sessionTTL: d.SessionTTL, dummyHash: dummy}, nil
+		audit: d.Audit, clock: d.Clock, sessionTTL: d.SessionTTL, dummyHash: dummy,
+		tokens: d.Tokens, mail: d.Mail, log: d.Log, webURL: strings.TrimRight(d.WebBaseURL, "/"),
+		requireVerified: d.RequireVerification}, nil
 }
 
 // RegisterInput is the registration payload.
@@ -73,7 +99,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, ci ClientInfo)
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
-	u := &user.User{Email: email, PasswordHash: hash, DisplayName: name, Status: user.StatusActive}
+	u := &user.User{Email: email, PasswordHash: hash, DisplayName: name, Status: user.StatusActive, Plan: user.DefaultPlan}
 	var issued IssuedSession
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		if err := s.users.Create(ctx, u); err != nil {
@@ -88,6 +114,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, ci ClientInfo)
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
+	s.IssueVerification(ctx, u)
 	return u, issued, nil
 }
 

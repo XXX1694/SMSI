@@ -17,7 +17,12 @@ type Status string
 const (
 	StatusActive   Status = "active"
 	StatusDisabled Status = "disabled"
+	// StatusDeleted marks an account whose owner deleted it; it can no longer sign in.
+	StatusDeleted Status = "deleted"
 )
+
+// DefaultPlan is the plan every account starts on.
+const DefaultPlan = "free"
 
 // User is an account owner (tenant).
 type User struct {
@@ -27,7 +32,14 @@ type User struct {
 	DisplayName  string
 	Status       Status
 	CreatedAt    time.Time
+	// EmailVerifiedAt is nil until the owner proves control of the address.
+	EmailVerifiedAt *time.Time
+	Plan            string
+	DeletedAt       *time.Time
 }
+
+// EmailVerified reports whether the address was verified.
+func (u *User) EmailVerified() bool { return u.EmailVerifiedAt != nil }
 
 // Password length bounds.
 const (
