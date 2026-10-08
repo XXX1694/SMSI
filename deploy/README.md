@@ -5,8 +5,9 @@ thing that listens on the internet; everything else lives on the internal compos
 
 There are two ways to run it. **Standalone** (this page, sections 1-12) is the default: the stack brings its own Caddy and owns
 ports 80/443. **Host-proxy mode** (section 13) is for a server where a reverse proxy already owns 80/443: the stack then listens
-on `127.0.0.1` only and that proxy forwards to it. Updates can be pushed from GitHub (section 8) or pulled by the server from
-GitHub Releases (section 14).
+on `127.0.0.1` only and that proxy forwards to it; on a host shared with another service, section 16 keeps SocialOS to at
+most half of the machine. Updates can be pushed from GitHub (section 8) or pulled by the server from GitHub Releases
+(section 14).
 
 ```
  browser ──► app.example.com  ─┐
@@ -28,7 +29,8 @@ GitHub Releases (section 14).
 | `Caddyfile` | hostnames, HTTPS, headers; `/metrics` is not routed publicly |
 | `docker-compose.host-proxy.yml` | override for host-proxy mode: no bundled Caddy, ports on `127.0.0.1`, memory limits for a small host (section 13) |
 | `host-proxy/` | `render-caddy.sh` stages the host Caddy snippet from `.env`; `install-caddy-import.sh` swaps it in, adds the one import line, validates, reloads and rolls everything back on failure (section 13) |
-| `autoupdate.sh`, `systemd/` | pull-based updates: a timer deploys the latest GitHub Release (section 14) |
+| `autoupdate.sh`, `systemd/` | pull-based updates: a timer deploys the latest GitHub Release (section 14); the slice, guard and Caddy pre-check units of section 16 |
+| `host-proxy/socialos-guard.sh`, `host-proxy/caddy-precheck.sh` | sharing a host: shed SocialOS load under host pressure; keep a broken snippet from stopping the host's Caddy (section 16, runbook `host-proxy/apply-guardrails.md`) |
 | `tests/` | shell tests for the scripts above (`bash tests/run.sh`, needs Linux; no Docker daemon, no network) |
 | `.env.prod.example` | every variable, documented. Copy to `.env` (or use `init-env.sh`) |
 | `init-env.sh` | creates `.env` with freshly generated secrets (`openssl rand`) |
@@ -370,6 +372,9 @@ certificate expires in under 14 days.
 | `install-caddy-import.sh` exits 4 (ROLLBACK NOT VERIFIED) | read its last messages: either a file could not be restored (the command to copy it back is printed), or Caddy could not be reloaded, or your sites still do not answer: `systemctl status caddy`, `journalctl -u caddy -n 50` |
 | `install-caddy-import.sh` exits 2 | a prerequisite is missing and nothing was changed: not root, nothing staged (run `render-caddy.sh`), no `HOST_PROXY_CHECK_URLS`, or `/opt/socialos/caddy` is not root-owned or is writable by others |
 | `install-caddy-import.sh` exits 3 | one of `HOST_PROXY_CHECK_URLS` was already failing before the change, so nothing was touched: fix that site first |
+| the guard paused or stopped SocialOS | `./host-proxy/socialos-guard.sh --status`, `journalctl -u socialos-guard -p warning`; once the cause is gone, `./host-proxy/socialos-guard.sh --resume` (level 1 resumes by itself) |
+| a container is OOM-killed although under its own cap | the slice is full: `systemctl show socialos.slice -p MemoryCurrent,MemoryPeak`, `journalctl -k \| grep -i oom` (section 16) |
+| SocialOS sites gone after a Caddy restart | `.deploy/guard/alerts/caddy-quarantine`: the pre-check moved a snippet Caddy rejected to `caddy/quarantine/`; fix it, then `render-caddy.sh` and `install-caddy-import.sh` |
 | the timer deploys nothing | `journalctl -u socialos-autoupdate -n 30`, `./autoupdate.sh --dry-run` (it says "not newer", "not a release version", "skipping", ...), `systemctl list-timers`, `.deploy/autoupdate_failed` (section 14) |
 
 ## 13. Behind an existing reverse proxy (host-proxy mode)
@@ -395,11 +400,11 @@ any failure puts the previous state back (13.5).
 |---|---|---|
 | Bundled Caddy | runs on 80/443 | not started |
 | Published ports | Caddy only | `127.0.0.1:13000` frontend, `:18080` backend, `:13333` mcp, `:19000` minio (`FRONTEND_HOST_PORT`, `BACKEND_HOST_PORT`, `MCP_HOST_PORT`, `MINIO_HOST_PORT`) |
-| Memory limit (hard cap, override with `<SERVICE>_MEM_LIMIT`) | postgres 768m, redis 192m, minio 512m, backend 384m, worker 384m, mcp 192m, frontend 512m, caddy 192m | postgres 256m, redis 64m, minio 160m, backend 160m, worker 160m, mcp 96m, frontend 160m: about 1 GB of caps, about 0.3 GB in use when idle |
+| Memory limit (hard cap, override with `<SERVICE>_MEM_LIMIT`) | postgres 768m, redis 192m, minio 512m, backend 384m, worker 384m, mcp 192m, frontend 512m, caddy 192m | postgres 256m, redis 64m, minio 160m, backend 160m, worker 160m, mcp 96m, frontend 192m, no swap, 128 processes each; the whole stack also inside `socialos.slice` (600M, 1 CPU, see "Sharing a host safely"); about 0.3 GB in use when idle |
 | PostgreSQL | image defaults | `shared_buffers=64MB`, `max_connections=40`, `work_mem=4MB` (`POSTGRES_SHARED_BUFFERS`, `POSTGRES_MAX_CONNECTIONS`, `POSTGRES_WORK_MEM`), pools of 10 (`DB_MAX_CONNS`) |
 
 All variables are documented in `.env.prod.example`. A container above its cap is OOM-killed and restarted by Docker; it never
-takes memory from the host's other service. Every SocialOS container also has `oom_score_adj: 500`, so if the *host* ever runs
+takes memory from the host's other service. On a host shared with another service, also follow section 16. Every SocialOS container also has `oom_score_adj: 500`, so if the *host* ever runs
 out of memory the kernel picks these containers before the host's Caddy or the other service, and Postgres gets a 64 MB
 `/dev/shm` (`POSTGRES_SHM_SIZE`, in step with `shared_buffers`). Watch `docker stats --no-stream` and `free -m` during the first days, and raise a
 limit when `docker inspect -f '{{.State.OOMKilled}}' <container>` says `true`.
@@ -623,3 +628,81 @@ A release is a git tag `vX.Y.Z` on `main`. Everything after the tag is automatic
 If the Release workflow fails on the CHANGELOG check, fix the changelog on `main`, then move the tag to the fixed commit
 (`git tag -f vX.Y.Z <sha> && git push -f origin vX.Y.Z`; an administrator can do that despite the protection) or delete the tag and
 push it again. No server has seen the release yet, because it does not exist before its images and notes do.
+
+## 16. Sharing a host safely
+
+On a host that also runs another production service (host-proxy mode, section 13), SocialOS must never slow that service
+down or take it with it, and should use at most half of the machine. Memory caps per container (section 13) are not enough
+on their own: seven caps add up to more than half of a 2 GB host, containers could still swap, a fork bomb could use the
+host's thread table, and the Docker daemons themselves are unbounded. This section adds four layers; the exact, ordered
+commands with checks and rollbacks for an existing installation are in [`host-proxy/apply-guardrails.md`](host-proxy/apply-guardrails.md),
+and the reasons in [D-008](../docs/DECISIONS.md).
+
+| Layer | What it does | Enforced by |
+|---|---|---|
+| `socialos.slice` (`systemd/socialos.slice`) | every SocialOS container runs in one slice: at most 1 CPU (`CPUQuota=100%` of 2) and half the CPU weight of the other services, throttled from 544M and OOM-killed inside the slice at 600M, no swap, 512 tasks, disk IO capped at 60/30 MB/s read/write | the kernel (cgroup v2), even when dockerd is down |
+| per container (`docker-compose.host-proxy.yml`) | `cgroup_parent: socialos.slice`, `mem_limit` (frontend 192m, others as in section 13), `memswap_limit` = `mem_limit`, `pids_limit` 128, `oom_score_adj` 500 | Docker and the kernel |
+| dockerd / containerd drop-ins (`systemd/*.service.d/socialos.conf`) | the daemons get `CPUQuota=50%`, `CPUWeight=50` and a soft `MemoryHigh` (128M / 256M); Docker starts after Caddy and the other service at boot (`After=` only) | systemd, no restart needed |
+| the guard (`host-proxy/socialos-guard.sh`, timer every 2 min) | measures RAM, swap, memory stalls, the other services' own CPU/IO/memory stall times (their PSI files) and the disk; under pressure it pauses the worker, and when critical twice in a row it stops `worker mcp frontend`; it alerts on a service that is down, a disk above 80%, SocialOS data above 15 GB and containers outside the slice | a oneshot service in `system.slice` |
+| Caddy pre-check (`host-proxy/caddy-precheck.sh`) | runs before every start of the host's Caddy; if our snippet makes the Caddyfile invalid, it moves the snippet to `caddy/quarantine/` so that Caddy, and the other sites, still start | `Before=caddy.service`, weak `Wants=` |
+
+The budget, for the 2 vCPU / 1.97 GB / 40 GB host: RAM 600M (slice) + 128M (dockerd) + 256M (containerd) = 984M, half of the
+RAM; CPU one of two CPUs for the containers, half a CPU each for the daemons, and only a third of the contended CPU when the
+other services want it too; swap none; disk about 15 GB of data (alert), the disk itself alerts at 80% and sheds load at
+92%. Docker needs no `daemon.json` change and no restart: the cgroup driver is already `systemd` on cgroup v2
+(`docker info -f '{{.CgroupDriver}} {{.CgroupVersion}}'` says `systemd 2`); with the `cgroupfs` driver `cgroup_parent` would
+not name a systemd slice, so set `SOCIALOS_CGROUP_PARENT=` (empty) there.
+
+**Install the slice before the compose file uses it.** If `socialos.slice` is not installed, systemd still creates the slice
+when the first container asks for it, but without limits; the guard reports that as the alert `slice`. Installing (all as root,
+in `/opt/socialos`, details and checks in the runbook):
+
+```bash
+install -m 644 systemd/socialos.slice /etc/systemd/system/ && systemctl daemon-reload   # 1. the slice
+./deploy.sh "$(cat .deploy/current_tag)" --no-migrate                                    # 2. containers move into it
+install -D -m 644 systemd/docker.service.d/socialos.conf /etc/systemd/system/docker.service.d/socialos.conf
+install -D -m 644 systemd/containerd.service.d/socialos.conf /etc/systemd/system/containerd.service.d/socialos.conf
+install -m 644 systemd/socialos-caddy-precheck.service systemd/socialos-guard.service systemd/socialos-guard.timer /etc/systemd/system/
+systemctl daemon-reload                                                                  # 3. daemons, pre-check, guard
+systemctl enable socialos-caddy-precheck.service && systemctl enable --now socialos-guard.timer
+```
+
+Edit the `After=` line of the docker drop-in and `GUARD_PROTECTED_UNITS` (default `irbisa.service caddy.service`) to name
+the services of your host; `GUARD_HEALTH_URLS` adds URLs whose failure is reported. Tune a slice value with a drop-in
+(`systemctl edit socialos.slice`), not by editing the unit, so that a refresh of `/opt/socialos` does not undo it.
+
+**What the guard does, and does not do.** Each run decides a level from the measurements (the thresholds are `GUARD_*` in
+`.env`, see `.env.prod.example`):
+
+| Level | When (defaults) | Action |
+|---|---|---|
+| 0 | none of the below | nothing; after 3 calm runs a level 1 is undone (the worker is unpaused) |
+| 1, pressure | RAM available < 15%, swap > 80% used, memory stall > 10%, a protected service waits > 20% of the time for CPU, IO or memory | pause the SocialOS worker (no publishing, no jobs: scheduled posts go out late, not lost) |
+| 2, critical (twice in a row) | RAM available < 8%, memory stall > 30%, a protected service stalls > 50%, disk > 92% | stop `GUARD_SHED_SERVICES` (`worker mcp frontend`; Postgres, Redis, MinIO and the API keep running). Stays so until `socialos-guard.sh --resume` |
+
+While anything is shed, `autoupdate.sh` deploys nothing. The guard only acts on containers labelled
+`com.docker.compose.project=socialos`; it reads the protected services' state and cgroup files and never starts, stops,
+restarts or reconfigures them. When the host is merely busy because of the other service, shedding SocialOS is still the
+right move: it frees what SocialOS used. Alerts are files in `.deploy/guard/alerts/` and `warning` lines in the journal
+(`journalctl -u socialos-guard -p warning`); nothing is sent anywhere. The public `Uptime` workflow (Monitoring) can watch
+the other site as well: add its URL to `UPTIME_URLS`.
+
+**Failure cases, and what holds.**
+
+| Case | What happens |
+|---|---|
+| a container leaks memory or spins | its own cap, then the slice cap; the OOM killer acts inside the slice only; the guard sheds if the host still feels it |
+| fork bomb | 128 processes per container, 512 for the slice (the host allows about 15000 threads) |
+| log flood | json-file 5 x 10 MB per container; dockerd, which writes the logs, at most half a CPU |
+| deploy (image pull and unpack) | dockerd and containerd capped; no deploy while the guard sheds load |
+| Docker daemon crash, restart or upgrade | the limits are kernel cgroups and stay; live-restore keeps the containers; Docker and Caddy come from third-party apt repositories, so unattended-upgrades (Ubuntu origins only) does not upgrade them |
+| host reboot | Docker starts after Caddy and the other service; the slice limits apply as the containers start; the guard starts 3 minutes after boot |
+| broken SocialOS snippet at Caddy start | moved to `caddy/quarantine/`, Caddy starts without the SocialOS sites, alert `caddy-quarantine` |
+| `/opt/socialos/caddy` missing | nothing: an `import` glob that matches no file is not an error for Caddy |
+| disk fills up | alert at 80% and at 15 GB of SocialOS data; at 92% the writers are stopped. There is no hard filesystem quota on ext4 without remounting; a separate volume or loop file for the Docker data is the next step if the data grows |
+| Let's Encrypt or sslip.io outage | only SocialOS hostnames lack certificates; limits are per hostname, so the other site's renewals are unaffected |
+| port conflict | SocialOS binds only `127.0.0.1:13000/13333/18080/19000`; at boot the other service binds first |
+
+IO is the one budget without a proof: the host disk uses the `none` scheduler without `io.cost`, so `IOWeight` has no
+effect and the slice uses absolute caps (60 MB/s read, 30 MB/s write) that are placeholders until the disk has been measured
+in a maintenance window. The guard watches the outcome that matters, the other service's IO stall time.

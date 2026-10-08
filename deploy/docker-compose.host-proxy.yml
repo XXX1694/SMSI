@@ -9,11 +9,22 @@
 #     The host proxy forwards app./api./mcp./s3.<domain> to them: see host-proxy/render-caddy.sh;
 #   * memory limits and Postgres settings are sized so that the whole stack fits in about 1 GB on a small shared host;
 #   * every SocialOS container has oom_score_adj 500: if the HOST runs out of memory, the kernel picks these containers
-#     before the host's Caddy or the other service (their score is around 0).
+#     before the host's Caddy or the other service (their score is around 0);
+#   * every SocialOS container runs in the systemd slice socialos.slice, which caps the whole stack (systemd/socialos.slice:
+#     1 CPU, 600 MB of RAM, no swap, 512 tasks); each container may not swap (memswap_limit = mem_limit) and runs at most
+#     SOCIALOS_PIDS_LIMIT processes. Install the slice unit before the first `up` with this file, otherwise systemd creates
+#     the slice without limits (README, "Sharing a host safely"). SOCIALOS_CGROUP_PARENT= (empty) in .env puts the containers
+#     back under Docker's default parent.
 #
 # Every number below can be overridden in .env (see .env.prod.example). The limits are hard caps: a container above its
 # limit is OOM-killed and restarted, which is better than starving the other services on the host.
 # The standalone mode (docker-compose.prod.yml alone) is unchanged and remains the default.
+
+# Shared by every SocialOS service in this mode. Docker's systemd cgroup driver accepts only a slice name here.
+x-host-guard: &host-guard
+  oom_score_adj: 500
+  cgroup_parent: ${SOCIALOS_CGROUP_PARENT-socialos.slice}
+  pids_limit: ${SOCIALOS_PIDS_LIMIT:-128}
 
 services:
   # Never started: nobody enables this profile. The bundled Caddy would fight the host proxy for ports 80 and 443.
@@ -22,8 +33,9 @@ services:
     profiles: ["disabled-in-host-proxy-mode"]
 
   postgres:
+    <<: *host-guard
     mem_limit: ${POSTGRES_MEM_LIMIT:-256m}
-    oom_score_adj: 500
+    memswap_limit: ${POSTGRES_MEM_LIMIT:-256m} # no swap: a leak ends in an OOM kill, not in disk thrash
     # /dev/shm is only used for parallel-query segments (the main shared memory is mmap'd and counted in mem_limit). Keep it
     # at or above shared_buffers so that a different shared_memory_type or a larger buffer pool still fits.
     shm_size: ${POSTGRES_SHM_SIZE:-64mb}
@@ -37,24 +49,28 @@ services:
       - work_mem=${POSTGRES_WORK_MEM:-4MB}
 
   redis:
+    <<: *host-guard
     mem_limit: ${REDIS_MEM_LIMIT:-64m}
-    oom_score_adj: 500
+    memswap_limit: ${REDIS_MEM_LIMIT:-64m}
 
   minio:
+    <<: *host-guard
     mem_limit: ${MINIO_MEM_LIMIT:-160m}
-    oom_score_adj: 500
+    memswap_limit: ${MINIO_MEM_LIMIT:-160m}
     ports:
       - "127.0.0.1:${MINIO_HOST_PORT:-19000}:9000"
     environment:
       GOMEMLIMIT: ${MINIO_GOMEMLIMIT:-128MiB} # soft limit for the Go GC, a bit under mem_limit
 
   migrate:
+    <<: *host-guard
     mem_limit: ${MIGRATE_MEM_LIMIT:-128m}
-    oom_score_adj: 500
+    memswap_limit: ${MIGRATE_MEM_LIMIT:-128m}
 
   backend:
+    <<: *host-guard
     mem_limit: ${BACKEND_MEM_LIMIT:-160m}
-    oom_score_adj: 500
+    memswap_limit: ${BACKEND_MEM_LIMIT:-160m}
     ports:
       - "127.0.0.1:${BACKEND_HOST_PORT:-18080}:8080"
     environment:
@@ -62,23 +78,26 @@ services:
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10} # per process (backend and worker); keep 2 x this under POSTGRES_MAX_CONNECTIONS
 
   worker:
+    <<: *host-guard
     mem_limit: ${WORKER_MEM_LIMIT:-160m}
-    oom_score_adj: 500
+    memswap_limit: ${WORKER_MEM_LIMIT:-160m}
     environment:
       GOMEMLIMIT: ${WORKER_GOMEMLIMIT:-128MiB}
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10}
 
   mcp:
+    <<: *host-guard
     mem_limit: ${MCP_MEM_LIMIT:-96m}
-    oom_score_adj: 500
+    memswap_limit: ${MCP_MEM_LIMIT:-96m}
     ports:
       - "127.0.0.1:${MCP_HOST_PORT:-13333}:3333"
     environment:
       NODE_OPTIONS: ${MCP_NODE_OPTIONS:---max-old-space-size=48}
 
   frontend:
-    mem_limit: ${FRONTEND_MEM_LIMIT:-160m}
-    oom_score_adj: 500
+    <<: *host-guard
+    mem_limit: ${FRONTEND_MEM_LIMIT:-192m}
+    memswap_limit: ${FRONTEND_MEM_LIMIT:-192m}
     ports:
       - "127.0.0.1:${FRONTEND_HOST_PORT:-13000}:3000"
     environment:
@@ -86,4 +105,4 @@ services:
 
   # Operator tool (profile "tools", never started by `up`).
   telegram:
-    oom_score_adj: 500
+    <<: *host-guard

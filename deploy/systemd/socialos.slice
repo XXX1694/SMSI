@@ -1,0 +1,31 @@
+# Every SocialOS container runs in this slice (docker-compose.host-proxy.yml sets cgroup_parent: socialos.slice), so the
+# kernel enforces one budget for the whole stack, whatever a single container does. Sized for a shared 2 vCPU / 2 GB host
+# where SocialOS may use at most half; dockerd and containerd stay outside (their drop-ins cap them separately).
+# No [Install] section: systemd starts the slice when Docker puts the first container in it. Install and tune: README,
+# "Sharing a host safely"; to change a value, add /etc/systemd/system/socialos.slice.d/override.conf instead of editing this.
+[Unit]
+Description=SocialOS containers (at most half of the shared host)
+Documentation=file:/opt/socialos/README.md
+
+[Slice]
+# CPU: never more than one of the two CPUs, and half the weight of system.slice (where the other services run) when the
+# CPUs are contended.
+CPUQuota=100%
+CPUWeight=50
+# Memory: the slice is throttled and reclaimed from 544M on, and OOM-killed inside the slice (never elsewhere) at 600M.
+# 600M plus the soft caps of dockerd (128M) and containerd (256M) is half of the 1.97 GB of RAM.
+MemoryAccounting=yes
+MemoryHigh=544M
+MemoryMax=600M
+# No swap: a leak ends in an OOM kill inside the slice instead of swap traffic that slows the whole disk.
+MemorySwapMax=0
+# Fork bombs: the whole stack runs about 60 tasks; the host allows about 15000 threads in total.
+TasksAccounting=yes
+TasksMax=512
+# Disk IO. The host disk uses the "none" scheduler without io.cost, so IOWeight is recorded but has no effect there; the
+# bandwidth caps (io.max) work with any scheduler. They are conservative placeholders until the disk has been measured;
+# a path stands for the block device that holds it.
+IOAccounting=yes
+IOWeight=50
+IOReadBandwidthMax=/var/lib/docker 60M
+IOWriteBandwidthMax=/var/lib/docker 30M

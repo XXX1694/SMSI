@@ -129,3 +129,29 @@ self-hoster without SMTP).
 the same as most sign-up forms). Existing users are unverified and must verify once mail is switched on. The rendered
 mail, with its link, sits in Redis until the worker sends it (D-006), and the forgot task holds the address until
 it runs. The mail limiter is in memory and per instance.
+
+## D-012: SocialOS gets at most half of the shared host, enforced by a systemd slice and a load-shedding guard (2026-10-09)
+
+**Context.** Production shares a 2 vCPU / 2 GB VPS with another production service (D-001). Per-container memory caps
+alone add up to more than half of the RAM, containers could swap, the default per-container task limit (2264) times seven
+exceeds the host's thread limit (about 15000), and dockerd/containerd are unbounded (containerd peaked at 963 MB during the
+first image pull). The other service's units, Caddy and the host configuration are not ours to change.
+
+**Decision.** All SocialOS containers run in `socialos.slice` (compose `cgroup_parent` in host-proxy mode; Docker already
+uses the systemd cgroup driver on cgroup v2, so no daemon change or restart): `CPUQuota=100%`, `CPUWeight=50`,
+`MemoryHigh=544M`, `MemoryMax=600M`, `MemorySwapMax=0`, `TasksMax=512`, IO bandwidth caps. Each container gets
+`memswap_limit = mem_limit` and `pids_limit`. Drop-ins give dockerd and containerd a CPU quota, a lower CPU weight and a soft
+memory cap, and order Docker after Caddy and the other service (ordering only). A guard timer reads host and per-service
+pressure (PSI) and, only under pressure, pauses the worker, then stops the non-essential containers; it alerts but never
+acts on the other service. A Caddy pre-check unit quarantines a SocialOS snippet that would stop Caddy from starting.
+
+**Alternatives.** `daemon.json` `cgroup-parent`: catches `docker run` too, but needs a Docker restart and changes every
+container. Per-container limits only: no single budget, no swap or task cap for the whole stack. `MemoryMax` on containerd:
+could kill the shims and orphan running containers. `IOWeight` alone: no effect with the `none` IO scheduler. A loop-mounted
+filesystem as a hard disk quota: needs a data migration and downtime; deferred until the data grows. A drop-in on
+`caddy.service` (`ExecStartPre`): would edit a unit that belongs to the other service.
+
+**Consequences.** The containers' hard memory budget shrinks to 600M (about 300M used today); under real contention the
+slice gets a third of the CPU. A level-2 shed stops the UI and MCP until someone runs `socialos-guard.sh --resume`, and
+autoupdate pauses while load is shed. IO caps are placeholders until the disk is measured. Standalone mode is unchanged.
+Not solved here (the other service's owner): `caddy.service` has `Restart=no`, and journald has no size cap.

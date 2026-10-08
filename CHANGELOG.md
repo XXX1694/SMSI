@@ -12,6 +12,11 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - When `MAIL_PROVIDER=smtp`, unverified accounts get `403 EMAIL_NOT_VERIFIED` on connecting networks, scheduling, publishing, editing scheduled posts and creating API keys. With the log provider nothing is restricted and the dashboard says mail is off. Existing accounts start unverified.
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.
 - Database migration `00003` also prepares plans, quotas, data export and account deletion; it needs no manual step.
+- Sharing a host safely (host-proxy mode): every SocialOS container runs in the systemd slice `socialos.slice` (1 CPU, 664 MB, no swap, 512 tasks for the whole stack), may not swap and has a process cap; drop-ins cap dockerd and containerd; a guard timer stops the SocialOS worker, then the worker, MCP and UI, only when the host is under pressure and SocialOS is a real contributor, and resumes them once the host is calm; it also alerts on disk, data budget and the other services' health. A Caddy pre-check keeps a broken SocialOS snippet from stopping the host's Caddy. Runbook: `deploy/host-proxy/apply-guardrails.md`.
+
+### Changed
+
+- Host-proxy mode: memory caps rebalanced to fit the slice (backend and worker 160m with `GOMEMLIMIT=100MiB`, frontend 160m, postgres 112m, minio 80m, mcp 56m, redis 32m, migrate 64m). Automatic updates do not deploy while the guard has shed load.
 
 ## [0.1.0] - 2026-10-09
 
