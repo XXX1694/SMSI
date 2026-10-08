@@ -6,6 +6,10 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Security
+
+- The generated Claude Desktop config no longer runs `npx -y socialos-mcp`: that npm package does not exist, and whoever registered the name would have received users' API keys. Configs, the MCP connections page and the docs now use Claude Desktop connectors or the `mcp-remote` bridge pinned to an exact version, and a regression test rejects `socialos-mcp` and unpinned `npx` packages.
+
 ### Added
 
 - Email verification, password reset and password change. Mailed links carry a single-use token in the URL fragment (48 h to verify, 30 min to reset). A reset signs out every session; a change keeps the current one. API keys and MCP connections are revoked only if you tick "Also revoke all API keys and MCP connections".

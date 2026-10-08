@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -537,7 +538,7 @@ func TestEndpointContract(t *testing.T) {
 			t.Errorf("http config not ready to paste: %v", httpCfg)
 		}
 		env := stdioCfg["env"].(map[string]any)
-		if stdioCfg["command"] != "npx" || env["SOCIALOS_API_KEY"] != rawMCP || !strings.HasPrefix(env["SOCIALOS_API_URL"].(string), "http://") {
+		if stdioCfg["command"] != "npx" || env["SOCIALOS_AUTH_HEADER"] != "Bearer "+rawMCP || strings.Contains(fmt.Sprint(stdioCfg["args"]), "socialos-mcp") {
 			t.Errorf("stdio config not ready to paste: %v", stdioCfg)
 		}
 		if !strings.Contains(cfg["claude_code"].(string), rawMCP) || !strings.Contains(cfg["claude_code"].(string), "http://mcp.test/mcp") {

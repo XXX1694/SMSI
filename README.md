@@ -294,7 +294,7 @@ To get a key, create a connection in **Developer → MCP connections**. The UI s
 | `delete_post` | `posts:delete` | **sensitive**, requires `confirm: true` |
 | `disconnect_account` | `social:disconnect` | **critical**, requires `confirm: true` |
 
-Tools without a granted scope are not even listed. The REST API enforces scopes again on every call, and every agent action is written to the audit log as `api_key:<name>`. Revoking the connection invalidates the key immediately. Keys can never create keys or change account security. Client configuration examples (Claude Desktop over stdio, HTTP clients, `mcp-remote`) are in [`mcp/README.md`](mcp/README.md). OAuth 2.1 authorization for MCP is the planned upgrade path; the key model already provides per-user binding, scopes, expiry and revocation.
+Tools without a granted scope are not even listed. The REST API enforces scopes again on every call, and every agent action is written to the audit log as `api_key:<name>`. Revoking the connection invalidates the key immediately. Keys can never create keys or change account security. Client configuration examples (Claude Desktop connector or pinned `mcp-remote` bridge, Claude Code, Cursor) are in [`mcp/README.md`](mcp/README.md). OAuth 2.1 authorization for MCP is the planned upgrade path; the key model already provides per-user binding, scopes, expiry and revocation.
 
 ## 11. Acceptance criterion
 

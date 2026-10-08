@@ -23,15 +23,30 @@ function CreatedPanel({ created, onDone }: { created: CreatedMcpConnection; onDo
         <p className="text-sm text-muted-foreground">This config contains the API key and is shown only once. Paste it into your MCP client now.</p>
       </div>
       <Tabs defaultValue="http">
-        <TabsList aria-label="Transport">
-          <TabsTrigger value="http">HTTP</TabsTrigger>
-          <TabsTrigger value="stdio">stdio</TabsTrigger>
+        <TabsList aria-label="Client">
+          <TabsTrigger value="http">Claude Code, Cursor</TabsTrigger>
+          <TabsTrigger value="stdio">Claude Desktop</TabsTrigger>
         </TabsList>
         <TabsContent value="http">
+          <p className="mb-2 text-sm text-muted-foreground">
+            Native HTTP with an Authorization header. In Claude Code run the one-liner below; in Cursor put the JSON into <code>mcp.json</code> and
+            replace the key with <code>{'${env:SOCIALOS_API_KEY}'}</code> if you keep it in an environment variable.
+          </p>
           <CodeBlock title="HTTP config" code={created.config.http} />
         </TabsContent>
         <TabsContent value="stdio">
-          <CodeBlock title="stdio config" code={created.config.stdio} />
+          <div className="mb-2 space-y-2 text-sm text-muted-foreground">
+            <p>
+              <strong>Connector (no install):</strong> Settings, Customize, Connectors, Add custom connector, enter the MCP URL, choose “No sign-in” and add{' '}
+              <code>Authorization: Bearer &lt;key&gt;</code> under Request headers. Request headers are a beta that not every plan has yet, and the URL must be
+              reachable from the internet over HTTPS. OAuth sign-in is not available for SocialOS yet.
+            </p>
+            <p>
+              <strong>Bridge:</strong> paste this into <code>claude_desktop_config.json</code> and restart Claude Desktop. It runs the community package{' '}
+              <code>mcp-remote</code> pinned to an exact version; the key stays in the <code>env</code> block, not in the command line.
+            </p>
+          </div>
+          <CodeBlock title="Bridge config" code={created.config.stdio} />
         </TabsContent>
       </Tabs>
       <div className="flex items-center gap-2">

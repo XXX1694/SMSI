@@ -57,7 +57,7 @@ server or product).
 
 ## 3. Unresolved mismatches with other components
 
-1. **`socialos-mcp` is not published to npm.** The generated stdio config runs `npx -y socialos-mcp --stdio`, which fails until the package exists. Local alternative: `node <repo>/mcp/dist/index.js --stdio` with `SOCIALOS_API_KEY` and `SOCIALOS_API_URL`. The HTTP config (`http://localhost:3333/mcp` or `MCP_PUBLIC_URL`) needs the MCP server running.
+1. **`socialos-mcp` is not published to npm, and the config no longer references it.** The `stdio` key of the generated config is now the Claude Desktop bridge: `npx -y mcp-remote@0.14.3 <mcp url> --header Authorization:${SOCIALOS_AUTH_HEADER}` with the key in `env` (the key name `stdio` is kept for contract compatibility). Local alternative without npm: `node <repo>/mcp/dist/index.js --stdio` with `SOCIALOS_API_KEY` and `SOCIALOS_API_URL`.
 2. **Frontend `Capabilities` type is camelCase** (`canPublishText`...). The backend sends snake_case as the contract requires; `frontend/src/lib/normalize.ts` converts, but any consumer that bypasses it will see snake_case keys.
 3. **Frontend `CreatedApiKey` is `{key: ApiKey, rawKey}`**; the backend sends `{api_key, key, raw_key}` (see section 1). The normalizer copes (it takes the record from `api_key` and the secret from `raw_key`). `key` therefore means the secret on this endpoint but the record in the frontend type; decide on one shape and drop the aliases.
 4. **Frontend `Post.created_by_ref`** (who created it) has no backend field; `created_by` is `user|api_key` only.
