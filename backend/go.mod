@@ -2,6 +2,8 @@ module github.com/socialos/backend
 
 go 1.26.0
 
+toolchain go1.26.9
+
 require (
 	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/go-chi/chi/v5 v5.3.2
