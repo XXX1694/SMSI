@@ -34,16 +34,16 @@ func CSRFToken(ctx context.Context) string {
 }
 
 // ClientInfoFrom builds auth.ClientInfo for a request.
-func ClientInfoFrom(r *http.Request, trustProxy bool) auth.ClientInfo {
-	return auth.ClientInfo{UserAgent: r.UserAgent(), IP: ClientIP(r, trustProxy), RequestID: httpx.RequestID(r.Context())}
+func ClientInfoFrom(r *http.Request, trusted TrustedProxies) auth.ClientInfo {
+	return auth.ClientInfo{UserAgent: r.UserAgent(), IP: ClientIP(r, trusted), RequestID: httpx.RequestID(r.Context())}
 }
 
 // Authenticate resolves a Bearer API key or the session cookie. Invalid bearer
 // credentials are rejected immediately; an invalid cookie means anonymous.
-func Authenticate(a Authenticator, trustProxy bool) func(http.Handler) http.Handler {
+func Authenticate(a Authenticator, trusted TrustedProxies) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ci := ClientInfoFrom(r, trustProxy)
+			ci := ClientInfoFrom(r, trusted)
 			ctx := r.Context()
 			if h := r.Header.Get("Authorization"); h != "" {
 				scheme, token, _ := strings.Cut(h, " ")

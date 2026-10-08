@@ -73,7 +73,7 @@ func (a *API) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u, sess, err := a.svc.Auth.Register(r.Context(), auth.RegisterInput{Email: req.Email, Password: req.Password, DisplayName: req.DisplayName},
-		middleware.ClientInfoFrom(r, a.opt.TrustProxy))
+		middleware.ClientInfoFrom(r, a.trusted))
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
@@ -88,7 +88,7 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	u, sess, err := a.svc.Auth.Login(r.Context(), req.Email, req.Password, middleware.ClientInfoFrom(r, a.opt.TrustProxy))
+	u, sess, err := a.svc.Auth.Login(r.Context(), req.Email, req.Password, middleware.ClientInfoFrom(r, a.trusted))
 	if err != nil {
 		httpx.Error(w, r, err)
 		return

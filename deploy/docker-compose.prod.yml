@@ -44,7 +44,10 @@ x-backend-env: &backend-env
   COOKIE_SECURE: "true"
   # The OAuth callback lands on api.<domain>, the login cookie is issued via app.<domain>: share it across the subdomains.
   COOKIE_DOMAIN: ${COOKIE_DOMAIN:-${DOMAIN}}
-  TRUST_PROXY: "true" # Caddy sets X-Forwarded-For; nothing else can reach the backend
+  # Caddy sets X-Forwarded-For (it replaces whatever the client sent); nothing else can reach the backend. The client
+  # address is the right-most hop that is not in TRUSTED_PROXIES, so a forged header cannot pick the rate-limit bucket.
+  TRUST_PROXY: "true"
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-} # empty = loopback + private ranges (the compose network); see .env.prod.example
 
   # Object storage. Default: the bundled MinIO ("minio" profile). For S3/R2 set S3_ENDPOINT, S3_USE_SSL=true and
   # S3_PUBLIC_ENDPOINT= (empty) in .env, and drop the minio profile.

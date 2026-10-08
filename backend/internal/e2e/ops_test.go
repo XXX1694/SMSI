@@ -88,6 +88,55 @@ func TestAuthEndpointsAreThrottled(t *testing.T) {
 	}
 }
 
+// The per-IP limit protects anonymous endpoints (login, register). With the proxy trusted, the client address is the
+// right-most X-Forwarded-For hop that is not itself a proxy, so forging the left part must not buy a fresh bucket.
+func TestAuthThrottleIgnoresForgedForwardedFor(t *testing.T) {
+	login := func(c *client, xff string) int {
+		req, _ := http.NewRequest("POST", c.e.srv.URL+"/api/v1/auth/login",
+			strings.NewReader(`{"email":"nobody@example.com","password":"wrong password!!"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Forwarded-For", xff)
+		return c.send(req).status
+	}
+	attempts := func(e *env, realClient string) []int {
+		c, codes := e.browser(), []int{}
+		for i := 0; i < 6; i++ {
+			codes = append(codes, login(c, fmt.Sprintf("198.51.100.%d, %s", i+1, realClient))) // forged hop, then what the proxy saw
+		}
+		return codes
+	}
+	limit := func(c *config.Config) { c.AuthRateRPS, c.AuthRateBurst = 0.001, 3 }
+
+	t.Run("behind a trusted proxy the forged hop is ignored", func(t *testing.T) {
+		// The test server's peer is 127.0.0.1, which the default trust set covers.
+		e := newEnv(t, envOpts{mutate: func(c *config.Config) {
+			limit(c)
+			c.TrustProxy, c.TrustedProxies = true, config.DefaultTrustedProxies()
+		}})
+		if got := fmt.Sprint(attempts(e, "203.0.113.9")); got != "[401 401 401 429 429 429]" {
+			t.Fatalf("one real client rotating forged hops: %s", got)
+		}
+		if got := login(e.browser(), "203.0.113.10"); got != 401 {
+			t.Fatalf("another real client must have its own bucket, got %d", got)
+		}
+	})
+	t.Run("with TRUST_PROXY off the header is not read at all", func(t *testing.T) {
+		e := newEnv(t, envOpts{mutate: limit})
+		if got := fmt.Sprint(attempts(e, "203.0.113.9")); got != "[401 401 401 429 429 429]" {
+			t.Fatalf("one peer rotating X-Forwarded-For: %s", got)
+		}
+	})
+	t.Run("an untrusted peer cannot make itself a proxy", func(t *testing.T) {
+		e := newEnv(t, envOpts{mutate: func(c *config.Config) {
+			limit(c)
+			c.TrustProxy, c.TrustedProxies = true, config.DefaultTrustedProxies()[2:3] // only 10.0.0.0/8; the test peer is 127.0.0.1
+		}})
+		if got := fmt.Sprint(attempts(e, "203.0.113.9")); got != "[401 401 401 429 429 429]" {
+			t.Fatalf("one peer outside the trust set: %s", got)
+		}
+	})
+}
+
 // ---------------------------------------------------------------- ops
 
 type pingFailStorage struct {

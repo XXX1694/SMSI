@@ -18,6 +18,11 @@
 	}
 }
 
+# Client address: reverse_proxy replaces any X-Forwarded-For the client sent with the address it sees (it only keeps the
+# header from peers listed in the global `trusted_proxies` option, which is unset here). On app.<domain> the Next.js
+# server forwards that header to the backend untouched. The backend (TRUST_PROXY, TRUSTED_PROXIES) trusts it only from
+# private peers and reads it from the right. If another proxy ever sits in front of this Caddy, see .env.prod.example.
+
 # Web UI. /api/v1/* is proxied to the backend by the Next.js server itself, so browsers only ever talk to this origin.
 app.{$DOMAIN} {
 	import common

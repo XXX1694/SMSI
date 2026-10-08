@@ -68,11 +68,12 @@ func (l *Limiter) Sweep() {
 	l.mu.Unlock()
 }
 
-// RateLimit applies the limiter keyed by actor (user/API key) or client IP.
-func RateLimit(l *Limiter, trustProxy bool, m *observability.Metrics, prefix string) func(http.Handler) http.Handler {
+// RateLimit applies the limiter keyed by actor (user/API key) or, for anonymous callers, the client IP as resolved by
+// ClientIP (so a forged X-Forwarded-For cannot pick the bucket).
+func RateLimit(l *Limiter, trusted TrustedProxies, m *observability.Metrics, prefix string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			key := prefix + "ip:" + ClientIP(r, trustProxy)
+			key := prefix + "ip:" + ClientIP(r, trusted)
 			if a, ok := actor.From(r.Context()); ok {
 				key = prefix + string(a.Type) + ":" + a.ID
 			}

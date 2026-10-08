@@ -180,7 +180,7 @@ func (a *App) Router() http.Handler {
 	}
 	return transport.NewRouter(a.Services, transport.Options{
 		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
-		CookieDomain: a.Cfg.CookieDomain, TrustProxy: a.Cfg.TrustProxy, MetricsToken: a.Cfg.MetricsToken,
+		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken,
 		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
 		TelegramWebhookSecret: webhookSecret,
 		Ready: []transport.ReadyCheck{
