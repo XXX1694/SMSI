@@ -1,0 +1,21 @@
+# Deploys the latest GitHub Release of SocialOS when it is newer than what runs here (D-002: the server pulls, nothing
+# is pushed to it). Started by socialos-autoupdate.timer. Install: README, section 14.
+# Runs as root on purpose: /opt/socialos/.env is mode 600 root, and deploy.sh needs the Docker socket (root-equivalent anyway).
+[Unit]
+Description=SocialOS: deploy the latest GitHub Release if it is new
+After=network-online.target docker.service
+Wants=network-online.target
+ConditionPathExists=/opt/socialos/.env
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/socialos
+ExecStart=/opt/socialos/autoupdate.sh
+SyslogIdentifier=socialos-autoupdate
+# A deploy pulls images, migrates and waits for /ready; it must not be cut short, but must not hang forever either.
+TimeoutStartSec=20min
+# Keep the other services on this host responsive while images are unpacked.
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
