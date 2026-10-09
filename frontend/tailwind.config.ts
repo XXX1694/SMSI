@@ -56,10 +56,11 @@ const config: Config = {
         '3xl': ['var(--text-3xl)', 'var(--text-3xl-leading)'],
       },
       // Screen-height layouts: the body is padded by the safe-area insets (globals.css), so subtract them (vh first as a fallback, then dvh for mobile browser bars). Zero insets give plain 100vh/100dvh.
-      height: { screen: SCREEN_HEIGHT },
+      height: { screen: SCREEN_HEIGHT, tag: 'var(--size-tag)', count: 'var(--size-count)' },
       minHeight: { screen: SCREEN_HEIGHT },
+      minWidth: { count: 'var(--size-count)' },
       spacing: { gutter: 'var(--space-gutter)', stack: 'var(--space-stack)', section: 'var(--space-section)' },
-      borderRadius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)' },
+      borderRadius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)', tag: 'var(--radius-tag)' },
       // Glass surfaces are the .glass-* classes in globals.css (D-024), not utilities: blur, tint, edge and fallbacks travel together.
       boxShadow: { md: 'var(--shadow-md)', lg: 'var(--shadow-lg)', pop: 'var(--shadow-pop)' },
       zIndex: { banner: 'var(--z-banner)', overlay: 'var(--z-overlay)', toast: 'var(--z-toast)' },

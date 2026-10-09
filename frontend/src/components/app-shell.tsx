@@ -28,6 +28,7 @@ import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
 import { LanguageSelect } from '@/i18n/language-select';
 import { useLocaleSettings } from '@/i18n/locale-provider';
+import { StatusGlyph } from '@/components/ui/status-glyph';
 import { cn } from '@/lib/utils';
 import type en from '../../messages/en.json';
 
@@ -65,13 +66,16 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative z-10 flex items-center gap-2.5 rounded-md px-2.5 py-3 text-sm transition-colors md:py-1.5',
-        active ? 'font-medium text-foreground group-data-[indicator=off]/nav:bg-muted' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+        // Forced colours drop the sliding highlight, so the active row also gets an outline there.
+        active
+          ? 'font-medium text-secondary-foreground group-data-[indicator=off]/nav:bg-secondary forced-colors:outline forced-colors:outline-1 forced-colors:-outline-offset-1'
+          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
       )}
     >
       <Icon className="h-4 w-4" aria-hidden />
       {t(item.labelKey)}
       {badge ? (
-        <span className="ml-auto rounded-full bg-warning-soft px-1.5 text-xs font-medium text-warning">
+        <span className="ml-auto inline-grid h-count min-w-count place-items-center rounded-tag bg-foreground/10 px-1 text-2xs font-semibold leading-none tabular-nums text-foreground">
           <span aria-hidden>{ts('navBadge', { count: badge, over: String(badge > 99) })}</span>
           <span className="sr-only">{ts('navWaiting', { count: badge })}</span>
         </span>
@@ -182,12 +186,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen md:flex">
       <SkipLink />
-      <header data-app-header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:hidden">
+      <header data-app-header className="glass-chrome sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 md:hidden">
         <Logo animate />
         {pending ? (
-          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-warning-soft px-3 text-xs font-medium text-warning">
-            <span aria-hidden className="inline-flex items-center gap-1 sm:hidden">
-              <ShieldCheck className="h-3.5 w-3.5" />
+          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center whitespace-nowrap rounded-md px-3 text-xs font-medium tabular-nums text-foreground hover:bg-secondary/60">
+            <span aria-hidden className="inline-flex items-center gap-1.5 sm:hidden">
+              <StatusGlyph name="waiting" className="text-warning" />
               {pending}
             </span>
             <span className="sr-only sm:not-sr-only">{t('requestsWaiting', { count: pending })}</span>
@@ -200,7 +204,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside
         id="sidebar"
         className={cn(
-          'flex-col border-b bg-surface p-3 md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r',
+          // The open mobile menu sits in the scrolling page, and blur is never applied to anything that scrolls (BRAND.md section 4).
+          'glass-chrome flex-col border-b p-3 max-md:backdrop-filter-none md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r',
           open ? 'flex' : 'hidden',
         )}
       >
@@ -212,7 +217,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-hidden
             data-testid="nav-indicator"
             className={cn(
-              'pointer-events-none absolute inset-x-0 top-0 rounded-md bg-muted before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent',
+              'pointer-events-none absolute inset-x-0 top-0 rounded-md bg-secondary before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent',
               settled && 'transition-transform duration-base ease-enter',
               !box && 'hidden',
             )}

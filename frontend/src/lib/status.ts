@@ -1,57 +1,79 @@
 import type { AppT } from '@/i18n/translate';
-import type { AccountStatus, AttemptStatus, PostStatus, TargetStatus } from './types';
+import type { AccountStatus, ApprovalStatus, AttemptStatus, PostStatus, TargetStatus } from './types';
 
 export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'accent';
 
+/** A status as a tag shows it. */
 export interface StatusView {
   label: string;
   tone: Tone;
+  /** The shape shown with the label (BRAND.md section 5); absent for a status this version does not know. */
+  glyph?: GlyphName;
 }
 
-const POST: Record<PostStatus, Tone> = {
-  draft: 'neutral',
-  scheduled: 'accent',
-  publishing: 'info',
-  published: 'success',
-  partially_published: 'warning',
-  failed: 'danger',
-  cancelled: 'neutral',
+/** The shapes a status tag can show (components/ui/status-glyph.tsx draws them). One shape per meaning, so colour is never the only cue. */
+export type GlyphName = 'draft' | 'waiting' | 'scheduled' | 'progress' | 'done' | 'partial' | 'failed' | 'alert' | 'off';
+
+/** A status's tone and glyph. */
+export type Look = [Tone, GlyphName];
+
+export const POST_LOOK: Record<PostStatus, Look> = {
+  draft: ['neutral', 'draft'],
+  scheduled: ['accent', 'scheduled'],
+  publishing: ['info', 'progress'],
+  published: ['success', 'done'],
+  partially_published: ['warning', 'partial'],
+  failed: ['danger', 'failed'],
+  cancelled: ['neutral', 'off'],
 };
 
-const TARGET: Record<TargetStatus, Tone> = {
-  pending: 'neutral',
-  publishing: 'info',
-  published: 'success',
-  failed: 'danger',
-  cancelled: 'neutral',
-  needs_review: 'warning',
+export const TARGET_LOOK: Record<TargetStatus, Look> = {
+  pending: ['neutral', 'scheduled'],
+  publishing: ['info', 'progress'],
+  published: ['success', 'done'],
+  failed: ['danger', 'failed'],
+  cancelled: ['neutral', 'off'],
+  needs_review: ['warning', 'waiting'],
 };
 
-const ACCOUNT: Record<AccountStatus, Tone> = {
-  active: 'success',
-  expired: 'warning',
-  revoked: 'neutral',
-  error: 'danger',
+export const ACCOUNT_LOOK: Record<AccountStatus, Look> = {
+  active: ['success', 'done'],
+  expired: ['warning', 'alert'],
+  revoked: ['neutral', 'off'],
+  error: ['danger', 'failed'],
 };
 
-const ATTEMPT: Record<AttemptStatus, Tone> = {
-  started: 'info',
-  succeeded: 'success',
-  failed: 'danger',
-  unknown: 'warning',
+export const ATTEMPT_LOOK: Record<AttemptStatus, Look> = {
+  started: ['info', 'progress'],
+  succeeded: ['success', 'done'],
+  failed: ['danger', 'failed'],
+  unknown: ['warning', 'alert'],
 };
 
 /** A status the server sent that this version does not know shows as sent, in the neutral tone. */
-function view(tones: Record<string, Tone>, kind: 'post' | 'target' | 'account' | 'attempt', status: string, t: AppT): StatusView {
-  const tone = tones[status];
+function view(looks: Record<string, Look>, kind: 'post' | 'target' | 'account' | 'attempt', status: string, t: AppT): StatusView {
+  const look = looks[status];
+  if (!look) return { label: status, tone: 'neutral' };
   // The key is built from a known status, so it exists in the catalog.
-  return tone ? { label: t(`common.status.${kind}.${status}` as 'common.status.post.draft'), tone } : { label: status, tone: 'neutral' };
+  return { label: t(`common.status.${kind}.${status}` as 'common.status.post.draft'), tone: look[0], glyph: look[1] };
 }
 
-export const postStatusView = (s: string, t: AppT): StatusView => view(POST, 'post', s, t);
-export const targetStatusView = (s: string, t: AppT): StatusView => view(TARGET, 'target', s, t);
-export const accountStatusView = (s: string, t: AppT): StatusView => view(ACCOUNT, 'account', s, t);
-export const attemptStatusView = (s: string, t: AppT): StatusView => view(ATTEMPT, 'attempt', s, t);
+/**
+ * Approval requests (D-013). `approved` (allowed, not yet used) and `consumed` (allowed and carried out) are both good news
+ * but mean different things to someone scanning the list, so they get the ringed and the filled check.
+ */
+export const APPROVAL_LOOK: Record<ApprovalStatus, Look> = {
+  pending: ['warning', 'waiting'],
+  approved: ['success', 'partial'],
+  consumed: ['success', 'done'],
+  denied: ['danger', 'failed'],
+  expired: ['neutral', 'off'],
+};
+
+export const postStatusView = (s: string, t: AppT): StatusView => view(POST_LOOK, 'post', s, t);
+export const targetStatusView = (s: string, t: AppT): StatusView => view(TARGET_LOOK, 'target', s, t);
+export const accountStatusView = (s: string, t: AppT): StatusView => view(ACCOUNT_LOOK, 'account', s, t);
+export const attemptStatusView = (s: string, t: AppT): StatusView => view(ATTEMPT_LOOK, 'attempt', s, t);
 
 export const POST_STATUSES: PostStatus[] = [
   'draft',

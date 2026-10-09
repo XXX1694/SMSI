@@ -96,6 +96,10 @@
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
+  /* Status tags and counters (BRAND.md section 5). */
+  --radius-tag: 0.3125rem;
+  --size-tag: 1.375rem;
+  --size-count: 1.125rem;
 
   /* Elevation */
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
