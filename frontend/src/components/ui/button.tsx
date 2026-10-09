@@ -24,16 +24,20 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  /** Disables the button and tells assistive tech it is working. The caller still changes the label. */
+  loading?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading = false, disabled, type, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
     return (
       <Comp
         ref={ref}
         type={asChild ? undefined : (type ?? 'button')}
         className={cn(buttonVariants({ variant, size }), className)}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
       />
     );

@@ -2,7 +2,8 @@
 import Link from 'next/link';
 import { useCallback } from 'react';
 import { PostList } from '@/components/post-row';
-import { EmptyState, ErrorState, LoadingRows, Section } from '@/components/states';
+import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { Section } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import type { DashboardSummary, Post } from '@/lib/types';
