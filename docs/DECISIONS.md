@@ -422,3 +422,20 @@ new empty volumes. Rename the copy only: users would still see `socialos` in ima
 redirect). Never create a repo named SMSI again. Dual-publish and the env fallback are removed once every known server pulls `steerpost-*`.
 The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*` GHCR packages start private; the owner makes them public
 (deploy/README.md, section 15.1). The shims (env fallback, dual publish, `curl -L` in `autoupdate.sh`) land and are deployed before the repository is renamed.
+
+## D-022: Steerpost is licensed under the AGPL-3.0 (2026-10-09)
+
+**Context.** The repository was public but had no licence, so no one could legally use, modify or self-host the code, and
+copy that called the product "open-source" was not true. The owner chose a licence.
+
+**Decision.** AGPL-3.0-only, in `LICENSE` (the unmodified text from gnu.org), with `"license": "AGPL-3.0-only"` in every
+`package.json`. Anyone may use, modify and self-host Steerpost; whoever runs a modified version as a network service must
+offer its source to that service's users. This matches comparable self-hosted social schedulers (Postiz, TryPost).
+
+**Alternatives.** MIT or Apache-2.0 (more permissive: a hosted fork could stay closed, which works against a small
+open-source project). No licence (source-available only; rejected because the product is meant to be self-hosted by
+others).
+
+**Consequences.** Product copy may say "open-source (AGPL-3.0)". Contributions are accepted under the same licence. The
+owner, as the sole author so far, could still dual-license later; once outside contributions land, that would need their
+agreement or a CLA.

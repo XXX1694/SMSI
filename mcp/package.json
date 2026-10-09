@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Steerpost MCP server (Streamable HTTP + stdio) that proxies the Steerpost REST API",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "private": true,
   "engines": {
     "node": ">=22"
