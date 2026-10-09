@@ -452,6 +452,7 @@ export function buildSeed(now: Date = new Date()): DemoState {
       revoked_at: null,
       last_used_at: pastIso(2),
       created_at: pastIso(24 * 100),
+      dangerous_policy: 'approve',
     },
     {
       id: SEED_ID.apiKey[1],
@@ -462,6 +463,7 @@ export function buildSeed(now: Date = new Date()): DemoState {
       revoked_at: null,
       last_used_at: pastIso(26),
       created_at: pastIso(24 * 45),
+      dangerous_policy: 'trusted',
     },
     {
       id: SEED_ID.apiKey[2],
@@ -472,6 +474,7 @@ export function buildSeed(now: Date = new Date()): DemoState {
       revoked_at: pastIso(24 * 20),
       last_used_at: pastIso(24 * 21),
       created_at: pastIso(24 * 120),
+      dangerous_policy: 'approve',
     },
   ];
 

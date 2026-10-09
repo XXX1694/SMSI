@@ -40,12 +40,27 @@ describe('approvals helpers', () => {
       summary: { instance_url: 'social.example.com', platforms: ['linkedin', 'telegram'], title: 'Launch', scheduled_at: '2026-10-08T12:02:00Z', content: 'Hello', empty: '' },
     };
     expect(summaryLines(a, 'UTC')).toEqual([
-      { label: 'Title', value: 'Launch' },
-      { label: 'Text', value: 'Hello' },
-      { label: 'Networks', value: 'linkedin, telegram' },
-      { label: 'Scheduled for', value: expect.stringContaining('12:02') },
-      { label: 'Instance url', value: 'social.example.com' },
+      { label: 'Title', value: 'Launch', long: false },
+      { label: 'Text', value: 'Hello', long: false },
+      { label: 'Networks', value: 'linkedin, telegram', long: false },
+      { label: 'Scheduled for', value: expect.stringContaining('12:02'), long: false },
+      { label: 'Instance url', value: 'social.example.com', long: false },
     ]);
     expect(summaryLines(base, 'UTC')).toEqual([]);
+  });
+
+  it('shows per-network text and media, and marks long text so the card can offer the full text', () => {
+    const long = 'x'.repeat(400);
+    const lines = summaryLines(
+      { ...base, summary: { content: long, targets: [{ platform: 'telegram', content: 'short one' }], media: { count: 3, images: 2, videos: 1 } } },
+      'UTC',
+    );
+    expect(lines).toEqual([
+      { label: 'Text', value: long, long: true },
+      { label: 'Text on telegram', value: 'short one', long: false },
+      { label: 'Media', value: '2 images, 1 video', long: false },
+    ]);
+    expect(summaryLines({ ...base, summary: { content: 'a\nb\nc\nd\ne' } }, 'UTC')[0]!.long).toBe(true);
+    expect(summaryLines({ ...base, summary: { media: { count: 0, images: 0, videos: 0 } } }, 'UTC')).toEqual([]);
   });
 });

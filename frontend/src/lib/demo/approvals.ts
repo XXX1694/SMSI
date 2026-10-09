@@ -16,7 +16,11 @@ export function seedApprovals(nowMs: number): Approval[] {
     {
       id: seedId('ab000000', 1), action: 'post.publish', resource_type: 'post', resource_id: seedPostId(0),
       actor_label: 'MCP: Claude Desktop', status: 'pending', created_at: at(2), expires_at: in10(2), decided_at: null,
-      summary: { title: 'Launch day', content: 'We are live. SocialOS now lets your agent draft while you stay in control.', platforms: ['linkedin', 'telegram'], status: 'draft' },
+      summary: {
+        title: 'Launch day', content: 'We are live. SocialOS now lets your agent draft while you stay in control. '.repeat(8).trim(),
+        platforms: ['linkedin', 'telegram'], targets: [{ platform: 'telegram', content: 'We are live. Your agent drafts, you decide.' }],
+        media: { count: 2, images: 2, videos: 0 }, status: 'draft',
+      },
     },
     {
       id: seedId('ab000000', 2), action: 'post.schedule_soon', resource_type: 'post', resource_id: seedPostId(1),

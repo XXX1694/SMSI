@@ -274,7 +274,7 @@ export const api = {
     async apiKeys(): Promise<ApiKey[]> {
       return unwrapList<ApiKey>(await request('/developer/api-keys'));
     },
-    async createApiKey(input: { name: string; scopes: string[]; expires_at?: string }): Promise<CreatedApiKey> {
+    async createApiKey(input: { name: string; scopes: string[]; expires_at?: string; dangerous_policy?: 'approve' | 'trusted' }): Promise<CreatedApiKey> {
       return normalizeCreatedApiKey(await request('/developer/api-keys', { method: 'POST', body: input }));
     },
     async revokeApiKey(id: string): Promise<void> {

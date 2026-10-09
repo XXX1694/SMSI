@@ -1,10 +1,12 @@
 'use client';
 import { Check, X } from 'lucide-react';
+import { useId, useState } from 'react';
 import { usePrefs } from '@/components/prefs-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { actionLabel, isIrreversible, isOpen, summaryLines, timeLeft } from '@/lib/approvals';
+import { actionLabel, isIrreversible, isOpen, summaryLines, timeLeft, type SummaryLine } from '@/lib/approvals';
 import { formatDateTime } from '@/lib/time';
+import { cn } from '@/lib/utils';
 import type { Approval, ApprovalStatus } from '@/lib/types';
 
 const STATUS: Record<ApprovalStatus, { label: string; tone: 'success' | 'danger' | 'neutral' | 'warning' }> = {
@@ -24,17 +26,41 @@ interface Props {
   onDeny: (a: Approval) => void;
 }
 
+/** One line of the summary. Long text is clamped; "Show full text" reveals all of it, as plain text. */
+function SummaryRow({ line }: { line: SummaryLine }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+      <dt className="w-28 shrink-0 text-muted-foreground">{line.label}</dt>
+      <dd className="min-w-0 flex-1 break-words">
+        <span id={id} className={cn('whitespace-pre-line', line.long && !open && 'line-clamp-4')}>
+          {line.value}
+        </span>
+        {line.long ? (
+          <button
+            type="button"
+            className="mt-1 block text-xs font-medium text-accent underline-offset-4 hover:underline"
+            aria-expanded={open}
+            aria-controls={id}
+            onClick={() => setOpen((o) => !o)}
+          >
+            {open ? 'Show less' : 'Show full text'}
+          </button>
+        ) : null}
+      </dd>
+    </div>
+  );
+}
+
 function Summary({ approval }: { approval: Approval }) {
   const { timezone } = usePrefs();
   const lines = summaryLines(approval, timezone);
   if (lines.length === 0) return null;
   return (
-    <dl className="mt-3 space-y-1.5 text-sm">
+    <dl className="mt-3 space-y-2 text-sm">
       {lines.map((l) => (
-        <div key={l.label} className="flex gap-3">
-          <dt className="w-28 shrink-0 text-muted-foreground">{l.label}</dt>
-          <dd className="min-w-0 break-words">{l.label === 'Text' ? <span className="line-clamp-4 whitespace-pre-line">{l.value}</span> : l.value}</dd>
-        </div>
+        <SummaryRow key={l.label} line={l} />
       ))}
     </dl>
   );

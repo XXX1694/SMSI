@@ -95,13 +95,13 @@ function seed() {
   post('Half and half', 'partially_published', [tg, mock], 'Partially published example.', { published_at: inPast(8) });
   const m = (name, kind, hue) => db.media.push({ id: randomUUID(), user_id: u.id, kind, mime_type: kind === 'image' ? 'image/png' : 'video/mp4', size_bytes: 480_000, original_name: name, width: 400, height: 400, status: 'ready', url: kind === 'image' ? svgThumb(name, hue) : undefined, created_at: inPast(20) });
   m('launch-banner.png', 'image', 230); m('team.png', 'image', 20); m('demo.mp4', 'video', 0);
-  db.keys.push({ id: randomUUID(), user_id: u.id, name: 'CI reader', prefix: 'sk_live_a1b2', scopes: ['posts:read', 'social:read'], expires_at: inFuture(24 * 60), revoked_at: null, last_used_at: inPast(2), created_at: inPast(100) });
+  db.keys.push({ id: randomUUID(), user_id: u.id, name: 'CI reader', prefix: 'sk_live_a1b2', scopes: ['posts:read', 'social:read'], expires_at: inFuture(24 * 60), revoked_at: null, last_used_at: inPast(2), created_at: inPast(100), dangerous_policy: 'approve' });
   db.mcp.push({ id: randomUUID(), user_id: u.id, name: 'Claude Desktop', client_name: 'claude-desktop 1.2', scopes: ['social:read', 'posts:read', 'posts:write'], last_seen_at: inPast(1), revoked_at: null, created_at: inPast(50) });
   const ask = (action, actor_label, minutesAgo, summary, status = 'pending') => db.approvals.push({
     id: randomUUID(), user_id: u.id, action, resource_type: action.startsWith('social_account') ? 'social_account' : 'post', resource_id: randomUUID(),
     actor_label, summary, status, created_at: inPast(minutesAgo / 60), expires_at: new Date(Date.now() - minutesAgo * 60_000 + 10 * 60_000).toISOString(), decided_at: status === 'pending' ? null : inPast(minutesAgo / 60 - 0.05),
   });
-  ask('post.publish', 'MCP: Claude Desktop', 2, { title: 'Draft: case study', content: 'Case study draft - how a 3-person team halved their publishing time.', platforms: ['linkedin'], status: 'draft' });
+  ask('post.publish', 'MCP: Claude Desktop', 2, { title: 'Draft: case study', content: 'Case study draft - how a 3-person team halved their publishing time. '.repeat(9).trim(), platforms: ['linkedin', 'telegram'], targets: [{ platform: 'telegram', content: 'Case study: how a 3-person team halved their publishing time.' }], media: { count: 2, images: 2, videos: 0 }, status: 'draft' });
   ask('post.schedule_soon', 'MCP: Cursor', 4, { title: 'Weekly tip', content: 'Tip: schedule posts in your audience timezone.', platforms: ['telegram'], scheduled_at: inFuture(0.05) });
   ask('social_account.disconnect', 'CI publisher', 95, { provider: 'mock', username: 'mock-1' }, 'denied');
   audit('Demo User', 'post.create', 'post', pub.id);
@@ -371,8 +371,9 @@ async function handle(req, res) {
   if (path === '/developer/api-keys' && m === 'GET') return send(res, 200, { items: mine(db.keys).map(({ user_id, ...k }) => k) });
   if (path === '/developer/api-keys' && m === 'POST') {
     if (!body.name || !Array.isArray(body.scopes) || body.scopes.some((s) => !ALL_SCOPES.includes(s))) return fail(res, 400, 'VALIDATION_ERROR', 'name and valid scopes are required');
+    if (body.dangerous_policy !== undefined && !['approve', 'trusted'].includes(body.dangerous_policy)) return fail(res, 400, 'VALIDATION_ERROR', 'dangerous_policy must be approve or trusted');
     const rawKey = `sk_live_${randomBytes(18).toString('hex')}`;
-    const k = { id: randomUUID(), user_id: user.id, name: body.name, prefix: rawKey.slice(0, 12), scopes: body.scopes, expires_at: body.expires_at ?? null, revoked_at: null, last_used_at: null, created_at: now() };
+    const k = { id: randomUUID(), user_id: user.id, name: body.name, prefix: rawKey.slice(0, 12), scopes: body.scopes, expires_at: body.expires_at ?? null, revoked_at: null, last_used_at: null, created_at: now(), dangerous_policy: body.dangerous_policy === 'trusted' ? 'trusted' : 'approve' };
     db.keys.push(k); audit(user.display_name, 'apikey.create', 'api_key', k.id);
     const { user_id, ...pub } = k; return send(res, 201, { key: pub, raw_key: rawKey });
   }

@@ -781,7 +781,11 @@ export class DemoEngine {
       revoked_at: null,
       last_used_at: null,
       created_at: this.iso(),
+      dangerous_policy: body.dangerous_policy === 'trusted' ? 'trusted' : 'approve',
     };
+    if (body.dangerous_policy !== undefined && body.dangerous_policy !== 'trusted' && body.dangerous_policy !== 'approve') {
+      return fail(400, 'VALIDATION_ERROR', 'dangerous_policy must be approve or trusted');
+    }
     this.state.api_keys.push(key);
     this.audit(this.user, 'api_key.created', 'api_key', key.id);
     return ok(201, { key, raw_key: raw });

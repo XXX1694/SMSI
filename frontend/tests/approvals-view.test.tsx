@@ -123,6 +123,25 @@ describe('ApprovalsView', () => {
     expect(within(screen.getByRole('group', { name: 'Show approvals' })).getByRole('button', { name: 'History' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('clamps long text and lets the owner read all of it, including per-network text and media', async () => {
+    const long = 'A long post. '.repeat(40);
+    const wide: Approval = {
+      ...publish,
+      summary: { title: 'Big', content: long, targets: [{ platform: 'telegram', content: '<b>raw</b> text' }], media: { count: 1, images: 1, videos: 0 } },
+    };
+    apiMock.approvals.list.mockResolvedValue(page([wide]));
+    render(<ApprovalsView />);
+    const toggle = await screen.findByRole('button', { name: 'Show full text' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText(long.trim())).toHaveClass('line-clamp-4');
+    expect(screen.getByText('Text on telegram')).toBeInTheDocument();
+    expect(screen.getByText('<b>raw</b> text')).toBeInTheDocument(); // shown as text, never as markup
+    expect(screen.getByText('1 image')).toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(long.trim())).not.toHaveClass('line-clamp-4');
+  });
+
   it('marks an irreversible action in danger styling so it is not mistaken for a routine one', async () => {
     apiMock.approvals.list.mockResolvedValue(page([disconnect]));
     render(<ApprovalsView />);

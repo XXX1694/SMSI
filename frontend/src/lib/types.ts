@@ -194,6 +194,8 @@ export interface ApiKey {
   revoked_at: string | null;
   last_used_at: string | null;
   created_at: string;
+  /** `approve`: publish, delete, disconnect and near-term schedules wait for the owner (default). `trusted`: they do not. */
+  dangerous_policy?: 'approve' | 'trusted';
 }
 
 export interface CreatedApiKey {

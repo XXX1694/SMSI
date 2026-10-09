@@ -36,11 +36,19 @@ export function timeLeft(expiresAt: string, now: Date = new Date()): string {
 export interface SummaryLine {
   label: string;
   value: string;
+  /** Long enough to be clamped in the card; the owner can expand it to read all of it. */
+  long: boolean;
 }
+
+/** Past this many characters or lines a text is clamped in the card. */
+const CLAMP_CHARS = 280;
+const CLAMP_LINES = 4;
 
 const KNOWN: [key: string, label: string][] = [
   ['title', 'Title'],
   ['content', 'Text'],
+  ['targets', ''],
+  ['media', 'Media'],
   ['platforms', 'Networks'],
   ['accounts', 'Accounts'],
   ['provider', 'Network'],
@@ -48,10 +56,29 @@ const KNOWN: [key: string, label: string][] = [
   ['scheduled_at', 'Scheduled for'],
 ];
 
+const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
 /** `instance_url` -> `Instance url`. */
 function sentence(key: string): string {
   const words = key.replace(/_/g, ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function isLong(value: string): boolean {
+  return value.length > CLAMP_CHARS || value.split('\n').length > CLAMP_LINES;
+}
+
+function plural(n: number, one: string): string {
+  return `${n} ${one}${n === 1 ? '' : 's'}`;
+}
+
+function mediaText(m: Record<string, unknown>): string {
+  const images = Number(m.images) || 0;
+  const videos = Number(m.videos) || 0;
+  const count = Number(m.count) || 0;
+  const parts = [images ? plural(images, 'image') : '', videos ? plural(videos, 'video') : ''].filter(Boolean);
+  if (parts.length) return parts.join(', ');
+  return count ? plural(count, 'file') : '';
 }
 
 function asText(v: unknown): string {
@@ -62,14 +89,17 @@ function asText(v: unknown): string {
 /** What the owner needs to see to decide: the server's summary, known fields first, in readable form. */
 export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
   const out: SummaryLine[] = [];
-  const seen = new Set<string>();
-  const add = (key: string, label: string) => {
-    seen.add(key);
-    const raw = a.summary[key];
-    const value = key === 'scheduled_at' && typeof raw === 'string' ? formatDateTime(raw, timezone) : asText(raw);
-    if (value) out.push({ label, value });
+  const add = (label: string, value: string) => {
+    if (value) out.push({ label, value, long: isLong(value) });
   };
-  for (const [key, label] of KNOWN) add(key, label);
-  for (const key of Object.keys(a.summary)) if (!seen.has(key)) add(key, sentence(key));
+  for (const [key, label] of KNOWN) {
+    const raw = a.summary[key];
+    if (key === 'targets' && Array.isArray(raw)) {
+      for (const t of raw) if (isRec(t)) add(`Text on ${asText(t.platform)}`, asText(t.content));
+    } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw));
+    else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone));
+    else add(label, asText(raw));
+  }
+  for (const key of Object.keys(a.summary)) if (!KNOWN.some(([k]) => k === key)) add(sentence(key), asText(a.summary[key]));
   return out;
 }
