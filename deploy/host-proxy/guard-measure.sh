@@ -49,8 +49,8 @@ load_settings() {
   UNIT_PSI_WARN=$(cfg_int GUARD_UNIT_PSI_WARN 20)     # same, for the protected units (cpu, io, memory)
   UNIT_PSI_CRIT=$(cfg_int GUARD_UNIT_PSI_CRIT 50)
   DISK_WARN=$(cfg_int GUARD_DISK_WARN 80)             # % of the disk in use: alert (stopping containers frees no space)
-  DATA_BUDGET_GB=$(cfg_int GUARD_DATA_BUDGET_GB 15)   # SocialOS data on disk: alert above this
-  SLICE_MEM_MB=$(cfg_int GUARD_SLICE_MEM_MB 300)     # SocialOS counts as a contributor from this much anonymous memory ...
+  DATA_BUDGET_GB=$(cfg_int GUARD_DATA_BUDGET_GB 15)   # Steerpost data on disk: alert above this
+  SLICE_MEM_MB=$(cfg_int GUARD_SLICE_MEM_MB 300)     # Steerpost counts as a contributor from this much anonymous memory ...
   SLICE_CPU_PCT=$(cfg_int GUARD_SLICE_CPU_PCT 40)     # ... or this % of one CPU since the last run ...
   SLICE_IO_MBPS=$(cfg_int GUARD_SLICE_IO_MBPS 10)     # ... or this many MB/s of disk IO since the last run
   CRIT_RUNS=$(cfg_int GUARD_CRIT_RUNS 2)              # consecutive critical runs before containers are stopped
@@ -160,7 +160,7 @@ slice_anon_bytes() {
   printf '%s' "$cur"
 }
 
-# assess_socialos: is SocialOS a real contributor to the pressure? Sets CONTRIBUTES (true/false) and SOCIALOS_USAGE.
+# assess_socialos: is Steerpost a real contributor to the pressure? Sets CONTRIBUTES (true/false) and SOCIALOS_USAGE.
 # Memory counts as anonymous memory only; CPU is the slice's own usage_usec rate and IO its own io.stat rate (never the
 # host-wide PSI, which also covers the other service).
 # Without the slice's cgroup files (slice not installed) it cannot tell, and assumes yes: the guard then keeps protecting.
@@ -179,12 +179,12 @@ assess_socialos() {
   io_rate=$(counter_rate slice-io "${io:-0}")    # bytes per second
   cpu=$((${cpu_rate:-0} / 10000))                # % of one CPU
   io=$((${io_rate:-0} / 1048576))                # MB/s
-  SOCIALOS_USAGE="SocialOS uses ${mem} MB anon, ${cpu}% CPU, ${io} MB/s IO"
+  SOCIALOS_USAGE="Steerpost uses ${mem} MB anon, ${cpu}% CPU, ${io} MB/s IO"
   CONTRIBUTES=false
   if ((mem >= SLICE_MEM_MB || cpu >= SLICE_CPU_PCT || io >= SLICE_IO_MBPS)); then CONTRIBUTES=true; fi
 }
 
-# assess_containers: finds a SocialOS container that thrashes its own page cache: memory.current at THRASH_MEM_PCT of
+# assess_containers: finds a Steerpost container that thrashes its own page cache: memory.current at THRASH_MEM_PCT of
 # memory.max AND workingset_refault_file growing faster than THRASH_REFAULT_MBPS (pages of getconf PAGESIZE, since the last
 # run). That is a cap too small for the working set: it reads the same files from disk again and again. Shedding other
 # containers cannot help, only that container can. Sets THRASHING (entries "service|id|mem%|refault MB/s") and
@@ -220,7 +220,7 @@ assess_containers() {
     --format '{{.ID}} {{.Label "com.docker.compose.service"}}' 2>/dev/null || true)
 }
 
-# data_used_gb: SocialOS data on disk (images, volumes, logs, backups, /opt/socialos), whole GB. -x: stays on the
+# data_used_gb: Steerpost data on disk (images, volumes, logs, backups, /opt/socialos), whole GB. -x: stays on the
 # filesystem, so the overlay mounts of running containers are not counted twice.
 data_used_gb() {
   local kb

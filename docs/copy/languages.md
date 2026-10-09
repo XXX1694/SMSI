@@ -1,4 +1,4 @@
-# Which languages SocialOS supports, and in what order (draft 2026-10-09)
+# Which languages Steerpost supports, and in what order (draft 2026-10-09)
 
 Legend: **[S]** comes from secondary sources (listed at the end). **[U]** has not been verified. Network tiers come from
 [PLATFORMS](../PLATFORMS.md).
@@ -15,7 +15,7 @@ Covered by `en` until then: India, Nigeria, the Philippines and the Nordics. Dev
 
 ## How languages were ranked
 
-1. **Network fit.** Do people in that market use the networks SocialOS can publish to: live (LinkedIn, Telegram), Tier 1
+1. **Network fit.** Do people in that market use the networks Steerpost can publish to: live (LinkedIn, Telegram), Tier 1
    (Discord, Mastodon, Bluesky, Slack, Dev.to, VK, Misskey) or Tier 2 (Threads, Instagram, Facebook, Tumblr)? A language
    whose main networks are Tier 3 or blocked brings few active users.
 2. **Developer and AI-agent audience.** GitHub developer counts and Claude usage by country.

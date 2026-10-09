@@ -1,4 +1,4 @@
-# SocialOS publishing platforms (checked 2026-10-09)
+# Steerpost publishing platforms (checked 2026-10-09)
 
 Legend: **[V]** means checked in the vendor's own docs today. **[U]** comes from secondary sources and has not been verified. Code paths are under `backend/internal/`.
 
@@ -140,7 +140,7 @@ H=(-H "Authorization: Bearer $KEY" -H "Content-Type: application/json")
 curl -s "${H[@]}" "$API/social/providers" | jq '.items[]|select(.capabilities.connect_method=="token")|{name,f:.capabilities.connect_fields}'
 ACC=$(curl -s "${H[@]}" -X POST "$API/social/accounts/token" \
   -d '{"provider":"discord","fields":{"webhook_url":"https://discord.com/api/webhooks/ID/TOKEN"}}' | jq -r .id)
-POST=$(curl -s "${H[@]}" -X POST "$API/posts" -d "{\"content\":\"SocialOS test\",\"social_account_ids\":[\"$ACC\"]}" | jq -r .id)
+POST=$(curl -s "${H[@]}" -X POST "$API/posts" -d "{\"content\":\"Steerpost test\",\"social_account_ids\":[\"$ACC\"]}" | jq -r .id)
 curl -s "${H[@]}" -X POST "$API/posts/$POST/publish"; curl -s "${H[@]}" "$API/posts/$POST/status"
 ```
 Fields for the other providers:

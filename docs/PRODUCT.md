@@ -1,11 +1,11 @@
-# SocialOS product brief
+# Steerpost product brief
 
 Written 2026-10-09 against v0.1.0. What to build next and why; status is in [ROADMAP](ROADMAP.md), network facts in
 [PLATFORMS](PLATFORMS.md).
 
 ## 1. Positioning
 
-**One-liner.** SocialOS is a self-hosted social media scheduler built for AI agents: your agent drafts and schedules
+**One-liner.** Steerpost is a self-hosted social media scheduler built for AI agents: your agent drafts and schedules
 through MCP, and you stay in control.
 
 **Who it is for.**
@@ -32,7 +32,7 @@ or "first". We compete on things a user can check:
 - **Honest capabilities.** A network that cannot do something says so; nothing returns a fake success.
 - **Publishing that never posts twice.** Idempotent targets, safe retries, and `needs_review` after a crash.
 - **Small footprint.** In host-proxy mode the long-running containers are capped at about 1 GB of memory in total,
-  so SocialOS shares a 2 GB server with another site (D-001).
+  so Steerpost shares a 2 GB server with another site (D-001).
 
 We lose today on networks (2 live), MCP OAuth, threads, queues, analytics and teams. Section 4 is the plan.
 
@@ -42,7 +42,7 @@ Checked on the vendors' own pages on 2026-10-09; prices are the lowest listed an
 
 | Product | Agent / MCP | Self-host | Networks (Telegram?) | Price from | Open source |
 |---|---|---|---|---|---|
-| **SocialOS** | Built in, 14 tools, scoped API key; OAuth planned | Yes | 2 live (yes) | Free (self-host) | Licence not chosen |
+| **Steerpost** | Built in, 14 tools, scoped API key; OAuth planned | Yes | 2 live (yes) | Free (self-host) | Licence not chosen |
 | [Buffer](https://buffer.com/mcp) | Hosted MCP on every plan, API key | No | 12 (no) | Free 3 channels; $5/channel/month | No |
 | [Hootsuite](https://www.hootsuite.com/integrations/mcp) | Hosted MCP, account sign-in | No | 9 (no) | $99/user/month, annual | No |
 | [Typefully](https://support.typefully.com/en/articles/13128440-typefully-mcp-server) | Hosted MCP, OAuth or key, on Free | No | 6 (no) | Free 10 posts/month; $10/month | No |
@@ -68,7 +68,7 @@ Typefully renders prices client-side and TryPost's pages disagree ($19 and $12),
 
 ## 3. Feature gap analysis
 
-| Users expect | SocialOS today | Gap |
+| Users expect | Steerpost today | Gap |
 |---|---|---|
 | Many networks | LinkedIn (personal), Telegram | **Critical.** Tier 1 needs no platform review |
 | Calendar with drag and drop | Month, week, day; click to open | Drag to reschedule |

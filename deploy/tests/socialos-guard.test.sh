@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # host-proxy/socialos-guard.sh against a fake /proc, fake cgroup files and stubbed docker, systemctl, df, du and curl:
-# it sheds SocialOS load only under pressure AND when SocialOS contributes to it, stops gracefully, starts again only what
+# it sheds Steerpost load only under pressure AND when Steerpost contributes to it, stops gracefully, starts again only what
 # it stopped (with a backoff after level 2), alerts without acting otherwise, and never touches the protected services
 # or containers of other projects.
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # setup: a calm host (50% RAM available, no stalls, disk 40%, data 1 GB, slice installed: 200 MB anonymous memory plus 160 MB page cache) and a running
-# SocialOS stack.
+# Steerpost stack.
 setup() {
   new_sb
   mkdir -p "$SB/opt" "$SB/proc/pressure" "$SB/docker" "$SB/cg/socialos.slice"
@@ -104,7 +104,7 @@ assert_no_file "calm: not shed" "$SB/$G/shed"
 assert_no_file "calm: no pressure alert" "$SB/$G/alerts/pressure"
 assert_has "calm: logs level 0" "$out" "level 0"
 
-# 2. memory pressure while SocialOS uses 450 MB anon: the worker is stopped gracefully (no pause), and started after 3 calm runs
+# 2. memory pressure while Steerpost uses 450 MB anon: the worker is stopped gracefully (no pause), and started after 3 calm runs
 setup
 mem 12
 slice_mem 450
@@ -115,7 +115,7 @@ assert_has "pressure: a docker stop with the container's own grace period" "$(ca
 assert_lacks "pressure: never paused" "$(cat "$SB/docker.calls")" "pause"
 assert_eq "pressure: shed level 1" 1 "$(cat "$SB/$G/shed")"
 assert_has "pressure: reason" "$(pressure_last)" "available memory 12% < 15%"
-assert_has "pressure: usage" "$(pressure_last)" "SocialOS uses 450 MB anon"
+assert_has "pressure: usage" "$(pressure_last)" "Steerpost uses 450 MB anon"
 mem 50
 calm_runs 2
 assert_eq "two calm runs: still stopped" exited "$(cat "$SB/docker/worker")"
@@ -124,7 +124,7 @@ assert_eq "third calm run: started again" "$ALL_RUNNING" "$(states)"
 assert_no_file "resumed: shed marker gone" "$SB/$G/shed"
 assert_no_file "resumed: alerts cleared" "$SB/$G/alerts/pressure"
 
-# 3. pressure that SocialOS does not cause (200 MB anon, no CPU, no IO): alert, but nothing is stopped
+# 3. pressure that Steerpost does not cause (200 MB anon, no CPU, no IO): alert, but nothing is stopped
 setup
 mem 5
 guard
@@ -134,7 +134,7 @@ assert_eq "not a contributor: no docker action" 0 "$(actions)"
 assert_has "not a contributor: alert says why" "$(pressure_last)" "not a real contributor, so no action"
 assert_no_file "not a contributor: not shed" "$SB/$G/shed"
 
-# 3b. a lot of page cache but little anonymous memory: memory.current is 700 MB, yet SocialOS is not a contributor
+# 3b. a lot of page cache but little anonymous memory: memory.current is 700 MB, yet Steerpost is not a contributor
 setup
 mem 5
 slice_mem 150 550
@@ -142,7 +142,7 @@ guard
 guard
 assert_eq "high cache, low anon: stack untouched" "$ALL_RUNNING" "$(states)"
 assert_eq "high cache, low anon: no docker action" 0 "$(actions)"
-assert_has "high cache, low anon: usage counts anon only" "$(pressure_last)" "SocialOS uses 150 MB anon"
+assert_has "high cache, low anon: usage counts anon only" "$(pressure_last)" "Steerpost uses 150 MB anon"
 assert_no_file "high cache, low anon: not shed" "$SB/$G/shed"
 
 # 3c. no memory.stat: falls back to memory.current minus "file"... and to memory.current alone without both
@@ -159,9 +159,9 @@ mem 12
 slice_mem 350 0
 guard
 assert_eq "high anon, pressure: worker stopped" exited "$(cat "$SB/docker/worker")"
-assert_has "high anon, pressure: usage" "$(pressure_last)" "SocialOS uses 350 MB anon"
+assert_has "high anon, pressure: usage" "$(pressure_last)" "Steerpost uses 350 MB anon"
 
-# 4. SocialOS contributes through CPU: the rate needs two runs (60% of one CPU over 120 s)
+# 4. Steerpost contributes through CPU: the rate needs two runs (60% of one CPU over 120 s)
 setup
 psi "$SB/cg/system.slice/irbisa.service/cpu.pressure" 25
 guard
@@ -266,7 +266,7 @@ assert_has "slice without limits: alert" "$(cat "$SB/$G/alerts/slice.last")" "no
 setup
 echo system.slice >"$SB/cgparent.frontend"
 guard
-assert_has "container outside the slice: alert" "$(cat "$SB/$G/alerts/slice.last")" "1 SocialOS container(s) run outside"
+assert_has "container outside the slice: alert" "$(cat "$SB/$G/alerts/slice.last")" "1 Steerpost container(s) run outside"
 rm "$SB/cgparent.frontend"
 guard
 assert_no_file "all inside: alert cleared" "$SB/$G/alerts/slice"
@@ -276,7 +276,7 @@ mem 12
 guard
 assert_eq "no slice files: assumed a contributor, worker stopped" exited "$(cat "$SB/docker/worker")"
 
-# 10. docker does not answer while SocialOS adds to the pressure: exit 1 and a clear error
+# 10. docker does not answer while Steerpost adds to the pressure: exit 1 and a clear error
 setup
 mem 5
 slice_mem 450
@@ -307,7 +307,7 @@ GUARD_MEM_AVAIL_WARN=abc guard
 assert_eq "bad setting: exit" 2 "$rc"
 assert_has "bad setting: explained" "$out" "GUARD_MEM_AVAIL_WARN must be a whole number"
 
-# 13. only SocialOS containers: every docker ps is filtered by the compose project; --status
+# 13. only Steerpost containers: every docker ps is filtered by the compose project; --status
 setup
 mem 5
 slice_mem 450
@@ -330,14 +330,14 @@ ctr() { # ctr SERVICE MEM_PCT REFAULT_PAGES [IO_BYTES]: the container's cgroup f
   echo "8:0 rbytes=${4:-0} wbytes=0" >"$d/io.stat"
 }
 STEP=0
-tick() { # tick SERVICE: one guard run 120 s later in which SERVICE thrashes harder (56 MB/s) and SocialOS reads 57 MB/s
+tick() { # tick SERVICE: one guard run 120 s later in which SERVICE thrashes harder (56 MB/s) and Steerpost reads 57 MB/s
   STEP=$((STEP + 1))
   NOW=$((NOW + 120))
   ctr "$1" 100 $((56 * 256 * 120 * STEP)) $((56 * 120 * 1048576 * STEP))
   echo "8:0 rbytes=$((1000 + 6840 * 1048576 * STEP)) wbytes=1000" >"$SB/cg/socialos.slice/io.stat"
   guard
 }
-thrash_setup() { # IO pressure caused by SocialOS; the first run only records counters
+thrash_setup() { # IO pressure caused by Steerpost; the first run only records counters
   setup
   STEP=0
   psi "$SB/cg/system.slice/irbisa.service/io.pressure" 60

@@ -1,10 +1,10 @@
-# Keeps a broken SocialOS snippet from stopping the host's Caddy: runs before every Caddy start and, only if the Caddyfile
-# is invalid because of the SocialOS snippet, moves that snippet aside (host-proxy/caddy-precheck.sh). Install: README,
+# Keeps a broken Steerpost snippet from stopping the host's Caddy: runs before every Caddy start and, only if the Caddyfile
+# is invalid because of the Steerpost snippet, moves that snippet aside (host-proxy/caddy-precheck.sh). Install: README,
 # "Sharing a host safely".
 # Wants= from caddy.service (the [Install] line) is weak and Before= is ordering only: whatever this unit does or fails
 # to do, Caddy still starts, at most TimeoutStartSec later. Nothing here can stop or restart Caddy.
 [Unit]
-Description=SocialOS: keep a broken SocialOS snippet from stopping Caddy
+Description=Steerpost: keep a broken Steerpost snippet from stopping Caddy
 Before=caddy.service
 ConditionPathExists=/opt/socialos/host-proxy/caddy-precheck.sh
 

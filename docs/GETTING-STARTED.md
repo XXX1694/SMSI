@@ -1,6 +1,6 @@
 # Getting started
 
-Run SocialOS locally, configure it, apply migrations and run the test suites. To put it on a server, follow
+Run Steerpost locally, configure it, apply migrations and run the test suites. To put it on a server, follow
 [`deploy/README.md`](../deploy/README.md). The design behind all of this is in [ARCHITECTURE](ARCHITECTURE.md).
 
 ## Local setup

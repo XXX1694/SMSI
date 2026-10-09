@@ -1,7 +1,7 @@
-# Looks for a new SocialOS release every 5 minutes. Turn updates off without removing the timer: AUTOUPDATE=false in
+# Looks for a new Steerpost release every 5 minutes. Turn updates off without removing the timer: AUTOUPDATE=false in
 # /opt/socialos/.env. Install: README, section 14.
 [Unit]
-Description=SocialOS: look for a new release every 5 minutes
+Description=Steerpost: look for a new release every 5 minutes
 
 [Timer]
 OnCalendar=*:0/5

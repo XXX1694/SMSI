@@ -1,9 +1,9 @@
-# Daily backup of SocialOS: database dump (+ media archive), 14 days of retention, optional encrypted off-site copy, and on
+# Daily backup of Steerpost: database dump (+ media archive), 14 days of retention, optional encrypted off-site copy, and on
 # Sundays a restore drill. Started by socialos-backup.timer. Install: README, section 9.
 # Runs as root on purpose: the backups are mode 600 root and backup.sh needs the Docker socket (root-equivalent anyway).
 # Output goes to the journal: journalctl -u socialos-backup.
 [Unit]
-Description=SocialOS: database and media backup
+Description=Steerpost: database and media backup
 After=docker.service
 Wants=docker.service
 ConditionPathExists=/opt/socialos/.env

@@ -6,7 +6,7 @@ effort: medium
 color: green
 ---
 
-You implement one scoped task in the SocialOS monorepo. Read AGENTS.md and the relevant parts of docs/ARCHITECTURE.md first.
+You implement one scoped task in the Steerpost monorepo. Read AGENTS.md and the relevant parts of docs/ARCHITECTURE.md first.
 
 Rules:
 - Work only inside the worktree path given in the task. Commit only to the branch given there. Never use `git stash`, never touch `main`, and never force-push.

@@ -1,10 +1,10 @@
-# Every SocialOS container runs in this slice (docker-compose.host-proxy.yml sets cgroup_parent: socialos.slice), so the
+# Every Steerpost container runs in this slice (docker-compose.host-proxy.yml sets cgroup_parent: socialos.slice), so the
 # kernel enforces one budget for the whole stack, whatever a single container does. Sized for a shared 2 vCPU / 2 GB host
-# where SocialOS may use at most half; dockerd and containerd stay outside (their drop-ins cap them separately).
+# where Steerpost may use at most half; dockerd and containerd stay outside (their drop-ins cap them separately).
 # No [Install] section: systemd starts the slice when Docker puts the first container in it. Install and tune: README,
 # "Sharing a host safely"; to change a value, add /etc/systemd/system/socialos.slice.d/override.conf instead of editing this.
 [Unit]
-Description=SocialOS containers (at most half of the shared host)
+Description=Steerpost containers (at most half of the shared host)
 Documentation=file:/opt/socialos/README.md
 
 [Slice]

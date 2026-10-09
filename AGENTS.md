@@ -1,11 +1,11 @@
-# SocialOS: rules for AI agents and contributors
+# Steerpost: rules for AI agents and contributors
 
 The single source of truth for how work is done in this repository. `CLAUDE.md` is a symlink to this file; do not copy
 its content elsewhere. Canon lives in `docs/`: [ARCHITECTURE](docs/ARCHITECTURE.md) (API, MCP, schema, state machine),
 [DECISIONS](docs/DECISIONS.md) (why things are the way they are), [ROADMAP](docs/ROADMAP.md) (status),
 [PLATFORMS](docs/PLATFORMS.md) (which networks and how). Link to them; do not restate them.
 
-SocialOS schedules and publishes social posts. People use the web UI; AI agents use the MCP server. The product promise is
+Steerpost schedules and publishes social posts. People use the web UI; AI agents use the MCP server. The product promise is
 **an agent can do the work, a human stays in control, and nothing is faked**.
 
 ## 1. Map and commands

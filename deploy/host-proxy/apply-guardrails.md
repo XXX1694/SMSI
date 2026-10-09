@@ -1,12 +1,12 @@
 # Applying the host guardrails on the shared production host
 
-Runbook for putting SocialOS under the "at most half of the host" limits on the shared VPS (2 vCPU, 1.97 GB RAM, 2 GB swap,
+Runbook for putting Steerpost under the "at most half of the host" limits on the shared VPS (2 vCPU, 1.97 GB RAM, 2 GB swap,
 40 GB disk) next to Irbisa (`irbisa.service` on :3001 behind the systemd `caddy`). Design and reasons: `deploy/README.md`,
 section 16, and `docs/DECISIONS.md` D-012. Run the steps **in order, one at a time, as root** (`sudo -i`), and stop at the first
 check that does not match. Every step says what it changes, its risk, how to verify it and how to roll it back. No step restarts
-Docker, containerd, Caddy or Irbisa; only step 3 restarts the SocialOS containers.
+Docker, containerd, Caddy or Irbisa; only step 3 restarts the Steerpost containers.
 
-Measured on 2026-10-09 (before): SocialOS containers about 360 MB with page cache, about 115 MB of it process memory
+Measured on 2026-10-09 (before): Steerpost containers about 360 MB with page cache, about 115 MB of it process memory
 (peaks with cache: frontend 149, postgres 92, backend 92, worker 91, minio 46, mcp 45, redis 15 MB); dockerd with
 docker-proxy 145 MB (peak 173 MB); containerd with 7 shims 310 MB, 60 MB of it process memory (peak 963 MB, page cache,
 during the first image pull); Irbisa 75 MB (peak 178 MB); Caddy 50 MB; disk 8.6 GB of 40 GB used (Docker plus containerd 2.5 GB, journal 373 MB, `/var/backups/socialos` 64 KB). Docker
@@ -84,9 +84,9 @@ docker compose config --format json | jq -c '[.services[] | [.cgroup_parent, .me
 Verify: `compose-ok`, then `[["socialos.slice",true,128]]`. `docker compose ps` still shows the old containers, healthy.
 Irbisa check. Rollback: restore the files from the step-0 archive, `systemctl start socialos-autoupdate.timer`.
 
-## Step 3: move the SocialOS containers into the slice (risk: low; SocialOS restarts, about 1 minute)
+## Step 3: move the Steerpost containers into the slice (risk: low; Steerpost restarts, about 1 minute)
 
-Recreates every SocialOS container with `cgroup_parent: socialos.slice`, no swap and a process cap. Irbisa is not touched;
+Recreates every Steerpost container with `cgroup_parent: socialos.slice`, no swap and a process cap. Irbisa is not touched;
 the restart burst itself already runs inside the slice caps. Pick a quiet moment.
 
 ```bash
@@ -164,7 +164,7 @@ Verify: the journal says "is valid"; `systemctl show caddy -p Wants` lists `soci
 is-active caddy` is still `active` with the same `ActiveEnterTimestamp` as before. Irbisa check.
 Rollback: `systemctl disable socialos-caddy-precheck.service && rm /etc/systemd/system/socialos-caddy-precheck.service && systemctl daemon-reload`.
 
-## Step 6: the guard (risk: low; it can only stop and restart SocialOS containers, and only under pressure that SocialOS adds to)
+## Step 6: the guard (risk: low; it can only stop and restart Steerpost containers, and only under pressure that Steerpost adds to)
 
 ```bash
 cd /opt/socialos
@@ -184,9 +184,9 @@ Irbisa check.
 Rollback: `systemctl disable --now socialos-guard.timer && ./host-proxy/socialos-guard.sh --resume` (starts what it
 stopped), then remove the two unit files and `daemon-reload`.
 
-The guard counts SocialOS as a contributor from 300 MB of **anonymous** memory (`anon` in the slice's `memory.stat`), not
+The guard counts Steerpost as a contributor from 300 MB of **anonymous** memory (`anon` in the slice's `memory.stat`), not
 from `memory.current`: that also holds page cache (about 150-250 MB here), which the kernel gives back under pressure and
-which would make the check pass nearly always, so that Irbisa's own spike could shed SocialOS. 300 MB is about half of
+which would make the check pass nearly always, so that Irbisa's own spike could shed Steerpost. 300 MB is about half of
 `MemoryMax` and well above the 120-250 MB the stack uses at rest. After a day, compare `anon` with the threshold and tune
 `GUARD_SLICE_MEM_MB` in `.env`. The CPU test uses the slice's own `cpu.stat` (`usage_usec`) rate, never host-wide PSI.
 
@@ -221,7 +221,7 @@ rm /etc/systemd/system/{docker,containerd}.service.d/socialos.conf
 systemctl daemon-reload
 systemctl set-property --runtime docker.service CPUQuota= CPUWeight= MemoryHigh=infinity
 systemctl set-property --runtime containerd.service CPUQuota= CPUWeight= MemoryHigh=infinity
-# 3: containers out of the slice (SocialOS restarts, about 1 minute); wait for it before step 1
+# 3: containers out of the slice (Steerpost restarts, about 1 minute); wait for it before step 1
 systemctl stop socialos-autoupdate.timer
 echo 'SOCIALOS_CGROUP_PARENT=' >>.env && docker compose up -d --wait
 for c in $(docker compose ps -q); do docker inspect -f '{{.Name}} {{.HostConfig.CgroupParent}}' "$c"; done   # none says socialos.slice
@@ -240,28 +240,28 @@ containers already run outside the slice by then, so nothing needs recreating.
 - One day later: `systemctl show socialos.slice -p MemoryCurrent,MemoryPeak`, `journalctl -k | grep -i oom`,
   `./host-proxy/socialos-guard.sh --status`, `journalctl -u socialos-guard -p warning --since -1d`.
 - Not covered here (owner decisions): `caddy.service` has `Restart=no` (a Caddy crash takes Irbisa down until someone
-  starts it); journald may grow to 4 GB (no `SystemMaxUse`); SocialOS backups are not scheduled yet (`backup.sh` exists).
+  starts it); journald may grow to 4 GB (no `SystemMaxUse`); Steerpost backups are not scheduled yet (`backup.sh` exists).
 
 ## Risk table (audit 2026-10-09)
 
 | Risk | Likelihood | Impact on Irbisa | Mitigation after these steps | Gap |
 |---|---|---|---|---|
-| SocialOS memory leak / runaway | medium | swap thrash, OOM of Irbisa | per-container caps, no swap, slice 664M hard, oom_score_adj 500, guard (only if SocialOS contributes) | caps overcommit the slice (896m vs 664M, about 35%; the slice hard cap still protects the host): a SocialOS OOM, never Irbisa's |
+| Steerpost memory leak / runaway | medium | swap thrash, OOM of Irbisa | per-container caps, no swap, slice 664M hard, oom_score_adj 500, guard (only if Steerpost contributes) | caps overcommit the slice (896m vs 664M, about 35%; the slice hard cap still protects the host): a Steerpost OOM, never Irbisa's |
 | CPU spin in a container | medium | slower responses | slice quota 1 CPU, weight 50; guard on Irbisa CPU stall | - |
 | Fork bomb | low | no new threads host-wide (threads-max 15098, was 2264 per container) | pids_limit 128, slice TasksMax 512 | - |
 | Log flood | low | dockerd CPU and disk IO | json-file 5x10 MB per container, dockerd CPUQuota 25% | - |
 | Image pull / deploy burst | high (each release) | CPU, IO, page cache | containerd/dockerd caps, autoupdate skipped while shed | IO caps on the daemons not set |
-| Disk IO saturation | low | slow SQLite | slice read cap 60 MB/s, guard on Irbisa IO stall and SocialOS IO rate | no write cap until the disk is measured (journal-commit stalls) |
+| Disk IO saturation | low | slow SQLite | slice read cap 60 MB/s, guard on Irbisa IO stall and Steerpost IO rate | no write cap until the disk is measured (journal-commit stalls) |
 | DB bloat / MinIO fills the disk | low (now 0.1 GB) | full disk = Irbisa write errors | alerts at 15 GB data and 80% disk | no hard filesystem quota |
-| Host OOM | low | Irbisa killed | SocialOS capped at about 50% and picked first | - |
-| Broken SocialOS Caddy snippet at Caddy start | low | Caddy does not start: Irbisa down | precheck quarantines it before start | reload path already safe |
+| Host OOM | low | Irbisa killed | Steerpost capped at about 50% and picked first | - |
+| Broken Steerpost Caddy snippet at Caddy start | low | Caddy does not start: Irbisa down | precheck quarantines it before start | reload path already safe |
 | `/opt/socialos/caddy` deleted | low | none (empty glob is allowed) | - | - |
 | Let's Encrypt or sslip.io outage | medium | none (own hostnames, per-hostname limits) | - | - |
-| Port conflict | low | Irbisa cannot bind :3001 | SocialOS on 127.0.0.1:13000/13333/18080/19000 | - |
+| Port conflict | low | Irbisa cannot bind :3001 | Steerpost on 127.0.0.1:13000/13333/18080/19000 | - |
 | Docker daemon crash or upgrade | low | none | live-restore; limits are kernel cgroups, independent of dockerd | docker/caddy are not auto-upgraded (third-party repos) |
 | Host reboot | certain, eventually | slow boot | slice applies at container start; no ordering against Irbisa (a cycle could drop its start job) | - |
 | Failed deploy | medium | none | deploy.sh rolls back, inside the slice | - |
-| Pressure caused by Irbisa, apt or journald | medium | none from SocialOS | the guard alerts but stops nothing unless SocialOS contributes | - |
+| Pressure caused by Irbisa, apt or journald | medium | none from Steerpost | the guard alerts but stops nothing unless Steerpost contributes | - |
 | Caddy crash | low | Irbisa down | - | `caddy.service` has `Restart=no` (owner) |
 
 ## Note: a thrashing container (incident 2026-10-09)

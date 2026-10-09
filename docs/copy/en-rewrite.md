@@ -7,7 +7,7 @@ code they describe.
 
 ## Top 10
 
-1. **#45: the MCP permission notice implies that SocialOS checks your consent.** It does not: the agent sets `confirm: true`
+1. **#45: the MCP permission notice implies that Steerpost checks your consent.** It does not: the agent sets `confirm: true`
    itself. Say so.
 2. **#70: the landing page says agents "can draft and schedule".** Scheduling is off by default, and the risky actions rely
    on a flag that the agent sets.
@@ -80,7 +80,7 @@ code they describe.
 |---|---|---|---|---|
 | 23 | frontend/src/components/composer/composer-view.tsx:72, :79 | No accounts connected / Connect at least one account before composing a post. | No accounts yet / Connect an account to write your first post. | empty-state pattern |
 | 24 | frontend/src/components/composer/composer-view.tsx:144 | Fix before continuing | ICU: Fix {count, plural, one {# problem} other {# problems}} first | says how many |
-| 25 | frontend/src/components/composer/composer-view.tsx:170 | This posts immediately to {list} and cannot be undone from SocialOS. | This posts to {accounts} now. SocialOS cannot undo it. | shorter |
+| 25 | frontend/src/components/composer/composer-view.tsx:170 | This posts immediately to {list} and cannot be undone from Steerpost. | This posts to {accounts} now. Steerpost cannot undo it. | shorter |
 | 26 | frontend/src/components/composer/content-editor.tsx:27 | All platforms | All networks | glossary term |
 | 27 | frontend/src/components/composer/content-editor.tsx:47 | Used for every selected account unless customised in its tab. | Goes to every account without custom text. | shorter, US spelling |
 | 28 | frontend/src/components/composer/content-editor.tsx:65 | Empty: the universal content is used. | Empty, so the main text is used. | no jargon |
@@ -94,7 +94,7 @@ code they describe.
 | # | File:line | Current | Proposed | Why |
 |---|---|---|---|---|
 | 33 | frontend/src/lib/status.ts:26 | Needs review | Unconfirmed | not an approval |
-| 34 | frontend/src/components/posts/post-detail.tsx:38 | The outcome is unknown. Check the platform before retrying to avoid a duplicate. | SocialOS cannot confirm this was published. Check {network} before you retry, or it may post twice. | states the risk |
+| 34 | frontend/src/components/posts/post-detail.tsx:38 | The outcome is unknown. Check the platform before retrying to avoid a duplicate. | Steerpost cannot confirm this was published. Check {network} before you retry, or it may post twice. | states the risk |
 | 35 | frontend/src/components/posts/post-detail.tsx:42 | {n} attempt{n === 1 ? '' : 's'} | ICU: {count, plural, one {# attempt} other {# attempts}} | ICU plural |
 | 36 | frontend/src/components/posts/post-detail.tsx:47 | View on platform | View on {network} | names destination |
 | 37 | frontend/src/components/posts/post-detail.tsx:179 | Retry failed | Retry | reads as status |
@@ -115,9 +115,9 @@ code they describe.
 
 | # | File:line | Current | Proposed | Why |
 |---|---|---|---|---|
-| 45 | frontend/src/components/developer/mcp-view.tsx:101 | Dangerous tools still require the agent to pass an explicit confirm flag, but they can act on live accounts. | The agent must send a confirmation flag for these actions, but SocialOS cannot check that you agreed. Grant them only to agents you trust. | honest limit |
+| 45 | frontend/src/components/developer/mcp-view.tsx:101 | Dangerous tools still require the agent to pass an explicit confirm flag, but they can act on live accounts. | The agent must send a confirmation flag for these actions, but Steerpost cannot check that you agreed. Grant them only to agents you trust. | honest limit |
 | 46 | frontend/src/lib/scopes.ts:62 | Agents can create and edit drafts and upload media. | Agents can create and edit drafts with media you uploaded. | no MCP upload |
-| 47 | frontend/src/lib/scopes.ts:20 | Permanently remove posts. | Delete posts from SocialOS. Published copies stay. | soft delete |
+| 47 | frontend/src/lib/scopes.ts:20 | Permanently remove posts. | Delete posts from Steerpost. Published copies stay. | soft delete |
 | 48 | frontend/src/components/developer/mcp-view.tsx:115, :161 | No agents connected / Connected agents | No MCP connections yet / MCP connections | one term |
 | 49 | frontend/src/components/developer/audit-view.tsx:117 | `actor_type.replace('_', ' ')` → "api key", "user" | Mapped labels: "API key", "Person" | no raw ids |
 
@@ -129,7 +129,7 @@ code they describe.
 | 51 | backend/internal/adapters/stubs/stubs.go:23, :34 | UNSUPPORTED in this release: requires a paid X API tier with write access. | Not available yet: X charges per post through its paid API. | per PLATFORMS |
 | 52 | backend/internal/adapters/stubs/stubs.go:30 | requires Meta app review for instagram_content_publish and a Business/Creator account. | Needs an Instagram Business or Creator account. Posting for other people needs Meta review. | per PLATFORMS |
 | 53 | backend/internal/adapters/stubs/stubs.go:33 | requires Google OAuth verification for youtube.upload scope. | Until Google verifies the app, uploads can only be private. | per PLATFORMS |
-| 54 | backend/internal/adapters/linkedin/linkedin.go:95 | Company pages require Marketing Developer Platform approval. No native scheduling; SocialOS schedules. | Company pages need Community Management API approval. SocialOS does the scheduling. | per PLATFORMS |
+| 54 | backend/internal/adapters/linkedin/linkedin.go:95 | Company pages require Marketing Developer Platform approval. No native scheduling; Steerpost schedules. | Company pages need Community Management API approval. Steerpost does the scheduling. | per PLATFORMS |
 | 55 | backend/internal/application/auth/service.go:96 | invalid email or password | Wrong email or password. | sentence case |
 | 56 | backend/internal/infrastructure/postgres/users.go:37 | an account with this email already exists | An account with this email already exists. Sign in instead. | adds next step |
 | 57 | backend/internal/transport/middleware/auth.go:107 | missing or invalid CSRF token | Your session expired. Reload the page. | user can act |
@@ -141,10 +141,10 @@ code they describe.
 
 | # | File:line | Current | Proposed | Why |
 |---|---|---|---|---|
-| 61 | backend/internal/adapters/mail/templates/verify_email.txt.tmpl:1 (and .html.tmpl:3) | Confirm your email address for SocialOS by opening this link: | Verify your email address for SocialOS: | one verb |
-| 62 | backend/internal/adapters/mail/templates/reset_password.txt.tmpl:1 | Someone asked to reset the password of your SocialOS account. Open this link to choose a new one: | Someone asked to reset your SocialOS password. To choose a new one, open this link: | shorter |
+| 61 | backend/internal/adapters/mail/templates/verify_email.txt.tmpl:1 (and .html.tmpl:3) | Confirm your email address for Steerpost by opening this link: | Verify your email address for Steerpost: | one verb |
+| 62 | backend/internal/adapters/mail/templates/reset_password.txt.tmpl:1 | Someone asked to reset the password of your Steerpost account. Open this link to choose a new one: | Someone asked to reset your Steerpost password. To choose a new one, open this link: | shorter |
 | 63 | backend/internal/adapters/mail/templates/reset_password.txt.tmpl:5 | … If this was not you, ignore this message; your password stays the same. | … If you did not ask for this, ignore this email. Your password stays the same. | no semicolon |
-| 64 | backend/internal/adapters/mail/templates/password_changed.txt.tmpl:1 | The password of your SocialOS account was just changed, and all other sessions were signed out. | Your SocialOS password was changed. Other sessions are signed out. | active, shorter |
+| 64 | backend/internal/adapters/mail/templates/password_changed.txt.tmpl:1 | The password of your Steerpost account was just changed, and all other sessions were signed out. | Your Steerpost password was changed. Other sessions are signed out. | active, shorter |
 | 65 | backend/internal/adapters/mail/templates/password_changed.txt.tmpl:3 | If this was not you, reset your password now and contact the operator of this server. | If this was not you, reset your password now: {ResetLink}. Then tell your server admin. | add the link |
 | 66 | backend/internal/adapters/mail/render.go:33 | `ExpiresIn` is pre-formatted English ("48 hours") | Pass a duration, and format it per locale with plural rules. Subjects (:36-42) move to the catalog. | i18n blocker |
 
@@ -153,7 +153,7 @@ code they describe.
 | # | File:line | Current | Proposed | Why |
 |---|---|---|---|---|
 | 67 | site/src/pages/index.html:4 | One place to publish, for you and your AI agents. | AI agents draft and schedule your posts. You stay in control. | states the promise |
-| 68 | site/src/pages/index.html:5 | SocialOS connects your social accounts, lets you write a post once, tailor it per platform and schedule it. The same abilities are available to AI agents through an MCP server, with scoped, revocable keys. | Write a post once, adjust it per network and schedule it. Claude Desktop, Claude Code or any MCP client can do the same, with keys you scope and can revoke. | shorter, concrete |
+| 68 | site/src/pages/index.html:5 | Steerpost connects your social accounts, lets you write a post once, tailor it per platform and schedule it. The same abilities are available to AI agents through an MCP server, with scoped, revocable keys. | Write a post once, adjust it per network and schedule it. Claude Desktop, Claude Code or any MCP client can do the same, with keys you scope and can revoke. | shorter, concrete |
 | 69 | site/src/pages/index.html:27-28 | Compose once, schedule per platform / … retries transient failures without ever posting twice. | Write once, adjust per network / … retries safe failures. If it cannot tell whether a post went out, it stops and asks you. | no absolute promise |
 | 70 | site/src/pages/index.html:32 | … paste the config into your agent. It can draft and schedule; anything risky needs an explicit confirmation. | … paste the config into your agent. By default it can only read and draft. Scheduling, publishing and deleting stay off until you allow them. | true defaults |
 | 71 | site/src/pages/index.html:62 | Two networks work today. The rest are registered but disabled, because each needs platform approval or a business account. | Two networks work today. The others need platform approval, a business account or a paid API, so they are off. | X is paid |
@@ -164,10 +164,10 @@ code they describe.
 
 | # | File:line | Current | Proposed | Why |
 |---|---|---|---|---|
-| 74 | mcp/src/tools/write.ts:107, :121 | SENSITIVE: publishes the post … / SENSITIVE: deletes a post in SocialOS (soft delete). … | Publishes the post … / Deletes a post in SocialOS. Published copies stay on the networks. Requires `confirm: true` after the user approves. (server.ts:25 already prefixes `[risk: …]`) | duplicate risk label |
-| 75 | mcp/src/tools/write.ts:135 | CRITICAL: disconnects a social account …; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. … | Disconnects a social account and deletes its stored credentials. Its scheduled posts fail until the user reconnects it in the SocialOS UI. Requires `confirm: true` after explicit user approval. | not only OAuth |
-| 76 | mcp/src/errors.ts:21 | … Ask the user to grant it in the SocialOS developer portal. | … Keys cannot gain scopes. Ask the user to create a new MCP connection with this permission under Developer → MCP connections. | real next step |
-| 77 | mcp/src/tools/write.ts:37 | Previously uploaded media ids | Ids of files the user uploaded to the SocialOS media library. This server cannot upload files. | states limit |
+| 74 | mcp/src/tools/write.ts:107, :121 | SENSITIVE: publishes the post … / SENSITIVE: deletes a post in Steerpost (soft delete). … | Publishes the post … / Deletes a post in Steerpost. Published copies stay on the networks. Requires `confirm: true` after the user approves. (server.ts:25 already prefixes `[risk: …]`) | duplicate risk label |
+| 75 | mcp/src/tools/write.ts:135 | CRITICAL: disconnects a social account …; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. … | Disconnects a social account and deletes its stored credentials. Its scheduled posts fail until the user reconnects it in the Steerpost UI. Requires `confirm: true` after explicit user approval. | not only OAuth |
+| 76 | mcp/src/errors.ts:21 | … Ask the user to grant it in the Steerpost developer portal. | … Keys cannot gain scopes. Ask the user to create a new MCP connection with this permission under Developer → MCP connections. | real next step |
+| 77 | mcp/src/tools/write.ts:37 | Previously uploaded media ids | Ids of files the user uploaded to the Steerpost media library. This server cannot upload files. | states limit |
 | 78 | mcp/src/tools/write.ts:85 | … The post WILL go public at that time unless cancelled with cancel_scheduled_post. | … The post goes public at that time with no further confirmation, unless canceled with cancel_scheduled_post. Show the user the final text and accounts first. | human in control |
 | 79 | mcp/src/server.ts:10-12 | … Prefer create_draft, then schedule_post. Never call publish_post, delete_post or disconnect_account without … | Add: "Before schedule_post, show the user the final text, accounts and time; scheduled posts publish without another check." | human in control |
 | 80 | mcp/src/tools/write.ts:14 | … (e.g. shorter for X) … | … (for example, a shorter text for one network) … | X unsupported |
