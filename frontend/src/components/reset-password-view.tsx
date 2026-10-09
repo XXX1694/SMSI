@@ -172,7 +172,7 @@ function ResetPasswordForm(p: FormProps) {
           className="w-full"
           disabled={p.busy || !p.password || !p.confirm}
         >
-          {p.busy ? "Please wait…" : "Save password"}
+          {p.busy ? "Saving…" : "Save password"}
         </Button>
       </form>
     </AuthShell>

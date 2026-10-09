@@ -8,7 +8,7 @@ export function RevokeKeysOption({ id, checked, onChange }: { id: string; checke
       checked={checked}
       onCheckedChange={(c) => onChange(c === true)}
       label="Also revoke all API keys and MCP connections"
-      description="Otherwise they keep working and you should review them yourself."
+      description="If you leave this off, they keep working."
     />
   );
 }

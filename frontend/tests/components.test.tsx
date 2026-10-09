@@ -41,7 +41,7 @@ describe('badges', () => {
     render(<CapabilityBadges caps={normalizeCapabilities({ CanPublishText: true, MaxTextLength: 280 })} />);
     expect(screen.getByText('Text').parentElement).toHaveTextContent('Supports Text');
     expect(screen.getByText('Video').parentElement).toHaveTextContent('No Video');
-    expect(screen.getByText('280 chars')).toBeInTheDocument();
+    expect(screen.getByText('280 characters')).toBeInTheDocument();
   });
 });
 

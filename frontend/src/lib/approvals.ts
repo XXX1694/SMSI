@@ -5,7 +5,7 @@ const LABELS: Record<ApprovalAction, string> = {
   'post.publish': 'Publish now',
   'post.retry_now': 'Retry now',
   'post.delete': 'Delete post',
-  'post.schedule_soon': 'Schedule within minutes',
+  'post.schedule_soon': 'Schedule at short notice',
   'social_account.disconnect': 'Disconnect account',
   'social_account.connect_token': 'Connect with a token',
 };
@@ -17,7 +17,7 @@ export function actionLabel(action: string): string {
 
 /** Actions that cannot be taken back or put content on the live networks. */
 export function isIrreversible(action: string): boolean {
-  return action === 'post.delete' || action === 'social_account.disconnect';
+  return action === 'post.delete' || action === 'social_account.disconnect' || action === 'post.publish' || action === 'post.retry_now';
 }
 
 export function isOpen(a: Approval, now: Date = new Date()): boolean {

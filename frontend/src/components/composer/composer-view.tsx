@@ -49,14 +49,14 @@ export function ComposerView({ postId }: { postId?: string }) {
   if (accounts.length === 0) {
     return (
       <EmptyState
-        title="No accounts connected"
+        title="No accounts yet"
         action={
           <Button asChild>
-            <Link href="/accounts">Connect an account</Link>
+            <Link href="/accounts">Connect account</Link>
           </Button>
         }
       >
-        Connect at least one account before composing a post.
+        Connect an account to write your first post.
       </EmptyState>
     );
   }

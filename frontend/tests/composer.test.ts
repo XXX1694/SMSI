@@ -21,7 +21,7 @@ describe('validateComposer', () => {
 
   it('requires an account and content', () => {
     expect(validateComposer({ ...base, accountIds: [] }, accounts, providers)[0]?.message).toMatch(/at least one account/i);
-    expect(validateComposer({ ...base, content: '  ' }, accounts, providers)[0]?.message).toMatch(/empty/i);
+    expect(validateComposer({ ...base, content: '  ' }, accounts, providers)[0]?.message).toMatch(/add text/i);
   });
 
   it('flags text over the per-platform limit using overrides', () => {
@@ -43,17 +43,17 @@ describe('validateComposer', () => {
     const issues = validateComposer({ ...base, media: [video] }, accounts, providers);
     expect(issues.some((i) => /video/i.test(i.message))).toBe(true);
     const two = validateComposer({ ...base, media: [video, { ...video, id: 'v2' }] }, accounts, providers);
-    expect(two.some((i) => /at most 1/.test(i.message))).toBe(true);
+    expect(two.some((i) => /1 attachment at most/.test(i.message))).toBe(true);
   });
 
   it('rejects inactive accounts', () => {
-    expect(validateComposer({ ...base, accountIds: ['a3'] }, accounts, providers).some((i) => /expired/.test(i.message))).toBe(true);
+    expect(validateComposer({ ...base, accountIds: ['a3'] }, accounts, providers).some((i) => /needs reconnecting/.test(i.message))).toBe(true);
   });
 
   it('validates schedule time', () => {
     const now = new Date('2026-01-01T00:00:00Z');
     expect(validateComposer(base, accounts, providers, { requireSchedule: true, now })[0]?.message).toMatch(/valid date/i);
-    expect(validateComposer({ ...base, scheduledAtUtc: '2025-12-31T00:00:00Z' }, accounts, providers, { requireSchedule: true, now })[0]?.message).toMatch(/future/i);
+    expect(validateComposer({ ...base, scheduledAtUtc: '2025-12-31T00:00:00Z' }, accounts, providers, { requireSchedule: true, now })[0]?.message).toMatch(/at least 1 minute from now/i);
     expect(validateComposer({ ...base, scheduledAtUtc: '2026-01-02T00:00:00Z' }, accounts, providers, { requireSchedule: true, now })).toEqual([]);
   });
 });

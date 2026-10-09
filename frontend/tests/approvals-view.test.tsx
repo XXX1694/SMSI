@@ -68,14 +68,14 @@ describe('ApprovalsView', () => {
     apiMock.approvals.list.mockResolvedValue(page([]));
     render(<ApprovalsView />);
     expect(await screen.findByText('Nothing is waiting for you')).toBeInTheDocument();
-    expect(screen.getByText(/nothing happens until you decide/i)).toBeInTheDocument();
+    expect(screen.getByText(/Requests from agents appear here/i)).toBeInTheDocument();
   });
 
   it('shows the error with a retry that reloads', async () => {
     apiMock.approvals.list.mockImplementationOnce(() => Promise.reject(new ApiError(500, 'INTERNAL', 'The server is down.'))).mockResolvedValueOnce(page([]));
     render(<ApprovalsView />);
     expect(await screen.findByRole('alert')).toHaveTextContent('The server is down.');
-    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('Nothing is waiting for you')).toBeInTheDocument();
   });
 

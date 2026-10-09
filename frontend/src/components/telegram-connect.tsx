@@ -234,7 +234,7 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
             <p className="text-sm">Post this code there as a normal message:</p>
             <div className="flex flex-wrap items-center gap-2">
               <code
-                aria-label="Link code"
+                aria-label="One-time code"
                 className="select-all rounded-md border bg-muted px-3 py-1.5 font-mono text-base font-semibold tracking-wider"
               >
                 {link.code}
@@ -259,11 +259,11 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
             <p className="text-xs text-muted-foreground">
               {retrying
                 ? 'Having trouble reaching the server. Retrying…'
-                : 'We check every 2 seconds. Keep this page open; the bot deletes the code message once you are connected.'}
+                : 'Steerpost checks every 2 seconds. Keep this page open; the bot deletes the code message once you are connected.'}
             </p>
             {DEMO ? (
               <p className="text-xs text-muted-foreground">
-                Demo: no real Telegram chat is needed. The code is recognised automatically after a few seconds.
+                Demo: no real Telegram chat is needed. The code is recognized automatically after a few seconds.
               </p>
             ) : null}
           </div>

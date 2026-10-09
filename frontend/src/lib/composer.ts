@@ -45,12 +45,12 @@ export function validateComposer(
     }
     const label = account.display_name || account.username;
     if (account.status !== 'active') {
-      issues.push({ accountId: id, message: `${label}: connection is ${account.status}. Reconnect it first.` });
+      issues.push({ accountId: id, message: `${label} needs reconnecting. Reconnect it in Accounts.` });
     }
     const provider = providers.find((p) => p.id === account.provider);
     const text = effectiveContent(state, id);
     if (text.trim() === '' && !hasMedia) {
-      issues.push({ accountId: id, message: `${label}: content is empty.` });
+      issues.push({ accountId: id, message: `${label}: add text.` });
     }
     if (!provider) continue;
     const caps = provider.capabilities;
@@ -58,13 +58,13 @@ export function validateComposer(
     if (caps.maxTextLength > 0 && len > caps.maxTextLength) {
       issues.push({
         accountId: id,
-        message: `${label}: ${len - caps.maxTextLength} characters over the ${provider.name} limit of ${caps.maxTextLength}.`,
+        message: `${label}: ${len - caps.maxTextLength === 1 ? '1 character' : `${len - caps.maxTextLength} characters`} over the ${provider.name} limit of ${caps.maxTextLength}.`,
       });
     }
     if (caps.maxMediaCount >= 0 && state.media.length > caps.maxMediaCount) {
       issues.push({
         accountId: id,
-        message: `${label}: ${provider.name} allows at most ${caps.maxMediaCount} attachment${caps.maxMediaCount === 1 ? '' : 's'}.`,
+        message: caps.maxMediaCount === 1 ? `${label}: ${provider.name} allows 1 attachment at most.` : `${label}: ${provider.name} allows ${caps.maxMediaCount} attachments at most.`,
       });
     }
     if (state.media.some((m) => m.kind === 'image') && !caps.canPublishImage) {
@@ -79,11 +79,14 @@ export function validateComposer(
     if (!state.scheduledAtUtc) {
       issues.push({ accountId: null, message: 'Choose a valid date and time to schedule.' });
     } else if (new Date(state.scheduledAtUtc).getTime() <= now.getTime() + 60_000) {
-      issues.push({ accountId: null, message: 'Scheduled time must be at least one minute in the future.' });
+      issues.push({ accountId: null, message: SCHEDULE_TOO_SOON });
     }
   }
   return issues;
 }
+
+/** One message for one rule: the composer and the post page both use it. */
+export const SCHEDULE_TOO_SOON = 'Choose a time at least 1 minute from now.';
 
 export function counterTone(len: number, max: number): 'ok' | 'warn' | 'over' {
   if (max <= 0) return 'ok';

@@ -12,8 +12,8 @@ import type { Approval, ApprovalStatus } from '@/lib/types';
 
 const STATUS: Record<ApprovalStatus, { label: string; tone: 'success' | 'danger' | 'neutral' | 'warning' }> = {
   pending: { label: 'Waiting', tone: 'warning' },
-  approved: { label: 'Approved, not used yet', tone: 'success' },
-  consumed: { label: 'Approved and used', tone: 'success' },
+  approved: { label: 'Approved, waiting for the agent', tone: 'success' },
+  consumed: { label: 'Approved and done', tone: 'success' },
   denied: { label: 'Denied', tone: 'danger' },
   expired: { label: 'Expired', tone: 'neutral' },
 };
@@ -78,7 +78,7 @@ export function ApprovalCard({ approval, now, busy, onApprove, onDeny }: Props) 
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={isIrreversible(approval.action) ? 'danger' : 'accent'}>{label}</Badge>
           <span className="text-sm text-muted-foreground">
-            asked by <span className="font-medium text-foreground">{approval.actor_label}</span>
+            Requested by <span className="font-medium text-foreground">{approval.actor_label}</span>
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
@@ -92,7 +92,7 @@ export function ApprovalCard({ approval, now, busy, onApprove, onDeny }: Props) 
             <X className="h-4 w-4" aria-hidden /> Deny
           </Button>
           <Button variant={isIrreversible(approval.action) ? 'danger' : 'primary'} size="sm" disabled={busy} onClick={() => onApprove(approval)} aria-label={`Approve: ${label}`}>
-            <Check className="h-4 w-4" aria-hidden /> {busy ? 'Working…' : 'Approve'}
+            <Check className="h-4 w-4" aria-hidden /> {busy ? 'Approving…' : 'Approve'}
           </Button>
         </div>
       ) : (

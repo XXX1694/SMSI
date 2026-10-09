@@ -98,7 +98,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
           </Field>
           <ScopePicker value={scopes} onChange={setScopes} />
           {dangerous ? (
-            <CheckboxField checked={ack} onCheckedChange={(c) => setAck(c === true)} label="I understand this key can publish, delete or disconnect on my behalf." />
+            <CheckboxField checked={ack} onCheckedChange={(c) => setAck(c === true)} label="I understand this key can ask to publish, delete or disconnect. Each request waits for my approval." />
           ) : null}
           {dangerous ? <TrustedPolicyField trusted={trusted} confirmed={trustAck} onTrusted={(v) => { setTrusted(v); if (!v) setTrustAck(false); }} onConfirmed={setTrustAck} /> : null}
           {error ? <InlineError>{error}</InlineError> : null}

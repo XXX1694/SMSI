@@ -14,7 +14,7 @@ const POST: Record<PostStatus, StatusView> = {
   published: { label: 'Published', tone: 'success' },
   partially_published: { label: 'Partially published', tone: 'warning' },
   failed: { label: 'Failed', tone: 'danger' },
-  cancelled: { label: 'Cancelled', tone: 'neutral' },
+  cancelled: { label: 'Canceled', tone: 'neutral' },
 };
 
 const TARGET: Record<TargetStatus, StatusView> = {
@@ -22,13 +22,13 @@ const TARGET: Record<TargetStatus, StatusView> = {
   publishing: { label: 'Publishing', tone: 'info' },
   published: { label: 'Published', tone: 'success' },
   failed: { label: 'Failed', tone: 'danger' },
-  cancelled: { label: 'Cancelled', tone: 'neutral' },
-  needs_review: { label: 'Needs review', tone: 'warning' },
+  cancelled: { label: 'Canceled', tone: 'neutral' },
+  needs_review: { label: 'Unconfirmed', tone: 'warning' },
 };
 
 const ACCOUNT: Record<AccountStatus, StatusView> = {
   active: { label: 'Active', tone: 'success' },
-  expired: { label: 'Expired', tone: 'warning' },
+  expired: { label: 'Needs reconnecting', tone: 'warning' },
   revoked: { label: 'Revoked', tone: 'neutral' },
   error: { label: 'Error', tone: 'danger' },
 };
@@ -37,7 +37,7 @@ const ATTEMPT: Record<AttemptStatus, StatusView> = {
   started: { label: 'Started', tone: 'info' },
   succeeded: { label: 'Succeeded', tone: 'success' },
   failed: { label: 'Failed', tone: 'danger' },
-  unknown: { label: 'Unknown outcome', tone: 'warning' },
+  unknown: { label: 'Unconfirmed', tone: 'warning' },
 };
 
 function lookup<K extends string>(map: Record<K, StatusView>, key: string): StatusView {

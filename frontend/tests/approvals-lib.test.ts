@@ -15,9 +15,9 @@ describe('approvals helpers', () => {
     expect(actionLabel('something.new')).toBe('something.new');
   });
 
-  it('flags only delete and disconnect as irreversible', () => {
-    expect(['post.delete', 'social_account.disconnect'].every(isIrreversible)).toBe(true);
-    expect(['post.publish', 'post.retry_now', 'post.schedule_soon', 'social_account.connect_token'].some(isIrreversible)).toBe(false);
+  it('flags delete, disconnect, publish now and retry now as irreversible', () => {
+    expect(['post.delete', 'social_account.disconnect', 'post.publish', 'post.retry_now'].every(isIrreversible)).toBe(true);
+    expect(['post.schedule_soon', 'social_account.connect_token'].some(isIrreversible)).toBe(false);
   });
 
   it('counts down and reports expiry', () => {
@@ -77,5 +77,12 @@ describe('approvals helpers', () => {
     );
     expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on linkedin · @alex', 'Text on linkedin · @team', 'Accounts']);
     expect(lines.at(-1)!.value).toBe('linkedin · @alex, linkedin · @team');
+  });
+});
+
+describe('approval copy', () => {
+  it('names the real dangerous actions in plain words', () => {
+    expect(actionLabel('post.schedule_soon')).toBe('Schedule at short notice');
+    expect(actionLabel('post.publish')).toBe('Publish now');
   });
 });

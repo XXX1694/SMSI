@@ -24,7 +24,7 @@ export function AccountChips({
             aria-pressed={on}
             disabled={!usable}
             onClick={() => onToggle(a.id)}
-            title={usable ? undefined : `Connection is ${a.status}`}
+            title={usable ? undefined : 'Needs reconnecting'}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50',
               on ? 'border-accent bg-accent-soft text-accent' : 'hover:bg-muted',

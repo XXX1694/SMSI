@@ -12,7 +12,9 @@ describe('state to badge mapping', () => {
   it('maps target, account and attempt statuses', () => {
     expect(targetStatusView('needs_review').tone).toBe('warning');
     expect(accountStatusView('expired').tone).toBe('warning');
-    expect(attemptStatusView('unknown').label).toBe('Unknown outcome');
+    expect(accountStatusView('expired').label).toBe('Needs reconnecting');
+    expect(targetStatusView('needs_review').label).toBe('Unconfirmed');
+    expect(attemptStatusView('unknown').label).toBe('Unconfirmed');
   });
   it('falls back for unknown values', () => {
     expect(postStatusView('weird')).toEqual({ label: 'weird', tone: 'neutral' });

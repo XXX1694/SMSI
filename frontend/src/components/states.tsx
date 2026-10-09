@@ -15,7 +15,7 @@ export function LoadingRows({ rows = 3 }: { rows?: number }) {
   );
 }
 
-export function ErrorState({ error, onRetry, title = 'Could not load this', showRef = true }: { error: unknown; onRetry?: () => void; title?: string; showRef?: boolean }) {
+export function ErrorState({ error, onRetry, title = 'Loading failed', showRef = true }: { error: unknown; onRetry?: () => void; title?: string; showRef?: boolean }) {
   return (
     <div role="alert" className="flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-sm">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
@@ -25,7 +25,7 @@ export function ErrorState({ error, onRetry, title = 'Could not load this', show
       </div>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
-          Retry
+          Try again
         </Button>
       ) : null}
     </div>

@@ -11,12 +11,14 @@ interface Props {
   title: string;
   description: string;
   confirmLabel: string;
+  /** Label of the button that closes the dialog; "Cancel" by default. */
+  dismissLabel?: string;
   destructive?: boolean;
   onConfirm: () => Promise<void>;
   children?: ReactNode;
 }
 
-export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, destructive, onConfirm, children }: Props) {
+export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, dismissLabel, destructive, onConfirm, children }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
         ) : null}
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
-            Cancel
+            {dismissLabel ?? 'Cancel'}
           </Button>
           <Button variant={destructive ? 'danger' : 'primary'} onClick={run} disabled={busy}>
             {busy ? 'Working…' : confirmLabel}

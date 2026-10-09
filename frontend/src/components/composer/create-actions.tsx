@@ -95,7 +95,7 @@ export function CreateActions({ state, title, accounts, providers, selected, onL
         open={confirmPublish}
         onOpenChange={setConfirmPublish}
         title="Publish now?"
-        description={`This posts immediately to ${selected.map((a) => a.display_name || a.username).join(', ')} and cannot be undone from Steerpost.`}
+        description={`This posts to ${selected.map((a) => a.display_name || a.username).join(', ')} now. Steerpost cannot undo it.`}
         confirmLabel="Publish now"
         onConfirm={() => run('publish')}
       />

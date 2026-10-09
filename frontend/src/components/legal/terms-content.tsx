@@ -6,7 +6,7 @@ export function TermsContent({ operator }: { operator: Operator }) {
     <LegalPage title="Terms of Service" other="privacy" operator={operator}>
       <LegalSection title="Who you are dealing with">
         <p>
-          Steerpost is open-source software. These terms are between you and the operator of this copy (named under Contact below). The Steerpost
+          Steerpost is open-source software under the AGPL-3.0. These terms are between you and the operator of this copy (named under Contact below). The Steerpost
           maintainers do not run this instance and are not a party to these terms.
         </p>
       </LegalSection>
@@ -21,7 +21,7 @@ export function TermsContent({ operator }: { operator: Operator }) {
       <LegalSection title="Your account">
         <ul>
           <li>Give a real email address and keep your password and API keys secret. You are responsible for what is done with them, including by AI agents you connect.</li>
-          <li>Dangerous actions by an API key can need your approval. Approving one is your decision.</li>
+          <li>Dangerous actions by an API key need your approval, unless you made the key trusted. Approving one is your decision.</li>
         </ul>
       </LegalSection>
 
