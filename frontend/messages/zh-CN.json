@@ -128,6 +128,12 @@
       "resetTitle": "重置演示？",
       "resetBody": "你在此演示中所做的全部更改都会被清除，示例数据将恢复。",
       "resetConfirm": "重置演示"
+    },
+    "deletionBanner": {
+      "heading": "你的账号将于 {date} 删除。",
+      "body": "届时你的所有数据都会被删除且无法恢复。API 密钥已吊销，定时发布的帖子已变回草稿。你仍可在设置中下载自己的数据。",
+      "cancel": "取消删除",
+      "cancelling": "正在取消…"
     }
   },
   "legal": {
@@ -190,7 +196,8 @@
       "failTitle": "无法验证你的邮箱",
       "invalidBody": "链接可能已过期或已被使用。链接只能使用一次，有效期 48 小时。",
       "signInToRequest": "登录以获取新链接"
-    }
+    },
+    "deletedNotice": "账号删除已排期。你的所有会话和 API 密钥都已退出登录。请在宽限期结束前登录，查看日期并取消删除。"
   },
   "posts": {
     "editBlockedPublishing": "此帖子正在发布，暂时无法修改。",
@@ -284,6 +291,34 @@
       "agentsUnlimited": "AI 智能体：不限制请求数。",
       "agentsLimit": "AI 智能体：你所有密钥和连接合计每分钟最多 {rpm, plural, other {# 个请求}}。",
       "loadFailed": "无法加载你的用量"
+    },
+    "yourData": "我的数据",
+    "export": {
+      "loadFailed": "无法加载你的导出",
+      "intro": "下载一个 ZIP，其中包含你的个人资料、帖子（含发布目标和发布尝试）、已连接的账号（不含凭据）、API 密钥名称、审计日志、审批和媒体文件。密码、密钥和令牌绝不会包含在内。",
+      "preparing": "正在准备你的导出。你可以离开此页面，回来时就准备好了。",
+      "ready": "你的导出（{size}）已准备好。下载链接 5 分钟内有效，文件将于 {date} 删除。",
+      "failed": "上一次导出未能生成。没有保留任何内容，请重试。",
+      "expired": "你上一次的导出已过期并已删除。请重新申请。",
+      "download": "下载 ZIP",
+      "requestNew": "申请新的导出",
+      "request": "申请导出",
+      "cooldown": "上一次导出 24 小时后才能申请新的导出。"
+    },
+    "exportHeading": "导出",
+    "deleteAccount": {
+      "heading": "删除账号",
+      "intro": "将删除你的账号、帖子、媒体、已连接的账号、API 密钥和审计日志。确认后 {days, plural, other {# 天}}执行。在此之前你可以登录并取消；定时发布的帖子会立即变回草稿，所有会话和 API 密钥会立即退出登录。如需副本，请先下载你的数据。",
+      "open": "删除账号…",
+      "dialogTitle": "要删除账号吗？",
+      "dialogBody": "你在 Steerpost 中的所有内容将在宽限期结束后删除。此操作无法撤销。",
+      "formLabel": "删除账号",
+      "password": "密码",
+      "confirmLabel": "输入 {email} 以确认",
+      "yourEmail": "你的邮箱",
+      "wrongPassword": "这不是当前密码。",
+      "wrongConfirm": "请按所示内容准确输入邮箱地址。",
+      "submit": "删除我的账号"
     }
   },
   "dashboard": {

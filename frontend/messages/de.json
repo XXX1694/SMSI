@@ -128,6 +128,12 @@
       "resetTitle": "Demo zurücksetzen?",
       "resetBody": "Alles, was du in dieser Demo geändert hast, wird entfernt, und die Beispieldaten kommen zurück.",
       "resetConfirm": "Zurücksetzen"
+    },
+    "deletionBanner": {
+      "heading": "Dein Konto wird am {date} gelöscht.",
+      "body": "Dann sind alle deine Daten weg und lassen sich nicht wiederherstellen. Deine API-Schlüssel wurden widerrufen, geplante Beiträge sind jetzt Entwürfe. Deine Daten kannst du weiterhin in den Einstellungen herunterladen.",
+      "cancel": "Löschung abbrechen",
+      "cancelling": "Wird abgebrochen…"
     }
   },
   "legal": {
@@ -190,7 +196,8 @@
       "failTitle": "E-Mail-Adresse konnte nicht bestätigt werden",
       "invalidBody": "Er ist möglicherweise abgelaufen oder wurde schon verwendet. Links funktionieren einmal und gelten 48 Stunden.",
       "signInToRequest": "Anmelden, um einen neuen Link anzufordern"
-    }
+    },
+    "deletedNotice": "Die Löschung deines Kontos ist geplant. Deine Sitzungen und API-Schlüssel wurden abgemeldet. Melde dich vor Ablauf der Frist an, um das Datum zu sehen und die Löschung abzubrechen."
   },
   "posts": {
     "editBlockedPublishing": "Dieser Beitrag wird gerade veröffentlicht und kann nicht geändert werden.",
@@ -297,6 +304,21 @@
       "requestNew": "Neuen Export anfordern",
       "request": "Export anfordern",
       "cooldown": "24 Stunden nach dem letzten Export kannst du einen neuen anfordern."
+    },
+    "exportHeading": "Export",
+    "deleteAccount": {
+      "heading": "Konto löschen",
+      "intro": "Löscht dein Konto, deine Beiträge, Medien, verbundenen Konten, API-Schlüssel und das Audit-Log. Das passiert {days, plural, one {# Tag} other {# Tage}} nach deiner Bestätigung. Bis dahin kannst du dich anmelden und abbrechen; geplante Beiträge werden wieder zu Entwürfen, und alle Sitzungen und API-Schlüssel werden sofort abgemeldet. Lade zuerst deine Daten herunter, wenn du eine Kopie möchtest.",
+      "open": "Konto löschen…",
+      "dialogTitle": "Konto löschen?",
+      "dialogBody": "Alles, was du in Steerpost hast, wird nach Ablauf der Frist gelöscht. Das lässt sich nicht rückgängig machen.",
+      "formLabel": "Konto löschen",
+      "password": "Dein Passwort",
+      "confirmLabel": "Gib zur Bestätigung {email} ein",
+      "yourEmail": "deine E-Mail-Adresse",
+      "wrongPassword": "Das ist nicht dein aktuelles Passwort.",
+      "wrongConfirm": "Gib deine E-Mail-Adresse genau so ein, wie sie angezeigt wird.",
+      "submit": "Mein Konto löschen"
     }
   },
   "dashboard": {

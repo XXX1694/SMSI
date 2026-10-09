@@ -128,6 +128,12 @@
       "resetTitle": "Rétablir la démo ?",
       "resetBody": "Tout ce que vous avez modifié dans cette démo est supprimé et les données d’exemple reviennent.",
       "resetConfirm": "Rétablir"
+    },
+    "deletionBanner": {
+      "heading": "Votre compte sera supprimé le {date}.",
+      "body": "Toutes vos données disparaîtront alors et ne pourront pas être récupérées. Vos clés d’API ont été révoquées et les posts planifiés sont redevenus des brouillons. Vous pouvez encore télécharger vos données dans les paramètres.",
+      "cancel": "Annuler la suppression",
+      "cancelling": "Annulation…"
     }
   },
   "legal": {
@@ -190,7 +196,8 @@
       "failTitle": "Impossible de vérifier votre e-mail",
       "invalidBody": "Il a peut-être expiré ou déjà été utilisé. Les liens ne fonctionnent qu’une fois et restent valables 48 heures.",
       "signInToRequest": "Connectez-vous pour demander un lien"
-    }
+    },
+    "deletedNotice": "La suppression de votre compte est programmée. Vos sessions et vos clés d’API ont été fermées. Connectez-vous avant la fin du délai pour voir la date et l’annuler."
   },
   "posts": {
     "editBlockedPublishing": "Ce post est en cours de publication et ne peut pas être modifié.",
@@ -297,6 +304,21 @@
       "requestNew": "Demander un nouvel export",
       "request": "Demander un export",
       "cooldown": "Vous pouvez demander un nouvel export 24 heures après le dernier."
+    },
+    "exportHeading": "Export",
+    "deleteAccount": {
+      "heading": "Supprimer le compte",
+      "intro": "Supprime votre compte, vos posts, médias, comptes connectés, clés d’API et journal d’audit. Cela se produit {days, plural, one {# jour} many {# de jours} other {# jours}} après votre confirmation. D’ici là, vous pouvez vous connecter et annuler ; les posts planifiés repassent en brouillons et toutes les sessions et clés d’API sont fermées immédiatement. Téléchargez d’abord vos données si vous en voulez une copie.",
+      "open": "Supprimer le compte…",
+      "dialogTitle": "Supprimer votre compte ?",
+      "dialogBody": "Tout ce que vous avez dans Steerpost sera supprimé à la fin du délai. Cette action est irréversible.",
+      "formLabel": "Supprimer le compte",
+      "password": "Votre mot de passe",
+      "confirmLabel": "Saisissez {email} pour confirmer",
+      "yourEmail": "votre e-mail",
+      "wrongPassword": "Ce n’est pas votre mot de passe actuel.",
+      "wrongConfirm": "Saisissez votre adresse e-mail exactement comme indiquée.",
+      "submit": "Supprimer mon compte"
     }
   },
   "dashboard": {
