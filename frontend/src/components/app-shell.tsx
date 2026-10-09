@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
 import { EmailBanner } from '@/components/email-banner';
@@ -56,7 +56,7 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative z-10 flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
-        active ? 'font-medium text-foreground' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+        active ? 'font-medium text-foreground group-data-[indicator=off]/nav:bg-muted' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
       )}
     >
       <Icon className="h-4 w-4" aria-hidden />
@@ -76,12 +76,25 @@ function useActiveIndicator(pathname: string, open: boolean) {
   const nav = useRef<HTMLElement>(null);
   const [box, setBox] = useState<{ y: number; h: number } | null>(null);
   const [settled, setSettled] = useState(false);
-  useLayoutEffect(() => {
+  const measure = useCallback(() => {
     const el = nav.current?.querySelector<HTMLElement>('[aria-current="page"]');
-    // A hidden sidebar (mobile, closed) measures 0; show nothing until it is open.
-    if (!el || el.offsetHeight === 0) return setBox(null);
-    setBox({ y: el.offsetTop, h: el.offsetHeight });
-  }, [pathname, open]);
+    // A hidden sidebar (mobile, closed) measures 0; show nothing until it is visible.
+    const next = el && el.offsetHeight > 0 ? { y: el.offsetTop, h: el.offsetHeight } : null;
+    setBox((cur) => (cur?.y === next?.y && cur?.h === next?.h ? cur : next));
+  }, []);
+  useLayoutEffect(measure, [measure, pathname, open]);
+  // Re-measure when the layout changes without a navigation: viewport resize (mobile <-> desktop), web font load.
+  useEffect(() => {
+    const el = nav.current;
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    if (el) observer?.observe(el);
+    void document.fonts?.ready.then(measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [measure]);
   // No slide on the very first placement, only on later moves.
   useLayoutEffect(() => {
     if (box) setSettled(true);
@@ -124,13 +137,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       >
         <div className="mb-4 hidden px-2.5 pt-1 text-sm font-semibold md:block">SocialOS</div>
-        <nav ref={nav} aria-label="Main" className="relative flex flex-1 flex-col gap-0.5">
+        <nav ref={nav} aria-label="Main" data-indicator={box ? 'on' : 'off'} className="group/nav relative flex flex-1 flex-col gap-0.5">
           <span
             aria-hidden
             data-testid="nav-indicator"
             className={cn(
               'pointer-events-none absolute inset-x-0 top-0 rounded-md bg-muted before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent',
-              settled && 'transition-transform duration-base ease-out',
+              settled && 'transition-transform duration-base ease-enter',
               !box && 'hidden',
             )}
             style={box ? { height: box.h, transform: `translateY(${box.y}px)` } : undefined}

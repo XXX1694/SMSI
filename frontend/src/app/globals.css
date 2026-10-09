@@ -22,9 +22,22 @@ html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
   html[data-demo] #sidebar { top: 1.75rem; height: calc(100vh - 1.75rem); }
 }
 
+/* Keyframes used by name from plain CSS live here: Tailwind only emits keyframes for animate-* utilities it sees. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(var(--distance-enter)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+
 @layer components {
   /* First-load list stagger: children rise in one after another (capped, so long lists do not crawl). */
-  .stagger > * { animation: rise-in var(--duration-slow) var(--ease-out) both; }
+  .stagger > * { animation: rise-in var(--duration-slow) var(--ease-enter) backwards; }
   .stagger > :nth-child(2) { animation-delay: calc(var(--stagger-step) * 1); }
   .stagger > :nth-child(3) { animation-delay: calc(var(--stagger-step) * 2); }
   .stagger > :nth-child(4) { animation-delay: calc(var(--stagger-step) * 3); }
@@ -32,10 +45,10 @@ html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
   .stagger > :nth-child(n + 6) { animation-delay: calc(var(--stagger-step) * 5); }
 
   /* Card hover lift: transform for the move, an opacity-faded shadow layer for the elevation. */
-  .card-lift { position: relative; transition: transform var(--duration-base) var(--ease-out); }
+  .card-lift { position: relative; transition: transform var(--duration-base) var(--ease-enter); }
   .card-lift::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    box-shadow: var(--shadow-pop); opacity: 0; transition: opacity var(--duration-base) var(--ease-out);
+    box-shadow: var(--shadow-pop); opacity: 0; transition: opacity var(--duration-base) var(--ease-enter);
   }
   .card-lift:hover { transform: translateY(-2px); }
   .card-lift:hover::after { opacity: 1; }
@@ -45,19 +58,21 @@ html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
   .shimmer::after {
     content: ''; position: absolute; inset: 0; transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
-    animation: shimmer 1.4s var(--ease-standard) infinite;
+    animation: shimmer var(--duration-shimmer) var(--ease-standard) infinite;
   }
 }
 
 /* Page enter: the fallback for browsers without the View Transitions API (and for navigations that skip it). */
-.page-enter { animation: rise-in var(--duration-slow) var(--ease-out) both; }
+.page-enter { animation: rise-in var(--duration-slow) var(--ease-enter) both; }
 html[data-vt] .page-enter { animation: none; }
 
 /* View Transitions: the page content fades and slides a little; the title and the sidebar stay put. */
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--duration-base); animation-timing-function: var(--ease-out); }
-::view-transition-old(page-main) { animation: fade-out var(--duration-fast) var(--ease-in) both; }
-::view-transition-new(page-main) { animation: rise-in var(--duration-slow) var(--ease-out) both; }
-::view-transition-group(sidebar) { animation-duration: 0s; }
+/* The shell (sidebar included) is not cross-faded: the new frame replaces the old at once, so a stale highlight never
+   shows over the new page. Only the page content (page-main) and the title animate. */
+::view-transition-old(root) { animation: none; opacity: 0; }
+::view-transition-new(root) { animation: none; opacity: 1; }
+::view-transition-old(page-main) { animation: fade-out var(--duration-fast) var(--ease-exit) both; }
+::view-transition-new(page-main) { animation: rise-in var(--duration-slow) var(--ease-enter) both; }
 
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {

@@ -19,6 +19,21 @@ export function supportsViewTransitions(): boolean {
   return typeof document !== 'undefined' && typeof (document as Document & { startViewTransition?: unknown }).startViewTransition === 'function';
 }
 
+function stripSlashes(path: string): string {
+  const trimmed = path.replace(/\/+$/, '');
+  return trimmed === '' ? '/' : trimmed;
+}
+
+/** True when `target` (a router href: path, optional query and hash) is the page the browser is already on. */
+export function isCurrentLocation(target: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '');
+  const url = new URL(target, window.location.origin);
+  const here = window.location;
+  const herePath = base && here.pathname.startsWith(base) ? here.pathname.slice(base.length) : here.pathname;
+  return stripSlashes(url.pathname) === stripSlashes(herePath) && url.search === here.search && url.hash === here.hash;
+}
+
 /** Marks <html> so CSS can drop the fallback animation in browsers that animate through the API. */
 export function markViewTransitions(): void {
   if (supportsViewTransitions() && !prefersReducedMotion()) document.documentElement.dataset.vt = '';
@@ -44,8 +59,9 @@ export function runWithTransition(navigate: () => void): boolean {
         const timer = window.setTimeout(resolve, TIMEOUT_MS);
         pending = () => {
           window.clearTimeout(timer);
-          // One frame so React has painted the committed tree before the browser takes the "new" snapshot.
-          requestAnimationFrame(() => resolve());
+          // Not requestAnimationFrame: rendering is suspended while the update callback is pending, so a frame never comes.
+          // The DOM is already committed here (React ran the effect), so a task tick is enough.
+          window.setTimeout(resolve, 0);
         };
         navigate();
       }),
