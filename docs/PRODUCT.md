@@ -99,7 +99,7 @@ Full user stories and acceptance criteria are in the issues.
 |---|---|---|---|---|---|
 | [#75](https://github.com/XXX1694/SMSI/issues/75) | Failure notifications | I learn a post failed and how to fix it | One email per failed post after the last attempt; banner in every mail mode | Mail port; real domain for prod email | 3·2·0.9/0.5 = 10.8 |
 | [#76](https://github.com/XXX1694/SMSI/issues/76) | Onboarding checklist | I get from sign-up to a scheduled post and a connected agent fast | Checklist driven by API state, only configured networks offered | None | 3·2·0.7/0.5 = 8.4 |
-| [#77](https://github.com/XXX1694/SMSI/issues/77) | MCP setup per client | I paste one config into Claude Code, Cursor or Claude Desktop | Copy-ready tabs; no `npx socialos-mcp` (unpublished) | None | 2·2·1/0.5 = 8.0 |
+| [#77](https://github.com/XXX1694/SMSI/issues/77) | MCP setup per client | I paste one config into Claude Code, Cursor or Claude Desktop | Copy-ready tabs; no unpublished npm package | None | 2·2·1/0.5 = 8.0 |
 | [#79](https://github.com/XXX1694/SMSI/issues/79) | Token connect + Discord | I connect a network without a developer app | PLATFORMS PR0a, PR0b, PR1 and the 5-step adapter acceptance | Tier 1; DECISIONS entries | 3·3·0.9/1.5 = 5.4 |
 | [#80](https://github.com/XXX1694/SMSI/issues/80) | Mastodon + Bluesky | One draft reaches the fediverse and Bluesky | PR2, PR3; SSRF guard proven by negative tests | Tier 1; #79 | 3·3·0.8/1.5 = 4.8 |
 | [#81](https://github.com/XXX1694/SMSI/issues/81) | Agent review inbox | I approve, edit or discard what agents drafted | Filtered list with agent name, actions audited as me | None | 2·3·0.8/1 = 4.8 |
@@ -146,7 +146,7 @@ off-site backups, Terms and Privacy, and support.
 - [ ] SECURITY.md and GitHub private vulnerability reporting enabled; threat model and ASVS L1 review done (ROADMAP 6).
 - [ ] Data export and account deletion (#78); Terms and Privacy pages.
 - [ ] At least Discord, Mastodon and Bluesky live (#79, #80), so the product is useful without developer apps.
-- [ ] MCP setup without the unpublished npm package (#77), or `socialos-mcp` published with the owner's "yes".
+- [ ] MCP setup without the unpublished npm package (#77), or the MCP package published to npm with the owner's "yes".
 - [ ] A real domain, production mail on, and off-site backups switched on with a restore drill passed.
 - [ ] The acceptance scenario passed in production with real networks.
 - [ ] The owner's "yes" for every announcement (AGENTS.md section 9).
