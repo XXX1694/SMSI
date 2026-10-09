@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, InlineError, LoadingRows } from '@/components/s
 import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { CheckboxField } from '@/components/ui/checkbox';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input, Select } from '@/components/ui/input';
@@ -85,11 +85,11 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title="Create API key" description="Keys act as you. Grant only what the integration needs.">
         <div className="space-y-5">
-          <Field label="Name" htmlFor="key-name">
-            <Input id="key-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="CI publisher" />
+          <Field label="Name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="CI publisher" />
           </Field>
-          <Field label="Expires" htmlFor="key-exp">
-            <Select id="key-exp" value={expiry} onChange={(e) => setExpiry(e.target.value)}>
+          <Field label="Expires">
+            <Select value={expiry} onChange={(e) => setExpiry(e.target.value)}>
               {EXPIRY.map((o) => (
                 <option key={o.label} value={o.days ?? ''}>{o.label}</option>
               ))}
@@ -97,10 +97,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
           </Field>
           <ScopePicker value={scopes} onChange={setScopes} />
           {dangerous ? (
-            <div className="flex items-start gap-2.5">
-              <Checkbox id="key-ack" checked={ack} onCheckedChange={(c) => setAck(c === true)} />
-              <label htmlFor="key-ack" className="text-sm">I understand this key can publish, delete or disconnect on my behalf.</label>
-            </div>
+            <CheckboxField checked={ack} onCheckedChange={(c) => setAck(c === true)} label="I understand this key can publish, delete or disconnect on my behalf." />
           ) : null}
           {dangerous ? <TrustedPolicyField trusted={trusted} confirmed={trustAck} onTrusted={(v) => { setTrusted(v); if (!v) setTrustAck(false); }} onConfirmed={setTrustAck} /> : null}
           {error ? <InlineError>{error}</InlineError> : null}
