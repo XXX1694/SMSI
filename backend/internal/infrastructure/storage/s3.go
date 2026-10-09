@@ -101,12 +101,18 @@ func (s *S3) ensureBucket(ctx context.Context, region string) error {
 	return nil
 }
 
-// Put uploads an object (private ACL by default).
+// putPartSize is the multipart part size (the S3 minimum). minio-go buffers one part per upload thread, so with
+// NumThreads 1 a streamed upload holds about 5 MiB however large the object is (D-015).
+const putPartSize = 5 << 20
+
+// Put uploads an object (private ACL by default). size -1 streams a body of unknown length in bounded parts; if r
+// fails, minio-go aborts the multipart upload and no object is created.
 func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
 	if err := s.ensure(ctx); err != nil {
 		return err
 	}
-	_, err := s.client.PutObject(ctx, s.bucket, key, r, size, minio.PutObjectOptions{ContentType: contentType})
+	_, err := s.client.PutObject(ctx, s.bucket, key, r, size,
+		minio.PutObjectOptions{ContentType: contentType, PartSize: putPartSize, NumThreads: 1})
 	return err
 }
 

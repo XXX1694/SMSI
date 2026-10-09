@@ -40,6 +40,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- Large uploads no longer exhaust memory on a small host: media is streamed to object storage in 5 MiB parts (no temp files, no whole-file buffering), the size and type limits are enforced while streaming and the partial object is removed on failure, and at most `MEDIA_UPLOAD_CONCURRENCY` (2) uploads run at once, the rest waiting 5 s and then getting `429 RATE_LIMITED` with `Retry-After`. The web UI uploads directly to the API host, so videos are no longer cut at the Next.js proxy's 10 MB (D-015).
 - The Posts date filter now uses the timezone chosen in Settings instead of the browser's, so "From" and "To" cover whole days where you expect them.
 - Colour contrast: unsupported-network badges and the dark-mode "Scheduled" badge now meet WCAG AA (axe `color-contrast` is clean in light and dark). The dark accent is slightly lighter, in the app and on the site.
 - A failed load no longer looks like an empty list: Posts, post detail and the audit log show a titled error with a retry button, "Load more" failures keep the list on screen, and error messages are plain English (no raw codes, JSON or stack traces).

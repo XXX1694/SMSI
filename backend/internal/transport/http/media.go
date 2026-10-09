@@ -2,6 +2,8 @@ package http
 
 import (
 	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
 
 	appmedia "github.com/socialos/backend/internal/application/media"
@@ -10,35 +12,59 @@ import (
 	"github.com/socialos/backend/internal/transport/httpx"
 )
 
-const (
-	maxUploadBody   = media.MaxVideoBytes + 1<<20 // largest file + multipart overhead
-	multipartMemory = 8 << 20                     // larger parts spill to temp files
-)
+const maxUploadBody = media.MaxVideoBytes + 1<<20 // largest file + multipart overhead
 
+// uploadMedia streams the multipart body: the file part goes to object storage as it arrives, so a 100 MB video is
+// never held in memory or written to a temp file (D-015).
 func (a *API) uploadMedia(w http.ResponseWriter, r *http.Request) {
+	if r.ContentLength > maxUploadBody {
+		httpx.Error(w, r, tooLarge())
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBody)
-	if err := r.ParseMultipartForm(multipartMemory); err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			httpx.Error(w, r, errs.Validationf("file exceeds the 100 MB limit").WithField("file", "too large"))
-			return
-		}
-		httpx.Error(w, r, errs.Validationf("expected multipart/form-data with a 'file' field"))
-		return
-	}
-	defer func() { _ = r.MultipartForm.RemoveAll() }()
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		httpx.Error(w, r, errs.Validationf("missing 'file' field").WithField("file", "required"))
-		return
-	}
-	defer func() { _ = file.Close() }()
-	m, err := a.svc.Media.Upload(r.Context(), actorOf(r), appmedia.UploadInput{File: file, Size: header.Size, OriginalName: header.Filename})
+	part, err := filePart(r)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
+	m, err := a.svc.Media.Upload(r.Context(), actorOf(r), appmedia.UploadInput{File: part, OriginalName: part.FileName()})
+	if err != nil {
+		var cut *http.MaxBytesError
+		if errors.As(err, &cut) {
+			err = tooLarge()
+		}
+		httpx.Error(w, r, err)
+		return
+	}
 	httpx.JSON(w, http.StatusCreated, toMediaWithURL(m))
+}
+
+func tooLarge() error {
+	return errs.Validationf("file exceeds the 100 MB limit").WithField("file", "too large")
+}
+
+// filePart advances to the first part named "file" that carries a filename; the parts before it are skipped.
+func filePart(r *http.Request) (*multipart.Part, error) {
+	mr, err := r.MultipartReader()
+	if err != nil {
+		return nil, errs.Validationf("expected multipart/form-data with a 'file' field")
+	}
+	for {
+		part, err := mr.NextPart()
+		if errors.Is(err, io.EOF) {
+			return nil, errs.Validationf("missing 'file' field").WithField("file", "required")
+		}
+		if err != nil {
+			var cut *http.MaxBytesError
+			if errors.As(err, &cut) {
+				return nil, tooLarge()
+			}
+			return nil, errs.Validationf("expected multipart/form-data with a 'file' field")
+		}
+		if part.FormName() == "file" && part.FileName() != "" {
+			return part, nil
+		}
+	}
 }
 
 func (a *API) listMedia(w http.ResponseWriter, r *http.Request) {

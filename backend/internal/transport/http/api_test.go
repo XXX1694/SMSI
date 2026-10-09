@@ -903,6 +903,42 @@ func TestMediaSizeLimits(t *testing.T) {
 	}
 }
 
+// blockingStore parks every Put until released, so a test can hold the only upload slot.
+type blockingStore struct {
+	media.Storage
+	started chan struct{}
+	release chan struct{}
+}
+
+func (b blockingStore) Put(ctx context.Context, key string, r io.Reader, size int64, ct string) error {
+	b.started <- struct{}{}
+	<-b.release
+	return b.Storage.Put(ctx, key, r, size, ct)
+}
+
+// D-015: with MEDIA_UPLOAD_CONCURRENCY=1 a second upload waits briefly and then gets 429 with Retry-After.
+func TestMediaUploadConcurrencyLimit(t *testing.T) {
+	bs := blockingStore{Storage: storage.NewMemory(), started: make(chan struct{}, 2), release: make(chan struct{})}
+	h := newHarness(t, opts{store: bs, tune: func(c *config.Config) { c.MediaUploadConcurrency = 1 }})
+	a := h.anon()
+	a.register("media-conc@example.com")
+	first := make(chan reply, 1)
+	go func() { first <- a.upload("a.png", pngBytes(t, 2, 2)) }()
+	<-bs.started
+	r := a.upload("b.png", pngBytes(t, 2, 2))
+	r.apiErr(t, 429, "RATE_LIMITED")
+	if r.header.Get("Retry-After") == "" {
+		t.Error("429 needs Retry-After")
+	}
+	close(bs.release)
+	if got := <-first; got.status != 201 {
+		t.Fatalf("first upload: %d %s", got.status, got.body)
+	}
+	if got := a.upload("c.png", pngBytes(t, 2, 2)); got.status != 201 {
+		t.Fatalf("after release: %d %s", got.status, got.body)
+	}
+}
+
 func TestMediaScopesAndLifecycle(t *testing.T) {
 	h := newHarness(t, opts{})
 	owner, other := h.anon(), h.anon()

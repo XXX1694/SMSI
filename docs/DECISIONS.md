@@ -259,3 +259,46 @@ publishing needs a `trusted` key (opt-in, shown as such) or a scheduled post at 
 spent before the live check of a token connect, so a rejected credential needs a new approval. Whoever holds the owner's
 browser session can approve. `trusted` is visible: the key list shows it as a badge, and choosing it at creation needs a separate explicit
 confirmation under the "Dangerous" heading. Changing the policy of an existing key and an OAuth-grant policy come later.
+
+## D-015: Stream media uploads to S3 in bounded parts, cap them, and send big uploads around the Next.js proxy (2026-10-09)
+
+**Context.** A load check with the production caps (backend 160m, MinIO 80m) showed that three parallel 100 MB uploads
+OOM-killed the API (peak 163m of 160m) and MinIO (killed 8 times). The handler parsed the multipart body into temp files
+in the container's writable layer (page cache counts against the cgroup), and `PutObject` with a known size made minio-go
+upload 16 MiB parts on 4 threads, so each upload put about 64 MiB in flight at the API and at MinIO. Separately, the Next.js
+rewrite proxy that carries `/api/v1/*` for the web UI buffers request bodies and cuts them at 10 MB, so a video could never
+arrive.
+
+**Decision.**
+- The handler reads the multipart body with `MultipartReader` and hands the `file` part to the media service as a stream:
+  no `ParseMultipartForm`, no temp file. The service reads the first 3 KiB, sniffs the MIME type and rejects a type that is
+  not on the allow-list before anything is stored. A guard around the stream counts and hashes the bytes and fails as soon
+  as the kind's limit (10 MB image, 100 MB video) is exceeded, so the size is enforced while streaming, not after.
+  Videos go to `PutObject` with unknown size (`-1`), `PartSize` 5 MiB and `NumThreads` 1: the API holds one 5 MiB buffer per
+  upload however large the file is. Images (at most 10 MB) are read into memory because their dimensions are needed.
+- On any failure (limit, wrong type, client gone, store error) minio-go aborts the multipart upload, and the service also
+  deletes the key, so no object and no media row remain.
+- At most `MEDIA_UPLOAD_CONCURRENCY` (default 2) uploads run at once, the same pattern as D-011: a caller waits up to 5 s for
+  a slot, then gets `429 RATE_LIMITED` with `Retry-After: 5`. The slot is taken before the body is read.
+- MinIO is unchanged: with 5 MiB parts and at most two in flight its working set stayed at 44 of 80 MiB, and
+  `MINIO_API_REQUESTS_MAX` made no difference in the same test, so no new setting was added. The caps (784m, within the
+  664 MB slice as before) are unchanged.
+- The web UI uploads straight to the API host (`NEXT_PUBLIC_API_URL`, baked at build time like the MCP URL; `credentials:
+  'include'`) instead of through the proxy. This needs nothing new: `CORS_ALLOWED_ORIGINS` already lists the app origin with
+  credentials and allows `X-CSRF-Token`, and `COOKIE_DOMAIN` already shares the session and CSRF cookies with `api.<domain>`
+  (SameSite=Lax cookies are sent on a same-site POST). Without `NEXT_PUBLIC_API_URL` (`next dev`) uploads use the proxy.
+
+**Alternatives.** Raising the proxy body limit (`experimental.proxyClientMaxBodySize`): the 160m frontend would buffer 100 MB.
+Presigned PUT URLs straight to S3: the browser needs the S3 host, a second CORS policy on MinIO, and the type and size
+checks would move to after the upload (a user could store anything up to the bucket limit); rejected for now. Bigger caps:
+the slice is full. A temp file on tmpfs: counts against the same cgroup.
+
+**Load check (local, production caps and slice file, 20 parallel logins + 3 parallel 100 MiB uploads).** Peak of
+`memory.peak` / working set (anon): backend 101 MiB of 160 (93 anon), MinIO 80 of 80 (44 anon; the rest is reclaimable page
+cache that the kernel drops under pressure), Postgres 39 of 128, worker 31 of 160, Redis 9 of 32. OOM kills: 0 in every
+container. All three uploads answered 201 (the third waited for a slot, 4.8 s in the slowest run).
+
+**Consequences.** A third simultaneous upload waits up to 5 s and is then refused; a browser that is still sending its body
+may report a network error instead of the 429, because the connection is closed after an early answer. The web UI now needs
+`API_PUBLIC_URL` set when the frontend image is built (the release workflow already does this). Image uploads still take up
+to 10 MB of heap each, at most two at once.

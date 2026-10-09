@@ -192,7 +192,8 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 		Posts: posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
 			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc,
 			MinAgentLead: cfg.AgentMinScheduleLead, NoAgentLead: cfg.AgentMinScheduleLead == 0}),
-		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk),
+		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk,
+			media.WithUploadLimit(cfg.MediaUploadConcurrency, media.DefaultUploadWait)),
 		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
 			Tx: db, Audit: auditSvc, Clock: clk, MCPPublicURL: cfg.MCPPublicURL, APIPublicURL: cfg.APIPublicURL}),
 	}

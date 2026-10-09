@@ -3,21 +3,13 @@ package media
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"image"
-	_ "image/gif"  // register decoder for dimensions
-	_ "image/jpeg" // register decoder for dimensions
-	_ "image/png"  // register decoder for dimensions
 	"io"
 	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/uuid"
-	_ "golang.org/x/image/webp" // register decoder for dimensions
 
 	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
@@ -39,6 +31,8 @@ type Repo interface {
 
 // Storage is the object storage port (S3/MinIO/R2 or in-memory).
 type Storage interface {
+	// Put stores r under key. size is the exact length, or -1 when unknown (the store streams in bounded parts and
+	// must leave no object behind when r fails).
 	Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error
 	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	Delete(ctx context.Context, key string) error
@@ -55,88 +49,22 @@ type Service struct {
 	storage Storage
 	audit   port.AuditRecorder
 	clock   port.Clock
+	slots   chan struct{} // bounds concurrent uploads (D-015)
+	wait    time.Duration
 }
 
 // NewService creates the media service.
-func NewService(repo Repo, storage Storage, audit port.AuditRecorder, clock port.Clock) *Service {
-	return &Service{repo: repo, storage: storage, audit: audit, clock: clock}
+func NewService(repo Repo, storage Storage, audit port.AuditRecorder, clock port.Clock, opts ...Option) *Service {
+	s := &Service{repo: repo, storage: storage, audit: audit, clock: clock,
+		slots: make(chan struct{}, DefaultUploadConcurrency), wait: DefaultUploadWait}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
 }
 
 // Storage returns the storage port (used by the publisher to stream bytes).
 func (s *Service) Storage() Storage { return s.storage }
-
-// UploadInput is a file to upload. File must be seekable (multipart temp file).
-type UploadInput struct {
-	File         io.ReadSeeker
-	Size         int64
-	OriginalName string
-}
-
-// Upload validates (size, sniffed MIME allow-list), hashes and stores a file.
-func (s *Service) Upload(ctx context.Context, a actor.Actor, in UploadInput) (*WithURL, error) {
-	if err := a.Require(apikey.MediaWrite); err != nil {
-		return nil, err
-	}
-	if in.Size <= 0 {
-		return nil, errs.Validationf("file is empty").WithField("file", "empty")
-	}
-	mt, err := mimetype.DetectReader(in.File)
-	if err != nil {
-		return nil, errs.Validationf("cannot read file")
-	}
-	mime := mt.String()
-	if i := strings.IndexByte(mime, ';'); i >= 0 {
-		mime = mime[:i]
-	}
-	kind, ext, ok := domain.Classify(mime)
-	if !ok {
-		return nil, errs.Validationf("unsupported file type %s", mime).WithField("file", "allowed: jpeg, png, webp, gif, mp4, mov")
-	}
-	if in.Size > domain.MaxBytes(kind) {
-		return nil, errs.Validationf("%s exceeds %d MB limit", kind, domain.MaxBytes(kind)>>20).WithField("file", "too large")
-	}
-	m := &domain.Media{
-		ID: uuid.New(), UserID: a.UserID, Kind: kind, MimeType: mime, SizeBytes: in.Size,
-		OriginalName: sanitizeName(in.OriginalName), Status: domain.StatusReady,
-	}
-	m.StorageKey = "users/" + a.UserID.String() + "/media/" + m.ID.String() + ext
-	if kind == domain.KindImage {
-		if err := s.readDimensions(in.File, m); err != nil {
-			return nil, err
-		}
-	}
-	if _, err := in.File.Seek(0, io.SeekStart); err != nil {
-		return nil, err
-	}
-	h := sha256.New()
-	if err := s.storage.Put(ctx, m.StorageKey, io.TeeReader(in.File, h), in.Size, mime); err != nil {
-		return nil, errs.Wrap(errs.Internal, "storage upload failed", err)
-	}
-	m.SHA256 = hex.EncodeToString(h.Sum(nil))
-	if err := s.repo.Create(ctx, m); err != nil {
-		_ = s.storage.Delete(context.WithoutCancel(ctx), m.StorageKey)
-		return nil, err
-	}
-	_ = s.audit.Record(ctx, a, audit.ActionMediaUploaded, "media", m.ID.String(),
-		map[string]any{"mime_type": mime, "size_bytes": in.Size})
-	out := s.withURL(ctx, []domain.Media{*m})[0]
-	return &out, nil
-}
-
-func (s *Service) readDimensions(f io.ReadSeeker, m *domain.Media) error {
-	if _, err := f.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-	cfg, _, err := image.DecodeConfig(f)
-	if err != nil {
-		return errs.Validationf("image is corrupt or unreadable").WithField("file", "invalid image")
-	}
-	if cfg.Width > 20000 || cfg.Height > 20000 {
-		return errs.Validationf("image dimensions too large").WithField("file", "max 20000px")
-	}
-	m.Width, m.Height = cfg.Width, cfg.Height
-	return nil
-}
 
 func sanitizeName(n string) string {
 	n = filepath.Base(strings.ReplaceAll(n, "\\", "/"))

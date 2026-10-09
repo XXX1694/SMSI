@@ -24,11 +24,17 @@ func NewMemory() *Memory {
 
 // Put stores the object.
 func (m *Memory) Put(_ context.Context, key string, r io.Reader, size int64, contentType string) error {
-	b, err := io.ReadAll(io.LimitReader(r, size+1))
+	var b []byte
+	var err error
+	if size < 0 { // unknown length: read to the end
+		b, err = io.ReadAll(r)
+	} else {
+		b, err = io.ReadAll(io.LimitReader(r, size+1))
+	}
 	if err != nil {
 		return err
 	}
-	if int64(len(b)) != size {
+	if size >= 0 && int64(len(b)) != size {
 		return fmt.Errorf("storage: size mismatch: got %d want %d", len(b), size)
 	}
 	m.mu.Lock()
