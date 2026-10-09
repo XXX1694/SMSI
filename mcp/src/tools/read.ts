@@ -62,7 +62,7 @@ export const readTools = [
     scope: "posts:read",
     risk: "safe",
     description:
-      "Get the lifecycle status of a post and of each target (pending, publishing, published, failed, needs_review). Poll this after publish_post or schedule_post.",
+      "Get the lifecycle status of a post and of each target (pending, publishing, published, failed, needs_review). needs_review means Steerpost cannot confirm the post went out; do not retry without asking the user, or it may post twice. Poll this after publish_post or schedule_post.",
     inputSchema: { post_id: id("Post id") },
     annotations: { title: "Get post status", ...readOnly },
     handler: (c, a) => c.request("GET", `/posts/${seg(a.post_id)}/status`),

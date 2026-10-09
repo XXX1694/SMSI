@@ -6,7 +6,7 @@ const when = (what: string) => z.iso.datetime({ offset: true }).describe(what);
 const perPlatform = z
   .record(z.string(), z.string().min(1))
   .describe(
-    "Optional per-account text override: map of social_account_id to the text to use for that account (e.g. shorter for X). Accounts not listed use `content`.",
+    "Optional per-account text override: map of social_account_id to the text to use for that account (for example, a shorter text for one network). Accounts not listed use `content`.",
   );
 
 function toTargets(overrides: Record<string, string> | undefined, accountIds: string[] | undefined) {
@@ -29,7 +29,7 @@ export const writeTools = [
     inputSchema: {
       content: z.string().min(1).describe("Post text"),
       social_account_ids: z.array(z.string().min(1)).min(1).describe("Target accounts from list_social_accounts"),
-      media_ids: z.array(z.string().min(1)).optional().describe("Previously uploaded media ids"),
+      media_ids: z.array(z.string().min(1)).optional().describe("Ids of files the user uploaded to the Steerpost media library. This server cannot upload files."),
       title: z.string().optional().describe("Internal title (not published)"),
       per_platform_content: perPlatform.optional(),
     },
@@ -78,7 +78,7 @@ export const writeTools = [
     scope: "posts:schedule",
     risk: "medium",
     description:
-      "Schedule a draft to be published automatically at scheduled_at (RFC 3339, must be in the future). The post WILL go public at that time unless cancelled with cancel_scheduled_post. A time closer than the server's minimum lead (default 5 minutes) counts as publishing now and needs the owner's approval (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "Schedule a draft to be published automatically at scheduled_at (RFC 3339, must be in the future). The post goes public at that time with no further approval, unless canceled with cancel_scheduled_post. Before you call this, show the user the final text, accounts and time. A time closer than the server's minimum lead (default 5 minutes) counts as publishing now and needs the owner's approval (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: {
       post_id: id("Post id"),
       scheduled_at: when("Publish time, RFC 3339 e.g. 2026-11-01T09:00:00Z"),
@@ -94,7 +94,7 @@ export const writeTools = [
     scope: "posts:write",
     risk: "medium",
     description:
-      "Cancel a draft or scheduled post. A cancelled post is terminal and can never be published; to keep the content, create a new draft.",
+      "Cancel a draft or scheduled post. A canceled post never publishes and cannot be restored; to reuse the content, create a new draft.",
     inputSchema: { post_id: id("Post id") },
     annotations: { title: "Cancel scheduled post", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => c.request("POST", `/posts/${seg(a.post_id)}/cancel`),
@@ -105,7 +105,7 @@ export const writeTools = [
     scope: "posts:publish",
     risk: "sensitive",
     description:
-      "SENSITIVE: publishes the post to the live social networks immediately and cannot be undone by this API. The owner must approve it in Steerpost first: the first call answers APPROVAL_REQUIRED with an approval_id and nothing is published; once the owner approved, repeat the identical call with approval_id. Returns immediately; poll get_post_status for the outcome.",
+      "Publishes the post to the live social networks immediately and cannot be undone by this API. The owner must approve it in Steerpost first: the first call answers APPROVAL_REQUIRED with an approval_id and nothing is published; once the owner approved, repeat the identical call with approval_id. Returns immediately; poll get_post_status for the outcome.",
     inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Publish post now", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     handler: (c, a) => {
@@ -118,7 +118,7 @@ export const writeTools = [
     scope: "posts:delete",
     risk: "sensitive",
     description:
-      "SENSITIVE: deletes a post in Steerpost (soft delete). It does not remove already-published copies from the social networks. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "Deletes a post in Steerpost. Published copies stay on the networks. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Delete post", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {
@@ -131,7 +131,7 @@ export const writeTools = [
     scope: "social:disconnect",
     risk: "critical",
     description:
-      "CRITICAL: disconnects a social account and discards its stored credentials; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "Disconnects a social account and deletes its stored credentials. Its scheduled posts fail until the user connects it again in the Steerpost web app. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: { account_id: id("Social account id"), approval_id: approvalId },
     annotations: { title: "Disconnect social account", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {
