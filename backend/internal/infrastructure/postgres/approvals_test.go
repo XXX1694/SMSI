@@ -2,6 +2,7 @@ package postgres_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/application/approvals"
 	"github.com/socialos/backend/internal/application/port"
+	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/infrastructure/postgres"
@@ -67,7 +69,7 @@ func TestApprovalsLifecycleAndTenantScope(t *testing.T) {
 	if ok, _ := repo.Decide(ctx, bob, a.ID, approval.StatusApproved, t0); ok {
 		t.Fatal("bob approved alice's approval")
 	}
-	if n, _ := repo.CountPending(ctx, bob, t0); n != 0 {
+	if n, _ := repo.CountPending(ctx, bob, "key-1", t0); n != 0 {
 		t.Fatalf("bob counts %d", n)
 	}
 	// Not consumable while pending.
@@ -151,18 +153,23 @@ func TestApprovalConsumeRollsBackWithTheCallersTransaction(t *testing.T) {
 	}
 }
 
-func TestNewApprovalSurvivesTheRollbackOfTheRequestThatMadeIt(t *testing.T) {
-	repo, db, alice, _ := approvalRepo(t)
+func TestNewApprovalSurvivesTheRollbackOfTheRequestThatAskedForIt(t *testing.T) {
+	_, db, alice, _ := approvalRepo(t)
+	svc, _ := gateService(db, 10)
 	ctx := context.Background()
-	a := newApproval(alice, "p1")
-	_ = db.InTx(ctx, func(ctx context.Context) error {
-		if err := repo.Create(db.WithoutTx(ctx), a); err != nil {
-			t.Fatal(err)
-		}
-		return errs.New(errs.ApprovalRequired, "428 rolls the surrounding transaction back")
+	var id string
+	// The use case's transaction rolls back on the ApprovalNeeded error; only afterwards is the approval recorded.
+	err := db.InTx(ctx, func(ctx context.Context) error {
+		return svc.Require(ctx, agentKey(alice, "key-1"), publishRequest("p1"))
 	})
-	if _, err := repo.Get(ctx, alice, a.ID); err != nil {
-		t.Fatalf("the pending approval vanished with the transaction: %v", err)
+	err = port.OpenIfNeeded(ctx, svc, err)
+	if e, ok := errs.As(err); !ok || e.Code != errs.ApprovalRequired {
+		t.Fatalf("want 428, got %v", err)
+	} else {
+		id = e.Fields["approval_id"]
+	}
+	if n := scalar[int](t, db, `SELECT count(*) FROM action_approvals WHERE id = '`+id+`' AND status = 'pending'`); n != 1 {
+		t.Fatalf("the pending approval vanished with the transaction")
 	}
 }
 
@@ -199,5 +206,113 @@ func TestApprovalsListPagesNewestFirstAndFiltersOpenOnes(t *testing.T) {
 	expired, _ := repo.List(ctx, alice, true, t0.Add(time.Hour), port.Page{Limit: 10})
 	if len(expired) != 0 {
 		t.Fatalf("expired approvals listed as open: %v", expired)
+	}
+}
+
+func TestApprovalsRetentionDeletesOnlyRowsPastTheirDeadline(t *testing.T) {
+	repo, _, alice, _ := approvalRepo(t)
+	ctx := context.Background()
+	old, young := newApproval(alice, "old"), newApproval(alice, "young")
+	old.ExpiresAt = t0.Add(-40 * 24 * time.Hour)
+	if err := repo.Create(ctx, old); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Create(ctx, young); err != nil {
+		t.Fatal(err)
+	}
+	n, err := repo.DeleteDecidedBefore(ctx, t0.Add(-30*24*time.Hour))
+	if err != nil || n != 1 {
+		t.Fatalf("deleted %d, %v", n, err)
+	}
+	if _, err := repo.Get(ctx, alice, young.ID); err != nil {
+		t.Fatalf("a current approval was deleted: %v", err)
+	}
+}
+
+type recAudit struct{ n atomic.Int32 }
+
+func (a *recAudit) Record(context.Context, actor.Actor, string, string, string, map[string]any) error {
+	a.n.Add(1)
+	return nil
+}
+
+type fixedClock struct{}
+
+func (fixedClock) Now() time.Time { return t0 }
+
+func gateService(db *postgres.DB, max int) (*approvals.Service, *recAudit) {
+	au := &recAudit{}
+	return approvals.NewService(approvals.Deps{Repo: postgres.NewApprovals(db), Tx: db, Audit: au, Clock: fixedClock{},
+		Config: approvals.Config{TTL: 10 * time.Minute, MaxPending: max, WebBaseURL: "http://web.test"}}), au
+}
+
+func agentKey(user uuid.UUID, id string) actor.Actor {
+	return actor.Actor{UserID: user, Type: actor.TypeAPIKey, ID: id, Label: id, EmailVerified: true}
+}
+
+func publishRequest(post string) approval.Request {
+	return approval.Request{Action: approval.ActionPostPublish, ResourceType: "post", ResourceID: post, Fingerprint: "fp-" + post}
+}
+
+func needed(user uuid.UUID, key, post string) *port.ApprovalNeeded {
+	return &port.ApprovalNeeded{Actor: agentKey(user, key), Request: publishRequest(post)}
+}
+
+func TestParallelIdenticalFirstCallsCreateOneApproval(t *testing.T) {
+	_, db, alice, _ := approvalRepo(t)
+	svc, au := gateService(db, 10)
+	ids := make(chan string, 16)
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Each call runs inside its own request transaction, like the use cases do; the 428 rolls it back.
+			err := db.InTx(context.Background(), func(ctx context.Context) error {
+				return svc.Require(ctx, agentKey(alice, "key-1"), publishRequest("p1"))
+			})
+			err = port.OpenIfNeeded(context.Background(), svc, err)
+			if e, ok := errs.As(err); ok && e.Code == errs.ApprovalRequired {
+				ids <- e.Fields["approval_id"]
+			} else {
+				t.Errorf("want 428, got %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+	close(ids)
+	seen := map[string]bool{}
+	for id := range ids {
+		seen[id] = true
+	}
+	if len(seen) != 1 {
+		t.Fatalf("parallel identical calls produced %d approvals", len(seen))
+	}
+	if n := scalar[int](t, db, `SELECT count(*) FROM action_approvals`); n != 1 {
+		t.Fatalf("%d rows", n)
+	}
+	if au.n.Load() != 1 {
+		t.Fatalf("approval.requested was audited %d times", au.n.Load())
+	}
+}
+
+func TestParallelDistinctCallsNeverExceedThePerKeyCap(t *testing.T) {
+	_, db, alice, _ := approvalRepo(t)
+	svc, _ := gateService(db, 3)
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_ = svc.Open(context.Background(), needed(alice, "key-1", fmt.Sprint("post-", i)))
+		}(i)
+	}
+	wg.Wait()
+	if n := scalar[int](t, db, `SELECT count(*) FROM action_approvals WHERE actor_id = 'key-1'`); n != 3 {
+		t.Fatalf("%d pending approvals for one key with a cap of 3", n)
+	}
+	// Another key of the same owner is not blocked by it.
+	if err := svc.Open(context.Background(), needed(alice, "key-2", "post-x")); !errs.Is(err, errs.ApprovalRequired) {
+		t.Fatalf("second key: %v", err)
 	}
 }

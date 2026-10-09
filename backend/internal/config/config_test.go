@@ -225,7 +225,7 @@ func TestApprovalSettingsDefaultAndAreValidated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.AgentMinScheduleLead != 5*time.Minute || c.ApprovalTTL != 10*time.Minute || c.ApprovalMaxPending != 10 {
+	if c.AgentMinScheduleLead != 5*time.Minute || c.ApprovalTTL != 10*time.Minute || c.ApprovalMaxPending != 10 || c.ApprovalRetention != 30*24*time.Hour {
 		t.Fatalf("defaults: %v %v %d", c.AgentMinScheduleLead, c.ApprovalTTL, c.ApprovalMaxPending)
 	}
 	t.Setenv("AGENT_MIN_SCHEDULE_LEAD", "0s") // 0 switches the rule off
@@ -234,7 +234,7 @@ func TestApprovalSettingsDefaultAndAreValidated(t *testing.T) {
 	if c, err = Load(); err != nil || c.AgentMinScheduleLead != 0 || c.ApprovalTTL != 30*time.Minute || c.ApprovalMaxPending != 3 {
 		t.Fatalf("overrides: %+v %v", c, err)
 	}
-	for env, val := range map[string]string{"AGENT_MIN_SCHEDULE_LEAD": "-1m", "APPROVAL_TTL": "10s", "APPROVAL_MAX_PENDING": "0"} {
+	for env, val := range map[string]string{"AGENT_MIN_SCHEDULE_LEAD": "-1m", "APPROVAL_TTL": "10s", "APPROVAL_MAX_PENDING": "0", "APPROVAL_RETENTION": "1h"} {
 		t.Run(env, func(t *testing.T) {
 			t.Setenv(env, val)
 			if _, err := Load(); err == nil || !strings.Contains(err.Error(), env) {

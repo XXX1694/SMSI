@@ -16,9 +16,13 @@ func (s *Service) List(ctx context.Context, a actor.Actor, includeDecided bool, 
 	if err := a.RequireSession(); err != nil {
 		return port.Result[approval.Approval]{}, err
 	}
-	items, err := s.Repo.List(ctx, a.UserID, !includeDecided, s.Clock.Now(), port.Page{Limit: page.Limit + 1, Cursor: page.Cursor})
+	items, err := s.repo.List(ctx, a.UserID, !includeDecided, s.clock.Now(), port.Page{Limit: page.Limit + 1, Cursor: page.Cursor})
 	if err != nil {
 		return port.Result[approval.Approval]{}, err
+	}
+	now := s.clock.Now()
+	for i := range items {
+		items[i].Status = items[i].EffectiveStatus(now)
 	}
 	return port.Paginate(items, page.Limit, func(x approval.Approval) port.Cursor {
 		return port.Cursor{At: x.CreatedAt, ID: x.ID}
@@ -30,7 +34,18 @@ func (s *Service) Get(ctx context.Context, a actor.Actor, id uuid.UUID) (*approv
 	if err := a.RequireSession(); err != nil {
 		return nil, err
 	}
-	return s.Repo.Get(ctx, a.UserID, id)
+	return s.view(ctx, a, id)
+}
+
+// view reads one approval of the owner with its status as of now: a pending or approved one past its deadline is
+// reported as expired, whatever the row says.
+func (s *Service) view(ctx context.Context, a actor.Actor, id uuid.UUID) (*approval.Approval, error) {
+	ap, err := s.repo.Get(ctx, a.UserID, id)
+	if err != nil {
+		return nil, err
+	}
+	ap.Status = ap.EffectiveStatus(s.clock.Now())
+	return ap, nil
 }
 
 // Approve lets the agent repeat the call once. Sessions only: a key can never approve itself.
@@ -47,21 +62,21 @@ func (s *Service) decide(ctx context.Context, a actor.Actor, id uuid.UUID, to ap
 	if err := a.RequireSession(); err != nil {
 		return nil, err
 	}
-	err := s.Tx.InTx(ctx, func(ctx context.Context) error {
-		ok, err := s.Repo.Decide(ctx, a.UserID, id, to, s.Clock.Now())
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		ok, err := s.repo.Decide(ctx, a.UserID, id, to, s.clock.Now())
 		if err != nil {
 			return err
 		}
 		if !ok {
-			if _, err := s.Repo.Get(ctx, a.UserID, id); err != nil {
+			if _, err := s.repo.Get(ctx, a.UserID, id); err != nil {
 				return err
 			}
 			return errs.New(errs.Conflict, "this approval is no longer pending")
 		}
-		return s.Audit.Record(ctx, a, action, "approval", id.String(), nil)
+		return s.audit.Record(ctx, a, action, "approval", id.String(), nil)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return s.Repo.Get(ctx, a.UserID, id)
+	return s.view(ctx, a, id)
 }

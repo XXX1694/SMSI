@@ -2,6 +2,8 @@ package posts
 
 import (
 	"context"
+
+	"github.com/socialos/backend/internal/application/port"
 	"log/slog"
 	"time"
 
@@ -97,7 +99,8 @@ func (s *Service) inTx(ctx context.Context, fn func(ctx context.Context) ([]post
 		return err
 	})
 	if err != nil {
-		return err
+		// The transaction is over: a pending approval can be recorded now (and survives).
+		return port.OpenIfNeeded(ctx, s.gate, err)
 	}
 	s.dequeue(ctx, toDequeue)
 	s.enqueue(ctx, toEnqueue)

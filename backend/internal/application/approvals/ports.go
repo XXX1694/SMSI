@@ -24,7 +24,11 @@ type Repo interface {
 	Create(ctx context.Context, a *approval.Approval) error
 	// FindPending returns the unexpired pending approval with the same binding, or NOT_FOUND.
 	FindPending(ctx context.Context, userID uuid.UUID, b Binding, now time.Time) (*approval.Approval, error)
-	CountPending(ctx context.Context, userID uuid.UUID, now time.Time) (int, error)
+	// CountPending counts the open approvals of one key.
+	CountPending(ctx context.Context, userID uuid.UUID, actorID string, now time.Time) (int, error)
+	// LockActor takes a transaction-scoped lock on (user, key): callers that check and then insert hold it, so two
+	// concurrent first calls cannot both pass the check. It must run inside a transaction.
+	LockActor(ctx context.Context, userID uuid.UUID, actorID string) error
 	// Consume atomically flips an approved, unexpired approval with exactly this binding to consumed. It reports false
 	// when no row matched (wrong tenant, id, binding, state or expired).
 	Consume(ctx context.Context, userID, id uuid.UUID, b Binding, now time.Time) (bool, error)
@@ -32,4 +36,6 @@ type Repo interface {
 	List(ctx context.Context, userID uuid.UUID, pendingOnly bool, now time.Time, page port.Page) ([]approval.Approval, error)
 	// Decide moves an unexpired pending approval to approved or denied; false when it was not pending.
 	Decide(ctx context.Context, userID, id uuid.UUID, to approval.Status, now time.Time) (bool, error)
+	// DeleteDecidedBefore removes approvals that were decided, consumed or ran out of time before t (retention).
+	DeleteDecidedBefore(ctx context.Context, t time.Time) (int64, error)
 }

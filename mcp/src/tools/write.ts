@@ -59,7 +59,7 @@ export const writeTools = [
       social_account_ids: z.array(z.string().min(1)).min(1).optional(),
       media_ids: z.array(z.string().min(1)).optional(),
       per_platform_content: perPlatform.optional(),
-      scheduled_at: when("New RFC 3339 schedule time (only for scheduled posts); under 5 minutes ahead needs the owner's approval").optional(),
+      scheduled_at: when("New RFC 3339 schedule time (only for scheduled posts); closer than the server's minimum lead (default 5 minutes) needs the owner's approval").optional(),
       approval_id: approvalId,
     },
     annotations: { title: "Update post", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -78,7 +78,7 @@ export const writeTools = [
     scope: "posts:schedule",
     risk: "medium",
     description:
-      "Schedule a draft to be published automatically at scheduled_at (RFC 3339, must be in the future). The post WILL go public at that time unless cancelled with cancel_scheduled_post. A time less than 5 minutes ahead counts as publishing now and needs the owner's approval (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "Schedule a draft to be published automatically at scheduled_at (RFC 3339, must be in the future). The post WILL go public at that time unless cancelled with cancel_scheduled_post. A time closer than the server's minimum lead (default 5 minutes) counts as publishing now and needs the owner's approval (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: {
       post_id: id("Post id"),
       scheduled_at: when("Publish time, RFC 3339 e.g. 2026-11-01T09:00:00Z"),

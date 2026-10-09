@@ -66,12 +66,6 @@ func (d *DB) q(ctx context.Context) querier {
 	return d.Pool
 }
 
-// WithoutTx returns ctx without its transaction: queries made with it use the pool and commit on their own. Used for
-// records that must outlive the rollback of the request that produced them (a pending approval).
-func (d *DB) WithoutTx(ctx context.Context) context.Context {
-	return context.WithValue(ctx, txKey{}, nil)
-}
-
 // InTx runs fn inside a transaction. Nested calls join the outer transaction.
 func (d *DB) InTx(ctx context.Context, fn func(ctx context.Context) error) (err error) {
 	if _, ok := ctx.Value(txKey{}).(pgx.Tx); ok {

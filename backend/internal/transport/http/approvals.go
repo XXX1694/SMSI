@@ -27,9 +27,9 @@ type approvalDTO struct {
 	CreatedAt    time.Time      `json:"created_at"`
 }
 
-func (a *API) toApproval(ap *approval.Approval) approvalDTO {
+func toApproval(ap *approval.Approval) approvalDTO {
 	return approvalDTO{ID: ap.ID, Action: string(ap.Action), ResourceType: ap.ResourceType, ResourceID: ap.ResourceID,
-		ActorLabel: ap.ActorLabel, Summary: ap.Summary, Status: string(ap.EffectiveStatus(a.clock.Now())),
+		ActorLabel: ap.ActorLabel, Summary: ap.Summary, Status: string(ap.Status),
 		ExpiresAt: utc(ap.ExpiresAt), DecidedAt: utcp(ap.DecidedAt), CreatedAt: utc(ap.CreatedAt)}
 }
 
@@ -50,7 +50,7 @@ func (a *API) listApprovals(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]approvalDTO, len(res.Items))
 	for i := range res.Items {
-		items[i] = a.toApproval(&res.Items[i])
+		items[i] = toApproval(&res.Items[i])
 	}
 	httpx.JSON(w, http.StatusOK, newPage(items, res.NextCursor))
 }
@@ -79,5 +79,5 @@ func (a *API) approvalCall(w http.ResponseWriter, r *http.Request, call func(ctx
 		httpx.Error(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, a.toApproval(ap))
+	httpx.JSON(w, http.StatusOK, toApproval(ap))
 }

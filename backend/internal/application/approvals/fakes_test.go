@@ -21,11 +21,6 @@ type memRepo struct {
 
 func newMemRepo() *memRepo { return &memRepo{rows: map[uuid.UUID]*approval.Approval{}} }
 
-func bindingOf(a *approval.Approval) Binding {
-	return Binding{ActorType: a.ActorType, ActorID: a.ActorID, Action: a.Action, ResourceType: a.ResourceType,
-		ResourceID: a.ResourceID, Fingerprint: a.Fingerprint}
-}
-
 func (r *memRepo) Create(_ context.Context, a *approval.Approval) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -46,12 +41,27 @@ func (r *memRepo) FindPending(_ context.Context, u uuid.UUID, b Binding, now tim
 	return nil, errs.NotFoundf("approval")
 }
 
-func (r *memRepo) CountPending(_ context.Context, u uuid.UUID, now time.Time) (int, error) {
+func (r *memRepo) LockActor(context.Context, uuid.UUID, string) error { return nil }
+
+func (r *memRepo) DeleteDecidedBefore(_ context.Context, t time.Time) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var n int64
+	for id, a := range r.rows {
+		if a.ExpiresAt.Before(t) {
+			delete(r.rows, id)
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (r *memRepo) CountPending(_ context.Context, u uuid.UUID, actorID string, now time.Time) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	n := 0
 	for _, a := range r.rows {
-		if a.UserID == u && a.Status == approval.StatusPending && a.ExpiresAt.After(now) {
+		if a.UserID == u && a.ActorID == actorID && a.Status == approval.StatusPending && a.ExpiresAt.After(now) {
 			n++
 		}
 	}
@@ -138,3 +148,13 @@ func (passTx) InTx(ctx context.Context, fn func(context.Context) error) error { 
 type clockAt struct{ t time.Time }
 
 func (c *clockAt) Now() time.Time { return c.t }
+
+// failingGet makes the lookup of one approval fail like a database outage would.
+type failingGet struct {
+	*memRepo
+	err error
+}
+
+func (f failingGet) Get(context.Context, uuid.UUID, uuid.UUID) (*approval.Approval, error) {
+	return nil, f.err
+}

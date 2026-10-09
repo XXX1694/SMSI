@@ -27,7 +27,7 @@ through MCP, and you stay in control.
 **Why us.** We are not the only scheduler with MCP, nor the only self-hosted one (section 2), so we never claim "only"
 or "first". We compete on things a user can check:
 
-- **Agent safety by design.** A key sees only the tools its scopes allow, risky tools need `confirm: true`, and the
+- **Agent safety by design.** A key sees only the tools its scopes allow, risky tools need the owner's approval in the dashboard, and the
   backend audits every tool call with its outcome (D-007).
 - **Honest capabilities.** A network that cannot do something says so; nothing returns a fake success.
 - **Publishing that never posts twice.** Idempotent targets, safe retries, and `needs_review` after a crash.

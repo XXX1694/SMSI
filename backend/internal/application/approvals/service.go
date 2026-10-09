@@ -22,7 +22,8 @@ const (
 
 // Config tunes the service.
 type Config struct {
-	TTL        time.Duration
+	TTL time.Duration
+	// MaxPending caps the open approvals of one key, so a noisy key cannot block the others.
 	MaxPending int
 	// WebBaseURL builds the approve link given to the agent.
 	WebBaseURL string
@@ -30,19 +31,20 @@ type Config struct {
 
 // Deps bundles dependencies.
 type Deps struct {
-	Repo  Repo
-	Tx    port.TxRunner
-	Audit port.AuditRecorder
-	Clock port.Clock
-	// Detach returns ctx without the caller's database transaction, so a new pending approval survives the rollback
-	// of the 428 response. Nil means ctx is used as is (fakes).
-	Detach func(context.Context) context.Context
+	Repo   Repo
+	Tx     port.TxRunner
+	Audit  port.AuditRecorder
+	Clock  port.Clock
 	Config Config
 }
 
 // Service implements port.ApprovalGate and the owner-facing approval use cases.
 type Service struct {
-	Deps
+	repo  Repo
+	tx    port.TxRunner
+	audit port.AuditRecorder
+	clock port.Clock
+	cfg   Config
 }
 
 var _ port.ApprovalGate = (*Service)(nil)
@@ -55,10 +57,7 @@ func NewService(d Deps) *Service {
 	if d.Config.MaxPending <= 0 {
 		d.Config.MaxPending = DefaultMaxPending
 	}
-	if d.Detach == nil {
-		d.Detach = func(ctx context.Context) context.Context { return ctx }
-	}
-	return &Service{Deps: d}
+	return &Service{repo: d.Repo, tx: d.Tx, audit: d.Audit, clock: d.Clock, cfg: d.Config}
 }
 
 func binding(a actor.Actor, req approval.Request) Binding {
@@ -66,75 +65,105 @@ func binding(a actor.Actor, req approval.Request) Binding {
 		ResourceID: req.ResourceID, Fingerprint: req.Fingerprint}
 }
 
-// Require implements port.ApprovalGate.
+func bindingOf(a *approval.Approval) Binding {
+	return Binding{ActorType: a.ActorType, ActorID: a.ActorID, Action: a.Action, ResourceType: a.ResourceType,
+		ResourceID: a.ResourceID, Fingerprint: a.Fingerprint}
+}
+
+// Require implements port.ApprovalGate: nil, or *port.ApprovalNeeded for the caller to pass to Open once its
+// transaction is over.
 func (s *Service) Require(ctx context.Context, a actor.Actor, req approval.Request) error {
 	if !a.NeedsApproval() {
 		return nil
 	}
-	now := s.Clock.Now()
+	now := s.clock.Now()
 	b := binding(a, req)
 	if id, ok := approval.IDFrom(ctx); ok {
-		used, err := s.Repo.Consume(ctx, a.UserID, id, b, now)
+		used, err := s.repo.Consume(ctx, a.UserID, id, b, now)
 		if err != nil {
 			return err
 		}
 		if used {
-			return s.Audit.Record(ctx, a, audit.ActionApprovalUsed, "approval", id.String(), auditMeta(req))
+			return s.audit.Record(ctx, a, audit.ActionApprovalUsed, "approval", id.String(), auditMeta(req))
 		}
 		if err := s.refuseIfDenied(ctx, a, id, b); err != nil {
 			return err
 		}
 	}
-	return s.request(ctx, a, req, b, now)
+	return &port.ApprovalNeeded{Actor: a, Request: req}
 }
 
 // refuseIfDenied tells an agent that the owner said no, so it stops asking. Any other mismatch (wrong target, reuse,
-// expiry, another tenant's id) gets a fresh request and no hint about why.
+// expiry, another tenant's id) gets a fresh request and no hint about why; a failing lookup is an error, not a hint.
 func (s *Service) refuseIfDenied(ctx context.Context, a actor.Actor, id uuid.UUID, b Binding) error {
-	ap, err := s.Repo.Get(ctx, a.UserID, id)
-	if err != nil || ap.Status != approval.StatusDenied || binding(a, approval.Request{Action: ap.Action,
-		ResourceType: ap.ResourceType, ResourceID: ap.ResourceID, Fingerprint: ap.Fingerprint}) != b || ap.ActorID != b.ActorID {
+	ap, err := s.repo.Get(ctx, a.UserID, id)
+	if errs.Is(err, errs.NotFound) {
 		return nil
 	}
-	return errs.New(errs.Forbidden, "the owner denied this action")
+	if err != nil {
+		return err
+	}
+	if ap.Status == approval.StatusDenied && bindingOf(ap) == b {
+		return errs.New(errs.Forbidden, "the owner denied this action")
+	}
+	return nil
 }
 
-func (s *Service) request(ctx context.Context, a actor.Actor, req approval.Request, b Binding, now time.Time) error {
-	dctx := s.Detach(ctx)
-	ap, err := s.Repo.FindPending(dctx, a.UserID, b, now)
-	if errs.Is(err, errs.NotFound) {
-		ap, err = s.create(dctx, a, req, now)
-	}
+// Open implements port.ApprovalGate: it answers 428 with the open approval for the request, creating it when there is
+// none. The lookup, the cap check and the insert run in one transaction under a lock on (user, key): identical first
+// calls from parallel requests produce one row, and the cap holds.
+func (s *Service) Open(ctx context.Context, n *port.ApprovalNeeded) error {
+	a, req := n.Actor, n.Request
+	now := s.clock.Now()
+	b := binding(a, req)
+	var ap *approval.Approval
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		if err := s.repo.LockActor(ctx, a.UserID, a.ID); err != nil {
+			return err
+		}
+		open, err := s.repo.FindPending(ctx, a.UserID, b, now)
+		if err == nil {
+			ap = open
+			return nil
+		}
+		if !errs.Is(err, errs.NotFound) {
+			return err
+		}
+		ap, err = s.create(ctx, a, req, now)
+		return err
+	})
 	if err != nil {
 		return err
 	}
 	return errs.New(errs.ApprovalRequired, "this action needs the owner's approval").
 		WithField("approval_id", ap.ID.String()).
-		WithField("approve_url", s.Config.WebBaseURL+"/approvals").
+		WithField("approve_url", s.cfg.WebBaseURL+"/approvals").
 		WithField("expires_at", ap.ExpiresAt.UTC().Format(time.RFC3339)).
 		WithField("action", string(ap.Action))
 }
 
 func (s *Service) create(ctx context.Context, a actor.Actor, req approval.Request, now time.Time) (*approval.Approval, error) {
-	n, err := s.Repo.CountPending(ctx, a.UserID, now)
+	n, err := s.repo.CountPending(ctx, a.UserID, a.ID, now)
 	if err != nil {
 		return nil, err
 	}
-	if n >= s.Config.MaxPending {
-		return nil, errs.New(errs.RateLimited, "too many pending approvals; ask the owner to decide on them first")
+	if n >= s.cfg.MaxPending {
+		return nil, errs.New(errs.RateLimited, "too many pending approvals for this key; ask the owner to decide on them first")
 	}
 	ap := &approval.Approval{ID: uuid.New(), UserID: a.UserID, ActorType: string(a.Type), ActorID: a.ID, ActorLabel: a.Label,
 		Action: req.Action, ResourceType: req.ResourceType, ResourceID: req.ResourceID, Fingerprint: req.Fingerprint,
-		Summary: req.Summary, Status: approval.StatusPending, ExpiresAt: now.Add(s.Config.TTL), CreatedAt: now}
-	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
-		if err := s.Repo.Create(ctx, ap); err != nil {
-			return err
-		}
-		return s.Audit.Record(ctx, a, audit.ActionApprovalRequested, "approval", ap.ID.String(), auditMeta(req))
-	})
-	return ap, err
+		Summary: req.Summary, Status: approval.StatusPending, ExpiresAt: now.Add(s.cfg.TTL), CreatedAt: now}
+	if err := s.repo.Create(ctx, ap); err != nil {
+		return nil, err
+	}
+	return ap, s.audit.Record(ctx, a, audit.ActionApprovalRequested, "approval", ap.ID.String(), auditMeta(req))
 }
 
 func auditMeta(req approval.Request) map[string]any {
 	return map[string]any{"action": string(req.Action), "resource_type": req.ResourceType, "resource_id": req.ResourceID}
+}
+
+// Purge deletes approvals that were decided, used or expired before now-retention, and reports how many.
+func (s *Service) Purge(ctx context.Context, retention time.Duration) (int64, error) {
+	return s.repo.DeleteDecidedBefore(ctx, s.clock.Now().Add(-retention))
 }

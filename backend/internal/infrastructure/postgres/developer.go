@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/application/developer"
 	"github.com/socialos/backend/internal/domain/apikey"
+	"github.com/socialos/backend/internal/domain/approval"
 )
 
 // APIKeys implements developer.Keys and auth.APIKeys.
@@ -29,6 +30,9 @@ func scanKey(row interface{ Scan(...any) error }) (*apikey.Key, error) {
 
 // Create inserts a key (hash only).
 func (r *APIKeys) Create(ctx context.Context, k *apikey.Key) error {
+	if k.DangerousPolicy == "" { // never store an empty policy: unset means the safe one
+		k.DangerousPolicy = approval.PolicyApprove
+	}
 	return mapErr(r.db.q(ctx).QueryRow(ctx, `INSERT INTO api_keys (id, user_id, name, prefix, key_hash, scopes, expires_at, dangerous_policy)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING created_at`,
 		k.ID, k.UserID, k.Name, k.Prefix, k.KeyHash, apikey.Strings(k.Scopes), k.ExpiresAt, k.DangerousPolicy).Scan(&k.CreatedAt), "api key")

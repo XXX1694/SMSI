@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/apikey"
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/errs"
 )
 
@@ -40,7 +41,9 @@ type Actor struct {
 
 // NeedsApproval reports whether a dangerous action by this actor must be approved by the owner first: API keys do,
 // unless the owner marked the key trusted. Sessions, the scheduler and system actors never do.
-func (a Actor) NeedsApproval() bool { return a.Type == TypeAPIKey && a.DangerousPolicy != "trusted" }
+func (a Actor) NeedsApproval() bool {
+	return a.Type == TypeAPIKey && a.DangerousPolicy != approval.PolicyTrusted
+}
 
 // IsSession reports whether the actor authenticated with a browser session.
 func (a Actor) IsSession() bool { return a.Type == TypeUser && a.SessionID != uuid.Nil }
