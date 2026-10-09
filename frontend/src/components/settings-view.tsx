@@ -4,10 +4,9 @@ import { useTranslations } from '@/i18n/use-translations';
 import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
-import { DataExportCard } from '@/components/data-export';
-import { DeleteAccount } from '@/components/delete-account';
 import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
+import { YourData } from '@/components/your-data';
 import { UsageCard } from '@/components/usage-card';
 import { Field, Select } from '@/components/ui/input';
 import { LanguageSelect } from '@/i18n/language-select';
@@ -78,18 +77,7 @@ export function SettingsView() {
       <Section title={t('password')}>
         <PasswordForm />
       </Section>
-      <Section title={t('yourData')}>
-        <div className="space-y-8">
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Export</h3>
-            <DataExportCard />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-danger">Delete account</h3>
-            <DeleteAccount />
-          </div>
-        </div>
-      </Section>
+      <YourData />
       <Section title={t('legal')}>
         <p className="text-sm text-muted-foreground">
           {nodes(

@@ -65,7 +65,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         ) : null}
         {isLogin && params.get('deleted') === '1' ? (
           <p role="status" className="mt-3 rounded-md border bg-muted px-3 py-2 text-sm">
-            Deletion of your account is scheduled. Your sessions and API keys were signed out. Sign in before the grace period ends to see the date and cancel it.
+            {t('deletedNotice')}
           </p>
         ) : null}
         <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
