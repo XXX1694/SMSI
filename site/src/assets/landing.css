@@ -279,6 +279,9 @@ body.landing::after { opacity: var(--noise-opacity);
 .glass-chrome, .glass-card { border: 1px solid var(--glass-border); }
 .glass-chrome { background-color: var(--glass-chrome); -webkit-backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate)); backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
   box-shadow: var(--glass-highlight), var(--shadow-glass); }
+/* The floating nav sits over moving headings and code, where 0.66 alpha lets large text read through even under the blur:
+   it gets the page background at 0.9 instead (BRAND §4: text never shows through chrome). */
+:where(.lp-nav-bar).glass-chrome { background-color: hsl(var(--background) / 0.9); }
 .glass-card { background-color: var(--glass-card); box-shadow: var(--glass-highlight), var(--shadow-glass); }
 /* The hero frame is the one card that blurs (16 px): it sits over the flow canvas. */
 .glass-hero { -webkit-backdrop-filter: blur(var(--glass-blur-hero)) saturate(var(--glass-saturate)); backdrop-filter: blur(var(--glass-blur-hero)) saturate(var(--glass-saturate)); }

@@ -72,6 +72,10 @@ test('glass never goes below 0.66 alpha under text', () => {
   for (const t of Object.values(themes)) for (const k of ['glass-chrome', 'glass-card', 'glass-strong']) assert.ok(hslaOf(t[k]).alpha >= 0.66, k);
 });
 
+test('the floating nav is near-opaque so text scrolling under it never reads through', () => {
+  assert.match(landing, /:where\(\.lp-nav-bar\)\.glass-chrome \{ background-color: hsl\(var\(--background\) \/ 0\.9\); \}/);
+});
+
 test('blur radii come from the shared tokens and the budget is the nav plus the hero frame', () => {
   assert.equal(light['glass-blur-chrome'], '20px');
   assert.equal(light['glass-blur-hero'], '16px');
