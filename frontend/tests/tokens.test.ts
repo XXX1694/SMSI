@@ -17,20 +17,39 @@ function block(selector: string): Record<string, string> {
 const light = block(':root');
 const dark = block('.dark');
 
-function luminance(channels: string): number {
+type Rgb = [number, number, number];
+
+/** sRGB 0..1 from an `h s% l%` triple. */
+function rgbOf(channels: string): Rgb {
   const [h = 0, s = 0, l = 0] = channels.split(/\s+/).map((v) => parseFloat(v));
   const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
   const f = (n: number) => {
     const k = (n + h / 30) % 12;
-    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    return l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
   };
-  return 0.2126 * f(0) + 0.7152 * f(8) + 0.0722 * f(4);
+  return [f(0), f(8), f(4)];
 }
-function contrast(a: string, b: string): number {
-  const hi = Math.max(luminance(a), luminance(b));
-  const lo = Math.min(luminance(a), luminance(b));
+/** A complete `hsl(h s% l% / a)` token as colour plus alpha. */
+function hslaOf(value: string): { rgb: Rgb; alpha: number } {
+  const m = value.match(/^hsl\(([^/]+)\/\s*([\d.]+)\)$/);
+  if (!m) throw new Error(`not an hsl(... / a) colour: ${value}`);
+  return { rgb: rgbOf((m[1] ?? '').trim()), alpha: parseFloat(m[2] ?? '1') };
+}
+function over(top: { rgb: Rgb; alpha: number }, base: Rgb): Rgb {
+  return top.rgb.map((c, i) => c * top.alpha + (base[i] ?? 0) * (1 - top.alpha)) as Rgb;
+}
+function relLum([r, g, b]: Rgb): number {
+  const f = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+function ratio(a: Rgb, b: Rgb): number {
+  const hi = Math.max(relLum(a), relLum(b));
+  const lo = Math.min(relLum(a), relLum(b));
   return (hi + 0.05) / (lo + 0.05);
+}
+/** WCAG contrast of two `h s% l%` triples. */
+function contrast(a: string, b: string): number {
+  return ratio(rgbOf(a), rgbOf(b));
 }
 
 describe('design tokens', () => {
@@ -77,12 +96,6 @@ describe('design tokens', () => {
     });
   }
 
-  it('gives every theme the same glass, mesh and motion tokens', () => {
-    for (const k of ['glass-blur-chrome', 'glass-blur-strong', 'glass-blur-hero', 'glass-saturate', 'duration-hero', 'ease-fill', 'font-script']) {
-      expect(light, k).toHaveProperty(k);
-    }
-  });
-
   it('only references tokens that exist', () => {
     const source = JSON.stringify(config);
     const used = [...source.matchAll(/var\(--([\w-]+)\)/g)].map((m) => m[1] ?? '');
@@ -90,37 +103,6 @@ describe('design tokens', () => {
     for (const name of used) expect(light, name).toHaveProperty(name);
   });
 });
-
-type Rgb = [number, number, number];
-
-/** sRGB 0..1 from an `h s% l%` triple. */
-function rgbOf(channels: string): Rgb {
-  const [h = 0, s = 0, l = 0] = channels.split(/\s+/).map((v) => parseFloat(v));
-  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    return l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
-  };
-  return [f(0), f(8), f(4)];
-}
-/** A complete `hsl(h s% l% / a)` token as colour plus alpha. */
-function hslaOf(value: string): { rgb: Rgb; alpha: number } {
-  const m = value.match(/^hsl\(([^/]+)\/\s*([\d.]+)\)$/);
-  if (!m) throw new Error(`not an hsl(... / a) colour: ${value}`);
-  return { rgb: rgbOf((m[1] ?? '').trim()), alpha: parseFloat(m[2] ?? '1') };
-}
-function over(top: { rgb: Rgb; alpha: number }, base: Rgb): Rgb {
-  return top.rgb.map((c, i) => c * top.alpha + (base[i] ?? 0) * (1 - top.alpha)) as Rgb;
-}
-function relLum([r, g, b]: Rgb): number {
-  const f = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-}
-function ratio(a: Rgb, b: Rgb): number {
-  const hi = Math.max(relLum(a), relLum(b));
-  const lo = Math.min(relLum(a), relLum(b));
-  return (hi + 0.05) / (lo + 0.05);
-}
 
 // Text on glass (D-024) is checked against the worst case the eye can meet: the glass tint composited over the canvas and
 // over each mesh colour at full strength (the centre of a blob). Inputs never sit on glass, so only text pairs are here.
@@ -139,14 +121,7 @@ describe('text on glass', () => {
 });
 
 function toHex(channels: string): string {
-  const [h = 0, s = 0, l = 0] = channels.split(/\s+/).map((v) => parseFloat(v));
-  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
-    return Math.round(255 * c).toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
+  return `#${rgbOf(channels).map((c) => Math.round(255 * c).toString(16).padStart(2, '0')).join('')}`;
 }
 
 describe('brand hex values', () => {

@@ -12,11 +12,6 @@ const SCRIPT_FONTS: Partial<Record<AppLocale, () => Promise<unknown>>> = {
   'zh-CN': () => import('@fontsource-variable/noto-sans-sc/wght.css'),
 };
 
-/** True when `locale` needs a script face beyond Onest. */
-export function needsScriptFont(locale: AppLocale): boolean {
-  return locale in SCRIPT_FONTS;
-}
-
 /**
  * Loads the locale's script face, if it has one. Never rejects: without the chunk (offline) the text falls back to the
  * system face for that script, which is readable, so the locale switch must not fail over a font.

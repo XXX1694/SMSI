@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "node build.mjs",
+    "test": "node --test scripts/*.test.mjs",
     "check": "node scripts/check.mjs",
     "record": "node scripts/record-hero.mjs",
     "preview": "node scripts/serve.mjs dist 4173 /steerpost/",
