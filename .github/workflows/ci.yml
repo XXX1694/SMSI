@@ -53,41 +53,43 @@ jobs:
     steps:
       - id: filter
         if: github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
-          # `shared` means "everything": the workflows, the compose file, the Makefile and the env example.
+          # `ci` is this workflow itself: changing it re-runs every job once. Other files under .github/ (release,
+          # uptime, scripts, Dependabot) are covered by repo-lint, which always runs.
           filters: |
-            shared: &shared
-              - '.github/**'
-              - 'docker-compose.yml'
-              - 'Makefile'
-              - '.env.example'
+            ci: &ci
+              - '.github/workflows/ci.yml'
             backend:
-              - *shared
+              - *ci
               - 'backend/**'
             mcp:
-              - *shared
+              - *ci
               - 'mcp/**'
             frontend:
-              - *shared
+              - *ci
               - 'frontend/**'
             site:
-              - *shared
+              - *ci
               - 'site/**'
               - 'frontend/**'
               - 'docs/**'
               - 'README.md'
               - 'mcp/README.md'
             e2e:
-              - *shared
+              - *ci
+              - '.github/ci/**'
               - 'backend/**'
               - 'mcp/**'
               - 'frontend/**'
+              - 'docker-compose.yml'
+              - 'Makefile'
+              - '.env.example'
             codeql_go:
-              - *shared
+              - *ci
               - 'backend/**'
             codeql_js:
-              - *shared
+              - *ci
               - 'mcp/**'
               - 'frontend/**'
               - 'site/**'
@@ -139,7 +141,7 @@ jobs:
           cache-dependency-path: backend/go.sum
 
       # golangci-lint v2 runs gofmt (formatters in backend/.golangci.yml) and go vet (govet is a standard linter).
-      - uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: backend
@@ -254,10 +256,10 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build backend image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: backend
           load: true
@@ -266,7 +268,7 @@ jobs:
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
       - name: Build mcp image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: mcp
           load: true
@@ -275,7 +277,7 @@ jobs:
           cache-from: type=gha,scope=mcp
           cache-to: type=gha,mode=max,scope=mcp
       - name: Build frontend image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: frontend
           load: true
@@ -339,7 +341,7 @@ jobs:
 
       - name: Trivy scan (backend)
         if: ${{ !cancelled() }}
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: socialos-backend:ci
           scanners: vuln
@@ -359,7 +361,7 @@ jobs:
 
       - name: Trivy scan (mcp)
         if: ${{ !cancelled() }}
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: socialos-mcp:ci
           scanners: vuln
@@ -379,7 +381,7 @@ jobs:
 
       - name: Trivy scan (frontend)
         if: ${{ !cancelled() }}
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: socialos-frontend:ci
           scanners: vuln
@@ -456,81 +458,19 @@ jobs:
         run: bash deploy/tests/run.sh
 
       - name: Production compose files resolve with the example environment (standalone and host-proxy)
-        run: |
-          set -euo pipefail
-          standalone=(--env-file deploy/.env.prod.example -f deploy/docker-compose.prod.yml)
-          host_proxy=("${standalone[@]}" -f deploy/docker-compose.host-proxy.yml)
-          # check MODE JQ_FILTER MESSAGE: the resolved configuration of MODE must satisfy the jq filter.
-          check() {
-            local -n compose_args=$1
-            docker compose "${compose_args[@]}" config --format json | jq -e "$2" >/dev/null ||
-              { echo "::error title=compose config ($1)::$3"; exit 1; }
-          }
-          docker compose "${standalone[@]}" config -q
-          docker compose "${host_proxy[@]}" config -q
+        run: .github/scripts/repo-lint.sh compose
 
-          check standalone '[.services[] | select(.mem_limit == null)] | length == 0' 'a service has no mem_limit'
-          check host_proxy '[.services[] | select(.mem_limit == null)] | length == 0' 'a service has no mem_limit'
-          # Standalone is unchanged: caddy owns 80/443 and nothing else publishes a port.
-          check standalone '[.services | to_entries[] | select(.value.ports != null) | .key] == ["caddy"]' 'only caddy may publish ports'
-          # Host-proxy: no bundled caddy, and everything that is published is bound to 127.0.0.1.
-          check host_proxy '.services | has("caddy") | not' 'the bundled caddy is still part of the stack'
-          check host_proxy '[.services[].ports[]?.host_ip] | (length > 0) and all(. == "127.0.0.1")' 'a published port is not bound to 127.0.0.1'
-          # Host-proxy: under host-wide memory pressure the kernel must pick Steerpost before the host's Caddy or other service,
-          # and postgres gets a small /dev/shm (64 MiB, not smaller than its shared_buffers default of 64MB).
-          check host_proxy '[.services[] | select(.oom_score_adj != 500)] | length == 0' 'a service lacks oom_score_adj 500'
-          check host_proxy '.services.postgres.shm_size | tonumber == 67108864' 'postgres shm_size is not 64mb'
-          # Host-proxy: the whole stack runs in socialos.slice (one kernel-enforced budget), no container may swap, and each
-          # has a process cap. Standalone needs no slice on the host.
-          check host_proxy '[.services[] | select(.cgroup_parent != "socialos.slice")] | length == 0' 'a service is not in socialos.slice'
-          check host_proxy '[.services[] | select(.memswap_limit != .mem_limit or .pids_limit == null)] | length == 0' 'a service may swap or has no pids_limit'
-          check standalone '[.services[] | select(.cgroup_parent != null)] | length == 0' 'the standalone stack must not depend on socialos.slice'
-          # ACME_EMAIL is only for the bundled Caddy: host-proxy mode must resolve with it empty (init-env.sh --host-proxy writes
-          # it empty). Standalone resolves too, and deploy.sh refuses an empty value there.
-          sed 's|^ACME_EMAIL=.*|ACME_EMAIL=|' deploy/.env.prod.example >"$RUNNER_TEMP/env-no-acme"
-          docker compose --env-file "$RUNNER_TEMP/env-no-acme" -f deploy/docker-compose.prod.yml -f deploy/docker-compose.host-proxy.yml config -q
 
       - name: Caddyfile is valid
-        run: |
-          docker run --rm \
-            -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            -e DOMAIN=example.com -e ACME_EMAIL=ops@example.com -e S3_SITE=s3.example.com \
-            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+        run: .github/scripts/repo-lint.sh caddy
+
 
       # The rendered host snippet is imported by a host Caddyfile that has its own global options, its own snippet called
       # "common" and its own site: none of that may collide. Its routes must also equal those of the standalone Caddyfile
       # (same headers, /metrics block, flush_interval, encode), apart from the upstream addresses.
       - name: Host-proxy Caddy snippet renders, validates and matches the standalone Caddyfile
-        run: |
-          set -euo pipefail
-          work="$RUNNER_TEMP/host-proxy"
-          mkdir -p "$work/caddy"
-          sed 's|^DOMAIN=.*|DOMAIN=example.com|' deploy/.env.prod.example >"$work/env"
-          deploy/host-proxy/render-caddy.sh --env "$work/env" --out "$work/caddy/socialos.caddy"
-          cat >"$work/Caddyfile" <<'EOF'
-          {
-          	email ops@example.com
-          }
-          (common) {
-          	header X-Host "1"
-          }
-          other.example.org {
-          	import common
-          	respond "ok"
-          }
-          import /opt/socialos/caddy/*.caddy
-          EOF
-          host_caddy=(docker run --rm -v "$work/Caddyfile:/etc/caddy/Caddyfile:ro" -v "$work/caddy:/opt/socialos/caddy:ro" caddy:2-alpine caddy)
-          "${host_caddy[@]}" validate --config /etc/caddy/Caddyfile --adapter caddyfile
+        run: .github/scripts/repo-lint.sh host-proxy
 
-          # Routes without the upstream addresses (the host's own site is left out on the host side).
-          "${host_caddy[@]}" adapt --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null |
-            jq -S '[.apps.http.servers[].routes[] | select(.match[0].host[0] | startswith("other.") | not)] | map(del(.. | .upstreams?))' >"$work/host.json"
-          docker run --rm -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            -e DOMAIN=example.com -e ACME_EMAIL=ops@example.com -e S3_SITE=s3.example.com \
-            caddy:2-alpine caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null |
-            jq -S '[.apps.http.servers[].routes[]] | map(del(.. | .upstreams?))' >"$work/standalone.json"
-          diff -u "$work/standalone.json" "$work/host.json"
 
   # ---------------------------------------------------------------------------
   # CodeQL. The categories match the old security.yml so the Security tab keeps one configuration per language.
