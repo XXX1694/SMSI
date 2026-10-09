@@ -11,6 +11,7 @@ import (
 	"github.com/socialos/backend/internal/adapters/linkedin"
 	"github.com/socialos/backend/internal/adapters/mail"
 	"github.com/socialos/backend/internal/adapters/mock"
+	"github.com/socialos/backend/internal/adapters/mocktoken"
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/adapters/stubs"
 	"github.com/socialos/backend/internal/adapters/telegram"
@@ -134,6 +135,7 @@ func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Regi
 	reg.Register(telegram.New(telegram.Config{BotToken: cfg.TelegramToken}))
 	if cfg.MockProviders {
 		reg.Register(mock.New())
+		reg.Register(mocktoken.New())
 	}
 	for _, p := range extra {
 		reg.Register(p)

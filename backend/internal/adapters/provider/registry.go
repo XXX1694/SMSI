@@ -69,6 +69,22 @@ func (r *Registry) OAuth(name string) (Provider, OAuth, error) {
 	return p, o, nil
 }
 
+// TokenConnector returns the provider as a TokenConnector, or PROVIDER_NOT_AVAILABLE.
+func (r *Registry) TokenConnector(name string) (Provider, TokenConnector, error) {
+	p, err := r.Get(name)
+	if err != nil {
+		return nil, nil, err
+	}
+	t, ok := p.(TokenConnector)
+	if !ok || !p.Supported() || p.Capabilities().ConnectMethod != ConnectToken {
+		return nil, nil, errs.Newf(errs.ProviderNotAvailable, "%s does not support connecting with a token", p.DisplayName())
+	}
+	if !p.Configured() {
+		return nil, nil, errs.Newf(errs.ProviderNotAvailable, "%s is not configured on this server", p.DisplayName())
+	}
+	return p, t, nil
+}
+
 // List returns providers sorted: supported first, then by name.
 func (r *Registry) List() []Provider {
 	r.mu.RLock()

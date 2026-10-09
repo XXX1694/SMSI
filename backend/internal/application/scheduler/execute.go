@@ -30,7 +30,7 @@ func (p *Publisher) execute(ctx context.Context, r *run) error {
 	if err != nil {
 		return p.onProviderError(ctx, r, prov, err)
 	}
-	if prov.Capabilities().ConnectMethod == provider.ConnectOAuth {
+	if cm := prov.Capabilities().ConnectMethod; cm == provider.ConnectOAuth || cm == provider.ConnectToken {
 		token, err := p.freshToken(ctx, r.account, prov)
 		if err != nil {
 			return p.onProviderError(ctx, r, prov, err)
@@ -64,6 +64,7 @@ func (p *Publisher) lookup(ctx context.Context, pub provider.Publisher, req prov
 func (p *Publisher) buildRequest(ctx context.Context, r *run) (provider.PublishRequest, error) {
 	req := provider.PublishRequest{
 		IdempotencyKey: r.target.IdempotencyKey,
+		Title:          r.post.Title,
 		Text:           r.target.Content,
 		Account: provider.AccountRef{ID: r.account.ID.String(), ProviderAccountID: r.account.ProviderAccountID,
 			Username: r.account.Username, Metadata: r.account.Metadata},

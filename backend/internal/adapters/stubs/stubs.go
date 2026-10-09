@@ -31,8 +31,11 @@ func All() []provider.Provider {
 		Unsupported{"facebook", "Facebook", "requires Meta app review for pages_manage_posts."},
 		Unsupported{"tiktok", "TikTok", "requires TikTok Content Posting API audit; unaudited apps can only post privately."},
 		Unsupported{"youtube", "YouTube", "requires Google OAuth verification for youtube.upload scope."},
-		Unsupported{"x", "X (Twitter)", "requires a paid X API tier with write access."},
+		Unsupported{"x", "X (Twitter)", "the API is pay-per-use (about $0.015 per post, $0.20 per post with a link) and needs a paid developer account; the free tier is closed to new developers."},
 		Unsupported{"threads", "Threads", "requires Meta app review for threads_content_publish."},
 		Unsupported{"pinterest", "Pinterest", "requires Pinterest API standard access approval."},
+		Unsupported{"reddit", "Reddit", "new API credentials reportedly need Reddit's Responsible Builder approval first."},
+		Unsupported{"medium", "Medium", "Medium reportedly no longer issues new integration tokens, so new accounts cannot connect."},
+		Unsupported{"hashnode", "Hashnode", "API access reportedly needs a paid Hashnode Pro plan."},
 	}
 }
