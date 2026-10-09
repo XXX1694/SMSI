@@ -154,7 +154,7 @@ func (a *Adapter) get(ctx context.Context, token, path string, into any) (next s
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
-		return "", err
+		return "", rejected("api request invalid", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -195,8 +195,9 @@ func nextLink(h string) string {
 }
 
 func rejected(msg string, cause error) error {
+	detail := fmt.Errorf("github: %s", msg)
 	if cause != nil {
-		msg += ": " + cause.Error()
+		detail = fmt.Errorf("github: %s: %w", msg, cause)
 	}
-	return errs.Wrap(errs.ProviderError, "the sign-in provider could not confirm your identity", fmt.Errorf("github: %s", msg))
+	return errs.Wrap(errs.ProviderError, "the sign-in provider could not confirm your identity", detail)
 }

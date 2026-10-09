@@ -3,8 +3,6 @@
 package githubfake
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+
+	"github.com/socialos/backend/internal/infrastructure/crypto"
 )
 
 // Email is one entry of /user/emails.
@@ -37,7 +37,8 @@ type Account struct {
 	UserStatus      int  // non-zero: /user answers this status
 	EmailsStatus    int  // non-zero: /user/emails answers this status
 	EmailsBadJSON   bool
-	EmailsEndlessly bool // every page claims another page follows
+	EmailsEndlessly bool   // every page claims another page follows
+	LinkOffHost     string // non-empty: the Link header's next page points at this base URL instead of the fake
 }
 
 // Fake is a running fake GitHub.
@@ -102,8 +103,7 @@ func (f *Fake) token(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if a.PKCEChallenge != "" {
-		sum := sha256.Sum256([]byte(r.PostForm.Get("code_verifier")))
-		if base64.RawURLEncoding.EncodeToString(sum[:]) != a.PKCEChallenge {
+		if crypto.PKCEChallenge(r.PostForm.Get("code_verifier")) != a.PKCEChallenge {
 			reply(w, r, map[string]string{"error": "bad_verification_code", "error_description": "PKCE"})
 			return
 		}
@@ -186,7 +186,11 @@ func (f *Fake) emails(w http.ResponseWriter, r *http.Request) {
 		q := next.Query()
 		q.Set("page", strconv.Itoa(page+1))
 		next.RawQuery = q.Encode()
-		w.Header().Set("Link", fmt.Sprintf(`<%s%s>; rel="next"`, f.Server.URL, next.RequestURI()))
+		base := f.Server.URL
+		if a.LinkOffHost != "" {
+			base = a.LinkOffHost
+		}
+		w.Header().Set("Link", fmt.Sprintf(`<%s%s>; rel="next"`, base, next.RequestURI()))
 	}
 	out := a.Emails[lo:hi]
 	if a.EmailsEndlessly {

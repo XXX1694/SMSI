@@ -128,6 +128,20 @@ func TestFailuresAreProviderErrors(t *testing.T) {
 	}
 }
 
+func TestPaginationCannotLeaveTheAPIHost(t *testing.T) {
+	f, a := setup(t)
+	acc := account(githubfake.Email{Email: "x@x.test", Verified: true}, githubfake.Email{Email: "y@x.test", Verified: true},
+		githubfake.Email{Email: "z@x.test", Primary: true, Verified: true})
+	acc.LinkOffHost = "https://evil.example"
+	c, err := exchange(a, f.Code(acc))
+	if !errs.Is(err, errs.ProviderError) || c != (identity.Claims{}) {
+		t.Fatalf("a Link to another host must fail, got %+v %v", c, err)
+	}
+	if !strings.Contains(err.Error(), "left the API host") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestEndlessPaginationStops(t *testing.T) {
 	f, a := setup(t)
 	acc := account(githubfake.Email{Email: "x@x.test", Verified: true})

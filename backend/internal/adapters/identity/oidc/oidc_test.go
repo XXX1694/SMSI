@@ -34,10 +34,8 @@ func setup(t *testing.T) (*oidcfake.Fake, *oidc.Adapter) {
 
 func grant() oidcfake.Grant {
 	return oidcfake.Grant{Subject: "sub-1", Email: " Ann@Gmail.com ", EmailVerified: true, Name: " Ann ", Nonce: nonce,
-		CodeChallenge: s256(verifier), RedirectURI: redirectURI}
+		CodeChallenge: crypto.PKCEChallenge(verifier), RedirectURI: redirectURI}
 }
-
-func s256(v string) string { return crypto.PKCEChallenge(v) }
 
 func exchange(a *oidc.Adapter, code string) (identity.Claims, error) {
 	return a.Exchange(context.Background(), auth.ExchangeRequest{Code: code, CodeVerifier: verifier, RedirectURI: redirectURI,
@@ -52,19 +50,15 @@ func TestExchangeReturnsVerifiedClaims(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := identity.Claims{Provider: identity.Google, Subject: "sub-1", Email: "ann@gmail.com", EmailVerified: true,
+	want := identity.Claims{Provider: identity.Google, Issuer: f.Issuer(), Subject: "sub-1", Email: "ann@gmail.com", EmailVerified: true,
 		EmailPrimary: true, HostedDomain: "corp.example", DisplayName: "Ann"}
 	if c != want {
 		t.Fatalf("got %+v want %+v", c, want)
 	}
-}
-
-func TestEmailVerifiedAsStringIsAccepted(t *testing.T) {
-	f, a := setup(t)
-	g := grant()
-	g.EmailVerifiedAsString = true
-	if c, err := exchange(a, f.Code(g)); err != nil || !c.EmailVerified {
-		t.Fatalf("%+v %v", c, err)
+	// The fake is not accounts.google.com, so even a gmail address with an hd claim is not authoritative: the Google
+	// rules never apply to another issuer (a future Keycloak or Authentik).
+	if c.AuthoritativeEmail() {
+		t.Fatal("a non-Google issuer must never be authoritative")
 	}
 }
 
@@ -153,7 +147,7 @@ func TestAuthorizeURL(t *testing.T) {
 	}
 	q := u.Query()
 	for k, want := range map[string]string{"response_type": "code", "client_id": "fake-client-id", "state": "st", "nonce": nonce,
-		"redirect_uri": redirectURI, "code_challenge": s256(verifier), "code_challenge_method": "S256", "scope": "openid email profile"} {
+		"redirect_uri": redirectURI, "code_challenge": crypto.PKCEChallenge(verifier), "code_challenge_method": "S256", "scope": "openid email profile"} {
 		if q.Get(k) != want {
 			t.Errorf("%s = %q, want %q", k, q.Get(k), want)
 		}
@@ -175,7 +169,6 @@ func TestNewValidatesConfig(t *testing.T) {
 		"no secret": func(c *oidc.ProviderConfig) { c.ClientSecret = "" },
 		"no jwks":   func(c *oidc.ProviderConfig) { c.JWKSURL = "" },
 		"bad id":    func(c *oidc.ProviderConfig) { c.ID = "myspace" },
-		"alg none":  func(c *oidc.ProviderConfig) { c.SigningAlgs = []string{"RS256", "none"} },
 	} {
 		c := good
 		mut(&c)

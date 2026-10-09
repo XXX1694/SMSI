@@ -8,6 +8,7 @@ package oidc
 import (
 	"context"
 	"crypto/subtle"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -19,6 +20,10 @@ import (
 	"github.com/socialos/backend/internal/domain/identity"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 )
+
+// signingAlgs is the allow-list for the ID token's alg. Only RS256 (what Google signs with): "none" and the HMAC
+// family are never acceptable, and a provider that needs another algorithm gets that code reviewed here.
+var signingAlgs = []string{"RS256"}
 
 // requestTimeout bounds every call to the provider (token endpoint, key set).
 const requestTimeout = 10 * time.Second
@@ -32,19 +37,14 @@ type ProviderConfig struct {
 	JWKSURL      string
 	ClientID     string
 	ClientSecret string
-	// Scopes defaults to openid, email and profile.
-	Scopes []string
-	// SigningAlgs is the allow-list for the ID token's alg; it defaults to RS256 only. "none" is never accepted.
-	SigningAlgs []string
-	// AuthStyle is how the client secret reaches the token endpoint; the zero value lets x/oauth2 probe.
-	AuthStyle oauth2.AuthStyle
 	// HTTPClient is used for the token and key requests; it defaults to a client with a 10 s timeout.
 	HTTPClient *http.Client
 	// Now is the clock for expiry checks; it defaults to time.Now.
 	Now func() time.Time
 }
 
-// Google returns the static configuration of Google Sign-In.
+// Google returns the static configuration of Google Sign-In. Only tokens from this issuer get the gmail.com and hd
+// rules (identity.Claims.AuthoritativeEmail).
 func Google(clientID, clientSecret string) ProviderConfig {
 	return ProviderConfig{
 		ID: identity.Google, Issuer: "https://accounts.google.com",
@@ -52,7 +52,6 @@ func Google(clientID, clientSecret string) ProviderConfig {
 		TokenURL: "https://oauth2.googleapis.com/token",
 		JWKSURL:  "https://www.googleapis.com/oauth2/v3/certs",
 		ClientID: clientID, ClientSecret: clientSecret,
-		AuthStyle: oauth2.AuthStyleInParams,
 	}
 }
 
@@ -72,17 +71,6 @@ func New(cfg ProviderConfig) (*Adapter, error) {
 		cfg.ClientID == "" || cfg.ClientSecret == "" {
 		return nil, errs.New(errs.Internal, "oidc: provider id, endpoints and client credentials are required")
 	}
-	if len(cfg.Scopes) == 0 {
-		cfg.Scopes = []string{gooidc.ScopeOpenID, "email", "profile"}
-	}
-	if len(cfg.SigningAlgs) == 0 {
-		cfg.SigningAlgs = []string{"RS256"}
-	}
-	for _, alg := range cfg.SigningAlgs {
-		if alg == "none" || alg == "" {
-			return nil, errs.New(errs.Internal, "oidc: unsigned ID tokens cannot be allowed")
-		}
-	}
 	client := cfg.HTTPClient
 	if client == nil {
 		client = &http.Client{Timeout: requestTimeout}
@@ -90,11 +78,11 @@ func New(cfg ProviderConfig) (*Adapter, error) {
 	// The key set keeps this context for its later fetches, so it must not be a request's.
 	long := gooidc.ClientContext(context.Background(), client)
 	provider := (&gooidc.ProviderConfig{IssuerURL: cfg.Issuer, AuthURL: cfg.AuthURL, TokenURL: cfg.TokenURL,
-		JWKSURL: cfg.JWKSURL, Algorithms: cfg.SigningAlgs}).NewProvider(long)
-	verifier := provider.VerifierContext(long, &gooidc.Config{ClientID: cfg.ClientID, SupportedSigningAlgs: cfg.SigningAlgs, Now: cfg.Now})
+		JWKSURL: cfg.JWKSURL, Algorithms: signingAlgs}).NewProvider(long)
+	verifier := provider.VerifierContext(long, &gooidc.Config{ClientID: cfg.ClientID, SupportedSigningAlgs: signingAlgs, Now: cfg.Now})
 	return &Adapter{cfg: cfg, client: client, verifier: verifier, oauth: &oauth2.Config{
-		ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, Scopes: cfg.Scopes,
-		Endpoint: oauth2.Endpoint{AuthURL: cfg.AuthURL, TokenURL: cfg.TokenURL, AuthStyle: cfg.AuthStyle},
+		ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, Scopes: []string{gooidc.ScopeOpenID, "email", "profile"},
+		Endpoint: oauth2.Endpoint{AuthURL: cfg.AuthURL, TokenURL: cfg.TokenURL, AuthStyle: oauth2.AuthStyleInParams},
 	}}, nil
 }
 
@@ -134,19 +122,9 @@ func (a *Adapter) Exchange(ctx context.Context, r auth.ExchangeRequest) (identit
 }
 
 func rejected(msg string, cause error) error {
-	return errs.Wrap(errs.ProviderError, "the sign-in provider could not confirm your identity", wrapped{msg, cause})
-}
-
-// wrapped keeps the reason for the log while the client message stays generic.
-type wrapped struct {
-	msg   string
-	cause error
-}
-
-func (w wrapped) Error() string {
-	if w.cause == nil {
-		return w.msg
+	detail := fmt.Errorf("oidc: %s", msg)
+	if cause != nil {
+		detail = fmt.Errorf("oidc: %s: %w", msg, cause)
 	}
-	return w.msg + ": " + w.cause.Error()
+	return errs.Wrap(errs.ProviderError, "the sign-in provider could not confirm your identity", detail)
 }
-func (w wrapped) Unwrap() error { return w.cause }
