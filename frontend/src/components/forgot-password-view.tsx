@@ -29,9 +29,9 @@ export function ForgotPasswordView() {
 
   if (sent) {
     return (
-      <AuthShell title="Check your inbox" description="If an account exists for that address, we have sent a link to reset the password. It works once and lasts 30 minutes.">
+      <AuthShell title="Check your inbox" description="If an account exists for that address, Steerpost sent a link to reset the password. It works once and lasts 30 minutes.">
         {sent.delivery === 'log' ? (
-          <Notice tone="warning">Email delivery is not set up on this server, so no message will arrive. Ask whoever runs it to configure mail.</Notice>
+          <Notice tone="warning">Email delivery is not set up on this server, so no message will arrive. Ask your server admin to set up email.</Notice>
         ) : null}
         <Link href="/login" className="mt-6 inline-block text-sm text-accent hover:underline">
           Back to sign in
@@ -49,7 +49,7 @@ export function ForgotPasswordView() {
           <InlineError>{error}</InlineError>
         ) : null}
         <Button type="submit" className="w-full" disabled={busy || !email.trim()}>
-          {busy ? 'Please wait…' : 'Send reset link'}
+          {busy ? 'Sending…' : 'Send reset link'}
         </Button>
       </form>
       <Link href="/login" className="mt-6 inline-block text-sm text-accent hover:underline">

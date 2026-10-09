@@ -3,6 +3,8 @@ package posts
 import (
 	"context"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -131,12 +133,32 @@ func (s *Service) buildTargets(ctx context.Context, userID uuid.UUID, accountIDs
 	return targets, nil
 }
 
+// networkName is the name people know the network by ("LinkedIn"); the id is the fallback.
+func (s *Service) networkName(id string) string {
+	if p, _, err := s.registry.Publisher(id); err == nil {
+		return p.DisplayName()
+	}
+	return id
+}
+
+func accountName(acc *socialaccount.Account) string {
+	if acc.Username != "" {
+		return "@" + strings.TrimPrefix(acc.Username, "@")
+	}
+	return acc.DisplayName
+}
+
+// megabytes renders a size for people: "2", "10", "1.5".
+func megabytes(n int64) string {
+	return strconv.FormatFloat(math.Round(float64(n)/(1<<20)*10)/10, 'f', -1, 64)
+}
+
 func (s *Service) checkTarget(acc *socialaccount.Account, title, text string, mediaList []media.Media, strict requireActive) error {
 	switch {
 	case acc.Status == socialaccount.StatusRevoked:
-		return errs.Validationf("social account %s is disconnected", acc.ID).WithField("social_account_ids", "disconnected")
+		return errs.Validationf("%s account %s is disconnected. Remove it from the post.", s.networkName(acc.Provider), accountName(acc)).WithField("social_account_ids", "disconnected")
 	case bool(strict) && !acc.Publishable():
-		return errs.Newf(errs.SocialAccountExpired, "%s account @%s needs to be reconnected", acc.Provider, acc.Username)
+		return errs.Newf(errs.SocialAccountExpired, "%s account %s needs reconnecting. Reconnect it in Accounts.", s.networkName(acc.Provider), accountName(acc))
 	}
 	p, _, err := s.registry.Publisher(acc.Provider)
 	if err != nil {
@@ -173,7 +195,7 @@ func CheckContent(name string, c provider.Capabilities, title, text string, medi
 			return errs.Validationf("%s does not support images", name).WithField("media_ids", "unsupported")
 		}
 		if m.Kind == media.KindImage && c.MaxImageBytes > 0 && m.SizeBytes > c.MaxImageBytes {
-			return errs.Validationf("%s accepts images up to %d bytes", name, c.MaxImageBytes).WithField("media_ids", "too large")
+			return errs.Validationf("%s accepts images up to %s MB", name, megabytes(c.MaxImageBytes)).WithField("media_ids", "too large")
 		}
 		if m.Kind == media.KindVideo && !c.CanPublishVideo {
 			return errs.Validationf("%s does not support video in this release", name).WithField("media_ids", "unsupported")

@@ -6,7 +6,7 @@ import { usePrefs, type Theme } from '@/components/prefs-provider';
 import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
 import { UsageCard } from '@/components/usage-card';
-import { Field, Input, Select } from '@/components/ui/input';
+import { Field, Select } from '@/components/ui/input';
 import { browserTimezone, formatDateTime, isValidTimezone } from '@/lib/time';
 
 function tzOptions(current: string): string[] {
@@ -45,7 +45,7 @@ export function SettingsView() {
       </Section>
       <Section title="Preferences">
         <div className="space-y-4">
-          <Field label="Timezone" hint={`Scheduled times are entered in this zone and stored as UTC. Now: ${formatDateTime(new Date().toISOString(), timezone)}.`}>
+          <Field label="Time zone" hint={`Times you enter and see use this time zone. Now: ${formatDateTime(new Date().toISOString(), timezone)}.`}>
             <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
               {zones.map((z) => (
                 <option key={z} value={z}>
@@ -63,11 +63,6 @@ export function SettingsView() {
           </Field>
         </div>
       </Section>
-      <Section title="Security">
-        <Field label="Session" hint="You are signed in with a secure session cookie. Sign out from the sidebar.">
-          <Input value="Active" readOnly disabled />
-        </Field>
-      </Section>
       <Section title="Password">
         <PasswordForm />
       </Section>
@@ -81,7 +76,7 @@ export function SettingsView() {
           <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
             Privacy Policy
           </Link>
-          . The operator of this instance is responsible for both.
+          . The server admin is responsible for both.
         </p>
       </Section>
     </div>

@@ -72,8 +72,7 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 			Placeholder: "https://discord.com/api/webhooks/...",
 			Help:        "Channel settings > Integrations > Webhooks > New Webhook > Copy Webhook URL. The URL is a password: anyone who has it can post in that channel.",
 		}},
-		Notes: "Posts into one channel through its webhook, as the webhook's name. Text up to 2000 characters and up to 10 images " +
-			"(10 MB each); mentions are not pinged. No titles, video, threads or scheduling on Discord's side. Deleting the webhook in " +
-			"Discord disconnects the account. If a send times out, the post goes to review because Discord offers no way to check whether it arrived.",
+		Notes: "Posts to one channel as the webhook's name. Text up to 2,000 characters, up to 10 images of 10 MB. No video. " +
+			"If a send times out, the post is marked unconfirmed.",
 	}
 }

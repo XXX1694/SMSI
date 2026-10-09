@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accountText, actionLabel, isIrreversible, isOpen, summaryLines, timeLeft } from '@/lib/approvals';
+import { actionLabel, isIrreversible, isOpen, summaryLines, timeLeft } from '@/lib/approvals';
 import type { Approval } from '@/lib/types';
 
 const NOW = new Date('2026-10-08T12:00:00Z');
@@ -15,9 +15,9 @@ describe('approvals helpers', () => {
     expect(actionLabel('something.new')).toBe('something.new');
   });
 
-  it('flags only delete and disconnect as irreversible', () => {
-    expect(['post.delete', 'social_account.disconnect'].every(isIrreversible)).toBe(true);
-    expect(['post.publish', 'post.retry_now', 'post.schedule_soon', 'social_account.connect_token'].some(isIrreversible)).toBe(false);
+  it('flags delete, disconnect, publish now and retry now as irreversible', () => {
+    expect(['post.delete', 'social_account.disconnect', 'post.publish', 'post.retry_now'].every(isIrreversible)).toBe(true);
+    expect(['post.schedule_soon', 'social_account.connect_token'].some(isIrreversible)).toBe(false);
   });
 
   it('counts down and reports expiry', () => {
@@ -75,22 +75,34 @@ describe('approvals helpers', () => {
       },
       'UTC',
     );
-    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on LinkedIn (@alex)', 'Text on LinkedIn (@team)', 'Accounts']);
-    expect(lines.at(-1)!.value).toBe('LinkedIn (@alex), LinkedIn (@team)');
+    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on LinkedIn · @alex', 'Text on LinkedIn · @team', 'Accounts']);
+    expect(lines.at(-1)!.value).toBe('LinkedIn · @alex, LinkedIn · @team');
   });
 });
 
-describe('display names', () => {
-  it('turns network ids and account strings into names a person recognises', () => {
-    expect(accountText('linkedin · @demo')).toBe('LinkedIn (@demo)');
-    expect(accountText('telegram')).toBe('Telegram');
-    expect(accountText('Some Free Text, with spaces')).toBe('Some Free Text, with spaces');
+describe('approval copy', () => {
+  it('names the real dangerous actions in plain words', () => {
+    expect(actionLabel('post.schedule_soon')).toBe('Schedule in the next few minutes');
+    expect(actionLabel('post.publish')).toBe('Publish now');
   });
+});
 
-  it('shows a post status code as the badge text', () => {
-    const lines = summaryLines({ ...base, summary: { status: 'draft', provider: 'mock' } }, 'UTC');
-    expect(lines).toEqual([
-      { label: 'Network', value: 'Mock', long: false },
+describe('summary shows network names, not ids', () => {
+  it('maps platform ids in text lines, networks and accounts', () => {
+    const a = {
+      summary: { platforms: ['telegram'], accounts: ['linkedin · @demo', 'telegram · @chan'], targets: [{ platform: 'telegram', content: 'Hi' }] },
+    } as unknown as Parameters<typeof summaryLines>[0];
+    const lines = summaryLines(a, 'UTC');
+    expect(lines.find((l) => l.label === 'Accounts')?.value).toBe('LinkedIn · @demo, Telegram · @chan');
+    expect(lines.find((l) => l.label === 'Text on Telegram')?.value).toBe('Hi');
+  });
+});
+
+describe('post status in a summary', () => {
+  it('shows a status code as the badge text', () => {
+    const a = { summary: { status: 'draft', provider: 'mock' } } as unknown as Parameters<typeof summaryLines>[0];
+    expect(summaryLines(a, 'UTC')).toEqual([
+      { label: 'Network', value: 'Test network', long: false },
       { label: 'Status', value: 'Draft', long: false },
     ]);
   });

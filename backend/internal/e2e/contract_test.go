@@ -163,11 +163,11 @@ func TestEndpointContract(t *testing.T) {
 			p := byID[id]
 			caps := p["capabilities"].(map[string]any)
 			if p["status"] != "unsupported" || p["supported"] != false || p["configured"] != false || caps["requires_approval"] != true ||
-				caps["can_publish_text"] != false || !strings.Contains(strings.ToUpper(caps["notes"].(string)), "UNSUPPORTED") {
+				caps["can_publish_text"] != false || !strings.HasPrefix(caps["notes"].(string), "Not available yet: ") {
 				t.Errorf("%s must be a clearly-labelled unsupported stub: %v", id, p)
 			}
 		}
-		if byID["mock"]["status"] != "supported" || !strings.Contains(byID["mock"]["capabilities"].(map[string]any)["notes"].(string), "MOCK") {
+		if byID["mock"]["status"] != "supported" || !strings.Contains(byID["mock"]["capabilities"].(map[string]any)["notes"].(string), "Test network") {
 			t.Errorf("mock must be labelled: %v", byID["mock"])
 		}
 	})

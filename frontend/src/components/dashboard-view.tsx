@@ -94,8 +94,8 @@ export function DashboardView() {
       <div className="stagger grid gap-10 lg:grid-cols-2">
         <PostSection title="Upcoming" posts={summary.upcoming} empty="Nothing scheduled." href="/posts?status=scheduled" />
         <PostSection title="Drafts" posts={drafts} empty="No drafts." href="/posts?status=draft" />
-        <PostSection title="Recent publications" posts={summary.recent} empty="Nothing published yet." href="/posts?status=published" />
-        <PostSection title="Failed" posts={failed} empty="No failures. Nice." href="/posts?status=failed" onRetry={(p) => void retry(p)} retryingId={retryingId} />
+        <PostSection title="Recently published" posts={summary.recent} empty="Nothing published yet." href="/posts?status=published" />
+        <PostSection title="Failed" posts={failed} empty="No failed posts." href="/posts?status=failed" onRetry={(p) => void retry(p)} retryingId={retryingId} />
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ describe('Calendar month view', () => {
     apiMock.posts.list.mockResolvedValue({ items: [1, 2, 3, 4, 5].map(post), next_cursor: null });
     render(<CalendarViewPage />);
     await userEvent.click(await screen.findByRole('button', { name: /\+2 more/ }));
-    expect(screen.getByRole('button', { name: 'day' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getAllByRole('link', { name: /Post \d/ })).toHaveLength(5);
   });
 });

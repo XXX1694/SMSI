@@ -42,7 +42,7 @@ describe('AuthProvider with /me', () => {
     mount();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(router.replace).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('page body')).toBeInTheDocument();
     expect(apiMock.auth.me).toHaveBeenCalledTimes(2);
   });

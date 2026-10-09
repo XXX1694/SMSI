@@ -45,3 +45,13 @@ describe('legal pages', () => {
     expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
   });
 });
+
+describe('legal wording', () => {
+  const op = readOperator({ OPERATOR_NAME: 'Acme', OPERATOR_CONTACT: 'privacy@acme.example' });
+
+  it('names the licence and the exact approval rule in the Terms', () => {
+    render(<TermsContent operator={op} />);
+    expect(screen.getByText(/open-source software under the AGPL-3\.0/)).toBeInTheDocument();
+    expect(screen.getByText(/need your approval, unless you made the key trusted/)).toBeInTheDocument();
+  });
+});

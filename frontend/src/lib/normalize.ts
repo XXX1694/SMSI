@@ -117,7 +117,7 @@ export function normalizeProvider(raw: unknown): Provider {
 const LABELS: Record<string, string> = {
   linkedin: 'LinkedIn',
   telegram: 'Telegram',
-  mock: 'Mock',
+  mock: 'Test network',
   instagram: 'Instagram',
   facebook: 'Facebook',
   tiktok: 'TikTok',

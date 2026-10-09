@@ -7,7 +7,7 @@ export const metadata = { title: 'Developer' };
 export default function DeveloperLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      <PageHeader title="Developer" description="API keys, MCP agents, usage and audit history." />
+      <PageHeader title="Developer" description="API keys, MCP connections, usage and audit log." />
       <DeveloperNav />
       {children}
     </>

@@ -24,13 +24,13 @@ export function ContentEditor({ content, overrides, selected, providers, onConte
   return (
     <Tabs defaultValue="all">
       <TabsList aria-label="Content scope">
-        <TabsTrigger value="all">All platforms</TabsTrigger>
+        <TabsTrigger value="all">All networks</TabsTrigger>
         {selected.map((a) => (
           <TabsTrigger key={a.id} value={a.id}>
             {providerLabel(a.provider)}
             <span className="ml-1 max-w-[10rem] truncate text-muted-foreground">{a.display_name}</span>
             {overrides[a.id]?.trim() ? ' •' : ''}
-            <span className="sr-only">{overrides[a.id]?.trim() ? ' (customised)' : ''}</span>
+            <span className="sr-only">{overrides[a.id]?.trim() ? ' (custom text)' : ''}</span>
           </TabsTrigger>
         ))}
       </TabsList>
@@ -44,28 +44,28 @@ export function ContentEditor({ content, overrides, selected, providers, onConte
           onChange={(e) => onContent(e.target.value)}
         />
         <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-          <span>Used for every selected account unless customised in its tab.</span>
-          <CharCounter text={content} max={strictMax} label="Universal content" />
+          <span>Goes to every account without custom text.</span>
+          <CharCounter text={content} max={strictMax} label="Main text" />
         </div>
       </TabsContent>
       {selected.map((a) => {
         const text = effectiveContent({ content, overrides }, a.id);
-        const customised = Boolean(overrides[a.id]?.trim());
+        const hasCustomText = Boolean(overrides[a.id]?.trim());
         return (
           <TabsContent key={a.id} value={a.id} className="space-y-1.5">
             <Textarea
               aria-label={`${providerLabel(a.provider)} content for ${a.display_name}`}
               rows={8}
-              placeholder={content || 'Customise the text for this account'}
+              placeholder={content || 'Write custom text for this account'}
               value={overrides[a.id] ?? ''}
               onChange={(e) => onOverride(a.id, e.target.value)}
             />
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
-                {customised ? 'Custom text for this account.' : 'Empty: the universal content is used.'}
+                {hasCustomText ? 'Custom text for this account.' : 'Empty, so the main text is used.'}
               </span>
               <div className="flex items-center gap-3">
-                {customised ? (
+                {hasCustomText ? (
                   <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onOverride(a.id, '')}>
                     Reset
                   </Button>

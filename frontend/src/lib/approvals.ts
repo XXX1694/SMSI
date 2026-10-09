@@ -7,7 +7,7 @@ const LABELS: Record<ApprovalAction, string> = {
   'post.publish': 'Publish now',
   'post.retry_now': 'Retry now',
   'post.delete': 'Delete post',
-  'post.schedule_soon': 'Schedule within minutes',
+  'post.schedule_soon': 'Schedule in the next few minutes',
   'social_account.disconnect': 'Disconnect account',
   'social_account.connect_token': 'Connect with a token',
 };
@@ -19,7 +19,7 @@ export function actionLabel(action: string): string {
 
 /** Actions that cannot be taken back or put content on the live networks. */
 export function isIrreversible(action: string): boolean {
-  return action === 'post.delete' || action === 'social_account.disconnect';
+  return action === 'post.delete' || action === 'social_account.disconnect' || action === 'post.publish' || action === 'post.retry_now';
 }
 
 export function isOpen(a: Approval, now: Date = new Date()): boolean {
@@ -32,6 +32,7 @@ export function timeLeft(expiresAt: string, now: Date = new Date()): string {
   if (Number.isNaN(ms) || ms <= 0) return 'Expired';
   const min = Math.ceil(ms / 60_000);
   if (ms < 60_000) return 'Under a minute left';
+  // Translator note: "{n} min left" is the time until an approval request expires. Needs an ICU plural.
   return min === 1 ? '1 min left' : `${min} min left`;
 }
 
@@ -66,6 +67,11 @@ function sentence(key: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** `linkedin · @alex` -> `LinkedIn · @alex`: the server sends network ids. */
+function named(account: string): string {
+  return account.replace(/^[a-z0-9_]+(?= · )/, providerLabel);
+}
+
 function isLong(value: string): boolean {
   return value.length > CLAMP_CHARS || value.split('\n').length > CLAMP_LINES;
 }
@@ -83,15 +89,6 @@ function mediaText(m: Record<string, unknown>): string {
   return count ? plural(count, 'file') : '';
 }
 
-/** `linkedin · @demo` -> `LinkedIn (@demo)`; a bare id (`telegram`) -> `Telegram`. Anything that does not look like an id stays as sent. */
-export function accountText(raw: string): string {
-  const [id, ...rest] = raw.split(' · ');
-  if (!id || !/^[a-z][a-z0-9_]*$/.test(id)) return raw;
-  const name = providerLabel(id);
-  const handle = rest.join(' · ').trim();
-  return handle ? `${name} (${handle})` : name;
-}
-
 function asText(v: unknown): string {
   if (Array.isArray(v)) return v.map(String).join(', ');
   return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
@@ -107,10 +104,11 @@ export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
     const raw = a.summary[key];
     if (key === 'platforms' && Array.isArray(a.summary.accounts)) continue; // the accounts line says it with names
     if (key === 'targets' && Array.isArray(raw)) {
-      for (const t of raw) if (isRec(t)) add(`Text on ${accountText(asText(t.account) || asText(t.platform))}`, asText(t.content));
+      for (const t of raw) if (isRec(t)) add(`Text on ${named(asText(t.account)) || providerLabel(asText(t.platform))}`, asText(t.content));
     } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw));
     else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone));
-    else if (key === 'platforms' || key === 'accounts' || key === 'provider') add(label, asText(raw).split(', ').map(accountText).join(', '));
+    else if ((key === 'platforms' || key === 'provider') && asText(raw)) add(label, asText(raw).split(', ').map(providerLabel).join(', '));
+    else if (key === 'accounts' && Array.isArray(raw)) add(label, raw.map((x) => named(String(x))).join(', '));
     else add(label, asText(raw));
   }
   for (const key of Object.keys(a.summary)) {

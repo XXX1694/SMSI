@@ -1,4 +1,5 @@
 import { ApiError, parseErrorBody } from './api-error';
+import { describeErrorCode } from './errors';
 import {
   buildMcpConfig,
   normalizeCreatedApiKey,
@@ -111,7 +112,7 @@ async function request(path: string, opts: RequestOptions = {}): Promise<unknown
       credentials: opts.direct && base !== API_BASE ? 'include' : 'same-origin',
     });
   } catch {
-    throw new ApiError(0, 'NETWORK', 'Cannot reach the server. Check your connection.');
+    throw new ApiError(0, 'NETWORK', describeErrorCode('NETWORK'));
   }
   const text = await res.text();
   let json: unknown = null;
