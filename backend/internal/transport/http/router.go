@@ -144,6 +144,8 @@ func (a *API) mountAuthenticated(r chi.Router) {
 	r.Delete("/social/accounts/{id}", a.disconnectAccount)
 	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "link:")).
 		Post("/social/telegram/connect", a.startTelegramLink)
+	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "link:")).
+		Post("/social/accounts/token", a.connectWithToken)
 	r.Get("/social/telegram/connect/{id}", a.telegramLinkStatus)
 	r.Get("/social/{provider}/connect", a.connect)
 

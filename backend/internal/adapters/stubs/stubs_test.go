@@ -9,7 +9,7 @@ import (
 
 func TestStubsAreHonestlyUnsupported(t *testing.T) {
 	all := All()
-	want := []string{"instagram", "facebook", "tiktok", "youtube", "x", "threads", "pinterest"}
+	want := []string{"instagram", "facebook", "tiktok", "youtube", "x", "threads", "pinterest", "reddit", "medium", "hashnode"}
 	if len(all) != len(want) {
 		t.Fatalf("%d stubs", len(all))
 	}
@@ -35,6 +35,9 @@ func TestStubsAreHonestlyUnsupported(t *testing.T) {
 		}
 		if _, ok := p.(provider.OAuth); ok {
 			t.Errorf("%s must not implement OAuth", p.Name())
+		}
+		if _, ok := p.(provider.TokenConnector); ok {
+			t.Errorf("%s must not implement TokenConnector", p.Name())
 		}
 		if _, ok := p.(provider.ChatVerifier); ok {
 			t.Errorf("%s must not implement ChatVerifier", p.Name())
