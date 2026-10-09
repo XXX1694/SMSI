@@ -20,7 +20,7 @@ function Stat({ name, value, tone }: { name: keyof typeof STAT_ICONS; value: num
   const Icon = STAT_ICONS[name];
   const alert = tone === 'danger' && value > 0;
   return (
-    <div className="glass-card rounded-xl border p-4">
+    <div className="glass-card flex flex-col justify-between rounded-xl border p-4">
       <dt className="flex items-center gap-2 text-xs text-muted-foreground">
         <span aria-hidden className={`grid h-7 w-7 shrink-0 place-items-center rounded-md ${alert ? 'bg-danger/10 text-danger' : 'bg-secondary text-secondary-foreground'}`}>
           <Icon className="h-4 w-4" />
