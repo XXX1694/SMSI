@@ -73,7 +73,7 @@ export function ApprovalCard({ approval, now, busy, onApprove, onDeny }: Props) 
   const label = actionLabel(approval.action);
   const state = STATUS[approval.status === 'pending' && !open ? 'expired' : approval.status];
   return (
-    <Card as="li">
+    <Card as="li" className="card-lift">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={isIrreversible(approval.action) ? 'danger' : 'accent'}>{label}</Badge>

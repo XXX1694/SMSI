@@ -5,12 +5,14 @@ package http_test
 // otherwise; the worker is not started, nothing here publishes.
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	httptransport "github.com/socialos/backend/internal/transport/http"
 	"image"
 	"image/color"
 	"image/gif"
@@ -18,6 +20,7 @@ import (
 	"image/png"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -195,7 +198,7 @@ func (a *agent) do(r *http.Request) reply {
 
 func (a *agent) register(email string) map[string]any {
 	a.h.t.Helper()
-	r := a.req("POST", "/api/v1/auth/register", map[string]any{"email": email, "password": pw, "display_name": "T"})
+	r := a.req("POST", "/api/v1/auth/register", map[string]any{"email": email, "password": pw, "display_name": "T", "accept_terms": true})
 	if r.status != 201 {
 		a.h.t.Fatalf("register: %d %s", r.status, r.body)
 	}
@@ -221,14 +224,14 @@ func TestRegisterValidation(t *testing.T) {
 	long := strings.Repeat("p", 129)
 	for name, body := range map[string]any{
 		"empty body":        `{}`,
-		"missing email":     map[string]any{"password": pw},
-		"invalid email":     map[string]any{"email": "not-an-email", "password": pw},
-		"display in email":  map[string]any{"email": "Bob <bob@example.com>", "password": pw},
+		"missing email":     map[string]any{"password": pw, "accept_terms": true},
+		"invalid email":     map[string]any{"email": "not-an-email", "password": pw, "accept_terms": true},
+		"display in email":  map[string]any{"email": "Bob <bob@example.com>", "password": pw, "accept_terms": true},
 		"email too long":    map[string]any{"email": strings.Repeat("a", 250) + "@example.com", "password": pw},
-		"short password":    map[string]any{"email": "a@example.com", "password": "short"},
-		"password 7 chars":  map[string]any{"email": "a@example.com", "password": "1234567"},
-		"password too long": map[string]any{"email": "a@example.com", "password": long},
-		"long display name": map[string]any{"email": "a@example.com", "password": pw, "display_name": strings.Repeat("n", 101)},
+		"short password":    map[string]any{"email": "a@example.com", "password": "short", "accept_terms": true},
+		"password 7 chars":  map[string]any{"email": "a@example.com", "password": "1234567", "accept_terms": true},
+		"password too long": map[string]any{"email": "a@example.com", "password": long, "accept_terms": true},
+		"long display name": map[string]any{"email": "a@example.com", "password": pw, "display_name": strings.Repeat("n", 101), "accept_terms": true},
 		"wrong field type":  `{"email": 5, "password": "x"}`,
 		"malformed json":    `{"email": "a@example.com"`,
 	} {
@@ -238,7 +241,7 @@ func TestRegisterValidation(t *testing.T) {
 		}
 	}
 	// Field-level details for forms.
-	e := a.req("POST", "/api/v1/auth/register", map[string]any{"email": "nope", "password": "x"}).apiErr(t, 400, "VALIDATION_ERROR")
+	e := a.req("POST", "/api/v1/auth/register", map[string]any{"email": "nope", "password": "x", "accept_terms": true}).apiErr(t, 400, "VALIDATION_ERROR")
 	if e["fields"] == nil {
 		t.Errorf("validation errors should say which field: %v", e)
 	}
@@ -247,7 +250,7 @@ func TestRegisterValidation(t *testing.T) {
 	}
 	// The boundary lengths work: 8 characters, 128 characters.
 	for i, p := range []string{"12345678", strings.Repeat("p", 128)} {
-		if r := h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": fmt.Sprintf("ok%d@example.com", i), "password": p}); r.status != 201 {
+		if r := h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": fmt.Sprintf("ok%d@example.com", i), "password": p, "accept_terms": true}); r.status != 201 {
 			t.Errorf("password of %d chars: %d %s", len(p), r.status, r.body)
 		}
 	}
@@ -267,7 +270,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 	}
 	// Duplicate email, any casing.
 	for _, e := range []string{"mixed.case@example.com", "MIXED.CASE@EXAMPLE.COM"} {
-		h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": e, "password": pw}).apiErr(t, 409, "CONFLICT")
+		h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": e, "password": pw, "accept_terms": true}).apiErr(t, 409, "CONFLICT")
 	}
 
 	// Cookies.
@@ -901,6 +904,108 @@ func TestMediaSizeLimits(t *testing.T) {
 	// Rejected oversize uploads leave nothing behind; only the 10 MB image exists.
 	if items := a.req("GET", "/api/v1/media", nil).obj(t)["items"].([]any); len(items) != 1 {
 		t.Fatalf("expected only the accepted image, got %d rows", len(items))
+	}
+}
+
+// blockingStore parks every Put until released, so a test can hold the only upload slot.
+type blockingStore struct {
+	media.Storage
+	started chan struct{}
+	release chan struct{}
+}
+
+func (b blockingStore) Put(ctx context.Context, key string, r io.Reader, size int64, ct string) error {
+	b.started <- struct{}{}
+	<-b.release
+	return b.Storage.Put(ctx, key, r, size, ct)
+}
+
+// D-015: with MEDIA_UPLOAD_CONCURRENCY=1 a second upload waits briefly and then gets 429 with Retry-After.
+func TestMediaUploadConcurrencyLimit(t *testing.T) {
+	bs := blockingStore{Storage: storage.NewMemory(), started: make(chan struct{}, 2), release: make(chan struct{})}
+	h := newHarness(t, opts{store: bs, tune: func(c *config.Config) { c.MediaUploadConcurrency = 1 }})
+	a := h.anon()
+	a.register("media-conc@example.com")
+	first := make(chan reply, 1)
+	go func() { first <- a.upload("a.png", pngBytes(t, 2, 2)) }()
+	<-bs.started
+	r := a.upload("b.png", pngBytes(t, 2, 2))
+	r.apiErr(t, 429, "RATE_LIMITED")
+	if r.header.Get("Retry-After") == "" {
+		t.Error("429 needs Retry-After")
+	}
+	close(bs.release)
+	if got := <-first; got.status != 201 {
+		t.Fatalf("first upload: %d %s", got.status, got.body)
+	}
+	if got := a.upload("c.png", pngBytes(t, 2, 2)); got.status != 201 {
+		t.Fatalf("after release: %d %s", got.status, got.body)
+	}
+}
+
+// A client that sends the start of a body and then stalls is cut after the idle timeout and its upload slot is freed.
+func TestMediaStalledUploadIsCutAndFreesTheSlot(t *testing.T) {
+	old := httptransport.UploadIdleTimeout
+	httptransport.UploadIdleTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { httptransport.UploadIdleTimeout = old })
+	h := newHarness(t, opts{tune: func(c *config.Config) { c.MediaUploadConcurrency = 1 }})
+	a := h.anon()
+	a.register("media-stall@example.com")
+	key := a.req("POST", "/api/v1/developer/api-keys", map[string]any{"name": "k", "scopes": []string{"media:write"}}).obj(t)["key"].(string)
+
+	conn, err := net.Dial("tcp", h.srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	body := "--zz\r\nContent-Disposition: form-data; name=\"file\"; filename=\"v.mp4\"\r\n\r\n" + string(mp4Header)
+	_, _ = fmt.Fprintf(conn, "POST /api/v1/media HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer %s\r\nContent-Type: multipart/form-data; boundary=zz\r\nContent-Length: 100000\r\n\r\n%s", key, body)
+	// Stalled now. Within a few idle periods the server answers and frees the slot.
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	line, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil || !strings.Contains(line, " 400 ") {
+		t.Fatalf("stalled upload: %q %v", line, err)
+	}
+	if r := h.bearer(key).upload("a.png", pngBytes(t, 2, 2)); r.status != 201 {
+		t.Fatalf("slot still held after the stall: %d %s", r.status, r.body)
+	}
+}
+
+// A client dripping bytes below the speed floor is cut within the window, even though it never goes fully idle.
+func TestMediaSlowDripUploadIsCut(t *testing.T) {
+	oi, og := httptransport.UploadIdleTimeout, httptransport.UploadGrace
+	httptransport.UploadIdleTimeout, httptransport.UploadGrace = 5*time.Second, 300*time.Millisecond
+	t.Cleanup(func() { httptransport.UploadIdleTimeout, httptransport.UploadGrace = oi, og })
+	h := newHarness(t, opts{tune: func(c *config.Config) { c.MediaUploadConcurrency = 1; c.UploadMinKBps = 32 }})
+	a := h.anon()
+	a.register("media-drip@example.com")
+	key := a.req("POST", "/api/v1/developer/api-keys", map[string]any{"name": "k", "scopes": []string{"media:write"}}).obj(t)["key"].(string)
+
+	conn, err := net.Dial("tcp", h.srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	_, _ = fmt.Fprintf(conn, "POST /api/v1/media HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer %s\r\nContent-Type: multipart/form-data; boundary=zz\r\nContent-Length: 100000\r\n\r\n--zz\r\nContent-Disposition: form-data; name=\"file\"; filename=\"v.mp4\"\r\n\r\n%s", key, mp4Header)
+	start := time.Now()
+	go func() { // 1 byte every 100 ms: never idle for long, far below 32 KiB/s
+		for i := 0; i < 100; i++ {
+			time.Sleep(100 * time.Millisecond)
+			if _, err := conn.Write([]byte{0}); err != nil {
+				return
+			}
+		}
+	}()
+	_ = conn.SetReadDeadline(time.Now().Add(4 * time.Second))
+	line, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil || !strings.Contains(line, " 400 ") {
+		t.Fatalf("slow drip: %q %v", line, err)
+	}
+	if took := time.Since(start); took > 2*time.Second {
+		t.Fatalf("cut after %v, want within about the grace period", took)
+	}
+	if r := h.bearer(key).upload("a.png", pngBytes(t, 2, 2)); r.status != 201 {
+		t.Fatalf("a normal-speed upload after the cut: %d %s", r.status, r.body)
 	}
 }
 

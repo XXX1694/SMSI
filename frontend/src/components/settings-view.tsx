@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
@@ -69,6 +70,19 @@ export function SettingsView() {
       </Section>
       <Section title="Password">
         <PasswordForm />
+      </Section>
+      <Section title="Legal">
+        <p className="text-sm text-muted-foreground">
+          Read the{' '}
+          <Link href="/terms" className="text-accent hover:underline">
+            Terms of Service
+          </Link>{' '}
+          and the{' '}
+          <Link href="/privacy" className="text-accent hover:underline">
+            Privacy Policy
+          </Link>
+          . The operator of this instance is responsible for both.
+        </p>
       </Section>
     </div>
   );

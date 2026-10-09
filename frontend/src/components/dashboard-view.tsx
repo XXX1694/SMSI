@@ -52,7 +52,7 @@ export function DashboardView() {
   const nothingYet = summary.connected_accounts === 0;
 
   return (
-    <div className="space-y-10">
+    <div className="stagger space-y-10">
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 border-y py-4 md:grid-cols-4">
         <Stat label="Connected accounts" value={summary.connected_accounts} />
         <Stat label="Scheduled" value={summary.scheduled_posts} />
@@ -71,7 +71,7 @@ export function DashboardView() {
           Connect LinkedIn, Telegram or the mock provider to start publishing.
         </EmptyState>
       ) : null}
-      <div className="grid gap-10 lg:grid-cols-2">
+      <div className="stagger grid gap-10 lg:grid-cols-2">
         <PostSection title="Upcoming" posts={summary.upcoming} empty="Nothing scheduled." href="/posts?status=scheduled" />
         <PostSection title="Drafts" posts={drafts} empty="No drafts." href="/posts?status=draft" />
         <PostSection title="Recent publications" posts={summary.recent} empty="Nothing published yet." href="/posts?status=published" />

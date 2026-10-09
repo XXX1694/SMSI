@@ -274,7 +274,7 @@ func (c *client) must(method, path string, body any, want int) map[string]any {
 // register creates a user and stores its CSRF token.
 func (c *client) register(email string) map[string]any {
 	c.e.t.Helper()
-	m := c.must("POST", "/api/v1/auth/register", map[string]any{"email": email, "password": "correct horse battery", "display_name": "Tester"}, 201)
+	m := c.must("POST", "/api/v1/auth/register", map[string]any{"email": email, "password": "correct horse battery", "display_name": "Tester", "accept_terms": true}, 201)
 	c.csrf, _ = m["csrf_token"].(string)
 	if c.csrf == "" {
 		c.e.t.Fatal("no csrf token returned")

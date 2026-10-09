@@ -16,12 +16,12 @@ type Users struct{ db *DB }
 // NewUsers creates the repo.
 func NewUsers(db *DB) *Users { return &Users{db: db} }
 
-const userCols = `id, email, password_hash, display_name, status, created_at, email_verified_at, plan, deleted_at`
+const userCols = `id, email, password_hash, display_name, status, created_at, email_verified_at, plan, deleted_at, terms_accepted_at, terms_version`
 
 func scanUser(row interface{ Scan(...any) error }) (*user.User, error) {
 	var u user.User
 	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.CreatedAt,
-		&u.EmailVerifiedAt, &u.Plan, &u.DeletedAt); err != nil {
+		&u.EmailVerifiedAt, &u.Plan, &u.DeletedAt, &u.TermsAcceptedAt, &u.TermsVersion); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -30,8 +30,9 @@ func scanUser(row interface{ Scan(...any) error }) (*user.User, error) {
 // Create inserts a user; duplicate emails yield CONFLICT.
 func (r *Users) Create(ctx context.Context, u *user.User) error {
 	err := r.db.q(ctx).QueryRow(ctx,
-		`INSERT INTO users (email, password_hash, display_name, status) VALUES ($1,$2,$3,$4) RETURNING id, created_at`,
-		u.Email, u.PasswordHash, u.DisplayName, u.Status).Scan(&u.ID, &u.CreatedAt)
+		`INSERT INTO users (email, password_hash, display_name, status, terms_accepted_at, terms_version)
+		 VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, created_at`,
+		u.Email, u.PasswordHash, u.DisplayName, u.Status, u.TermsAcceptedAt, u.TermsVersion).Scan(&u.ID, &u.CreatedAt)
 	if err != nil {
 		mapped := mapErr(err, "user")
 		if errs.Is(mapped, errs.Conflict) {

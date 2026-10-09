@@ -279,8 +279,9 @@ the limit is dropped (logged, the code stays unused) rather than retried, becaus
 request rate is a token bucket in memory per API instance, keyed by user (not by key) and applied to API-key actors only;
 the rate cap stays `RATE_LIMITED` (429). Usage is shown by `GET /account/usage`, the MCP tool `get_usage` and a card in
 Settings. Posts are counted per UTC month. A refusal is the typed error
-`QUOTA_EXCEEDED` (403), mapped once in `httpx`. Usage is shown by `GET /account/usage`. The per-user cap on agent requests follows
-in the next PR.
+`QUOTA_EXCEEDED` (403), mapped once in `httpx`. The request rate is a token bucket in memory per API instance, keyed by user (not by key) and applied to API-key
+actors only; the rate cap stays `RATE_LIMITED` (429). Usage is shown by `GET /account/usage`, the MCP tool `get_usage` and
+a card in Settings.
 
 **Alternatives.** A `plans` table: no second plan exists yet, and env is enough for self-hosters (the column stays for it).
 A database trigger or constraint: hides the rule from the code and the tests and cannot say what to do about it.
@@ -289,6 +290,106 @@ lock: not tied to the row and invisible in `pg_locks` joins with users. A counte
 paths that forget it. Counting scheduled posts instead of first-scheduled ones: lets a user cycle posts forever.
 
 **Consequences.** Every counted change takes one row lock per user for the length of its transaction (short, and only
-for users who have limits switched on). The agent cap is per instance, so with N API replicas the effective cap is up to N times the setting. Media: concurrent uploads cannot overshoot, but a refused upload that passed the early check has
-stored and then deleted its object. Existing users are counted from the first day of use; nothing is retro-fitted, so a
+for users who have limits switched on). The agent cap is per instance, so with N API replicas the effective cap is up to N times the setting. Media: concurrent uploads cannot overshoot, but the size of a streamed upload is only known once it has been
+read, so the check runs with the insert and a refused upload has already been stored and then has its object deleted. Existing users are counted from the first day of use; nothing is retro-fitted, so a
 user already above a limit keeps what they have and cannot add more. Raising a limit needs only an env change.
+## D-015: Stream media uploads to S3 in bounded parts, cap them, and send big uploads around the Next.js proxy (2026-10-09)
+
+**Context.** A load check with the production caps (backend 160m, MinIO 80m) showed that three parallel 100 MB uploads
+OOM-killed the API (peak 163m of 160m) and MinIO (killed 8 times). The handler parsed the multipart body into temp files
+in the container's writable layer (page cache counts against the cgroup), and `PutObject` with a known size made minio-go
+upload 16 MiB parts on 4 threads, so each upload put about 64 MiB in flight at the API and at MinIO. Separately, the Next.js
+rewrite proxy that carries `/api/v1/*` for the web UI buffers request bodies and cuts them at 10 MB, so a video could never
+arrive.
+
+**Decision.**
+- The handler reads the multipart body with `MultipartReader` and hands the `file` part to the media service as a stream:
+  no `ParseMultipartForm`, no temp file. The service reads the first 3 KiB, sniffs the MIME type and rejects a type that is
+  not on the allow-list before anything is stored. A guard around the stream counts and hashes the bytes and fails as soon
+  as the kind's limit (10 MB image, 100 MB video) is exceeded, so the size is enforced while streaming, not after.
+  Videos go to `PutObject` with unknown size (`-1`), `PartSize` 5 MiB and `NumThreads` 1: the API holds one 5 MiB buffer per
+  upload however large the file is. Images (at most 10 MB) are read into one buffer allocated at the limit (no regrowing)
+  because their dimensions are needed, so an image upload holds about 10 MB plus the client's 5 MiB part buffer.
+- `PutObject` runs on a context detached from the request (30 min bound), because minio-go aborts a failed multipart
+  upload with the context it got and a cancelled one would leave the parts behind; a client disconnect still ends the
+  upload because reading the body fails. A bucket lifecycle rule (abort incomplete multipart uploads after 1 day, prefix
+  `users/`) is added best effort; MinIO refuses that rule type but cleans stale uploads itself.
+- On any failure (limit, wrong type, client gone, store error) minio-go aborts the multipart upload, and the service also
+  deletes the key, so no object and no media row remain.
+- At most `MEDIA_UPLOAD_CONCURRENCY` (default 2) uploads run at once, the same pattern as D-011: a caller waits up to 5 s for
+  a slot, then gets `429 RATE_LIMITED` with `Retry-After: 5`. The slot is taken before the body is read. A user holds at
+  most one slot: a second concurrent upload by the same user is refused at once, so one account cannot starve the rest.
+  Speed floor: the connection read deadline
+  moves forward on every read (30 s idle), but once an upload is 5 s old it is cut as soon as its average speed since the
+  start is below `UPLOAD_MIN_KBPS` (default 32 KiB/s), and the total time is bounded by the size limit divided by that
+  floor (about 54 min for 101 MiB). One rule, so a 1 byte/25 s client is cut within the idle window and frees its slot. A
+  client can still bank speed with a fast burst and then slow down, but only until the average falls to the floor, and the
+  bytes it sent are bounded by the 100 MB limit.
+- MinIO is unchanged: with 5 MiB parts and at most two in flight its working set stayed at 44 of 80 MiB, and
+  `MINIO_API_REQUESTS_MAX` made no difference in the same test, so no new setting was added. The caps (784m, within the
+  664 MB slice as before) are unchanged.
+- The web UI uploads straight to the API host (`NEXT_PUBLIC_API_URL`, baked at build time like the MCP URL; `credentials:
+  'include'`) instead of through the proxy. This needs nothing new: `CORS_ALLOWED_ORIGINS` already lists the app origin with
+  credentials and allows `X-CSRF-Token`, and `COOKIE_DOMAIN` already shares the session and CSRF cookies with `api.<domain>`
+  (SameSite=Lax cookies are sent on a same-site POST). Without `NEXT_PUBLIC_API_URL` (`next dev`) uploads use the proxy.
+
+**Alternatives.** Raising the proxy body limit (`experimental.proxyClientMaxBodySize`): the 160m frontend would buffer 100 MB.
+Presigned PUT URLs straight to S3: the browser needs the S3 host, a second CORS policy on MinIO, and the type and size
+checks would move to after the upload (a user could store anything up to the bucket limit); rejected for now. Bigger caps:
+the slice is full. A temp file on tmpfs: counts against the same cgroup.
+
+**Load check (local, production caps and slice file, 20 parallel logins + 3 parallel 100 MiB uploads).** Peak of
+`memory.peak` / working set (anon): backend 101 MiB of 160 (93 anon), MinIO 80 of 80 (44 anon; the rest is reclaimable page
+cache that the kernel drops under pressure), Postgres 39 of 128, worker 31 of 160, Redis 9 of 32. OOM kills: 0 in every
+container. All three uploads answered 201 (the third waited for a slot, 4.8 s in the slowest run).
+
+**Consequences.** A third simultaneous upload waits up to 5 s and is then refused; a browser that is still sending its body
+may report a network error instead of the 429, because the connection is closed after an early answer. The web UI now needs
+`API_PUBLIC_URL` set when the frontend image is built (the release workflow already does this). Image uploads still take about
+10 MB of heap each (plus the 5 MiB part buffer), at most two at once.
+
+## D-016: Registration requires accepting the current Terms; existing users are not blocked (2026-10-09)
+
+**Context.** SocialOS can be run by anyone, so each operator needs Terms and a Privacy Policy that users see and accept, and
+a LinkedIn app needs a public Privacy Policy URL. Migration 00003 already has `users.terms_accepted_at` and `terms_version`.
+
+**Decision.** `POST /auth/register` takes `accept_terms: true`; anything else is `400 VALIDATION_ERROR` with
+`fields.accept_terms`. The server stores its own `terms.CurrentVersion` and the clock time, not a version sent by the
+client, so a client cannot claim to have accepted a text that does not exist. The texts are TSX in the frontend
+(`/terms`, `/privacy`, static, no auth, no new dependency) with the version in `frontend/src/lib/legal.ts`; a Go test fails
+when the two versions differ. The operator's name and contact are read from `OPERATOR_NAME` and `OPERATOR_CONTACT` of the
+frontend container per request, because the published image is shared by all operators and `NEXT_PUBLIC_*` values are baked
+in at build time. Unset values render a placeholder that says the operator must set them.
+
+**Alternatives.** Block existing users until they accept a new version (a gate after login, a 403 on every route): the safer
+legal posture, but it locks out accounts and API keys that run unattended, and needs UI and API states that do not exist
+yet. Markdown files plus the `marked` dependency, shared with the static site: one source, but a new dependency and a build
+step for two short pages. Operator values in the backend config: an extra API call on a page that should be static.
+
+**Consequences.** Breaking for API clients that register users (the MCP server never does). Existing accounts have an empty
+`terms_version` and carry on; when the texts change in meaning, bumping the version only affects new accounts. Re-acceptance
+for existing users is a later decision. The texts are a template: the operator must review them.
+
+## D-017: The landing page moves with CSS and a few small scripts, no animation library (2026-10-09)
+
+**Decision.** The landing page has its own layout (`site/src/layout-landing.html`); docs keep the calm one. Motion is CSS
+(keyframes, CSS scroll-driven animations where supported, cross-document View Transitions) plus about 10 KB of first-party
+JavaScript (`landing.js`, `hero-flow.js`): IntersectionObserver reveals, counters, the sticky "how it works" picture and a canvas
+background. Only `transform` and `opacity` animate. Everything honours `prefers-reduced-motion`: no video, no loops, a static
+frame of the background, nothing hidden until revealed. The hero video is real footage of the demo, recorded by
+`site/scripts/record-hero.mjs`, and phones get its poster. Network marks are Simple Icons (CC0), inlined; counters show only
+numbers the build derives from the README.
+
+**Alternatives.** GSAP or Motion: 25 to 60 KB for effects CSS already does, and a dependency to vendor and audit. Lottie or a
+generated video: not real UI, and the page would claim things the product does not do. A WebGL background: weight and battery
+for decoration.
+
+**Consequences.** Safari and Firefox without scroll-driven animations show the parallax and hero exit still, which is fine.
+The hero video must be re-recorded (`npm run record`) when the compose or approvals screens change.
+
+Addendum (review): a visible "Pause motion" switch (remembered in `localStorage`) stops the video, canvas, glow blobs, marquee
+and story sweep (WCAG 2.2.2); it is not offered under reduced motion, where nothing moves. Each script block is guarded and the
+`js` class that hides unrevealed sections is set only after the reveal setup works. The retry counter is read from
+`MaxRetry` in `backend/internal/application/scheduler/backoff.go` at build time. The docs' Mermaid renderer is now vendored
+from the `mermaid` npm package (MIT, 3.5 MB, loaded only on pages with diagrams) instead of jsDelivr, so the site makes no
+third-party request.

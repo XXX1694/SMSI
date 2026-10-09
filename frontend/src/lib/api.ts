@@ -33,6 +33,15 @@ import type {
 } from './types';
 
 export const API_BASE = '/api/v1';
+/**
+ * Where uploads go. The Next.js rewrite proxy buffers and truncates request bodies at 10 MB, so large uploads
+ * (videos, up to 100 MB) go straight to the API host (NEXT_PUBLIC_API_URL, baked at build time; CORS and the session
+ * cookie, set for the parent domain, already allow it, see D-015). Without it (`next dev`) they use the proxy.
+ */
+export function uploadBase(): string {
+  const direct = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
+  return direct ? `${direct}/api/v1` : API_BASE;
+}
 const MCP_URL = process.env.NEXT_PUBLIC_MCP_URL ?? 'http://localhost:3333/mcp';
 
 export { ApiError, parseErrorBody };
@@ -55,6 +64,8 @@ interface RequestOptions {
   query?: Query;
   body?: unknown;
   form?: FormData;
+  /** Send straight to the API host instead of through the same-origin proxy (see uploadBase). */
+  direct?: boolean;
 }
 
 export function buildQuery(query?: Query): string {
@@ -91,11 +102,12 @@ async function request(path: string, opts: RequestOptions = {}): Promise<unknown
   }
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, {
+    const base = opts.direct ? uploadBase() : API_BASE;
+    res = await fetch(`${base}${path}${buildQuery(opts.query)}`, {
       method,
       headers,
       body,
-      credentials: 'same-origin',
+      credentials: opts.direct && base !== API_BASE ? 'include' : 'same-origin',
     });
   } catch {
     throw new ApiError(0, 'NETWORK', 'Cannot reach the server. Check your connection.');
@@ -125,7 +137,7 @@ export interface PostFilters {
 
 export const api = {
   auth: {
-    async register(input: { email: string; password: string; display_name: string }): Promise<Me> {
+    async register(input: { email: string; password: string; display_name: string; accept_terms: boolean }): Promise<Me> {
       return normalizeMe(await request('/auth/register', { method: 'POST', body: input }));
     },
     async login(input: { email: string; password: string }): Promise<Me> {
@@ -230,7 +242,7 @@ export const api = {
     async upload(file: File): Promise<Media> {
       const form = new FormData();
       form.append('file', file);
-      return (await request('/media', { method: 'POST', form })) as Media;
+      return (await request('/media', { method: 'POST', form, direct: true })) as Media;
     },
     async get(id: string): Promise<Media> {
       return (await request(`/media/${enc(id)}`)) as Media;

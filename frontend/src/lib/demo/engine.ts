@@ -261,6 +261,7 @@ export class DemoEngine {
       const email = str(body.email).trim();
       const password = str(body.password);
       if (!email || password.length < 8) return fail(400, 'VALIDATION_ERROR', 'Email and a password of 8+ characters are required');
+      if (body.accept_terms !== true) return fail(400, 'VALIDATION_ERROR', 'You must accept the Terms and the Privacy Policy');
       if (email === s.user.email) return fail(409, 'CONFLICT', 'Email already registered');
       // Single-user demo: registering renames the one demo user instead of creating a tenant.
       Object.assign(s.user, { email, password, display_name: str(body.display_name).trim() || email });

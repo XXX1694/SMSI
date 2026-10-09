@@ -1,0 +1,78 @@
+/* Hero: full-viewport, animated flow canvas behind a left-aligned headline and the real product video. */
+:root {
+  --hero-glow: hsl(var(--accent) / 0.2);
+  --hero-glow-soft: hsl(var(--accent) / 0.1);
+}
+@media (prefers-color-scheme: dark) { :root { --hero-glow: hsl(var(--accent) / 0.28); --hero-glow-soft: hsl(var(--accent) / 0.14); } }
+
+.hero { position: relative; min-height: 100svh; display: flex; align-items: center; padding-block: 5.75rem 3rem; overflow: clip; }
+.hero-bg { position: absolute; inset: 0; pointer-events: none; }
+.hero-bg::after { content: ''; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(transparent, hsl(var(--background))); }
+.hero-flow { position: absolute; inset: 0; width: 100%; height: 100%; }
+.blob { position: absolute; border-radius: 50%; will-change: transform; }
+.blob-a { width: 60vmax; height: 60vmax; left: -22vmax; top: -26vmax; background: radial-gradient(closest-side, var(--hero-glow), transparent); animation: drift-a 26s ease-in-out infinite alternate; }
+.blob-b { width: 54vmax; height: 54vmax; right: -20vmax; top: 4vmax; background: radial-gradient(closest-side, var(--hero-glow-soft), transparent); animation: drift-b 32s ease-in-out infinite alternate; }
+.blob-c { width: 40vmax; height: 40vmax; left: 30%; bottom: -26vmax; background: radial-gradient(closest-side, var(--hero-glow-soft), transparent); animation: drift-a 38s ease-in-out infinite alternate-reverse; }
+.final-card .blob-a { width: 40rem; height: 40rem; left: -10rem; top: -18rem; }
+.final-card .blob-b { width: 36rem; height: 36rem; right: -12rem; top: -6rem; }
+@keyframes drift-a { to { transform: translate3d(8vmax, 5vmax, 0) scale(1.12); } }
+@keyframes drift-b { to { transform: translate3d(-7vmax, 6vmax, 0) scale(0.92); } }
+
+.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.hero-copy { display: contents; }
+.hero-tag { margin: 0; justify-self: start; padding: 0.3rem 0.85rem; border: 1px solid hsl(var(--border)); border-radius: 999px; background: color-mix(in srgb, hsl(var(--background)) 70%, transparent); font-size: 0.8125rem; font-weight: 520; color: hsl(var(--muted-foreground)); }
+.hero-title { margin: 0; max-width: none; font-size: clamp(2.55rem, 10vw, 4.4rem); line-height: 1.02; font-weight: 660; letter-spacing: -0.052em; }
+.hero-title .ln { display: block; padding-bottom: 0.1em; margin-bottom: -0.1em; overflow: hidden; }
+.hero-title .w { display: inline-block; }
+.hero-title .soft { color: hsl(var(--muted-foreground)); }
+.hero-side { align-self: start; }
+.hero .lead { margin: 0; max-width: 28rem; font-size: 1.125rem; text-wrap: pretty; }
+
+/* the stage: a double-bezel frame around the poster and the video */
+.stage { position: relative; perspective: 1800px; min-width: 0; }
+.stage .frame { padding: 6px; border-radius: 22px; border: 1px solid hsl(var(--border)); background: hsl(var(--foreground) / 0.05);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.25), 0 50px 90px -40px hsl(var(--accent) / 0.55), 0 2px 8px hsl(var(--foreground) / 0.1); transform-origin: 50% 100%; }
+.frame-in, .stage .poster, .stage .poster img, .stage video { border-radius: 16px; }
+.stage .poster { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: hsl(var(--surface)); }
+.stage .poster img { width: 100%; height: 100%; object-fit: cover; }
+.stage video { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); object-fit: cover; opacity: 0; transition: opacity 0.8s var(--lp-ease); background: hsl(var(--surface)); }
+.stage.is-playing video { opacity: 1; }
+.stage .frame { position: relative; }
+.stage-cap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin: 1rem 0 0; font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
+.hero-side .pause { margin-top: 1.25rem; }
+.pause { padding: 0.3rem 0.85rem; border: 1px solid hsl(var(--input)); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.pause:hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+
+@media (min-width: 62rem) {
+  .hero-title { font-size: clamp(3rem, 4.7vw, 5.2rem); }
+  .hero-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 2rem clamp(1.5rem, 3vw, 3rem); align-items: start; }
+  .hero-tag, .hero-title { grid-column: 1 / -1; }
+  .hero-side { grid-column: 1; grid-row: 3; padding-top: 1rem; }
+  .stage { grid-column: 2; grid-row: 3; margin: -1.25rem calc(-1 * clamp(1.25rem, 5vw, 6rem)) 0 0; }
+  .stage .frame { transform: rotateY(-7deg) rotateX(3deg); }
+}
+@media (max-width: 61.99rem) {
+  .hero { align-items: flex-start; padding-top: 6rem; }
+  .stage { margin-top: 1.5rem; }
+  /* phones get the poster and the animated flow, not a 400 KB video */
+  .stage video { display: none; }
+  /* a feathered scrim keeps the moving background from running under the text */
+  .hero-title, .hero-side { position: relative; box-shadow: 0 0 1.25rem 1.1rem hsl(var(--background) / 0.78); background: hsl(var(--background) / 0.78); }
+  .hero-flow { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-tag { animation: fade-up 0.8s var(--lp-ease) both; }
+  .hero-title .w { animation: word-up 1s var(--lp-ease) both; animation-delay: calc(var(--i) * 55ms + 120ms); }
+  .hero-side { animation: fade-up 0.9s var(--lp-ease) 0.75s both; }
+  .stage { animation: stage-in 1.3s var(--lp-ease) 0.45s both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blob { animation: none; }
+}
+/* The motion switch (landing.js): every looping animation stops, nothing disappears. */
+html.motion-off .blob, html.motion-off .marquee-track, html.motion-off .story-flow i::after { animation-play-state: paused; }
+@keyframes word-up { from { transform: translateY(105%); } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(22px); } }
+/* No opacity here: the poster is the largest element above the fold and should be painted at once (LCP). */
+@keyframes stage-in { from { transform: translateY(70px) scale(0.96); } }
