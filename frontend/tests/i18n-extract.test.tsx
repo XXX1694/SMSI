@@ -16,6 +16,7 @@ import { createTranslator } from '@/i18n/translate';
 import { enT } from '@/i18n/en';
 import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/hooks';
+import { editBlockedReason } from '@/lib/status';
 import { formatBytes } from '@/lib/media';
 import { formatRelative } from '@/lib/time';
 import type { Approval, Post } from '@/lib/types';
@@ -42,6 +43,8 @@ describe('counts use ICU plurals, never "1 posts"', () => {
     ['accounts.orphans', 2, '2 accounts belong to a network that is no longer available.'],
     ['calendar.postCount', 1, '1 post'],
     ['calendar.postCount', 4, '4 posts'],
+    ['calendar.more', 1, '+1 more'],
+    ['calendar.more', 1200, '+1,200 more'],
     ['media.attach', 1, 'Attach 1 file'],
     ['media.attach', 3, 'Attach 3 files'],
     ['approvals.minLeft', 1, '1 min left'],
@@ -53,10 +56,25 @@ describe('counts use ICU plurals, never "1 posts"', () => {
   it('plural and select messages cover state and count together', () => {
     expect(t('posts.targetMeta', { hasDate: 'true', when: '9 Oct 2026, 14:30', count: 1 })).toBe('Published 9 Oct 2026, 14:30 · 1 attempt');
     expect(t('posts.targetMeta', { hasDate: 'false', when: '', count: 3 })).toBe('3 attempts');
-    expect(t('posts.editBlockedOther', { status: 'failed' })).toBe('Only drafts and scheduled posts can be edited. This post is failed.');
-    expect(t('posts.editBlockedOther', { status: 'partially_published' })).toContain('This post is partially published.');
+    expect(t('composer.counter', { label: 'X', len: 5, max: 1 })).toBe('X: 5 of 1 character');
+    expect(t('composer.counter', { label: 'X', len: 5, max: 1000 })).toBe('X: 5 of 1,000 characters');
     expect(t('composer.v.mediaMax', { account: 'A', network: 'X', max: 1 })).toBe('A: X allows 1 attachment at most.');
     expect(t('composer.v.overLimit', { account: 'A', over: 1, network: 'X', limit: 10 })).toBe('A: 1 character over the X limit of 10.');
+  });
+});
+
+describe('editBlockedReason passes the API status code to the select', () => {
+  it('uses the real catalog', () => {
+    expect(editBlockedReason('failed', enT)).toBe('Only drafts and scheduled posts can be edited. This post is failed.');
+    expect(editBlockedReason('partially_published', enT)).toBe('Only drafts and scheduled posts can be edited. This post is partially published.');
+    expect(editBlockedReason('canceled' as never, enT)).toContain('in a state that cannot be edited');
+    expect(editBlockedReason('cancelled', enT)).toBe('This post was canceled and cannot be edited.');
+  });
+  it('picks the branch by status code even when every branch reads differently', () => {
+    const messages = { posts: { editBlockedOther: '{status, select, failed {BRANCH-F} partially_published {BRANCH-P} other {BRANCH-O}}' } };
+    const t = createTranslator({ locale: 'en', messages: messages as never, onMissing: () => {} });
+    expect(editBlockedReason('failed', t as never)).toBe('BRANCH-F');
+    expect(editBlockedReason('partially_published', t as never)).toBe('BRANCH-P');
   });
 });
 
@@ -76,6 +94,7 @@ describe('errors outside English never show the server text', () => {
 describe('numbers, sizes and times follow the locale', () => {
   it('formats sizes with the locale decimal separator', () => {
     expect(formatBytes(1.5 * 1024 * 1024, enT)).toBe('1.5 MB');
+    expect(formatBytes(2048 * 1024 * 1024, enT)).toBe('2,048 MB');
     expect(formatBytes(1.5 * 1024 * 1024, tFor('de'))).toBe('1,5 MB');
   });
   it('formats relative times in the locale', () => {

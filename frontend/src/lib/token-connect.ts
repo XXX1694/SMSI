@@ -43,7 +43,7 @@ const FIELD_TEXT = {
   'must be an https URL': 'accounts.tokenConnect.httpsUrl',
   'too long': 'accounts.tokenConnect.tooLong',
 } as const;
-const isKnownField = (text: string): text is keyof typeof FIELD_TEXT => text in FIELD_TEXT;
+const isKnownField = (text: string): text is keyof typeof FIELD_TEXT => Object.hasOwn(FIELD_TEXT, text);
 
 /**
  * Plain-English version of a failed token connect. Server messages are only used for the field they name;

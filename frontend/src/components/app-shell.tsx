@@ -184,8 +184,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header data-app-header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:hidden">
         <Logo animate />
         {pending ? (
-          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center rounded-full bg-warning-soft px-3 text-xs font-medium text-warning">
-            {t('requestsWaiting', { count: pending })}
+          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-warning-soft px-3 text-xs font-medium text-warning">
+            <span aria-hidden className="sm:hidden">
+              {pending}
+            </span>
+            <span className="sr-only sm:not-sr-only">{t('requestsWaiting', { count: pending })}</span>
           </TransitionLink>
         ) : null}
         <Button ref={toggle} variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? t('closeMenu') : t('openMenu')} aria-expanded={open} aria-controls="sidebar">

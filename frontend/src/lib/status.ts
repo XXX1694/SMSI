@@ -88,5 +88,5 @@ export function editBlockedReason(status: PostStatus, t: AppT): string | null {
   if (status === 'publishing') return t('posts.editBlockedPublishing');
   if (status === 'published') return t('posts.editBlockedPublished');
   if (status === 'cancelled') return t('posts.editBlockedCanceled');
-  return t('posts.editBlockedOther', { status: postStatusView(status, t).label.toLowerCase() });
+  return t('posts.editBlockedOther', { status });
 }

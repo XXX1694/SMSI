@@ -143,7 +143,7 @@
   "posts.editBlockedPublishing": { "type": "body", "description": "Why a post cannot be edited: status Publishing" },
   "posts.editBlockedPublished": { "type": "body", "description": "Why a post cannot be edited: status Published" },
   "posts.editBlockedCanceled": { "type": "body", "description": "Why a post cannot be edited: status Canceled" },
-  "posts.editBlockedOther": { "type": "body", "description": "Why a post cannot be edited: any other status. {status} is the API status code; the select turns it into a lowercase adjective." },
+  "posts.editBlockedOther": { "type": "body", "description": "Why a post cannot be edited: any other status. {status} is the API status code (failed, partially_published, ...), never the translated label: the select matches it exactly; the other branch is fixed text." },
   "common.loadingFailed": { "type": "title", "description": "Default title of an error box shown when data could not be loaded" },
   "settings.passwordLength": { "type": "error", "description": "Validation in Settings → change password" },
   "settings.passwordMismatch": { "type": "error", "description": "Validation: the repeat differs" },
