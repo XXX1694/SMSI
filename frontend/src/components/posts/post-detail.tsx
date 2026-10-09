@@ -18,7 +18,7 @@ import { describeErrorCode, friendlyMessage, isEnglish, isTechnicalMessage } fro
 import { editHref } from '@/lib/demo/config';
 import { joinList, postLabel } from '@/lib/format';
 import { RetryPostDialog } from '@/components/posts/retry-post-dialog';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import { editBlockedReason, postActions } from '@/lib/status';
 import { zonedToUtcIso } from '@/lib/time';
 import type { Post, PublicationAttempt } from '@/lib/types';
@@ -28,13 +28,14 @@ import { useFormat } from '@/i18n/use-format';
 
 function Targets({ post }: { post: Post }) {
   const t = useTranslations();
+  const providerName = useProviderName();
   const fmt = useFormat();
   return (
     <ul className="divide-y rounded-lg border">
       {post.targets.map((tg) => (
         <li key={tg.id} className="space-y-2 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium">{providerLabel(tg.platform)}</p>
+            <p className="text-sm font-medium">{providerName(tg.platform)}</p>
             <TargetStatusBadge status={tg.status} />
           </div>
           <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{tg.content}</p>
@@ -44,14 +45,14 @@ function Targets({ post }: { post: Post }) {
               {isTechnicalMessage(tg.error_message) || !isEnglish(t) ? null : <> {tg.error_message}</>}
             </Notice>
           ) : null}
-          {tg.status === 'needs_review' ? <Notice>{t('posts.unconfirmedNote', { network: providerLabel(tg.platform) })}</Notice> : null}
+          {tg.status === 'needs_review' ? <Notice>{t('posts.unconfirmedNote', { network: providerName(tg.platform) })}</Notice> : null}
           <p className="text-xs text-muted-foreground">
             {t('posts.targetMeta', { hasDate: String(Boolean(tg.published_at)), when: tg.published_at ? fmt.dateTime(tg.published_at) : '', count: tg.attempt_count })}
             {tg.external_url ? (
               <>
                 {' · '}
                 <a href={tg.external_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
-                  {t('posts.viewOn', { network: providerLabel(tg.platform) })} <ExternalLink className="h-3 w-3" aria-hidden />
+                  {t('posts.viewOn', { network: providerName(tg.platform) })} <ExternalLink className="h-3 w-3" aria-hidden />
                 </a>
               </>
             ) : null}
@@ -64,9 +65,10 @@ function Targets({ post }: { post: Post }) {
 
 function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Post }) {
   const t = useTranslations();
+  const providerName = useProviderName();
   const tp = useTranslations('posts');
   const fmt = useFormat();
-  const platformOf = (id: string) => providerLabel(post.targets.find((x) => x.id === id)?.platform ?? '') || t('common.unknown');
+  const platformOf = (id: string) => providerName(post.targets.find((x) => x.id === id)?.platform ?? '');
   if (attempts.length === 0) return <p className="text-sm text-muted-foreground">{tp('noAttempts')}</p>;
   return (
     <Table label={tp('attemptsTable')}>
@@ -147,6 +149,7 @@ type Dlg = 'publish' | 'cancel' | 'delete' | 'retry' | 'schedule' | null;
 
 export function PostDetail({ id }: { id: string }) {
   const t = useTranslations();
+  const providerName = useProviderName();
   const fmt = useFormat();
   const router = useRouter();
   const toast = useToast();
@@ -225,7 +228,7 @@ export function PostDetail({ id }: { id: string }) {
           <Attempts attempts={post.attempts ?? []} post={post} />
         </Section>
       </div>
-      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title={t('composer.publishConfirmTitle')} description={t('composer.publishConfirmBody', { accounts: joinList([...new Set(post.targets.map((x) => providerLabel(x.platform)))], t) })} confirmLabel={t('composer.publishNow')} onConfirm={act(() => api.posts.publish(id), t('composer.publishStarted'))} />
+      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title={t('composer.publishConfirmTitle')} description={t('composer.publishConfirmBody', { accounts: joinList([...new Set(post.targets.map((x) => providerName(x.platform)))], t) })} confirmLabel={t('composer.publishNow')} onConfirm={act(() => api.posts.publish(id), t('composer.publishStarted'))} />
       <RetryPostDialog postId={id} open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} onRetried={() => { toast.success(t('posts.retryStarted')); reload(); }} />
       <ConfirmDialog open={dlg === 'cancel'} onOpenChange={(o) => !o && setDlg(null)} title={t('posts.cancelTitle')} description={t('posts.cancelBody')} confirmLabel={t('posts.cancelPost')} dismissLabel={t('posts.keepPost')} destructive onConfirm={act(() => api.posts.cancel(id), t('posts.canceled'))} />
       <ConfirmDialog

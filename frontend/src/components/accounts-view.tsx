@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { DEMO } from '@/lib/demo/config';
 import { describeErrorCode } from '@/lib/errors';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import type { Provider, SocialAccount } from '@/lib/types';
 import { useAsync, useErrorText } from '@/hooks';
 import { nodes } from '@/i18n/rich';
@@ -172,6 +172,7 @@ interface ConnectResult {
 /** The message for `?connected=` / `?error=`, shown once; the parameters are then removed from the address. */
 function useConnectResult(): ConnectResult | null {
   const t = useTranslations();
+  const providerName = useProviderName();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -180,18 +181,19 @@ function useConnectResult(): ConnectResult | null {
   const failed = params.get('error');
   const provider = params.get('provider');
   useEffect(() => {
-    if (connected) setResult({ tone: 'info', text: t('accounts.resultConnected', { network: providerLabel(connected) }) });
+    if (connected) setResult({ tone: 'info', text: t('accounts.resultConnected', { network: providerName(connected) }) });
     else if (failed) {
       const reason = describeErrorCode(failed, t);
-      setResult({ tone: 'danger', text: provider ? t('accounts.resultFailed', { network: providerLabel(provider), reason }) : t('accounts.resultFailedGeneric', { reason }) });
+      setResult({ tone: 'danger', text: provider ? t('accounts.resultFailed', { network: providerName(provider), reason }) : t('accounts.resultFailedGeneric', { reason }) });
     } else return;
     router.replace(pathname);
-  }, [connected, failed, provider, router, pathname, t]);
+  }, [connected, failed, provider, router, pathname, t, providerName]);
   return result;
 }
 
 export function AccountsView() {
   const t = useTranslations('accounts');
+  const providerName = useProviderName();
   const result = useConnectResult();
   const toast = useToast();
   const load = useCallback(async () => {
@@ -201,7 +203,7 @@ export function AccountsView() {
   const { data, error, loading, reload } = useAsync(load);
   const [target, setTarget] = useState<SocialAccount | null>(null);
   const targetName = target?.display_name || target?.username;
-  const network = target ? providerLabel(target.provider) : '';
+  const network = target ? providerName(target.provider) : '';
   const disconnectBody = targetName ? t('disconnectBody', { account: targetName, network }) : t('disconnectBodyUnnamed', { network });
 
   if (loading && !data) return <LoadingRows rows={4} />;

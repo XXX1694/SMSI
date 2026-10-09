@@ -11,8 +11,8 @@ export function Section({ title, action, children }: { title: React.ReactNode; a
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {action}
+        <h2 className="min-w-0 text-sm font-semibold tracking-tight">{title}</h2>
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {children}
     </section>

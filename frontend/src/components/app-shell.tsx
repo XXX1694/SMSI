@@ -75,8 +75,8 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       {t(item.labelKey)}
       {badge ? (
         <span className="ml-auto inline-grid h-count min-w-count place-items-center rounded-tag bg-foreground/10 px-1 text-2xs font-semibold leading-none tabular-nums text-foreground">
-          {badge > 99 ? '99+' : badge}
-          <span className="sr-only"> {ts('waiting')}</span>
+          <span aria-hidden>{ts('navBadge', { count: badge, over: String(badge > 99) })}</span>
+          <span className="sr-only">{ts('navWaiting', { count: badge })}</span>
         </span>
       ) : null}
     </TransitionLink>
@@ -188,9 +188,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header data-app-header className="glass-chrome sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 md:hidden">
         <Logo animate />
         {pending ? (
-          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium tabular-nums text-foreground hover:bg-secondary/60">
-            <StatusGlyph name="waiting" className="text-warning" />
-            <span aria-hidden className="sm:hidden">
+          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center whitespace-nowrap rounded-md px-3 text-xs font-medium tabular-nums text-foreground hover:bg-secondary/60">
+            <span aria-hidden className="inline-flex items-center gap-1.5 sm:hidden">
+              <StatusGlyph name="waiting" className="text-warning" />
               {pending}
             </span>
             <span className="sr-only sm:not-sr-only">{t('requestsWaiting', { count: pending })}</span>

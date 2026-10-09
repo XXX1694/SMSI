@@ -39,8 +39,9 @@ describe('badges', () => {
   });
   it('capability badges expose support to screen readers', () => {
     render(<CapabilityBadges caps={normalizeCapabilities({ CanPublishText: true, MaxTextLength: 280 })} />);
-    expect(screen.getByText('Text').parentElement).toHaveTextContent('Supports Text');
-    expect(screen.getByText('Video').parentElement).toHaveTextContent('No Video');
+    expect(screen.getByText('Supports text posts')).toBeInTheDocument();
+    expect(screen.getByText('Does not support video posts')).toBeInTheDocument();
+    expect(screen.getByText('Video')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByText('280 characters')).toBeInTheDocument();
   });
 });

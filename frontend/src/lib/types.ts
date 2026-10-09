@@ -313,3 +313,21 @@ export interface Approval {
   decided_at: string | null;
   created_at: string;
 }
+
+export type DataExportStatus = 'pending' | 'running' | 'ready' | 'failed' | 'expired';
+
+/** One account data export (`/account/exports`). `expires_at` is when a ready ZIP is deleted. */
+export interface DataExport {
+  id: string;
+  status: DataExportStatus;
+  size_bytes: number;
+  error_code: string | null;
+  created_at: string;
+  expires_at: string | null;
+}
+
+/** `GET /account/exports/{id}` for a ready export: a download URL that works for `url_expires_at` only. */
+export interface DataExportLink extends DataExport {
+  url: string;
+  url_expires_at: string;
+}

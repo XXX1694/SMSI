@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import type { SocialAccount } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/i18n/use-translations';
@@ -14,6 +14,7 @@ export function AccountChips({
   onToggle: (id: string) => void;
 }) {
   const t = useTranslations();
+  const providerName = useProviderName();
   return (
     <div role="group" aria-label={t('composer.publishTo')} className="flex flex-wrap gap-2">
       {accounts.map((a) => {
@@ -34,7 +35,7 @@ export function AccountChips({
           >
             {on ? <Check className="h-3.5 w-3.5" aria-hidden /> : null}
             <span className="font-medium">{a.display_name || a.username}</span>
-            <span className="text-xs text-muted-foreground">{providerLabel(a.provider)}</span>
+            <span className="text-xs text-muted-foreground">{providerName(a.provider)}</span>
           </button>
         );
       })}
