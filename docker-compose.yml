@@ -44,6 +44,11 @@ x-backend-env: &backend-env
   SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   MAIL_FROM: ${MAIL_FROM:-}
 
+  # Plan limits; -1 switches one off (see backend/.env.example).
+  QUOTA_ACCOUNTS: ${QUOTA_ACCOUNTS:-5}
+  QUOTA_POSTS_PER_MONTH: ${QUOTA_POSTS_PER_MONTH:-60}
+  QUOTA_MEDIA_MB: ${QUOTA_MEDIA_MB:-500}
+
 services:
   postgres:
     image: postgres:16-alpine

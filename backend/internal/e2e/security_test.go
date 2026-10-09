@@ -541,3 +541,36 @@ func TestApprovalsAreTenantScoped(t *testing.T) {
 		t.Fatalf("alice's approved publish: %d %s", r.status, r.body)
 	}
 }
+
+// Quotas are per user: one user's usage never counts against, or shows in, another user's.
+func TestQuotaIsPerUser(t *testing.T) {
+	e := newEnv(t, withQuota(config.QuotaConfig{QuotaAccounts: 1, QuotaPostsPerMonth: 1, QuotaMediaMB: 1}))
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice@quota.test")
+	bob.register("bob@quota.test")
+	alice.connectToken(tokenKey(1))
+	if r := alice.upload("a.png", noisePNG(t, 1)); r.status != 201 {
+		t.Fatalf("alice upload: %d %s", r.status, r.body)
+	}
+	// Alice is full; Bob still has everything.
+	requireQuotaExceeded(t, alice.do("POST", tokenPath, tokenBody(tokenKey(2))), "connected_accounts")
+	bob.connectToken(tokenKey(1))
+	// The same provider identity connected by both is two rows and two slots.
+	if used, _ := usageOf(t, bob, "connected_accounts"); used != 1 {
+		t.Fatalf("bob sees %v accounts used", used)
+	}
+	if used, _ := usageOf(t, bob, "media_bytes"); used != 0 {
+		t.Fatalf("bob's storage includes alice's files: %v", used)
+	}
+	if r := bob.upload("b.png", noisePNG(t, 2)); r.status != 201 {
+		t.Fatalf("bob upload: %d %s", r.status, r.body)
+	}
+	if used, _ := usageOf(t, alice, "media_bytes"); used == 0 {
+		t.Fatal("alice's storage is empty")
+	}
+	// Alice's agent key sees Alice's usage, not Bob's.
+	k := e.apiKeyClient(alice.createKey("r", "analytics:read"))
+	if q := k.must("GET", "/api/v1/account/usage", nil, 200)["quotas"].(map[string]any)["connected_accounts"].(map[string]any); q["used"].(float64) != 1 {
+		t.Fatalf("key usage: %v", q)
+	}
+}

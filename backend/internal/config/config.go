@@ -82,6 +82,7 @@ type Config struct {
 	MailFrom     string // RFC 5322 address, e.g. "SocialOS <no-reply@example.com>"
 
 	ApprovalConfig // approvals and the agent schedule lead (config_approvals.go)
+	QuotaConfig    // plan limits (config_quota.go)
 }
 
 // Mail providers and SMTP TLS modes.
@@ -158,6 +159,7 @@ func Load() (*Config, error) {
 	}
 	proxies, warnings, perr := resolveTrustedProxies(c.TrustProxy, env("TRUSTED_PROXIES", ""))
 	c.ApprovalConfig = loadApprovalConfig()
+	c.QuotaConfig = loadQuotaConfig()
 	c.TrustedProxies, c.Warnings = proxies, warnings
 	if c.Production() && c.MailProvider == MailProviderLog {
 		c.Warnings = append(c.Warnings, "MAIL_PROVIDER=log in production: no email is sent, so verification and password-reset mail never reaches users (set MAIL_PROVIDER=smtp)")
@@ -222,6 +224,7 @@ func (c *Config) validate(extra ...error) error {
 		problems = append(problems, "TELEGRAM_UPDATES_MODE must be polling or webhook")
 	}
 	problems = append(problems, c.validateApprovals()...)
+	problems = append(problems, c.validateQuota()...)
 	problems = append(problems, c.validateMail()...)
 	if c.Production() {
 		if !c.CookieSecure {

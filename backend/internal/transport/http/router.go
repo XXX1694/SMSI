@@ -16,6 +16,7 @@ import (
 	"github.com/socialos/backend/internal/application/developer"
 	"github.com/socialos/backend/internal/application/media"
 	"github.com/socialos/backend/internal/application/posts"
+	"github.com/socialos/backend/internal/application/quota"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/observability"
 	"github.com/socialos/backend/internal/transport/httpx"
@@ -32,6 +33,7 @@ type Services struct {
 	Analytics *analytics.Service
 	Audit     *audit.Service
 	Approvals *approvals.Service
+	Quota     *quota.Service
 }
 
 // Options configure transport behaviour.
@@ -171,6 +173,8 @@ func (a *API) mountAuthenticated(r chi.Router) {
 	r.Get("/analytics", a.analytics)
 	r.Get("/dashboard/summary", a.dashboard)
 	r.Get("/audit-logs", a.auditLogs)
+
+	r.Get("/account/usage", a.accountUsage)
 
 	r.Get("/approvals", a.listApprovals)
 	r.Get("/approvals/{id}", a.getApproval)

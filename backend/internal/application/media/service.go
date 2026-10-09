@@ -55,11 +55,19 @@ type Service struct {
 	storage Storage
 	audit   port.AuditRecorder
 	clock   port.Clock
+	quota   port.QuotaGate
+	tx      port.TxRunner
 }
 
 // NewService creates the media service.
 func NewService(repo Repo, storage Storage, audit port.AuditRecorder, clock port.Clock) *Service {
 	return &Service{repo: repo, storage: storage, audit: audit, clock: clock}
+}
+
+// WithQuota makes uploads count against the storage limit. tx must be the runner that backs the quota gate.
+func (s *Service) WithQuota(q port.QuotaGate, tx port.TxRunner) *Service {
+	s.quota, s.tx = q, tx
+	return s
 }
 
 // Storage returns the storage port (used by the publisher to stream bytes).
@@ -100,6 +108,12 @@ func (s *Service) Upload(ctx context.Context, a actor.Actor, in UploadInput) (*W
 		OriginalName: sanitizeName(in.OriginalName), Status: domain.StatusReady,
 	}
 	m.StorageKey = "users/" + a.UserID.String() + "/media/" + m.ID.String() + ext
+	if s.quota != nil {
+		// Cheap early refusal, before the bytes are stored; the authoritative check runs under the lock below.
+		if err := s.quota.EnforceMedia(ctx, a.UserID, in.Size); err != nil {
+			return nil, err
+		}
+	}
 	if kind == domain.KindImage {
 		if err := s.readDimensions(in.File, m); err != nil {
 			return nil, err
@@ -113,7 +127,7 @@ func (s *Service) Upload(ctx context.Context, a actor.Actor, in UploadInput) (*W
 		return nil, errs.Wrap(errs.Internal, "storage upload failed", err)
 	}
 	m.SHA256 = hex.EncodeToString(h.Sum(nil))
-	if err := s.repo.Create(ctx, m); err != nil {
+	if err := s.createCounted(ctx, m); err != nil {
 		_ = s.storage.Delete(context.WithoutCancel(ctx), m.StorageKey)
 		return nil, err
 	}
@@ -121,6 +135,20 @@ func (s *Service) Upload(ctx context.Context, a actor.Actor, in UploadInput) (*W
 		map[string]any{"mime_type": mime, "size_bytes": in.Size})
 	out := s.withURL(ctx, []domain.Media{*m})[0]
 	return &out, nil
+}
+
+// createCounted inserts the row. With a quota gate, the check and the insert run in one transaction under the user's
+// lock, so concurrent uploads cannot overshoot the limit together.
+func (s *Service) createCounted(ctx context.Context, m *domain.Media) error {
+	if s.quota == nil || s.tx == nil {
+		return s.repo.Create(ctx, m)
+	}
+	return s.tx.InTx(ctx, func(ctx context.Context) error {
+		if err := s.quota.EnforceMedia(ctx, m.UserID, m.SizeBytes); err != nil {
+			return err
+		}
+		return s.repo.Create(ctx, m)
+	})
 }
 
 func (s *Service) readDimensions(f io.ReadSeeker, m *domain.Media) error {

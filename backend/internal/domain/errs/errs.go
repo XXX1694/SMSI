@@ -17,6 +17,7 @@ const (
 	Forbidden              Code = "FORBIDDEN"
 	InsufficientScope      Code = "INSUFFICIENT_SCOPE"
 	EmailNotVerified       Code = "EMAIL_NOT_VERIFIED"
+	QuotaExceeded          Code = "QUOTA_EXCEEDED"
 	ApprovalRequired       Code = "APPROVAL_REQUIRED"
 	NotFound               Code = "NOT_FOUND"
 	InvalidStateTransition Code = "INVALID_STATE_TRANSITION"

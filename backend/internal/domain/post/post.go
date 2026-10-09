@@ -16,18 +16,20 @@ const (
 
 // Post is the aggregate root.
 type Post struct {
-	ID           uuid.UUID
-	UserID       uuid.UUID
-	Title        string
-	Content      string
-	Status       Status
-	ScheduledAt  *time.Time
-	PublishedAt  *time.Time
-	CreatedBy    CreatedBy
-	CreatedByRef string
-	DeletedAt    *time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	Title       string
+	Content     string
+	Status      Status
+	ScheduledAt *time.Time
+	PublishedAt *time.Time
+	// QuotaCountedAt is set once, when the post is first scheduled or published; it is what the monthly quota counts.
+	QuotaCountedAt *time.Time
+	CreatedBy      CreatedBy
+	CreatedByRef   string
+	DeletedAt      *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 
 	Targets  []Target
 	MediaIDs []uuid.UUID

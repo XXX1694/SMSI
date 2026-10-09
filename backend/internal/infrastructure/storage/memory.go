@@ -72,3 +72,10 @@ func (m *Memory) Has(key string) bool {
 	_, ok := m.objects[key]
 	return ok
 }
+
+// Len is the number of stored objects (tests).
+func (m *Memory) Len() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return len(m.objects)
+}

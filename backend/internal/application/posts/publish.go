@@ -47,6 +47,9 @@ func (s *Service) startPublishing(ctx context.Context, a actor.Actor, p *post.Po
 	if err := s.revalidate(ctx, p); err != nil {
 		return nil, err
 	}
+	if err := s.countQuota(ctx, p); err != nil {
+		return nil, err
+	}
 	old, err := s.cancelJobs(ctx, p)
 	if err != nil {
 		return nil, err

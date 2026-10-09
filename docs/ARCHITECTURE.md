@@ -134,7 +134,7 @@ Error format everywhere:
 ```json
 {"error":{"code":"SOCIAL_ACCOUNT_EXPIRED","message":"LinkedIn authorization has expired","request_id":"…"}}
 ```
-Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`; also `EMAIL_NOT_VERIFIED` when the server enforces email verification and the owner has not verified, see Auth), `APPROVAL_REQUIRED 428` (an API key attempted a dangerous action; see "Approvals"), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
+Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`; also `EMAIL_NOT_VERIFIED` when the server enforces email verification and the owner has not verified, see Auth; also `QUOTA_EXCEEDED` when a plan limit is reached, see "Plan limits"), `APPROVAL_REQUIRED 428` (an API key attempted a dangerous action; see "Approvals"), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
 Pagination: `?limit=&cursor=` → `{"items":[…],"next_cursor":null|"…"}`. Times are RFC 3339 UTC.
 
 ### Auth
@@ -209,6 +209,17 @@ Security properties: user B cannot connect user A's channel without posting a co
 ### Analytics & dashboard
 `GET /analytics?from=&to=` · `GET /dashboard/summary` → `{connected_accounts, scheduled_posts, drafts, published_this_month, failed, upcoming:[…], recent:[…]}`
 `GET /audit-logs?limit=&cursor=&action=` (session only; `action` keeps one action, e.g. `mcp.tool_call` for agent actions)
+
+### Plan limits (D-014)
+One `free` plan; the limits come from env and `-1` switches one off. The application layer counts under a per-user lock (`SELECT … FOR NO KEY UPDATE` on the user row, taken in the same transaction as the change), so parallel requests cannot pass the check together. A refusal is `403 QUOTA_EXCEEDED` with `fields.quota` naming the metric and a message that says what to do; nothing is changed.
+
+| Metric (`fields.quota`) | Env, default | Counted | Checked in |
+|---|---|---|---|
+| `connected_accounts` | `QUOTA_ACCOUNTS=5` | non-revoked social accounts; reconnecting one you have is free | `accounts.connectAccount` (OAuth, token and chat connects) |
+| `scheduled_posts_month` | `QUOTA_POSTS_PER_MONTH=60` | posts whose `quota_counted_at` is in the current UTC month; set once, when a post is first scheduled or published. Drafts are free, unschedule then schedule does not count twice, deleting does not give it back | `posts.scheduleLocked`, `posts.startPublishing` |
+| `media_bytes` | `QUOTA_MEDIA_MB=500` | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (early refusal before the object is stored, authoritative check with the insert) |
+
+`GET /account/usage` (scope `analytics:read`) → `{plan, period_start, period_end, quotas:{connected_accounts:{used,limit}, scheduled_posts_month:{used,limit}, media_bytes:{used,limit}}}`; `limit` -1 = unlimited.
 
 ### Approvals
 Dangerous actions made with an **API key** (not a browser session) need the owner's approval first (D-013): `POST /posts/{id}/publish`, `POST /posts/{id}/retry` without `scheduled_at`, `DELETE /posts/{id}`, `DELETE /social/accounts/{id}`, `POST /social/accounts/token`, and any schedule (`POST /posts` with `schedule`, `POST /posts/{id}/schedule`, `PATCH /posts/{id}` or `POST /posts/{id}/retry` with a time) less than `AGENT_MIN_SCHEDULE_LEAD` (default 5m) ahead. The scope check comes first (403); then, for a key whose `dangerous_policy` is `approve` (the default), the call answers `428` and does nothing:

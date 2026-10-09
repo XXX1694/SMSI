@@ -48,6 +48,9 @@ func (s *Service) scheduleLocked(ctx context.Context, a actor.Actor, p *post.Pos
 	if err := s.revalidate(ctx, p); err != nil {
 		return nil, err
 	}
+	if err := s.countQuota(ctx, p); err != nil {
+		return nil, err
+	}
 	p.Status, p.ScheduledAt = post.StatusScheduled, &at
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err
@@ -58,6 +61,21 @@ func (s *Service) scheduleLocked(ctx context.Context, a actor.Actor, p *post.Pos
 	}
 	return jobs, s.audit.Record(ctx, a, audit.ActionPostScheduled, "post", p.ID.String(),
 		map[string]any{"scheduled_at": at.UTC().Format(time.RFC3339)})
+}
+
+// countQuota counts the post against the monthly quota the first time it is scheduled or published; unscheduling and
+// scheduling again, or retrying, never counts it twice. The caller's transaction holds the user lock, so the count and
+// the update that records it cannot interleave with another request of the same user.
+func (s *Service) countQuota(ctx context.Context, p *post.Post) error {
+	if p.QuotaCountedAt != nil {
+		return nil
+	}
+	if err := s.quota.EnforcePost(ctx, p.UserID); err != nil {
+		return err
+	}
+	now := s.clock.Now()
+	p.QuotaCountedAt = &now
+	return nil
 }
 
 // Schedule schedules a draft for publication at `at`.

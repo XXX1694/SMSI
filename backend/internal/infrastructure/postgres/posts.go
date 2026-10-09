@@ -18,11 +18,11 @@ type Posts struct{ db *DB }
 // NewPosts creates the repo.
 func NewPosts(db *DB) *Posts { return &Posts{db: db} }
 
-const postCols = `p.id, p.user_id, p.title, p.content, p.status, p.scheduled_at, p.published_at, p.created_by, p.created_by_ref, p.deleted_at, p.created_at, p.updated_at`
+const postCols = `p.id, p.user_id, p.title, p.content, p.status, p.scheduled_at, p.published_at, p.quota_counted_at, p.created_by, p.created_by_ref, p.deleted_at, p.created_at, p.updated_at`
 
 func scanPost(row interface{ Scan(...any) error }) (*post.Post, error) {
 	var p post.Post
-	if err := row.Scan(&p.ID, &p.UserID, &p.Title, &p.Content, &p.Status, &p.ScheduledAt, &p.PublishedAt,
+	if err := row.Scan(&p.ID, &p.UserID, &p.Title, &p.Content, &p.Status, &p.ScheduledAt, &p.PublishedAt, &p.QuotaCountedAt,
 		&p.CreatedBy, &p.CreatedByRef, &p.DeletedAt, &p.CreatedAt, &p.UpdatedAt); err != nil {
 		return nil, err
 	}
@@ -133,9 +133,9 @@ func (r *Posts) queryPosts(ctx context.Context, userID uuid.UUID, sql string, ar
 
 // Update writes mutable post fields.
 func (r *Posts) Update(ctx context.Context, p *post.Post) error {
-	err := r.db.q(ctx).QueryRow(ctx, `UPDATE posts SET title = $3, content = $4, status = $5, scheduled_at = $6, published_at = $7
+	err := r.db.q(ctx).QueryRow(ctx, `UPDATE posts SET title = $3, content = $4, status = $5, scheduled_at = $6, published_at = $7, quota_counted_at = COALESCE($8, quota_counted_at)
 		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL RETURNING updated_at`,
-		p.ID, p.UserID, p.Title, p.Content, p.Status, p.ScheduledAt, p.PublishedAt).Scan(&p.UpdatedAt)
+		p.ID, p.UserID, p.Title, p.Content, p.Status, p.ScheduledAt, p.PublishedAt, p.QuotaCountedAt).Scan(&p.UpdatedAt)
 	return mapErr(err, "post")
 }
 
