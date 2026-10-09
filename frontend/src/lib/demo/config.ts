@@ -24,7 +24,7 @@ export function wipeDemoStorage(): void {
   }
 }
 
-export const DEMO_EMAIL = 'demo@socialos.dev';
+export const DEMO_EMAIL = 'demo@example.com';
 export const DEMO_PASSWORD = 'demo12345';
 
 /** Fired on `window` when the simulated scheduler changed data in the background. */

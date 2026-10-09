@@ -19,7 +19,7 @@ export const SCOPES: readonly ScopeInfo[] = [
   { scope: 'posts:publish', label: 'Publish immediately', description: 'Publish to live social accounts right now.', risk: 'dangerous' },
   { scope: 'posts:delete', label: 'Delete posts', description: 'Permanently remove posts.', risk: 'dangerous' },
   { scope: 'social:disconnect', label: 'Disconnect accounts', description: 'Remove connected social accounts.', risk: 'dangerous' },
-  { scope: 'social:connect', label: 'Connect accounts', description: 'Hand a network credential (token, app password, webhook URL) to SocialOS. Anyone holding this key can attach accounts.', risk: 'dangerous' },
+  { scope: 'social:connect', label: 'Connect accounts', description: 'Hand a network credential (token, app password, webhook URL) to Steerpost. Anyone holding this key can attach accounts.', risk: 'dangerous' },
 ];
 
 export const RISK_ORDER: readonly ScopeRisk[] = ['safe', 'medium', 'dangerous'];

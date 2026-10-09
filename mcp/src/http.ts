@@ -97,7 +97,7 @@ async function handle(req: IncomingMessage, res: ServerResponse, config: Config)
       rpcError(res, 401, -32001, "Invalid, expired or revoked API key", challenge);
     } else {
       const status = err instanceof ApiError && err.status === 504 ? 504 : 502;
-      rpcError(res, status, -32002, "SocialOS API unavailable", { "X-Request-Id": requestId });
+      rpcError(res, status, -32002, "Steerpost API unavailable", { "X-Request-Id": requestId });
     }
     return;
   }

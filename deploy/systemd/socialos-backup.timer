@@ -1,6 +1,6 @@
-# Backs up SocialOS once a day at about 03:15 local time. Install: README, section 9.
+# Backs up Steerpost once a day at about 03:15 local time. Install: README, section 9.
 [Unit]
-Description=SocialOS: daily backup around 03:15
+Description=Steerpost: daily backup around 03:15
 
 [Timer]
 OnCalendar=*-*-* 03:15:00

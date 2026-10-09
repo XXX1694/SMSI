@@ -7,7 +7,7 @@ import (
 
 func TestMailConfigValidation(t *testing.T) {
 	smtpOK := map[string]string{"MAIL_PROVIDER": "smtp", "SMTP_HOST": "smtp.resend.com", "SMTP_PORT": "465", "SMTP_TLS": "implicit",
-		"SMTP_USERNAME": "resend", "SMTP_PASSWORD": "re_test_key", "MAIL_FROM": "SocialOS <no-reply@example.com>"}
+		"SMTP_USERNAME": "resend", "SMTP_PASSWORD": "re_test_key", "MAIL_FROM": "Steerpost <no-reply@example.com>"}
 	with := func(over map[string]string) map[string]string {
 		m := map[string]string{}
 		for k, v := range smtpOK {

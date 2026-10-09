@@ -18,13 +18,13 @@ export function redact(s: string): string {
 }
 
 const HINTS: Record<string, string> = {
-  INSUFFICIENT_SCOPE: "The API key lacks the scope this action needs. Ask the user to grant it in the SocialOS developer portal.",
-  EMAIL_NOT_VERIFIED: "The SocialOS account has not verified its email address, so this action is blocked. Ask the user to open the verification link in their email (it can be resent from the SocialOS banner).",
-  QUOTA_EXCEEDED: "The SocialOS plan limit for this resource is reached and the action was NOT performed. If your key has the analytics:read scope, get_usage shows the limits; otherwise ask the user. Do not retry in a loop: tell the user which limit it is (the message says), and that they must free space (disconnect an account, delete media) or wait for the new month.",
-  APPROVAL_REQUIRED: "This action needs the owner's approval and was NOT performed. Ask the owner to approve it in SocialOS, wait until they confirm, then repeat the identical call with the approval_id below. An approval works once and only for that exact call.",
+  INSUFFICIENT_SCOPE: "The API key lacks the scope this action needs. Ask the user to grant it in the Steerpost developer portal.",
+  EMAIL_NOT_VERIFIED: "The Steerpost account has not verified its email address, so this action is blocked. Ask the user to open the verification link in their email (it can be resent from the Steerpost banner).",
+  QUOTA_EXCEEDED: "The Steerpost plan limit for this resource is reached and the action was NOT performed. If your key has the analytics:read scope, get_usage shows the limits; otherwise ask the user. Do not retry in a loop: tell the user which limit it is (the message says), and that they must free space (disconnect an account, delete media) or wait for the new month.",
+  APPROVAL_REQUIRED: "This action needs the owner's approval and was NOT performed. Ask the owner to approve it in Steerpost, wait until they confirm, then repeat the identical call with the approval_id below. An approval works once and only for that exact call.",
   FORBIDDEN: "The API key is not allowed to do this.",
   UNAUTHENTICATED: "The API key is invalid, expired or revoked.",
-  SOCIAL_ACCOUNT_EXPIRED: "The social account's authorization expired. The user must reconnect it in SocialOS (this cannot be done through the API).",
+  SOCIAL_ACCOUNT_EXPIRED: "The social account's authorization expired. The user must reconnect it in Steerpost (this cannot be done through the API).",
   INVALID_STATE_TRANSITION: "The post is not in a state that allows this action. Call get_post_status to check its current status.",
   NOT_FOUND: "The resource does not exist or belongs to another user.",
   VALIDATION_ERROR: "The request was rejected as invalid; fix the arguments and retry.",
@@ -56,5 +56,5 @@ export function toToolError(err: unknown): CallToolResult {
     if (err.requestId) parts.push(`(request_id: ${err.requestId})`);
     return errorResult(parts.join(" "));
   }
-  return errorResult("INTERNAL: unexpected error while calling SocialOS");
+  return errorResult("INTERNAL: unexpected error while calling Steerpost");
 }

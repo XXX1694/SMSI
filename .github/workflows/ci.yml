@@ -430,7 +430,7 @@ jobs:
           # Host-proxy: no bundled caddy, and everything that is published is bound to 127.0.0.1.
           check host_proxy '.services | has("caddy") | not' 'the bundled caddy is still part of the stack'
           check host_proxy '[.services[].ports[]?.host_ip] | (length > 0) and all(. == "127.0.0.1")' 'a published port is not bound to 127.0.0.1'
-          # Host-proxy: under host-wide memory pressure the kernel must pick SocialOS before the host's Caddy or other service,
+          # Host-proxy: under host-wide memory pressure the kernel must pick Steerpost before the host's Caddy or other service,
           # and postgres gets a small /dev/shm (64 MiB, not smaller than its shared_buffers default of 64MB).
           check host_proxy '[.services[] | select(.oom_score_adj != 500)] | length == 0' 'a service lacks oom_score_adj 500'
           check host_proxy '.services.postgres.shm_size | tonumber == 67108864' 'postgres shm_size is not 64mb'

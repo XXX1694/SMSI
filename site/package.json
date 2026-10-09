@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Landing page and documentation for SocialOS (GitHub Pages)",
+  "description": "Landing page and documentation for Steerpost (GitHub Pages)",
   "engines": {
     "node": ">=20"
   },

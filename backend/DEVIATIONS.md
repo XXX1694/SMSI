@@ -61,7 +61,7 @@ server or product).
 2. **Frontend `Capabilities` type is camelCase** (`canPublishText`...). The backend sends snake_case as the contract requires; `frontend/src/lib/normalize.ts` converts, but any consumer that bypasses it will see snake_case keys.
 3. **Frontend `CreatedApiKey` is `{key: ApiKey, rawKey}`**; the backend sends `{api_key, key, raw_key}` (see section 1). The normalizer copes (it takes the record from `api_key` and the secret from `raw_key`). `key` therefore means the secret on this endpoint but the record in the frontend type; decide on one shape and drop the aliases.
 4. **Frontend `Post.created_by_ref`** (who created it) has no backend field; `created_by` is `user|api_key` only.
-5. **Analytics are SocialOS counters only** (published/failed per day and platform). LinkedIn and Telegram expose no analytics API for this use, so `can_analytics` is false for every provider.
+5. **Analytics are Steerpost counters only** (published/failed per day and platform). LinkedIn and Telegram expose no analytics API for this use, so `can_analytics` is false for every provider.
 6. **No endpoint for changing a password**, although the contract says API keys can never do it. Nothing to protect yet; add it as session-only.
 7. **Not implemented (out of scope for the MVP)**: email verification, password reset, session listing/revocation UI, organisations/teams (one user is one tenant), LinkedIn video upload, post editing after publish, webhooks.
 

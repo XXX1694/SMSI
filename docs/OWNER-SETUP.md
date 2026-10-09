@@ -1,7 +1,7 @@
 # Owner setup: accounts, platforms and a first test
 
 For the owner of the production instance. It lists, network by network, what you set up once on the platform side, what
-every user then does in the SocialOS UI, and how to check the whole chain without posting anything public.
+every user then does in the Steerpost UI, and how to check the whole chain without posting anything public.
 
 Production runs without a domain of its own, on sslip.io names with valid Let's Encrypt certificates:
 
@@ -42,7 +42,7 @@ rollback, redeploy the running tag instead:
 cd /opt/socialos && sudo ./deploy.sh "$(sudo cat .deploy/current_tag)" --no-migrate
 ```
 
-## 1. Create your SocialOS account
+## 1. Create your Steerpost account
 
 1. Open <https://app.194-238-43-194.sslip.io/register>, enter your name, email and a password, submit.
 2. Email verification: production runs `MAIL_PROVIDER=log`, so **no email is sent** (the worker only logs "mail not sent",
@@ -61,10 +61,10 @@ cd /opt/socialos && sudo ./deploy.sh "$(sudo cat .deploy/current_tag)" --no-migr
 `https://api.194-238-43-194.sslip.io/api/v1/webhooks/telegram`. Nothing to do. To check it:
 `cd /opt/socialos && sudo docker compose run --rm telegram webhook-info` (expect that URL and no `last error`).
 
-**Per-account connect (in the SocialOS UI).**
+**Per-account connect (in the Steerpost UI).**
 
 1. Create a **private** Telegram channel for testing (Telegram > New Channel > Private), or use an existing channel or group.
-2. In SocialOS open **Accounts** and click **Connect channel** (Telegram). A code such as `SOS-7KQ2M9XA` appears. It is valid
+2. In Steerpost open **Accounts** and click **Connect channel** (Telegram). A code such as `SOS-7KQ2M9XA` appears. It is valid
    15 minutes and works once.
 3. In Telegram: channel > **Administrators > Add admin** > `@ABZAL_SOCIALMEDIABOT`, keep the **Post messages** right on.
 4. Post the code in the channel as a normal message. Within a few seconds the page shows the connected chat and the bot deletes
@@ -76,7 +76,7 @@ Typing a channel name never connects it: the code proves you control the chat. F
 
 ### 2.2 LinkedIn, personal profile (live)
 
-What SocialOS uses, from the code: env vars `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` (optional
+What Steerpost uses, from the code: env vars `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` (optional
 `LINKEDIN_API_VERSION`, default `202606`; `LINKEDIN_USE_PKCE`, default `true`) in `backend/internal/config/config.go`, passed
 through by `deploy/docker-compose.prod.yml`; scopes `openid profile email w_member_social`
 (`backend/internal/adapters/linkedin/linkedin.go`); callback route `GET /api/v1/social/{provider}/callback`
@@ -91,13 +91,13 @@ https://api.194-238-43-194.sslip.io/api/v1/social/linkedin/callback
 **Platform-level setup (once, by the owner).**
 
 1. **A LinkedIn Page.** Every developer app must be associated with a LinkedIn Page. If you have none, create one at
-   <https://www.linkedin.com/company/setup/new/> (a small placeholder Page is fine for the self-serve products). SocialOS posts
+   <https://www.linkedin.com/company/setup/new/> (a small placeholder Page is fine for the self-serve products). Steerpost posts
    to each connecting member's own profile, not to this Page. The association cannot be changed later.
-2. **A privacy policy URL.** The create-app form has a *Privacy policy URL* field. SocialOS has no privacy page yet, so publish
+2. **A privacy policy URL.** The create-app form has a *Privacy policy URL* field. Steerpost has no privacy page yet, so publish
    a short one on any public https page you control (for example a GitHub Pages page of this repo or a public Gist) and use that
    URL. An sslip.io URL would also be syntactically fine, but there is no such page on the app today.
 3. Open <https://www.linkedin.com/developers/apps/new> and fill in:
-   - **App name:** `SocialOS` (no "LinkedIn" or "In" in the name or logo);
+   - **App name:** `Steerpost` (no "LinkedIn" or "In" in the name or logo);
    - **LinkedIn Page:** the Page from step 1;
    - **Privacy policy URL:** the URL from step 2;
    - **App logo:** a square image of at least 100 x 100 px, uploaded from your computer;
@@ -130,7 +130,7 @@ rejects the URL, a real domain is the fix (point `DOMAIN` at it and update the r
 supported by the adapter. Tokens last 60 days and self-serve apps get no refresh token, so every member reconnects about every
 60 days (the account shows **Reconnect**).
 
-**Per-account connect (in the SocialOS UI).**
+**Per-account connect (in the Steerpost UI).**
 
 1. **Accounts > Connect > LinkedIn.** You are sent to linkedin.com; sign in and click **Allow**.
 2. You land back on `/accounts` with the profile connected. Connect while logged in to the app in the same browser: the callback
@@ -142,12 +142,12 @@ Errors and fixes: [integrations/linkedin.md](integrations/linkedin.md#troublesho
 
 **Platform-level setup (once, by the owner).** None. No developer app, no env var.
 
-**Per-account connect (in the SocialOS UI).**
+**Per-account connect (in the Steerpost UI).**
 
 1. For a private test, create your own Discord server (**+** > *Create My Own*), or use a private channel.
 2. Channel > **Edit Channel > Integrations > Webhooks > New Webhook** (needs *Manage Webhooks*). Set the name and avatar posts
    should show, click **Copy Webhook URL**.
-3. In SocialOS: **Accounts > Connect > Discord**, paste the URL into **Webhook URL**.
+3. In Steerpost: **Accounts > Connect > Discord**, paste the URL into **Webhook URL**.
 4. Only `https://discord.com/...` and `https://discordapp.com/...` URLs are accepted. The URL is a password: anyone who holds it
    can post. If it leaks, delete the webhook in Discord and reconnect with a new one.
 
@@ -157,14 +157,14 @@ Limits: 2000 characters, up to 10 images of 10 MB, delete supported. Guide: [int
 
 **Platform-level setup (once, by the owner).** None. Each user creates a token on their own Mastodon server.
 
-**Per-account connect (in the SocialOS UI).**
+**Per-account connect (in the Steerpost UI).**
 
 1. On your Mastodon server (for example <https://mastodon.social>): **Preferences > Development > New application**.
-2. **Application name:** `SocialOS`. Leave *Redirect URI* at its default (`urn:ietf:wg:oauth:2.0:oob`; SocialOS does not use it).
+2. **Application name:** `Steerpost`. Leave *Redirect URI* at its default (`urn:ietf:wg:oauth:2.0:oob`; Steerpost does not use it).
 3. **Scopes:** untick everything, then tick exactly `write:statuses`, `write:media`, `read:accounts` (the scopes in
    `backend/internal/adapters/mastodon/mastodon.go`). Click **Submit**.
 4. Open the application and copy **Your access token**.
-5. In SocialOS: **Accounts > Connect > Mastodon**, fill **Instance URL** (`https://mastodon.social`, no path) and **Access token**.
+5. In Steerpost: **Accounts > Connect > Mastodon**, fill **Instance URL** (`https://mastodon.social`, no path) and **Access token**.
 
 Posts are public on Mastodon; for a test use a throwaway account. Revoke: delete the application in Preferences > Development.
 Guide: [integrations/mastodon.md](integrations/mastodon.md).
@@ -173,11 +173,11 @@ Guide: [integrations/mastodon.md](integrations/mastodon.md).
 
 **Platform-level setup (once, by the owner).** None.
 
-**Per-account connect (in the SocialOS UI).**
+**Per-account connect (in the Steerpost UI).**
 
-1. In Bluesky: **Settings > Privacy and security > App passwords > Add App Password**, name it `SocialOS`, copy the
+1. In Bluesky: **Settings > Privacy and security > App passwords > Add App Password**, name it `Steerpost`, copy the
    `xxxx-xxxx-xxxx-xxxx` password. Never use your main password.
-2. In SocialOS: **Accounts > Connect > Bluesky**, enter **Handle** (`name.bsky.social`) and **App password**. Leave
+2. In Steerpost: **Accounts > Connect > Bluesky**, enter **Handle** (`name.bsky.social`) and **App password**. Leave
    **Server (optional)** empty unless you run your own PDS.
 
 Limits: 300 characters, up to 4 images of 2 MB, delete supported, 300 logins per day per account. Bluesky has no private
@@ -207,7 +207,7 @@ None of these adapters exists yet, so nothing in this section can be set up toda
 
 | Service | Create | Env vars in `/opt/socialos/.env` | Blocker |
 |---|---|---|---|
-| Resend (real email) | Account at <https://resend.com>, add and verify a sending domain (DNS records), create an API key | `MAIL_PROVIDER=smtp`, `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`, `SMTP_TLS=implicit` (or `587` + `starttls`), `SMTP_USERNAME=resend`, `SMTP_PASSWORD=<API key>`, `MAIL_FROM=SocialOS <no-reply@your-domain>` | **Needs a domain you own.** sslip.io names cannot be verified as a sending domain. Turning it on also enforces email verification for every account. |
+| Resend (real email) | Account at <https://resend.com>, add and verify a sending domain (DNS records), create an API key | `MAIL_PROVIDER=smtp`, `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`, `SMTP_TLS=implicit` (or `587` + `starttls`), `SMTP_USERNAME=resend`, `SMTP_PASSWORD=<API key>`, `MAIL_FROM=Steerpost <no-reply@your-domain>` | **Needs a domain you own.** sslip.io names cannot be verified as a sending domain. Turning it on also enforces email verification for every account. |
 | Sentry | Project at <https://sentry.io>, copy the DSN | none today | The code has no Sentry integration and reads no `SENTRY_DSN` (checked in `backend/internal/config`, `.env.prod.example`). Creating a project now is harmless but has no effect until it is wired in. |
 | Offsite backups (S3, Backblaze B2 or Cloudflare R2) | A private bucket with a lifecycle rule that expires old objects; an access key that may only write to it. On **your own computer**: `age-keygen -o key.txt` and keep `key.txt` off the server | `BACKUP_S3_URL=s3://<bucket>/socialos`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`, `BACKUP_S3_ENDPOINT` (empty for AWS; B2: `https://s3.<region>.backblazeb2.com`; R2: `https://<account>.r2.cloudflarestorage.com`), `BACKUP_AGE_RECIPIENT=age1...` (public key only) | none; without `key.txt` the offsite copies cannot be read |
 
@@ -223,7 +223,7 @@ public target.
 - [ ] Log in at <https://app.194-238-43-194.sslip.io/login>.
 - [ ] **Accounts:** connect the private Telegram channel (2.1) and a private Discord channel (2.3). Both show **active**.
 - [ ] Optional: connect LinkedIn (2.2), Mastodon or Bluesky. Do not publish to them unless you want a public post.
-- [ ] **Compose:** write "SocialOS test", pick the Telegram account, **Publish now**. The message appears in the channel and the
+- [ ] **Compose:** write "Steerpost test", pick the Telegram account, **Publish now**. The message appears in the channel and the
       post shows **published** with a link.
 - [ ] **Posts:** delete that post; the message disappears from the channel.
 - [ ] Schedule a post 10 minutes ahead to the Discord account; it arrives on time (**Calendar** shows it until then).
@@ -248,7 +248,7 @@ ahead) is answered with `428 APPROVAL_REQUIRED` until you approve it in the brow
 
    # Create a draft: not dangerous, no approval needed
    POST=$(curl -s "${H[@]}" -X POST "$API/posts" \
-     -d "{\"content\":\"SocialOS API test\",\"social_account_ids\":[\"$ACC\"]}" | jq -r .id)
+     -d "{\"content\":\"Steerpost API test\",\"social_account_ids\":[\"$ACC\"]}" | jq -r .id)
 
    # Publish now: dangerous -> 428
    curl -s -w '\nHTTP %{http_code}\n' "${H[@]}" -X POST "$API/posts/$POST/publish"

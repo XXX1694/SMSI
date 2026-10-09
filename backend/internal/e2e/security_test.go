@@ -101,7 +101,7 @@ func TestMCPConnection(t *testing.T) {
 	c.register("mcp@example.com")
 	m := c.must("POST", "/api/v1/developer/mcp-connections", map[string]any{"name": "Claude Desktop", "client_name": "claude"}, 201)
 	raw := m["key"].(string)
-	cfg := m["config"].(map[string]any)["mcpServers"].(map[string]any)["socialos"].(map[string]any)
+	cfg := m["config"].(map[string]any)["mcpServers"].(map[string]any)["steerpost"].(map[string]any)
 	if cfg["url"] != "http://mcp.test/mcp" || !strings.Contains(cfg["headers"].(map[string]any)["Authorization"].(string), raw) {
 		t.Fatalf("bad config %v", cfg)
 	}

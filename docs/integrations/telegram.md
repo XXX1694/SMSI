@@ -1,6 +1,6 @@
 # Telegram setup guide
 
-For the owner of a SocialOS instance. SocialOS uses **one bot per deployment**, shared by all users. Telegram has no OAuth for
+For the owner of a Steerpost instance. Steerpost uses **one bot per deployment**, shared by all users. Telegram has no OAuth for
 bots, so a user proves they control a channel or group with a one-time code (below).
 
 ## Steps
@@ -24,7 +24,7 @@ docker compose run --rm telegram webhook-info
 ```
 
 - `no webhook is set`: nobody uses a webhook. Another process may still poll `getUpdates`; if you cannot rule that out, use a new bot.
-- `url: https://something-else/...`: another consumer owns the bot. Use a separate bot for SocialOS, or migrate that consumer first.
+- `url: https://something-else/...`: another consumer owns the bot. Use a separate bot for Steerpost, or migrate that consumer first.
 - `url:` equal to `https://api.<your-domain>/api/v1/webhooks/telegram`: already yours; `pending updates` and `last error` tell you
   whether Telegram can reach you.
 
@@ -52,13 +52,13 @@ secret (after `docker compose up -d`). The webhook asks only for `channel_post`,
 
 Code: `backend/internal/application/accounts/chatlink.go`, `backend/internal/domain/linkcode`, `backend/internal/adapters/telegram`.
 
-1. The user clicks **Connect channel**. SocialOS creates a code like `SOS-7KQ2M9XA`, shown once. Only its hash is stored. It is valid
+1. The user clicks **Connect channel**. Steerpost creates a code like `SOS-7KQ2M9XA`, shown once. Only its hash is stored. It is valid
    **15 minutes** (`linkcode.TTL`), usable once, and a user holds at most **3** active codes (starting a fourth retires the oldest).
 2. The user adds the bot as **administrator with the "Post messages" right** (channel: *Administrators > Add admin*; group: same).
 3. The user posts the code in that chat as a normal message.
 4. The update reaches `HandleChatUpdate` (webhook or polling). A channel post is trusted (only admins can post). In a group the sender
    must be the creator or an administrator (`getChatMember`), anonymous admins included; other senders are ignored.
-5. SocialOS re-checks the bot's rights with `getMe`, `getChat` and `getChatMember` (`VerifyChat`): only channels and groups,
+5. Steerpost re-checks the bot's rights with `getMe`, `getChat` and `getChatMember` (`VerifyChat`): only channels and groups,
    never private chats, and the bot must be allowed to post. Then the account is stored for the code's owner and the bot **deletes the
    code message** (best effort).
 6. Wrong, expired or reused codes and non-admin senders get no reply, so nothing leaks. They are only visible in debug logs
@@ -78,7 +78,7 @@ Source: `adapters/telegram/telegram.go` (constants and `Validate`), `upload.go`,
 | Media types | photo (`sendPhoto`), video (`sendVideo`), GIF (`sendAnimation`), 2-10 items as album (`sendMediaGroup`, caption on the first item) | |
 | Delete | supported | |
 
-Rate limits: SocialOS has no own throttle for Telegram. On HTTP 429 the adapter reads `retry_after` and classifies the failure as
+Rate limits: Steerpost has no own throttle for Telegram. On HTTP 429 the adapter reads `retry_after` and classifies the failure as
 retryable, so the worker retries with backoff (max 5). Telegram's own guidance is about 1 message per second per chat and 20 per
 minute per group; schedule bursts accordingly. `403` ("bot was kicked / lost rights") is an auth failure: the user must re-add the
 bot and reconnect.
@@ -89,6 +89,6 @@ bot and reconnect.
 |---|---|
 | Code posted, nothing happens (webhook) | `webhook-info`: wrong `url`, `last error`, growing `pending updates`; check `TELEGRAM_WEBHOOK_SECRET` equals the one used at `set-webhook`, and that `TELEGRAM_UPDATES_MODE=webhook` is set. |
 | Worker logs a hint about a webhook while polling | A webhook is still set: `delete-webhook`. |
-| Another service stopped receiving updates | You replaced its webhook. Restore it, or give SocialOS its own bot. |
+| Another service stopped receiving updates | You replaced its webhook. Restore it, or give Steerpost its own bot. |
 | Code expired | Click **Connect channel** again for a new one. |
 | Group works, channel does not (or the reverse) | The bot must be an admin with "Post messages" in that chat. |

@@ -1,7 +1,7 @@
-# Runs the SocialOS guard every 2 minutes. Install: README, "Sharing a host safely". Stop it without uninstalling:
+# Runs the Steerpost guard every 2 minutes. Install: README, "Sharing a host safely". Stop it without uninstalling:
 # systemctl disable --now socialos-guard.timer (nothing it did is undone: socialos-guard.sh --resume does that).
 [Unit]
-Description=SocialOS guard: check the shared host every 2 minutes
+Description=Steerpost guard: check the shared host every 2 minutes
 
 [Timer]
 OnBootSec=3min

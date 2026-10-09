@@ -114,7 +114,7 @@ run
 assert_eq "guard shed: exit" 0 "$rc"
 assert_eq "guard shed: no deploy" "" "$(calls)"
 assert_no_file "guard shed: GitHub not asked" "$SB/curl.calls"
-assert_has "guard shed: explained" "$out" "host guard has shed SocialOS load (level 2)"
+assert_has "guard shed: explained" "$out" "host guard has shed Steerpost load (level 2)"
 rm "$SB/app/.deploy/guard/shed"
 run
 assert_eq "guard resumed: deploys" "1.2.3" "$(calls)"

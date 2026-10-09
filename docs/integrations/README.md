@@ -69,7 +69,7 @@ The requested scopes are `openid profile email w_member_social`. Posting to comp
 
 ## Telegram
 
-SocialOS runs **one bot for the whole deployment**. If connecting only needed the channel's `@username`, any user could attach somebody else's channel, because the bot is an admin of all of them. So a chat is linked only when the user proves they control it with a one-time code.
+Steerpost runs **one bot for the whole deployment**. If connecting only needed the channel's `@username`, any user could attach somebody else's channel, because the bot is an admin of all of them. So a chat is linked only when the user proves they control it with a one-time code.
 
 Setup (operator):
 
@@ -80,7 +80,7 @@ Setup (operator):
 
 Connecting (user, on `/accounts`):
 
-1. Click **Connect channel**. SocialOS shows a code such as `SOS-7KQ2M9XA`, valid for 15 minutes and usable once.
+1. Click **Connect channel**. Steerpost shows a code such as `SOS-7KQ2M9XA`, valid for 15 minutes and usable once.
 2. Add the bot to your channel or group as an administrator with the **Post messages** right.
 3. Post the code in that chat as a normal message. The page detects it within a couple of seconds, shows the connected chat and the bot deletes your message.
 

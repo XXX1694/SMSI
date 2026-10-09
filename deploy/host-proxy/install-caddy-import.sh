@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Put the staged SocialOS sites into the host's Caddy, safely. Run as root, after ./host-proxy/render-caddy.sh has staged
+# Put the staged Steerpost sites into the host's Caddy, safely. Run as root, after ./host-proxy/render-caddy.sh has staged
 # /opt/socialos/caddy/staging/socialos.caddy. The host Caddyfile gets one line: `import /opt/socialos/caddy/*.caddy`.
 #
 #   sudo ./host-proxy/install-caddy-import.sh                 # URLs to check come from HOST_PROXY_CHECK_URLS
@@ -136,7 +136,7 @@ import_present() {
 # append_import: the import line goes at the end of the Caddyfile, on its own line.
 append_import() {
   if [ -n "$(tail -c 1 "$CADDYFILE")" ]; then printf '\n' >>"$CADDYFILE" || return 1; fi
-  printf '\n# SocialOS (added by %s)\n%s\n' "$SOCIALOS_DIR/host-proxy/install-caddy-import.sh" "$IMPORT_LINE" >>"$CADDYFILE"
+  printf '\n# Steerpost (added by %s)\n%s\n' "$SOCIALOS_DIR/host-proxy/install-caddy-import.sh" "$IMPORT_LINE" >>"$CADDYFILE"
 }
 
 # set_names DIR: the names of the *.caddy files in DIR, space separated.
@@ -224,7 +224,7 @@ rollback() {
     fi
   fi
   if [ "$files_ok" = true ] && { [ "$reload_ok" = true ] || [ "$reloaded_new" = false ]; } && [ "$checks_ok" = true ]; then
-    warn "ROLLED BACK. The host is as it was before this run; SocialOS is not routed (or still on its last applied version)."
+    warn "ROLLED BACK. The host is as it was before this run; Steerpost is not routed (or still on its last applied version)."
   else
     rc=4
     warn "ROLLBACK NOT VERIFIED: act on the messages above before anything else."

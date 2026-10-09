@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy a published SocialOS image tag on this server (single-host docker compose).
+# Deploy a published Steerpost image tag on this server (single-host docker compose).
 #
 #   ./deploy.sh <tag>               pull <tag>, run migrations, restart, wait for /ready, roll back on failure
 #   ./deploy.sh <tag> --no-migrate  same, without running migrations
@@ -79,7 +79,7 @@ public_check() {
   if has_service caddy; then
     proxy_hint="docker compose logs caddy"
   else
-    proxy_hint="host-proxy mode: is the SocialOS import in the host's Caddyfile (host-proxy/install-caddy-import.sh)? journalctl -u caddy"
+    proxy_hint="host-proxy mode: is the Steerpost import in the host's Caddyfile (host-proxy/install-caddy-import.sh)? journalctl -u caddy"
   fi
   if [ "$SKIP_PUBLIC_CHECK" = 1 ] || [ -z "$domain" ] || ! command -v curl >/dev/null 2>&1; then return 0; fi
   for url in "https://api.${domain}/ready" "https://app.${domain}/login"; do
@@ -113,7 +113,7 @@ cleanup_images() {
   done < <(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E "^ghcr\.io/${owner}/socialos-(backend|mcp|frontend):" || true)
 }
 
-# Untagged leftovers of the SocialOS images only (a moving tag such as main leaves them behind). Never a bare
+# Untagged leftovers of the Steerpost images only (a moving tag such as main leaves them behind). Never a bare
 # `docker image prune`: on a shared host that would also delete other workloads' untagged images. release.yml labels the
 # images org.opencontainers.image.title=socialos-<name>.
 prune_socialos_images() {

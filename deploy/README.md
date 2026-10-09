@@ -1,11 +1,11 @@
-# Deploying SocialOS on one server
+# Deploying Steerpost on one server
 
 A single VPS runs the whole product with Docker Compose. Caddy terminates HTTPS (Let's Encrypt, automatic) and is the only
 thing that listens on the internet; everything else lives on the internal compose network.
 
 There are two ways to run it. **Standalone** (this page, sections 1-12) is the default: the stack brings its own Caddy and owns
 ports 80/443. **Host-proxy mode** (section 13) is for a server where a reverse proxy already owns 80/443: the stack then listens
-on `127.0.0.1` only and that proxy forwards to it; on a host shared with another service, section 16 keeps SocialOS to at
+on `127.0.0.1` only and that proxy forwards to it; on a host shared with another service, section 16 keeps Steerpost to at
 most half of the machine. Updates can be pushed from GitHub (section 8) or pulled by the server from GitHub Releases
 (section 14).
 
@@ -30,7 +30,7 @@ most half of the machine. Updates can be pushed from GitHub (section 8) or pulle
 | `docker-compose.host-proxy.yml` | override for host-proxy mode: no bundled Caddy, ports on `127.0.0.1`, memory limits for a small host (section 13) |
 | `host-proxy/` | `render-caddy.sh` stages the host Caddy snippet from `.env`; `install-caddy-import.sh` swaps it in, adds the one import line, validates, reloads and rolls everything back on failure (section 13) |
 | `autoupdate.sh`, `systemd/` | pull-based updates: a timer deploys the latest GitHub Release (section 14); the slice, guard and Caddy pre-check units of section 16 |
-| `host-proxy/socialos-guard.sh`, `host-proxy/caddy-precheck.sh` | sharing a host: shed SocialOS load under host pressure; keep a broken snippet from stopping the host's Caddy (section 16, runbook `host-proxy/apply-guardrails.md`) |
+| `host-proxy/socialos-guard.sh`, `host-proxy/caddy-precheck.sh` | sharing a host: shed Steerpost load under host pressure; keep a broken snippet from stopping the host's Caddy (section 16, runbook `host-proxy/apply-guardrails.md`) |
 | `tests/` | shell tests for the scripts above (`bash tests/run.sh`, needs Linux; no Docker daemon, no network) |
 | `.env.prod.example` | every variable, documented. Copy to `.env` (or use `init-env.sh`) |
 | `init-env.sh` | creates `.env` with freshly generated secrets (`openssl rand`) |
@@ -332,7 +332,7 @@ see section 5.
 - **External S3 / Cloudflare R2** instead of MinIO: see the block in `.env.prod.example` (set `COMPOSE_PROFILES=` empty, `S3_ENDPOINT`,
   `S3_USE_SSL=true`, `S3_PUBLIC_ENDPOINT=` empty, `S3_SITE=:8099`), then `docker compose up -d --remove-orphans`. Presigned URLs then
   point at your provider, so `s3.<domain>` and its DNS record are not needed.
-- **Update Postgres/Redis/Caddy/MinIO**: `deploy.sh` only pulls the SocialOS images, so infrastructure images change when you decide:
+- **Update Postgres/Redis/Caddy/MinIO**: `deploy.sh` only pulls the Steerpost images, so infrastructure images change when you decide:
   `docker compose pull postgres redis caddy && docker compose up -d`. A Postgres **major** upgrade needs dump and restore (section 9).
 - **Certificates** are in the `caddy-data` volume and renew automatically. While testing DNS, uncomment the staging CA in the
   `Caddyfile` to avoid Let's Encrypt rate limits.
@@ -377,15 +377,15 @@ certificate expires in under 14 days.
 | `install-caddy-import.sh` exits 4 (ROLLBACK NOT VERIFIED) | read its last messages: either a file could not be restored (the command to copy it back is printed), or Caddy could not be reloaded, or your sites still do not answer: `systemctl status caddy`, `journalctl -u caddy -n 50` |
 | `install-caddy-import.sh` exits 2 | a prerequisite is missing and nothing was changed: not root, nothing staged (run `render-caddy.sh`), no `HOST_PROXY_CHECK_URLS`, or `/opt/socialos/caddy` is not root-owned or is writable by others |
 | `install-caddy-import.sh` exits 3 | one of `HOST_PROXY_CHECK_URLS` was already failing before the change, so nothing was touched: fix that site first |
-| the guard stopped SocialOS containers | `./host-proxy/socialos-guard.sh --status`, `journalctl -u socialos-guard -p warning`; it starts them again by itself once the host is calm, or at once with `./host-proxy/socialos-guard.sh --resume` |
+| the guard stopped Steerpost containers | `./host-proxy/socialos-guard.sh --status`, `journalctl -u socialos-guard -p warning`; it starts them again by itself once the host is calm, or at once with `./host-proxy/socialos-guard.sh --resume` |
 | a container is OOM-killed although under its own cap | the slice is full: `systemctl show socialos.slice -p MemoryCurrent,MemoryPeak`, `journalctl -k \| grep -i oom` (section 16) |
-| SocialOS sites gone after a Caddy restart | `.deploy/guard/alerts/caddy-quarantine`: the pre-check moved a snippet Caddy rejected to `caddy/quarantine/`; fix it, then `render-caddy.sh` and `install-caddy-import.sh` |
+| Steerpost sites gone after a Caddy restart | `.deploy/guard/alerts/caddy-quarantine`: the pre-check moved a snippet Caddy rejected to `caddy/quarantine/`; fix it, then `render-caddy.sh` and `install-caddy-import.sh` |
 | the timer deploys nothing | `journalctl -u socialos-autoupdate -n 30`, `./autoupdate.sh --dry-run` (it says "not newer", "not a release version", "skipping", ...), `systemctl list-timers`, `.deploy/autoupdate_failed` (section 14) |
 
 ## 13. Behind an existing reverse proxy (host-proxy mode)
 
 Use this when the server already runs a web server that owns ports 80 and 443 (here: **Caddy running as a systemd service**, not in
-Docker, with its configuration in `/etc/caddy/Caddyfile`). SocialOS then lives in `/opt/socialos`, runs in Docker, publishes
+Docker, with its configuration in `/etc/caddy/Caddyfile`). Steerpost then lives in `/opt/socialos`, runs in Docker, publishes
 its ports on `127.0.0.1` only, and the host Caddy serves `app.`, `api.`, `mcp.` and `s3.<domain>` by importing one generated file.
 
 ```
@@ -409,7 +409,7 @@ any failure puts the previous state back (13.5).
 | PostgreSQL | image defaults | `shared_buffers=64MB`, `max_connections=40`, `work_mem=4MB` (`POSTGRES_SHARED_BUFFERS`, `POSTGRES_MAX_CONNECTIONS`, `POSTGRES_WORK_MEM`), pools of 10 (`DB_MAX_CONNS`) |
 
 All variables are documented in `.env.prod.example`. A container above its cap is OOM-killed and restarted by Docker; it never
-takes memory from the host's other service. On a host shared with another service, also follow section 16. Every SocialOS container also has `oom_score_adj: 500`, so if the *host* ever runs
+takes memory from the host's other service. On a host shared with another service, also follow section 16. Every Steerpost container also has `oom_score_adj: 500`, so if the *host* ever runs
 out of memory the kernel picks these containers before the host's Caddy or the other service, and Postgres gets a 64 MB
 `/dev/shm` (`POSTGRES_SHM_SIZE`, in step with `shared_buffers`). Watch `docker stats --no-stream` and `free -m` during the first days, and raise a
 limit when `docker inspect -f '{{.State.OOMKilled}}' <container>` says `true`.
@@ -443,7 +443,7 @@ docker compose version
 ```
 
 Docker adds its own firewall rules (`iptables`) and sets the `FORWARD` policy to `DROP`; check that nothing else on the host
-depends on forwarding. The SocialOS ports are bound to `127.0.0.1`, so `ufw` and the cloud firewall need no change. If the images
+depends on forwarding. The Steerpost ports are bound to `127.0.0.1`, so `ufw` and the cloud firewall need no change. If the images
 are private, log in once as root (section 2); public packages need nothing.
 
 ### 13.3 Put the files in `/opt/socialos`
@@ -596,7 +596,7 @@ journalctl -u socialos-autoupdate -n 50  # one short line per run, plus deploy.s
 | the deployed tag is `sha-...` or `main` (a hand deploy) | the timer does nothing and says why, until you run `./deploy.sh X.Y.Z` for a release once |
 | you rolled back by hand (`./deploy.sh --rollback`) | the latest release is newer than the rolled-back tag, so the next run deploys it again: set `AUTOUPDATE=false` first (`deploy.sh` reminds you) |
 
-It updates the three SocialOS images only. The files in `/opt/socialos` (compose files, scripts, `.env`) are never touched; refresh
+It updates the three Steerpost images only. The files in `/opt/socialos` (compose files, scripts, `.env`) are never touched; refresh
 them when a release changes `deploy/` (13.8). Because migrations stay backward compatible (section 5), a rollback to the previous
 tag works against the migrated database.
 
@@ -677,11 +677,13 @@ resource, so renaming one is a migration, not a find-and-replace. Do not "clean 
 | Caddy snippet names `socialos.caddy`, `socialos_common` | Imported by the host's Caddyfile. |
 | `SOCIALOS_DIR`, `SOCIALOS_CGROUP_PARENT`, `SOCIALOS_PIDS_LIMIT` | Read from the server `.env`. |
 | `SOCIALOS_API_URL`, `SOCIALOS_API_KEY`, `SOCIALOS_TIMEOUT_MS` | Still read, as a fallback after `STEERPOST_*`; compose sets both. Generated client configs also still use the old names until the identifier rename lands. |
+| `SOCIALOS_AUTH_HEADER` (env var in generated `stdio` client configs) | Kept on purpose: configs users already pasted into their clients keep working. The config key itself is now `steerpost`. |
+| GitHub URLs containing `SMSI` | The repository has not been renamed yet. |
 | Images `socialos-{backend,mcp,frontend}` | Published next to `steerpost-*` until every server pulls the new names. |
 
 ## 16. Sharing a host safely
 
-On a host that also runs another production service (host-proxy mode, section 13), SocialOS must never slow that service
+On a host that also runs another production service (host-proxy mode, section 13), Steerpost must never slow that service
 down or take it with it, and should use at most half of the machine. Memory caps per container (section 13) are not enough
 on their own: containers could still swap, a fork bomb could use the host's thread table, and the Docker daemons are
 unbounded. This section adds the layers below; the exact, ordered commands with checks and rollbacks for an existing
@@ -690,16 +692,16 @@ installation are in [`host-proxy/apply-guardrails.md`](host-proxy/apply-guardrai
 
 | Layer | What it does | Enforced by |
 |---|---|---|
-| `socialos.slice` (`systemd/socialos.slice`) | every SocialOS container runs in one slice: at most 1 CPU (`CPUQuota=100%` of 2) and half the CPU weight of the other services, throttled from 616M and OOM-killed inside the slice at 664M, no swap, 512 tasks, disk reads capped at 60 MB/s | the kernel (cgroup v2), even when dockerd is down |
+| `socialos.slice` (`systemd/socialos.slice`) | every Steerpost container runs in one slice: at most 1 CPU (`CPUQuota=100%` of 2) and half the CPU weight of the other services, throttled from 616M and OOM-killed inside the slice at 664M, no swap, 512 tasks, disk reads capped at 60 MB/s | the kernel (cgroup v2), even when dockerd is down |
 | per container (`docker-compose.host-proxy.yml`) | `cgroup_parent: socialos.slice`, `mem_limit` (section 13), `memswap_limit` = `mem_limit`, `pids_limit` 128, `oom_score_adj` 500; backend and worker `GOMEMLIMIT=100MiB` in 160m | Docker and the kernel |
 | dockerd / containerd drop-ins (`systemd/*.service.d/socialos.conf`) | each daemon at most a quarter of a CPU, half the CPU weight, a soft `MemoryHigh` (192M / 128M). Resource settings only, no boot ordering against the other services (no risk of an ordering cycle) | systemd, no restart needed |
-| the guard (`host-proxy/socialos-guard.sh`, timer every 2 min) | under host pressure **to which SocialOS contributes**, it stops the worker, then the non-essential containers, and starts them again once the host is calm; it alerts on everything else | a oneshot service in `system.slice` |
+| the guard (`host-proxy/socialos-guard.sh`, timer every 2 min) | under host pressure **to which Steerpost contributes**, it stops the worker, then the non-essential containers, and starts them again once the host is calm; it alerts on everything else | a oneshot service in `system.slice` |
 | Caddy pre-check (`host-proxy/caddy-precheck.sh`) | runs before every start of the host's Caddy; if our snippet makes the Caddyfile invalid, it moves the snippet to `caddy/quarantine/` so that Caddy, and the other sites, still start | `Before=caddy.service`, weak `Wants=` |
 
 **The budget**, for the 2 vCPU / 1.97 GB / 40 GB host: RAM 664M (slice, hard) + 192M (dockerd, soft) + 128M (containerd,
 soft) = 984M, half of the RAM. CPU: one CPU for the containers plus a quarter each for the daemons (1.5 of 2 at most, and
 a third of the contended CPU when the other services want it too). Swap: none. Disk: alerts at 80% of the disk and at 15 GB
-of SocialOS data. Docker needs no `daemon.json` change and no restart: the cgroup driver is already `systemd` on cgroup v2
+of Steerpost data. Docker needs no `daemon.json` change and no restart: the cgroup driver is already `systemd` on cgroup v2
 (`docker info -f '{{.CgroupDriver}} {{.CgroupVersion}}'` says `systemd 2`); with the `cgroupfs` driver `cgroup_parent`
 would not name a systemd slice, so set `SOCIALOS_CGROUP_PARENT=` (empty) there.
 
@@ -707,7 +709,7 @@ would not name a systemd slice, so set `SOCIALOS_CGROUP_PARENT=` (empty) there.
 slice (overcommit of about 35%). About 0.3 GB is in use, so the slice only binds when several containers peak at once; then the OOM kill happens
 inside the slice, never to the other service (the slice hard cap still protects the host). MinIO is 192m, not 80m: at 80m it thrashed its own page cache (D-012, incident 2026-10-09). Making the caps fit the slice would leave the backend too little room for
 uploads (it needs about 60 MiB outside the Go heap for multipart and upload buffers); raising the slice to 848M would put
-SocialOS at about 56% of the RAM. Raising a container's cap does not raise the slice. After a deploy and after a load
+Steerpost at about 56% of the RAM. Raising a container's cap does not raise the slice. After a deploy and after a load
 test, check `systemctl show socialos.slice docker containerd -p MemoryPeak` and
 `docker inspect -f '{{.Name}} {{.State.OOMKilled}}' $(docker compose ps -aq)`.
 
@@ -730,16 +732,16 @@ URLs whose failure is reported. Tune a slice value with a drop-in (`systemctl ed
 unit, so that a refresh of `/opt/socialos` does not undo it.
 
 **What the guard does, and does not do.** Each run measures the host (RAM available, swap, memory stall time, and the
-protected services' own CPU, IO and memory stall times from their PSI files) and SocialOS's share (its CPU and disk IO since the last run). It acts only when both say so; the thresholds are `GUARD_*` in `.env`:
+protected services' own CPU, IO and memory stall times from their PSI files) and Steerpost's share (its CPU and disk IO since the last run). It acts only when both say so; the thresholds are `GUARD_*` in `.env`:
 
 | Level | When (defaults) | Action |
 |---|---|---|
 | 0 | none of the below | nothing; what the guard stopped is started again after 3 calm runs (level 1) or 5 (level 2, doubled for each level 2 within a day, at most 2 hours) |
-| 1, pressure | RAM available < 15%, swap > 80% used, memory stall > 10%, or a protected service waits > 20% of the time for CPU, IO or memory; **and** SocialOS uses ≥ 300 MB of anonymous memory (page cache does not count), ≥ 40% of a CPU or ≥ 10 MB/s of disk IO | stop the worker gracefully (its stop grace period): scheduled posts go out late, not lost |
-| 2, critical, twice in a row | RAM available < 8%, memory stall > 30%, a protected service stalls > 50%; and SocialOS contributes as above | also stop `GUARD_SHED_SERVICES` (`worker mcp frontend`); Postgres, Redis, MinIO and the API keep running |
+| 1, pressure | RAM available < 15%, swap > 80% used, memory stall > 10%, or a protected service waits > 20% of the time for CPU, IO or memory; **and** Steerpost uses ≥ 300 MB of anonymous memory (page cache does not count), ≥ 40% of a CPU or ≥ 10 MB/s of disk IO | stop the worker gracefully (its stop grace period): scheduled posts go out late, not lost |
+| 2, critical, twice in a row | RAM available < 8%, memory stall > 30%, a protected service stalls > 50%; and Steerpost contributes as above | also stop `GUARD_SHED_SERVICES` (`worker mcp frontend`); Postgres, Redis, MinIO and the API keep running |
 
 If the pressure comes from elsewhere (the other service itself, apt, journald), the guard only raises the `pressure` alert
-and says that SocialOS is not a real contributor. It starts again only the containers it stopped itself
+and says that Steerpost is not a real contributor. It starts again only the containers it stopped itself
 (`.deploy/guard/stopped`), never one a human stopped; `socialos-guard.sh --resume` does that at once. While anything is shed,
 `autoupdate.sh` deploys nothing. The guard acts only on containers labelled `com.docker.compose.project=socialos`, reads the
 protected services' state and cgroup files and never starts, stops, restarts or reconfigures them. A full disk is an alert
@@ -757,11 +759,11 @@ the other site as well: add its URL to `UPTIME_URLS`.
 | deploy (image pull and unpack) | dockerd and containerd capped; no deploy while the guard sheds load |
 | Docker daemon crash, restart or upgrade | the limits are kernel cgroups and stay; live-restore keeps the containers; Docker and Caddy come from third-party apt repositories, so unattended-upgrades (Ubuntu origins only) does not upgrade them |
 | host reboot | the slice limits apply as the containers start; the guard starts 3 minutes after boot. Docker is not ordered against the other services (an ordering there could form a cycle that makes systemd drop a start job) |
-| broken SocialOS snippet at Caddy start | moved to `caddy/quarantine/`, Caddy starts without the SocialOS sites, alert `caddy-quarantine`; a pre-check interrupted midway is undone by the next one |
+| broken Steerpost snippet at Caddy start | moved to `caddy/quarantine/`, Caddy starts without the Steerpost sites, alert `caddy-quarantine`; a pre-check interrupted midway is undone by the next one |
 | `/opt/socialos/caddy` missing | nothing: an `import` glob that matches no file is not an error for Caddy |
-| disk fills up | alert at 80% and at 15 GB of SocialOS data. There is no hard filesystem quota on ext4 without remounting; a separate volume or loop file for the Docker data is the next step if the data grows |
-| Let's Encrypt or sslip.io outage | only SocialOS hostnames lack certificates; limits are per hostname, so the other site's renewals are unaffected |
-| port conflict | SocialOS binds only `127.0.0.1:13000/13333/18080/19000` |
+| disk fills up | alert at 80% and at 15 GB of Steerpost data. There is no hard filesystem quota on ext4 without remounting; a separate volume or loop file for the Docker data is the next step if the data grows |
+| Let's Encrypt or sslip.io outage | only Steerpost hostnames lack certificates; limits are per hostname, so the other site's renewals are unaffected |
+| port conflict | Steerpost binds only `127.0.0.1:13000/13333/18080/19000` |
 
 **A container that thrashes its page cache.** When a container sits at 95% of its `memory.max` (`GUARD_THRASH_MEM_PCT`)
 and re-reads the pages it just lost faster than 20 MB/s (`workingset_refault_file`, `GUARD_THRASH_REFAULT_MBPS`), its cap is
@@ -776,4 +778,4 @@ container with the most disk IO and says when shedding does not stop it.
 IO is the one budget without a proof: the host disk uses the `none` scheduler without `io.cost`, so `IOWeight` has no
 effect. The slice caps reads at 60 MB/s and deliberately has **no write cap** until the disk has been measured in a
 maintenance window: throttled writeback can hold up ext4 journal commits, and with them the other service's `fsync`. The
-guard watches the outcome that matters, the other service's IO stall time, and SocialOS's own IO rate.
+guard watches the outcome that matters, the other service's IO stall time, and Steerpost's own IO rate.

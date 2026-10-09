@@ -18,7 +18,7 @@
 # A tag whose deploy failed is remembered in .deploy/autoupdate_failed and not tried again until a newer release appears
 # (delete that file to retry; a manual `./deploy.sh <tag>` that succeeds makes it irrelevant). Output goes to the journal:
 #   journalctl -u socialos-autoupdate
-# It updates the three SocialOS images only. The files in this directory (compose files, scripts) are not touched.
+# It updates the three Steerpost images only. The files in this directory (compose files, scripts) are not touched.
 # While .deploy/guard/shed exists (the host guard shed load because the host is under pressure) it deploys nothing.
 set -Eeuo pipefail
 
@@ -129,10 +129,10 @@ case "$(printf '%s' "$enabled" | tr '[:upper:]' '[:lower:]')" in
     ;;
 esac
 
-# A deploy pulls and unpacks images: the heaviest thing SocialOS does to a host. Not while the guard is shedding load
+# A deploy pulls and unpacks images: the heaviest thing Steerpost does to a host. Not while the guard is shedding load
 # because the host is under pressure (host-proxy/socialos-guard.sh); it resumes by itself or with --resume.
 if [ -e "$STATE_DIR/guard/shed" ]; then
-  log "skipping: the host guard has shed SocialOS load (level $(cat "$STATE_DIR/guard/shed" 2>/dev/null || true)); see host-proxy/socialos-guard.sh --status"
+  log "skipping: the host guard has shed Steerpost load (level $(cat "$STATE_DIR/guard/shed" 2>/dev/null || true)); see host-proxy/socialos-guard.sh --status"
   exit 0
 fi
 

@@ -1,5 +1,5 @@
 /**
- * In-browser implementation of the SocialOS REST contract (docs/ARCHITECTURE.md section 4).
+ * In-browser implementation of the Steerpost REST contract (docs/ARCHITECTURE.md section 4).
  * A typed port of scripts/mock-api.mjs: same routes, same status codes, same error format,
  * same state machine. One user, no tenants; state lives in memory and the caller persists it
  * through `onChange`.
@@ -527,8 +527,8 @@ export class DemoEngine {
       id: link.id,
       code,
       expires_at: link.expires_at,
-      bot_username: 'socialos_bot',
-      instructions: `Add @socialos_bot as an administrator of your Telegram channel or group with the "Post messages" right. Post this code there as a normal message: ${code}. The code expires in 15 minutes and works once.`,
+      bot_username: 'steerpost_bot',
+      instructions: `Add @steerpost_bot as an administrator of your Telegram channel or group with the "Post messages" right. Post this code there as a normal message: ${code}. The code expires in 15 minutes and works once.`,
     });
   }
 

@@ -63,4 +63,14 @@ describe('demo approvals endpoints', () => {
     const storage: StorageLike = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v), removeItem: (k) => void store.delete(k) };
     expect(loadState(storage).approvals.length).toBeGreaterThan(0);
   });
+
+  it('a demo saved under the old login email is restored with the new one', () => {
+    const old = structuredClone(buildSeed(new Date()));
+    old.user.email = 'demo@socialos.dev';
+    const store = new Map([[STORAGE_KEY, JSON.stringify(old)]]);
+    const storage: StorageLike = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v), removeItem: (k) => void store.delete(k) };
+    const restored = loadState(storage);
+    expect(restored.user.email).toBe('demo@example.com');
+    expect(restored.posts.length).toBe(old.posts.length);
+  });
 });

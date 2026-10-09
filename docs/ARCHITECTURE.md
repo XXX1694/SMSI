@@ -1,4 +1,4 @@
-# SocialOS — Architecture & Contract
+# Steerpost — Architecture & Contract
 
 This document is the single source of truth for the backend, MCP server and frontend.
 All three components are implemented against the contract below.
@@ -7,7 +7,7 @@ All three components are implemented against the contract below.
 
 ```
 User (browser) ──► Next.js frontend ─┐
-                                      ├──► SocialOS REST API (Go, :8080) ──► Social Core ──► Adapters (LinkedIn, Telegram, Mock…)
+                                      ├──► Steerpost REST API (Go, :8080) ──► Social Core ──► Adapters (LinkedIn, Telegram, Mock…)
 AI agent ──► MCP server (TS, :3333) ──┘             │                             │
                                                      ├─ PostgreSQL (source of truth)
                                                      ├─ Redis + Asynq (queue)      ◄── Worker (Go) runs publish jobs
@@ -65,7 +65,7 @@ ProviderCapabilities { CanPublishText, CanPublishImage, CanPublishVideo, CanSche
 ```
 `ConnectFields` (`connect_fields` in JSON) is the form of a `token` provider: `{name, label, help, placeholder, kind: text|secret|url, required, secret}`; `secret: true` marks a credential whatever its kind (a webhook URL is a `url` field and a password): it is rendered as a password input, never echoed, and the connect leak check treats it as a secret. `max_image_bytes` and `requires_title` are omitted when they do not apply. `CheckContent` applies the stricter of these limits and the account's own `metadata.limits` (`max_characters`, `max_media`, `max_image_bytes`), and requires a title when `requires_title` is set. See "Connect with a token" below.
 * **LinkedIn** – real adapter (OAuth 2.0 auth-code, OpenID `userinfo`, `/rest/posts`, `w_member_social`). Text + image; video marked unsupported in MVP; company pages need Marketing Developer Platform approval (`RequiresApproval=true`, flagged in Notes). Analytics: false.
-* **Telegram** – real adapter (Bot API). Not OAuth, and **one platform-wide bot** (`TELEGRAM_BOT_TOKEN`) serves every tenant. Because the bot is shared, knowing a channel's `@username` proves nothing: "the bot is admin there" is true for every user's channel. A chat is therefore connected only by **proof of control**: the user asks SocialOS for a one-time link code, adds the bot as admin with "Post messages" and posts the code in the chat. The bot sees the post (`channel_post` / group `message`), the backend matches the code to its owner, re-checks the bot's rights on that chat (`getChat`/`getChatMember`) and creates the `social_account` for **that user only**. There is no endpoint that takes a chat name or id. The bot token is never stored per account (account metadata keeps a `token_ref` only). Text, image, video, delete. Analytics: false.
+* **Telegram** – real adapter (Bot API). Not OAuth, and **one platform-wide bot** (`TELEGRAM_BOT_TOKEN`) serves every tenant. Because the bot is shared, knowing a channel's `@username` proves nothing: "the bot is admin there" is true for every user's channel. A chat is therefore connected only by **proof of control**: the user asks Steerpost for a one-time link code, adds the bot as admin with "Post messages" and posts the code in the chat. The bot sees the post (`channel_post` / group `message`), the backend matches the code to its owner, re-checks the bot's rights on that chat (`getChat`/`getChatMember`) and creates the `social_account` for **that user only**. There is no endpoint that takes a chat name or id. The bot token is never stored per account (account metadata keeps a `token_ref` only). Text, image, video, delete. Analytics: false.
 * **mock** – deterministic in-memory/DB-less provider used by tests and `SOCIAL_MOCK_PROVIDERS=true` dev mode. Clearly labelled.
 * **mocktoken** – the mock for the token connect flow (`SOCIAL_MOCK_PROVIDERS=true` only; production refuses mocks).
 * instagram, facebook, tiktok, youtube, x, threads, pinterest, reddit, medium, hashnode – **registered as `unsupported` stubs** returning `PROVIDER_NOT_AVAILABLE` and capabilities with `RequiresApproval=true`. Not pretended to work.
@@ -248,7 +248,7 @@ Env: `MCP_GATEWAY_SECRET` (backend and mcp share it; min 32 chars, empty = disab
 `GET /health` (liveness) · `GET /ready` (Postgres + Redis + S3) · `GET /metrics` (Prometheus text, basic counters, optionally token-protected)
 
 ### Scopes
-`social:read` (accounts, providers) · `posts:read` · `posts:write` (create/update drafts, cancel) · `posts:schedule` · `posts:publish` (**sensitive**) · `posts:delete` (**sensitive**) · `social:disconnect` (**critical**) · `social:connect` (**critical**, hands a network credential to SocialOS) · `media:write` · `analytics:read`.
+`social:read` (accounts, providers) · `posts:read` · `posts:write` (create/update drafts, cancel) · `posts:schedule` · `posts:publish` (**sensitive**) · `posts:delete` (**sensitive**) · `social:disconnect` (**critical**) · `social:connect` (**critical**, hands a network credential to Steerpost) · `media:write` · `analytics:read`.
 Browser sessions have all scopes. API keys carry only granted scopes; `publish`, `delete`, `connect`, `disconnect` are never in default sets; UI shows them under a "Dangerous" heading and requires confirmation. Using them with a key also needs the owner's approval per action (Approvals, D-013). API keys can never create/revoke API keys, or change password (session-only).
 
 ## 5. MCP tools

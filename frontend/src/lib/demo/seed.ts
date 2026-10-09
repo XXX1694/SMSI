@@ -12,7 +12,7 @@ import { seedApprovals } from './approvals';
 import { SEED_ID, seedId, seedPostId } from './ids';
 import type { DemoPost, DemoState } from './model';
 
-export const DEMO_USER_EMAIL = 'demo@socialos.dev';
+export const DEMO_USER_EMAIL = 'demo@example.com';
 export const DEMO_USER_PASSWORD = 'demo12345';
 
 const MIN = 60_000;
