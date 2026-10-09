@@ -3,7 +3,7 @@ import { localeScript } from '@/i18n/head-script';
 
 function run(stored: string | null, enabled: string[]) {
   window.localStorage.clear();
-  if (stored) window.localStorage.setItem('socialos_locale', stored);
+  if (stored) window.localStorage.setItem('steerpost_locale', stored);
   const h = document.documentElement;
   h.lang = 'en';
   h.dir = 'ltr';
@@ -23,7 +23,7 @@ describe('head script', () => {
     expect([h.lang, h.dir, h.hasAttribute('data-i18n-pending')]).toEqual(['en', 'ltr', false]);
   });
   it('does not hide anything when the server already rendered that locale', () => {
-    window.localStorage.setItem('socialos_locale', 'ar');
+    window.localStorage.setItem('steerpost_locale', 'ar');
     document.documentElement.lang = 'ar';
     new Function(localeScript(['en', 'ar']))();
     expect(document.documentElement.hasAttribute('data-i18n-pending')).toBe(false);

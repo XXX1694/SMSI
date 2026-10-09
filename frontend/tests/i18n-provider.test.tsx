@@ -61,34 +61,34 @@ describe('LocaleProvider', () => {
   });
 
   it('a missing key falls back to English', async () => {
-    window.localStorage.setItem('socialos_locale', 'ar');
+    window.localStorage.setItem('steerpost_locale', 'ar');
     setup();
     await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('ar|لوحة التحكم|Compose'));
   });
 
   it('localStorage beats navigator.languages; the user setting beats localStorage', async () => {
     languages(['ar']);
-    window.localStorage.setItem('socialos_locale', 'en');
+    window.localStorage.setItem('steerpost_locale', 'en');
     setup();
     await waitFor(() => expect(document.documentElement.lang).toBe('en'));
     expect(screen.getByTestId('probe')).toHaveTextContent('en|Dashboard');
   });
 
   it('the user setting beats localStorage', async () => {
-    window.localStorage.setItem('socialos_locale', 'en');
+    window.localStorage.setItem('steerpost_locale', 'en');
     setup(<Probe />, { userLocale: 'ar' });
     await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('ar|'));
   });
 
   it('ignores a stored locale that is not enabled', async () => {
-    window.localStorage.setItem('socialos_locale', 'ru');
+    window.localStorage.setItem('steerpost_locale', 'ru');
     setup();
     await waitFor(() => expect(document.documentElement.lang).toBe('en'));
     expect(screen.getByTestId('probe')).toHaveTextContent('en|Dashboard');
   });
 
   it('the pseudo-locale is available outside production builds', async () => {
-    window.localStorage.setItem('socialos_locale', 'en-XA');
+    window.localStorage.setItem('steerpost_locale', 'en-XA');
     setup();
     await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('en-XA|[Ď'));
     expect(document.documentElement.lang).toBe('en-XA');
@@ -104,10 +104,10 @@ describe('LanguageSelect', () => {
     expect(options).toEqual(['English', 'العربية (Beta translation)', 'Pseudo-locale (testing)']);
     await userEvent.selectOptions(select, 'ar');
     await waitFor(() => expect(document.documentElement.dir).toBe('rtl'));
-    expect(window.localStorage.getItem('socialos_locale')).toBe('ar');
+    expect(window.localStorage.getItem('steerpost_locale')).toBe('ar');
     await userEvent.selectOptions(screen.getByRole('combobox'), 'en');
     await waitFor(() => expect(document.documentElement.dir).toBe('ltr'));
-    expect(window.localStorage.getItem('socialos_locale')).toBe('en');
+    expect(window.localStorage.getItem('steerpost_locale')).toBe('en');
   });
 
   it('the compact variant has an accessible name', () => {

@@ -432,7 +432,7 @@ The runtime is a small in-house ICU subset (`src/i18n/icu.ts`: arguments, number
 CHANGELOG), this is about 2 kB. A test asserts that it prints the same text as FormatJS `intl-messageformat`, and
 `npm run i18n:check` validates every catalog with the official FormatJS parser. Switching to next-intl later means changing
 the import of `useTranslations`. The locale is resolved in the browser, the same way in the
-standalone and the static-export build: `users.locale` → `localStorage socialos_locale` → `navigator.languages` → `en`.
+standalone and the static-export build: `users.locale` → `localStorage steerpost_locale` → `navigator.languages` → `en`.
 There are no `/[locale]/` routes in the app; the landing page gets `/{locale}/` pages with hreflang. Locales: `en` (source),
 then `ru`; `es`, `pt-BR`, `de`, `fr`, `id`; `ja`, `zh-CN`; `kk` (hidden until a native review); `ar` last, after logical CSS.
 This supersedes the wave table in docs/copy/languages.md: `uk` waits, `zh-CN` is in. `uk` and `zh-Hant` fall back to `en`.
@@ -442,7 +442,7 @@ Translations are machine-drafted with the glossary, back-translated on a sample 
 native speaker signs `docs/copy/review/{locale}.md`. CI blocks missing keys in every enabled locale.
 
 **First paint.** English is a static import of the provider module (a cached JS chunk), not a prop, so it is not
-serialised into every document. Other catalogs are lazy chunks. In the server build the root layout reads a `socialos_locale`
+serialised into every document. Other catalogs are lazy chunks. In the server build the root layout reads a `steerpost_locale`
 cookie (written by the switcher, not a secret) and renders that catalog first, which makes routes dynamic. The static demo has
 no request: it resolves from `localStorage` on the client, and a head script hides the shell (`data-i18n-pending`, at most
 1.5 s) only when the stored locale differs from the rendered one, to avoid a visible flash. The head script and the cookie

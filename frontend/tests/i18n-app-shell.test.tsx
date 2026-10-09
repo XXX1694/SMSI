@@ -35,7 +35,7 @@ describe('sidebar navigation labels come from the catalog', () => {
   });
 
   it('shows pseudo-locale labels when en-XA is chosen (proves the pipeline end to end)', async () => {
-    window.localStorage.setItem('socialos_locale', 'en-XA');
+    window.localStorage.setItem('steerpost_locale', 'en-XA');
     shell();
     await waitFor(() => expect(screen.getByRole('link', { name: /^\[Ďààšĥ/ })).toBeInTheDocument());
     expect(screen.queryByRole('link', { name: 'Dashboard' })).not.toBeInTheDocument();
