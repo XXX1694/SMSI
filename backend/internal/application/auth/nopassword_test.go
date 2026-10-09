@@ -26,29 +26,27 @@ func (r *rig) socialOnly(hash string) {
 }
 
 func TestLoginOfPasswordlessUserCostsTheSameAsAnyOtherFailure(t *testing.T) {
-	for _, hash := range []string{""} {
-		r := newRig(t, false)
-		h := &verifyLog{}
-		r.svc.hasher = h
-		r.socialOnly(hash)
+	r := newRig(t, false)
+	h := &verifyLog{}
+	r.svc.hasher = h
+	r.socialOnly("")
 
-		_, _, err := r.svc.Login(ctx, r.u.Email, "any password at all", ClientInfo{})
-		if !errs.Is(err, errs.Unauthenticated) || err.Error() != errs.New(errs.Unauthenticated, "Wrong email or password.").Error() {
-			t.Fatalf("hash %q: want the generic credentials error, got %v", hash, err)
-		}
-		// Exactly one verification, against the dummy hash: the same work as for an unknown address.
-		if len(h.against) != 1 || h.against[0] != r.svc.dummyHash {
-			t.Fatalf("hash %q: verified against %q, want one check against the dummy hash", hash, h.against)
-		}
-		if len(r.sessions.ids) != 0 || len(r.audit.got) != 0 {
-			t.Fatal("a failed login must not create a session or an audit entry")
-		}
+	_, _, err := r.svc.Login(ctx, r.u.Email, "any password at all", ClientInfo{})
+	if !errs.Is(err, errs.Unauthenticated) || err.Error() != errs.New(errs.Unauthenticated, "Wrong email or password.").Error() {
+		t.Fatalf("want the generic credentials error, got %v", err)
+	}
+	// Exactly one verification, against the dummy hash: the same work as for an unknown address.
+	if len(h.against) != 1 || h.against[0] != r.svc.dummyHash {
+		t.Fatalf("verified against %q, want one check against the dummy hash", h.against)
+	}
+	if len(r.sessions.ids) != 0 || len(r.audit.got) != 0 {
+		t.Fatal("a failed login must not create a session or an audit entry")
+	}
 
-		h.against = nil
-		_, _, _ = r.svc.Login(ctx, "nobody@example.com", "any password at all", ClientInfo{})
-		if len(h.against) != 1 {
-			t.Fatalf("unknown address: %d verifications, want 1", len(h.against))
-		}
+	h.against = nil
+	_, _, _ = r.svc.Login(ctx, "nobody@example.com", "any password at all", ClientInfo{})
+	if len(h.against) != 1 {
+		t.Fatalf("unknown address: %d verifications, want 1", len(h.against))
 	}
 }
 
