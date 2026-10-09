@@ -6,6 +6,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
 ### Security
 
 - The generated Claude Desktop config no longer runs `npx -y socialos-mcp`: that npm package does not exist, and whoever registered the name would have received users' API keys. Configs, the MCP connections page and the docs now use Claude Desktop connectors or the `mcp-remote` bridge pinned to an exact version, and a regression test rejects `socialos-mcp` and unpinned `npx` packages.
@@ -43,6 +45,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - The SSRF guard also blocks site-local `fec0::/10`, IPv4-compatible `::/96` and local-use NAT64 `64:ff9b:1::/48` (the whole range is blocked).
 - Browser sessions now hold ten scopes (the new `social:connect`); the "Dangerous" list in the dashboard shows it.
 - Host-proxy mode: memory caps rebalanced to fit the slice (backend and worker 160m with `GOMEMLIMIT=100MiB`, frontend 160m, postgres 112m, minio 80m, mcp 56m, redis 32m, migrate 64m). Automatic updates do not deploy while the guard has shed load.
+- One shared table for post attempts, analytics, API usage, API keys and the audit log. On phones each row becomes a stacked card showing every column (the Error column is no longer hidden), `/developer` no longer scrolls sideways at 390 px, and wide tables can be scrolled with the keyboard.
 
 ### Fixed
 
@@ -52,10 +55,6 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - The Posts date filter now uses the timezone chosen in Settings instead of the browser's, so "From" and "To" cover whole days where you expect them.
 - Colour contrast: unsupported-network badges and the dark-mode "Scheduled" badge now meet WCAG AA (axe `color-contrast` is clean in light and dark). The dark accent is slightly lighter, in the app and on the site.
 - A failed load no longer looks like an empty list: Posts, post detail and the audit log show a titled error with a retry button, "Load more" failures keep the list on screen, and error messages are plain English (no raw codes, JSON or stack traces).
-
-### Changed
-
-- One shared table for post attempts, analytics, API usage, API keys and the audit log. On phones each row becomes a stacked card showing every column (the Error column is no longer hidden), `/developer` no longer scrolls sideways at 390 px, and wide tables can be scrolled with the keyboard.
 
 ## [0.1.0] - 2026-10-09
 
@@ -94,5 +93,6 @@ First release: the MVP, ready to self-host on one server.
 - A Telegram channel can only be connected by proving ownership with a one-time link code.
 - CI scans every change: govulncheck, npm audit, gitleaks over the history, Trivy on the images and CodeQL; the runtime images no longer ship npm.
 
-[Unreleased]: https://github.com/XXX1694/SMSI/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/XXX1694/SMSI/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/XXX1694/SMSI/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/XXX1694/SMSI/releases/tag/v0.1.0
