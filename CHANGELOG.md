@@ -31,6 +31,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- After a navigation that removes the focused control (signing in, a dialog that leaves the page) keyboard focus fell back to the top of the document; it now lands on the page's main content. Focus that is still somewhere (a sidebar link) is left alone.
 - The "Create one" and "Sign in" links between `/login` and `/register` dropped `?next=`; they keep it now, and only same-origin paths are accepted.
 
 ### Removed
