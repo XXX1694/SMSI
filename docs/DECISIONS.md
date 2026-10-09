@@ -442,11 +442,14 @@ Translations are machine-drafted with the glossary, back-translated on a sample 
 native speaker signs `docs/copy/review/{locale}.md`. CI blocks missing keys in every enabled locale.
 
 **First paint.** English is a static import of the provider module (a cached JS chunk), not a prop, so it is not
-serialised into every document. Other catalogs are lazy chunks. In the server build the root layout reads a `steerpost_locale`
-cookie (written by the switcher, not a secret) and renders that catalog first, which makes routes dynamic. The static demo has
-no request: it resolves from `localStorage` on the client, and a head script hides the shell (`data-i18n-pending`, at most
-1.5 s) only when the stored locale differs from the rendered one, to avoid a visible flash. The head script and the cookie
-accept only locales the build offers. Runtime formatting supports named number/date/time styles only (FormatJS presets);
+serialised into every document. Other catalogs are lazy chunks. Routes stay static in both builds: the HTML is English, the
+stored (or detected) locale is applied after mount, and a head script hides the shell (`data-i18n-pending`, at most 1.5 s)
+only when the stored locale is not English, so English users are unaffected and others see no flash. The head script
+accepts only locales the build offers. The `steerpost_locale` cookie is still written by the switcher for future server use.
+Measured trade-off (server build, 12 sidebar navigations): reading the cookie in the root layout made every route dynamic;
+with a `loading.tsx` the click feedback was fast (p50 144 to 14 ms at +100 ms latency) but content-ready p95 went from
+49 ms to 330 ms (React holds the reveal about 300 ms after a fallback), and without it each navigation waited for a server
+round trip. Static routes avoid both. Runtime formatting supports named number/date/time styles only (FormatJS presets);
 `i18n:check` rejects skeletons and custom patterns, and a test compares every catalog message with FormatJS.
 
 **Alternatives.** `[locale]` prefix routes with `generateStaticParams`: the app renders in the browser behind login, so no

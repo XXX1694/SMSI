@@ -20,8 +20,7 @@ interface LocaleSettings {
 
 const LocaleContext = createContext<LocaleSettings | null>(null);
 
-/** What the server already rendered: set from the locale cookie by the root layout (server build only). */
-export interface InitialLocale {
+interface LocaleState {
   locale: AppLocale;
   messages: Catalog;
 }
@@ -35,17 +34,16 @@ function applyDocument(locale: string): void {
 /**
  * Client-side locale state, no middleware and no locale routes (D-021), so it behaves the same in the server build and
  * the static demo. English is a static import (a cached JS chunk, not part of every document); other catalogs are lazy
- * chunks merged over it. In the server build the layout reads the locale cookie, so a non-English first paint is already
- * right (`initial`). In the demo the stored locale swaps in after mount, with the shell hidden meanwhile (head script).
+ * chunks merged over it. Routes stay static in both builds: the first render is English and the stored or detected locale
+ * swaps in after mount; a head script hides the shell meanwhile (`data-i18n-pending`, at most 1.5 s) only when that locale
+ * is not English, so English users see no change and others see no flash of English.
  */
 export function LocaleProvider({
   children,
-  initial,
   userLocale = null,
   enabled = ENABLED_LOCALES,
 }: {
   children: ReactNode;
-  initial?: InitialLocale;
   /** `users.locale` once the API returns it; resolution order is user setting, localStorage, navigator, en. */
   userLocale?: string | null;
   /** Which locales may be chosen; tests override it. */
@@ -55,7 +53,7 @@ export function LocaleProvider({
   const enabledKey = enabled.join(',');
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content, so an inline array does not re-run the effect
   const stableEnabled = useMemo(() => enabled, [enabledKey]);
-  const [state, setState] = useState<InitialLocale>(initial ?? { locale: 'en', messages: en });
+  const [state, setState] = useState<LocaleState>({ locale: 'en', messages: en });
   const current = useRef(state.locale);
   const seq = useRef(0);
 
@@ -74,17 +72,16 @@ export function LocaleProvider({
   }, []);
 
   useEffect(() => {
-    const stored = readStorage(LOCALE_STORAGE_KEY) ?? initial?.locale ?? null;
+    const stored = readStorage(LOCALE_STORAGE_KEY);
     const next = resolveLocale({ user: userLocale, stored, languages: navigator.languages }, { enabled: stableEnabled });
     if (next !== current.current) void activate(next);
     else applyDocument(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `initial` only seeds the first resolution
   }, [activate, userLocale, stableEnabled]);
 
   const setLocale = useCallback(
     (l: AppLocale) => {
       writeStorage(LOCALE_STORAGE_KEY, l);
-      // The server build reads this cookie so the next first paint is already in the right language. Not a secret.
+      // Not read by the app today (routes stay static); kept for future server use. Not a secret.
       document.cookie = `${LOCALE_STORAGE_KEY}=${l}; path=/; max-age=31536000; samesite=lax`;
       void activate(l);
     },
