@@ -194,7 +194,7 @@ func (a *agent) do(r *http.Request) reply {
 
 func (a *agent) register(email string) map[string]any {
 	a.h.t.Helper()
-	r := a.req("POST", "/api/v1/auth/register", map[string]any{"email": email, "password": pw, "display_name": "T"})
+	r := a.req("POST", "/api/v1/auth/register", map[string]any{"email": email, "password": pw, "display_name": "T", "accept_terms": true})
 	if r.status != 201 {
 		a.h.t.Fatalf("register: %d %s", r.status, r.body)
 	}
@@ -220,14 +220,14 @@ func TestRegisterValidation(t *testing.T) {
 	long := strings.Repeat("p", 129)
 	for name, body := range map[string]any{
 		"empty body":        `{}`,
-		"missing email":     map[string]any{"password": pw},
-		"invalid email":     map[string]any{"email": "not-an-email", "password": pw},
-		"display in email":  map[string]any{"email": "Bob <bob@example.com>", "password": pw},
+		"missing email":     map[string]any{"password": pw, "accept_terms": true},
+		"invalid email":     map[string]any{"email": "not-an-email", "password": pw, "accept_terms": true},
+		"display in email":  map[string]any{"email": "Bob <bob@example.com>", "password": pw, "accept_terms": true},
 		"email too long":    map[string]any{"email": strings.Repeat("a", 250) + "@example.com", "password": pw},
-		"short password":    map[string]any{"email": "a@example.com", "password": "short"},
-		"password 7 chars":  map[string]any{"email": "a@example.com", "password": "1234567"},
-		"password too long": map[string]any{"email": "a@example.com", "password": long},
-		"long display name": map[string]any{"email": "a@example.com", "password": pw, "display_name": strings.Repeat("n", 101)},
+		"short password":    map[string]any{"email": "a@example.com", "password": "short", "accept_terms": true},
+		"password 7 chars":  map[string]any{"email": "a@example.com", "password": "1234567", "accept_terms": true},
+		"password too long": map[string]any{"email": "a@example.com", "password": long, "accept_terms": true},
+		"long display name": map[string]any{"email": "a@example.com", "password": pw, "display_name": strings.Repeat("n", 101), "accept_terms": true},
 		"wrong field type":  `{"email": 5, "password": "x"}`,
 		"malformed json":    `{"email": "a@example.com"`,
 	} {
@@ -237,7 +237,7 @@ func TestRegisterValidation(t *testing.T) {
 		}
 	}
 	// Field-level details for forms.
-	e := a.req("POST", "/api/v1/auth/register", map[string]any{"email": "nope", "password": "x"}).apiErr(t, 400, "VALIDATION_ERROR")
+	e := a.req("POST", "/api/v1/auth/register", map[string]any{"email": "nope", "password": "x", "accept_terms": true}).apiErr(t, 400, "VALIDATION_ERROR")
 	if e["fields"] == nil {
 		t.Errorf("validation errors should say which field: %v", e)
 	}
@@ -246,7 +246,7 @@ func TestRegisterValidation(t *testing.T) {
 	}
 	// The boundary lengths work: 8 characters, 128 characters.
 	for i, p := range []string{"12345678", strings.Repeat("p", 128)} {
-		if r := h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": fmt.Sprintf("ok%d@example.com", i), "password": p}); r.status != 201 {
+		if r := h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": fmt.Sprintf("ok%d@example.com", i), "password": p, "accept_terms": true}); r.status != 201 {
 			t.Errorf("password of %d chars: %d %s", len(p), r.status, r.body)
 		}
 	}
@@ -266,7 +266,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 	}
 	// Duplicate email, any casing.
 	for _, e := range []string{"mixed.case@example.com", "MIXED.CASE@EXAMPLE.COM"} {
-		h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": e, "password": pw}).apiErr(t, 409, "CONFLICT")
+		h.anon().req("POST", "/api/v1/auth/register", map[string]any{"email": e, "password": pw, "accept_terms": true}).apiErr(t, 409, "CONFLICT")
 	}
 
 	// Cookies.

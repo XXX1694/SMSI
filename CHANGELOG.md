@@ -12,6 +12,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Added
 
+- Public pages `/privacy` and `/terms` (no sign-in, linked from the sign-in and register forms and from the app sidebar and Settings), written for a self-hosted, single-operator instance and usable as the LinkedIn app's Privacy Policy URL. They are a template, not legal advice. The operator's name and contact come from the frontend container's `OPERATOR_NAME` and `OPERATOR_CONTACT`; without them the pages say so.
+- Breaking: `POST /auth/register` requires `accept_terms: true` (otherwise `400 VALIDATION_ERROR` with `fields.accept_terms`). The register form has the matching checkbox. The accepted version and time are stored. Existing accounts are not blocked (D-016).
 - A new landing page: full-viewport hero with an animated flow of posts from agent to approval to networks, a real recorded video of the demo (WebM and MP4, light and dark, poster only on phones and with reduced motion), a sticky "agent, approval, network" walkthrough, parallax screenshots, true-fact counters, a marquee of the networks that publish today and an honest list of those that do not. Cross-document View Transitions between the landing page and the docs. Docs keep their own calm layout. See D-017.
 - Email verification, password reset and password change. Mailed links carry a single-use token in the URL fragment (48 h to verify, 30 min to reset). A reset signs out every session; a change keeps the current one. API keys and MCP connections are revoked only if you tick "Also revoke all API keys and MCP connections".
 - When `MAIL_PROVIDER=smtp`, unverified accounts get `403 EMAIL_NOT_VERIFIED` on connecting networks, scheduling, publishing, editing scheduled posts and creating API keys. With the log provider nothing is restricted and the dashboard says mail is off. Existing accounts start unverified.
@@ -41,6 +43,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- Cancelling, unscheduling or publishing a post while the worker publishes it can no longer deadlock and fail with a 500: the API and the worker now lock rows in the same order (post, then target). A database deadlock or serialization failure that still happens is reported as a retryable `CONFLICT` (#38).
+- Deploying or restarting the worker during a publish no longer sends that post to review: on SIGTERM the worker stops taking tasks, lets in-flight publishes finish (up to `WORKER_SHUTDOWN_TIMEOUT`, default 30s, at most 35s; the worker's `stop_grace_period` is now 45s instead of Docker's 10s), stops its background jobs and only then closes the database. The worker's health address is configurable as `WORKER_HTTP_ADDR` (#39).
 - The Posts date filter now uses the timezone chosen in Settings instead of the browser's, so "From" and "To" cover whole days where you expect them.
 - Colour contrast: unsupported-network badges and the dark-mode "Scheduled" badge now meet WCAG AA (axe `color-contrast` is clean in light and dark). The dark accent is slightly lighter, in the app and on the site.
 - A failed load no longer looks like an empty list: Posts, post detail and the audit log show a titled error with a retry button, "Load more" failures keep the list on screen, and error messages are plain English (no raw codes, JSON or stack traces).

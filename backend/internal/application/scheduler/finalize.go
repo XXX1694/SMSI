@@ -6,6 +6,7 @@ import (
 
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/domain/audit"
+	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/post"
 )
 
@@ -15,15 +16,15 @@ const (
 	MetricFailed    = "posts_failed"
 )
 
-// relock re-acquires target then post locks inside a new tx. The order
-// (target → post) matches begin, so the two paths cannot deadlock; the post
-// lock serialises sibling targets settling the same post.
+// relock re-acquires the post then the target lock inside a new tx. The order (post → target) is the one the API
+// and begin use everywhere (issue #38), so no path can deadlock with a cancel; the post lock also serialises sibling
+// targets settling the same post.
 func (p *Publisher) relock(ctx context.Context, r *run) error {
-	if err := p.targets.LockTargetWait(ctx, r.target.UserID, r.target.ID); err != nil {
-		return err
-	}
 	ps, err := p.posts.GetForUpdate(ctx, r.target.UserID, r.target.PostID)
 	if err != nil {
+		return err
+	}
+	if err := p.targets.LockTargetWait(ctx, r.target.UserID, r.target.ID); err != nil {
 		return err
 	}
 	r.post = ps
@@ -129,25 +130,55 @@ func (p *Publisher) fail(ctx context.Context, r *run, f failure, cause error) er
 	return nil
 }
 
-// retryLater records a failed/unknown attempt and asks the queue to retry.
+// retryLater records a failed/unknown attempt and asks the queue to retry. It relocks (post → target) and re-reads the
+// target first: a cancel or unschedule that committed during the provider call must win, so the stale in-memory
+// target is never written back over it (issue #38). In that case the attempt is still recorded and no retry is asked.
 func (p *Publisher) retryLater(ctx context.Context, r *run, f failure, unknown bool, cause error) error {
 	st := post.AttemptFailed
 	if unknown {
 		st = post.AttemptUnknown
 	}
+	stopped := false
 	err := p.tx.InTx(context.WithoutCancel(ctx), func(ctx context.Context) error {
-		t := r.target
-		t.Status, t.ErrorCode, t.ErrorMessage = post.TargetPending, f.code, f.message
-		if err := p.targets.UpdateTarget(ctx, t); err != nil {
+		if err := p.relock(ctx, r); err != nil {
 			return err
+		}
+		current, err := p.currentTargetStatus(ctx, r)
+		if err != nil {
+			return err
+		}
+		if stopped = current != post.TargetPublishing; !stopped {
+			t := r.target
+			t.Status, t.ErrorCode, t.ErrorMessage = post.TargetPending, f.code, f.message
+			if err := p.targets.UpdateTarget(ctx, t); err != nil {
+				return err
+			}
 		}
 		return p.finishAttempt(ctx, r, st, &f, nil)
 	})
 	if err != nil {
 		return &RetryableError{Err: err}
 	}
+	if stopped {
+		p.outcome(r, "cancelled")
+		return nil
+	}
 	p.outcome(r, "retry")
 	return &RetryableError{Err: cause}
+}
+
+// currentTargetStatus reads the target's status inside the transaction that holds its locks.
+func (p *Publisher) currentTargetStatus(ctx context.Context, r *run) (post.TargetStatus, error) {
+	ts, err := p.targets.ListTargets(ctx, r.target.UserID, r.target.PostID)
+	if err != nil {
+		return "", err
+	}
+	for _, t := range ts {
+		if t.ID == r.target.ID {
+			return t.Status, nil
+		}
+	}
+	return "", errs.NotFoundf("post target")
 }
 
 // needsReview stops automatic publishing to avoid a possible duplicate.

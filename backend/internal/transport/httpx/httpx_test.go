@@ -116,3 +116,21 @@ func TestCodeSlotSeesTheRenderedErrorCode(t *testing.T) {
 		t.Fatalf("code %q", slot.Code())
 	}
 }
+
+func TestTransientConflictAsksForImmediateRetry(t *testing.T) {
+	r := httptest.NewRequest("POST", "/x", nil)
+	for name, tc := range map[string]struct {
+		err  error
+		want string
+	}{
+		"deadlock":   {errs.New(errs.Conflict, "retry").AsTransient(), "1"},
+		"duplicate":  {errs.New(errs.Conflict, "exists"), ""},
+		"transition": {errs.New(errs.InvalidStateTransition, "no"), ""},
+	} {
+		rec := httptest.NewRecorder()
+		Error(rec, r, tc.err)
+		if rec.Code != 409 || rec.Header().Get("Retry-After") != tc.want {
+			t.Errorf("%s: status %d Retry-After %q, want 409 %q", name, rec.Code, rec.Header().Get("Retry-After"), tc.want)
+		}
+	}
+}

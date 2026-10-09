@@ -69,18 +69,6 @@ export function Notice({ tone = 'warning', children }: { tone?: 'warning' | 'dan
   );
 }
 
-export function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
     <div className="mb-8 flex flex-wrap items-start justify-between gap-4">

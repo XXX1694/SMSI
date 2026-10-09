@@ -87,6 +87,9 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 	if e.Code == errs.RateLimited && w.Header().Get("Retry-After") == "" {
 		w.Header().Set("Retry-After", RetryAfterSeconds)
 	}
+	if e.Transient && w.Header().Get("Retry-After") == "" {
+		w.Header().Set("Retry-After", "1")
+	}
 	if slot, ok := r.Context().Value(codeSlotKey{}).(*CodeSlot); ok {
 		slot.set(e.Code)
 	}

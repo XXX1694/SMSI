@@ -124,7 +124,7 @@ export interface PostFilters {
 
 export const api = {
   auth: {
-    async register(input: { email: string; password: string; display_name: string }): Promise<Me> {
+    async register(input: { email: string; password: string; display_name: string; accept_terms: boolean }): Promise<Me> {
       return normalizeMe(await request('/auth/register', { method: 'POST', body: input }));
     },
     async login(input: { email: string; password: string }): Promise<Me> {

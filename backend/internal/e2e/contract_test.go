@@ -66,7 +66,7 @@ func TestMeShape(t *testing.T) {
 
 func TestSessionCookies(t *testing.T) {
 	e := newEnv(t, envOpts{})
-	body := `{"email":"cookie@example.com","password":"correct horse battery","display_name":"C"}`
+	body := `{"email":"cookie@example.com","password":"correct horse battery","display_name":"C","accept_terms":true}`
 	res, err := http.Post(e.srv.URL+"/api/v1/auth/register", "application/json", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
