@@ -56,5 +56,5 @@ export function errorMessage(e: unknown): string {
     const text = friendlyMessage(e.code, e.message);
     return e.requestId ? `${text} (ref ${e.requestId})` : text;
   }
-  return e instanceof Error ? e.message : 'Something went wrong.';
+  return friendlyMessage(null, e instanceof Error ? e.message : null);
 }

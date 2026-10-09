@@ -2,12 +2,14 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { usePrefs } from '@/components/prefs-provider';
 import { PostList } from '@/components/post-row';
-import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { EmptyState, ErrorState, InlineError, LoadingRows } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { POST_STATUSES, postStatusView } from '@/lib/status';
+import { zonedDayRangeIso } from '@/lib/time';
 import type { Post } from '@/lib/types';
 import { errorMessage } from '@/hooks';
 
@@ -17,6 +19,7 @@ export function PostsView() {
   const status = params.get('status') ?? '';
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
+  const { timezone } = usePrefs();
 
   const [items, setItems] = useState<Post[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -27,11 +30,10 @@ export function PostsView() {
 
   const fetchPage = useCallback(
     async (after?: string) => {
-      const toIso = to ? new Date(`${to}T23:59:59`).toISOString() : undefined;
-      const fromIso = from ? new Date(`${from}T00:00:00`).toISOString() : undefined;
-      return api.posts.list({ status: status || undefined, from: fromIso, to: toIso, limit: 20, cursor: after });
+      const range = zonedDayRangeIso(from, to, timezone);
+      return api.posts.list({ status: status || undefined, from: range.from, to: range.to, limit: 20, cursor: after });
     },
-    [status, from, to],
+    [status, from, to, timezone],
   );
 
   const reload = useCallback(() => {
@@ -108,7 +110,7 @@ export function PostsView() {
       {loading ? (
         <LoadingRows rows={4} />
       ) : error ? (
-        <ErrorState error={new Error(error)} onRetry={reload} />
+        <ErrorState title="Could not load posts" error={new Error(error)} onRetry={reload} />
       ) : items.length === 0 ? (
         <EmptyState
           title={filtered ? 'No posts match these filters' : 'No posts yet'}
@@ -124,12 +126,9 @@ export function PostsView() {
         <>
           <PostList posts={items} />
           {moreError ? (
-            <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm">
-              <span>Could not load more posts. {moreError}</span>
-              <Button variant="secondary" size="sm" onClick={() => void loadMore()} disabled={more}>
-                Try again
-              </Button>
-            </div>
+            <InlineError onRetry={() => void loadMore()} retryDisabled={more} className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2">
+              Could not load more posts. {moreError}
+            </InlineError>
           ) : null}
           {cursor && !moreError ? (
             <div className="text-center">

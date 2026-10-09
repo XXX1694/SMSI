@@ -129,3 +129,69 @@ self-hoster without SMTP).
 the same as most sign-up forms). Existing users are unverified and must verify once mail is switched on. The rendered
 mail, with its link, sits in Redis until the worker sends it (D-006), and the forgot task holds the address until
 it runs. The mail limiter is in memory and per instance.
+
+## D-009: Connect with a pasted token needs the critical `social:connect` scope (2026-10-09)
+
+**Context.** Webhook URLs, app passwords and API keys are bearer secrets. Networks that use them (Discord, Mastodon,
+Bluesky, Slack, Dev.to, VK) need one generic way to connect. Per-provider endpoints mean N handlers and N forms, and
+metadata cannot hold the secret because the account API returns it.
+
+**Decision.** One port and one route. A provider declares `connect_method: token` and its form (`connect_fields`);
+`POST /social/accounts/token` validates the fields, calls the adapter's `Verify` (live whoami, 10 s) and stores the
+credential in the encrypted vault, reusing the OAuth upsert and audit path. The scope `social:connect` is **critical**
+and never part of a default set: an agent that can connect accounts can attach a credential it chose, so it is granted
+on purpose. Browser sessions always may connect. Once server-side approvals exist, a key-initiated connect should need
+the owner's approval like other dangerous actions. MCP gets no connect tool.
+
+**Alternatives.** An endpoint per provider (rejected: duplication). Secrets in `metadata` (rejected: returned by the
+API). Allowing sessions only (rejected: it blocks the API-key testing flow in PLATFORMS).
+
+**Consequences.** Static tokens are never refreshed; a revoked one marks the account `expired` and the user repeats the
+POST. Adapters must keep secrets out of the profile; the use case refuses a profile that contains them.
+
+## D-010: User-supplied hosts are fetched through an SSRF-safe client (2026-10-09)
+
+**Context.** Mastodon, Misskey and WordPress take a host from the user, so the server would fetch a user-chosen URL.
+
+**Decision.** Such adapters use `safehttp.NewSafeClient`: https only; the client resolves the host itself, refuses
+loopback, private, link-local (including the 169.254.169.254 metadata address), CGNAT, multicast, unspecified and other
+reserved addresses in IPv4, IPv6 and IPv4-mapped/NAT64/6to4 forms, dials the vetted address (no second DNS lookup, so
+no rebinding) and re-checks it in the dialer `Control`; redirects only to the same host, at most three; responses over
+1 MB fail instead of being truncated; no proxy environment variables; timeouts on dial, TLS, headers and the whole
+request. Adapters with a fixed host set `AllowedHosts` instead. Every adapter takes an injected `http.Client` for tests.
+
+**Consequences.** A self-hosted instance on a private network cannot be connected. Accepted: SocialOS runs on a shared
+host next to other services (D-001).
+
+## D-012: SocialOS gets at most half of the shared host, enforced by a systemd slice and a load-shedding guard (2026-10-09)
+
+**Context.** Production shares a 2 vCPU / 2 GB VPS with another production service (D-001). Containers could swap, the
+default per-container task limit (2264) times seven exceeds the host's thread limit (about 15000), and dockerd/containerd
+are unbounded (containerd peaked at 963 MB during the first image pull). The other service's units, Caddy and the host
+configuration are not ours to change.
+
+**Decision.** All SocialOS containers run in `socialos.slice` (compose `cgroup_parent` in host-proxy mode; Docker already
+uses the systemd cgroup driver on cgroup v2, so no daemon change or restart): `CPUQuota=100%`, `CPUWeight=50`,
+`MemoryHigh=616M`, `MemoryMax=664M`, `MemorySwapMax=0`, `TasksMax=512`, a 60 MB/s read cap and no write cap. Each container
+gets `memswap_limit = mem_limit` and `pids_limit`; backend and worker keep 160m with `GOMEMLIMIT=100MiB` for upload buffers.
+Drop-ins give dockerd and containerd `CPUQuota=25%`, `CPUWeight=50` and a soft `MemoryHigh` (192M / 128M), with no boot
+ordering. Slice plus daemons: 984M, half of the RAM. A guard timer reads host and per-service pressure (PSI) and SocialOS's
+share; only when the host is under pressure and SocialOS contributes (slice anon ≥ 300 MB, ≥ 40% of a CPU or ≥ 10 MB/s IO) it
+stops the worker, then the non-essential containers, and starts what it stopped after calm runs (level 2 with a doubling
+backoff). It alerts but never acts on the other service. A Caddy pre-check quarantines a SocialOS snippet that would stop
+Caddy from starting.
+
+**Alternatives.** `daemon.json` `cgroup-parent`: catches `docker run` too, but needs a Docker restart. Per-container caps
+that add up to the slice: leaves the backend too little room for uploads. A slice of 848M (no overcommit): about 56% of the
+RAM. `MemoryMax` on containerd: could kill the shims and orphan running containers. `IOWeight` alone: no effect with the
+`none` IO scheduler. A write cap: throttled writeback can stall ext4 journal commits and the other service's fsync.
+`After=caddy irbisa` on Docker: nice at boot, but a cycle if either is ever ordered after Docker. Pausing the worker: it
+would freeze holding database locks. A guard that sheds on any pressure: it would stop SocialOS for pressure it does not
+cause. A loop-mounted filesystem as a hard disk quota: needs a data migration; deferred. A drop-in on `caddy.service`:
+edits a unit that belongs to the other service.
+
+**Consequences.** The per-container caps (784m, 848m during a deploy) overcommit the 664M slice: under a simultaneous
+peak, the OOM kill hits SocialOS inside its slice, never the other service. Under real contention the slice gets a third
+of the CPU. A shed stops publishing (posts go out late) and, at level 2, the UI and MCP until the host has been calm for
+10 minutes or more; autoupdate pauses meanwhile. The read cap is a placeholder until the disk is measured. Standalone mode
+is unchanged. Not solved here (the other service's owner): `caddy.service` has `Restart=no`, and journald has no size cap.

@@ -2,11 +2,12 @@
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { usePrefs } from '@/components/prefs-provider';
-import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { EmptyState, ErrorState, InlineError, LoadingRows } from '@/components/states';
 import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -94,7 +95,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
               <label htmlFor="key-ack" className="text-sm">I understand this key can publish, delete or disconnect on my behalf.</label>
             </div>
           ) : null}
-          {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+          {error ? <InlineError>{error}</InlineError> : null}
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -109,12 +110,14 @@ function KeyRow({ k, onRevoke }: { k: ApiKey; onRevoke: (k: ApiKey) => void }) {
   const { timezone } = usePrefs();
   const expired = k.expires_at !== null && new Date(k.expires_at).getTime() < Date.now();
   return (
-    <tr className="align-top">
-      <td className="px-3 py-3">
-        <p className="font-medium">{k.name}</p>
-        <code className="text-xs text-muted-foreground">{k.prefix}…</code>
-      </td>
-      <td className="px-3 py-3">
+    <Tr className="align-top">
+      <Td label="Name" className="py-3">
+        <div>
+          <p className="font-medium">{k.name}</p>
+          <code className="text-xs text-muted-foreground">{k.prefix}…</code>
+        </div>
+      </Td>
+      <Td label="Scopes" className="py-3">
         <div className="flex max-w-xs flex-wrap gap-1">
           {k.scopes.map((s) => (
             <Badge key={s} tone={scopeRisk(s) === 'dangerous' ? 'danger' : scopeRisk(s) === 'medium' ? 'warning' : 'neutral'}>
@@ -122,15 +125,15 @@ function KeyRow({ k, onRevoke }: { k: ApiKey; onRevoke: (k: ApiKey) => void }) {
             </Badge>
           ))}
         </div>
-      </td>
-      <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{k.expires_at ? formatDateTime(k.expires_at, timezone) : 'Never'}</td>
-      <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{formatRelative(k.last_used_at)}</td>
-      <td className="px-3 py-3 text-right">
+      </Td>
+      <Td label="Expires" className="whitespace-nowrap py-3 text-muted-foreground">{k.expires_at ? formatDateTime(k.expires_at, timezone) : 'Never'}</Td>
+      <Td label="Last used" className="whitespace-nowrap py-3 text-muted-foreground">{formatRelative(k.last_used_at)}</Td>
+      <Td align="right" className="py-3">
         {k.revoked_at ? <Badge>Revoked</Badge> : expired ? <Badge tone="warning">Expired</Badge> : (
           <Button variant="ghost" size="sm" onClick={() => onRevoke(k)} aria-label={`Revoke ${k.name}`}>Revoke</Button>
         )}
-      </td>
-    </tr>
+      </Td>
+    </Tr>
   );
 }
 
@@ -155,24 +158,22 @@ export function ApiKeysView() {
       ) : data.length === 0 ? (
         <EmptyState title="No API keys">Create a key to call the REST API from your own tools.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Scopes</th>
-                <th className="px-3 py-2 font-medium">Expires</th>
-                <th className="px-3 py-2 font-medium">Last used</th>
-                <th className="px-3 py-2"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {data.map((k) => (
-                <KeyRow key={k.id} k={k} onRevoke={setRevoking} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table label="API keys">
+          <Thead>
+            <Tr>
+              <Th>Name</Th>
+              <Th>Scopes</Th>
+              <Th>Expires</Th>
+              <Th>Last used</Th>
+              <Th><span className="sr-only">Actions</span></Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {data.map((k) => (
+              <KeyRow key={k.id} k={k} onRevoke={setRevoking} />
+            ))}
+          </Tbody>
+        </Table>
       )}
       <CreateKeyDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={(c) => { setCreated(c); reload(); }} />
       <RawKeyDialog created={created} onClose={() => setCreated(null)} />

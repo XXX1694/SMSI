@@ -12,7 +12,10 @@ import (
 const (
 	ConnectOAuth    = "oauth"
 	ConnectTelegram = "telegram_chat"
-	ConnectNone     = "none"
+	// ConnectToken: the user pastes a static credential (webhook URL, app
+	// password, API key) described by Capabilities.ConnectFields.
+	ConnectToken = "token"
+	ConnectNone  = "none"
 )
 
 // Capabilities describe what a provider can do (returned by GET /social/providers).
@@ -32,6 +35,34 @@ type Capabilities struct {
 	// so re-sending after an unknown outcome cannot create a duplicate.
 	SafeToRetryAfterUnknown bool   `json:"safe_to_retry_after_unknown"`
 	ConnectMethod           string `json:"connect_method"`
+	// ConnectFields describes the form of a ConnectToken provider.
+	ConnectFields []ConnectField `json:"connect_fields,omitempty"`
+	// MaxImageBytes is the largest single image the network accepts (0 = no known limit).
+	MaxImageBytes int64 `json:"max_image_bytes,omitempty"`
+	// RequiresTitle is true for article networks that reject posts without a title.
+	RequiresTitle bool `json:"requires_title,omitempty"`
+}
+
+// Field kinds of a ConnectField.
+const (
+	FieldText   = "text"
+	FieldSecret = "secret"
+	FieldURL    = "url"
+)
+
+// ConnectField is one input of a token connect form.
+type ConnectField struct {
+	Name        string `json:"name"`
+	Label       string `json:"label"`
+	Help        string `json:"help,omitempty"`
+	Placeholder string `json:"placeholder,omitempty"`
+	// Kind is FieldText, FieldSecret (rendered as a password input) or FieldURL (https only).
+	Kind     string `json:"kind"`
+	Required bool   `json:"required"`
+	// Secret marks a value that is a credential whatever its Kind (a webhook
+	// URL is a url field and a password). Secret fields are never echoed,
+	// logged or allowed in the profile, and forms render them as password inputs.
+	Secret bool `json:"secret,omitempty"`
 }
 
 // Provider is the base contract of every registered network.
@@ -119,6 +150,14 @@ type ChatLinker interface {
 	LinkInstructions(botUsername, code string, ttl time.Duration) string
 }
 
+// TokenConnector is implemented by providers connected with a pasted credential.
+type TokenConnector interface {
+	// Verify makes a live whoami call with the submitted fields. Profile.Metadata
+	// must hold non-secret data only; secret is the adapter-encoded credential
+	// that the vault stores and Publish later receives as AccessToken.
+	Verify(ctx context.Context, fields map[string]string) (p Profile, secret string, err error)
+}
+
 // AccountRef is the non-secret account data an adapter needs.
 type AccountRef struct {
 	ID                string
@@ -141,8 +180,10 @@ type PublishRequest struct {
 	IdempotencyKey string
 	Account        AccountRef
 	AccessToken    string
-	Text           string
-	Media          []MediaFile
+	// Title is the post title; only providers with Capabilities.RequiresTitle use it.
+	Title string
+	Text  string
+	Media []MediaFile
 }
 
 // PublishResult identifies the created post.

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { EmptyState, ErrorState, LoadingRows, Notice, Section } from '@/components/states';
+import { EmptyState, ErrorState, InlineError, LoadingRows, Notice, Section } from '@/components/states';
 import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -105,7 +105,7 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
           </div>
         </>
       ) : null}
-      {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+      {error ? <InlineError>{error}</InlineError> : null}
       <Button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create connection'}</Button>
     </form>
   );

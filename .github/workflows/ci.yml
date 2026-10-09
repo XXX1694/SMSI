@@ -147,7 +147,8 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: backend/go.mod
+          check-latest: true
           cache-dependency-path: backend/go.sum
 
       - name: gofmt
@@ -433,6 +434,11 @@ jobs:
           # and postgres gets a small /dev/shm (64 MiB, not smaller than its shared_buffers default of 64MB).
           check host_proxy '[.services[] | select(.oom_score_adj != 500)] | length == 0' 'a service lacks oom_score_adj 500'
           check host_proxy '.services.postgres.shm_size | tonumber == 67108864' 'postgres shm_size is not 64mb'
+          # Host-proxy: the whole stack runs in socialos.slice (one kernel-enforced budget), no container may swap, and each
+          # has a process cap. Standalone needs no slice on the host.
+          check host_proxy '[.services[] | select(.cgroup_parent != "socialos.slice")] | length == 0' 'a service is not in socialos.slice'
+          check host_proxy '[.services[] | select(.memswap_limit != .mem_limit or .pids_limit == null)] | length == 0' 'a service may swap or has no pids_limit'
+          check standalone '[.services[] | select(.cgroup_parent != null)] | length == 0' 'the standalone stack must not depend on socialos.slice'
           # ACME_EMAIL is only for the bundled Caddy: host-proxy mode must resolve with it empty (init-env.sh --host-proxy writes
           # it empty). Standalone resolves too, and deploy.sh refuses an empty value there.
           sed 's|^ACME_EMAIL=.*|ACME_EMAIL=|' deploy/.env.prod.example >"$RUNNER_TEMP/env-no-acme"

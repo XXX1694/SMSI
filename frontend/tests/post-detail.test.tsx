@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@/lib/api';
 
 const apiMock = vi.hoisted(() => ({ posts: { get: vi.fn() } }));
 vi.mock('@/lib/api', async () => ({ ...(await vi.importActual<typeof import('@/lib/api')>('@/lib/api')), api: apiMock }));
@@ -19,7 +20,10 @@ const failed: Post = {
   attempts: [],
 };
 
-beforeEach(() => apiMock.posts.get.mockResolvedValue(failed));
+beforeEach(() => {
+  apiMock.posts.get.mockReset();
+  apiMock.posts.get.mockResolvedValue(failed);
+});
 
 describe('PostDetail failed target', () => {
   it('explains the failure in a sentence and never shows the raw error code', async () => {
@@ -27,5 +31,16 @@ describe('PostDetail failed target', () => {
     expect(await screen.findByText(/chat not found/)).toBeInTheDocument();
     expect(container.textContent).not.toContain('PROVIDER_ERROR');
     expect(container.textContent).toContain('The network could not publish the post.');
+  });
+});
+
+describe('PostDetail load failure', () => {
+  it('shows a titled, readable error and no raw payload', async () => {
+    apiMock.posts.get.mockImplementation(() => {
+      return Promise.reject(new ApiError(500, 'INTERNAL', '{"error":"boom"}'));
+    });
+    const { container } = render(<PostDetail id="p1" />);
+    expect(await screen.findByText('Could not load this post')).toBeInTheDocument();
+    expect(container.textContent).not.toContain('{');
   });
 });

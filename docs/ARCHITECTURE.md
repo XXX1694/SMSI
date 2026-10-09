@@ -59,12 +59,16 @@ Target statuses: `pending`, `publishing`, `published`, `failed`, `cancelled`, `n
 ### Provider capabilities (returned by `GET /social/providers`)
 ```
 ProviderCapabilities { CanPublishText, CanPublishImage, CanPublishVideo, CanSchedule (native), CanDelete, CanAnalytics,
-                       MaxTextLength, MaxMediaCount, RequiresApproval bool, Notes string }
+                       MaxTextLength, MaxMediaCount, RequiresApproval bool, Notes string,
+                       ConnectMethod ("oauth"|"telegram_chat"|"token"|"none"),
+                       ConnectFields []ConnectField, MaxImageBytes int64, RequiresTitle bool }
 ```
+`ConnectFields` (`connect_fields` in JSON) is the form of a `token` provider: `{name, label, help, placeholder, kind: text|secret|url, required, secret}`; `secret: true` marks a credential whatever its kind (a webhook URL is a `url` field and a password): it is rendered as a password input, never echoed, and the connect leak check treats it as a secret. `max_image_bytes` and `requires_title` are omitted when they do not apply. `CheckContent` applies the stricter of these limits and the account's own `metadata.limits` (`max_characters`, `max_media`, `max_image_bytes`), and requires a title when `requires_title` is set. See "Connect with a token" below.
 * **LinkedIn** – real adapter (OAuth 2.0 auth-code, OpenID `userinfo`, `/rest/posts`, `w_member_social`). Text + image; video marked unsupported in MVP; company pages need Marketing Developer Platform approval (`RequiresApproval=true`, flagged in Notes). Analytics: false.
 * **Telegram** – real adapter (Bot API). Not OAuth, and **one platform-wide bot** (`TELEGRAM_BOT_TOKEN`) serves every tenant. Because the bot is shared, knowing a channel's `@username` proves nothing: "the bot is admin there" is true for every user's channel. A chat is therefore connected only by **proof of control**: the user asks SocialOS for a one-time link code, adds the bot as admin with "Post messages" and posts the code in the chat. The bot sees the post (`channel_post` / group `message`), the backend matches the code to its owner, re-checks the bot's rights on that chat (`getChat`/`getChatMember`) and creates the `social_account` for **that user only**. There is no endpoint that takes a chat name or id. The bot token is never stored per account (account metadata keeps a `token_ref` only). Text, image, video, delete. Analytics: false.
 * **mock** – deterministic in-memory/DB-less provider used by tests and `SOCIAL_MOCK_PROVIDERS=true` dev mode. Clearly labelled.
-* instagram, facebook, tiktok, youtube, x, threads, pinterest – **registered as `unsupported` stubs** returning `PROVIDER_NOT_AVAILABLE` and capabilities with `RequiresApproval=true`. Not pretended to work.
+* **mocktoken** – the mock for the token connect flow (`SOCIAL_MOCK_PROVIDERS=true` only; production refuses mocks).
+* instagram, facebook, tiktok, youtube, x, threads, pinterest, reddit, medium, hashnode – **registered as `unsupported` stubs** returning `PROVIDER_NOT_AVAILABLE` and capabilities with `RequiresApproval=true`. Not pretended to work.
 
 ## 3. Database (PostgreSQL 16)
 
@@ -154,7 +158,17 @@ Tokens: 32 random bytes, stored as SHA-256, single use (atomic consume), TTL 48 
 Browser mutating requests need header `X-CSRF-Token` (value returned by `GET /me` / login in `csrf_token`, also in cookie `socialos_csrf`). API-key requests are exempt.
 
 ### Social
-`GET /social/providers` (capabilities + configured flag) · `GET /social/accounts` · `GET /social/{provider}/connect` (302 to provider; `?redirect=` allow-listed) · `GET /social/{provider}/callback` · `POST /social/telegram/connect` (non-OAuth; no body, mints a link code) · `GET /social/telegram/connect/{id}` (link status) · `GET /social/accounts/{id}` · `DELETE /social/accounts/{id}` (disconnect)
+`GET /social/providers` (capabilities + configured flag) · `GET /social/accounts` · `GET /social/{provider}/connect` (302 to provider; `?redirect=` allow-listed) · `GET /social/{provider}/callback` · `POST /social/telegram/connect` (non-OAuth; no body, mints a link code) · `GET /social/telegram/connect/{id}` (link status) · `POST /social/accounts/token` (connect with a pasted credential, see below) · `GET /social/accounts/{id}` · `DELETE /social/accounts/{id}` (disconnect)
+
+### Connect with a token
+`POST /social/accounts/token {provider, fields: {name: value}}` → `201` account (the same shape as `GET /social/accounts/{id}`). It is for providers whose `connect_method` is `token`; the form comes from `connect_fields`. It needs the **critical** scope `social:connect` (browser sessions hold every scope; API keys must be granted it explicitly, and it is never in the default set, see D-009), is CSRF-protected for sessions and shares the `link:` rate limit of the Telegram link start.
+
+1. Unknown field names are rejected, required fields must be non-empty, each value is at most 2 KB, and `url` fields must be `https` without credentials. Error messages never echo a value.
+2. The adapter's `Verify` makes a live whoami call with a 10 s timeout. Rejected credentials (auth or permanent failure) answer `400 VALIDATION_ERROR` "<Provider> rejected these credentials"; other failures follow the usual provider mapping (`502 PROVIDER_ERROR`).
+3. The adapter returns a non-secret profile (it becomes `metadata`, which the API returns) and the secret credential. The secret is encrypted into `oauth_credentials` with the same AES-GCM vault as OAuth tokens; it has no expiry and is never refreshed. A profile that contains the credential is refused (`500`).
+4. Reconnecting repeats the same POST: the account is upserted by provider account id and an `expired` account becomes `active`. The audit entry `social_account.connected` carries provider, username and provider account id only.
+
+The worker loads credentials for `token` accounts like for OAuth ones. A 401-style failure marks the account `expired` (`SOCIAL_ACCOUNT_EXPIRED`) and the user reconnects. Outbound calls to hosts a user supplies go through the SSRF-safe client (`adapters/safehttp`, D-010).
 
 ### Telegram linking (proof of control)
 Both endpoints are **session only** (API keys get 403) and the POST is CSRF-protected and rate-limited per user (the auth limiter, key prefix `link:`).
@@ -216,8 +230,8 @@ Env: `MCP_GATEWAY_SECRET` (backend and mcp share it; min 32 chars, empty = disab
 `GET /health` (liveness) · `GET /ready` (Postgres + Redis + S3) · `GET /metrics` (Prometheus text, basic counters, optionally token-protected)
 
 ### Scopes
-`social:read` (accounts, providers) · `posts:read` · `posts:write` (create/update drafts, cancel) · `posts:schedule` · `posts:publish` (**sensitive**) · `posts:delete` (**sensitive**) · `social:disconnect` (**critical**) · `media:write` · `analytics:read`.
-Browser sessions have all scopes. API keys carry only granted scopes; `publish`, `delete`, `disconnect` are never in default sets; UI shows them under a "Dangerous" heading and requires confirmation. API keys can never create/revoke API keys, or change password (session-only).
+`social:read` (accounts, providers) · `posts:read` · `posts:write` (create/update drafts, cancel) · `posts:schedule` · `posts:publish` (**sensitive**) · `posts:delete` (**sensitive**) · `social:disconnect` (**critical**) · `social:connect` (**critical**, hands a network credential to SocialOS) · `media:write` · `analytics:read`.
+Browser sessions have all scopes. API keys carry only granted scopes; `publish`, `delete`, `connect`, `disconnect` are never in default sets; UI shows them under a "Dangerous" heading and requires confirmation. API keys can never create/revoke API keys, or change password (session-only).
 
 ## 5. MCP tools
 

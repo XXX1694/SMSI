@@ -33,7 +33,7 @@ func (s *Service) revalidate(ctx context.Context, p *post.Post) error {
 		if err != nil {
 			return err
 		}
-		if err := s.checkTarget(acc, t.Content, mediaList, true); err != nil {
+		if err := s.checkTarget(acc, p.Title, t.Content, mediaList, true); err != nil {
 			return err
 		}
 	}

@@ -139,7 +139,7 @@ function useConnectResult(): ConnectResult | null {
     if (connected) setResult({ tone: 'info', text: `Connected ${providerLabel(connected)} successfully.` });
     else if (failed) {
       const who = provider ? providerLabel(provider) : 'the account';
-      setResult({ tone: 'danger', text: `Could not connect ${who}. ${describeErrorCode(failed)} Please try again.` });
+      setResult({ tone: 'danger', text: `Could not connect ${who}. ${describeErrorCode(failed)}` });
     } else return;
     router.replace(pathname);
   }, [connected, failed, provider, router, pathname]);

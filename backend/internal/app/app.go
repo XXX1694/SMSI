@@ -8,9 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/socialos/backend/internal/adapters/discord"
 	"github.com/socialos/backend/internal/adapters/linkedin"
 	"github.com/socialos/backend/internal/adapters/mail"
+	"github.com/socialos/backend/internal/adapters/mastodon"
 	"github.com/socialos/backend/internal/adapters/mock"
+	"github.com/socialos/backend/internal/adapters/mocktoken"
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/adapters/stubs"
 	"github.com/socialos/backend/internal/adapters/telegram"
@@ -132,8 +135,11 @@ func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Regi
 	reg.Register(linkedin.New(linkedin.Config{ClientID: cfg.LinkedInID, ClientSecret: cfg.LinkedInSecret,
 		APIVersion: cfg.LinkedInVersion, UsePKCE: cfg.LinkedInPKCE}))
 	reg.Register(telegram.New(telegram.Config{BotToken: cfg.TelegramToken}))
+	reg.Register(discord.New(discord.Config{}))
+	reg.Register(mastodon.New(mastodon.Config{}))
 	if cfg.MockProviders {
 		reg.Register(mock.New())
+		reg.Register(mocktoken.New())
 	}
 	for _, p := range extra {
 		reg.Register(p)

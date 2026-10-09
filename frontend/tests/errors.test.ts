@@ -30,3 +30,13 @@ describe('friendlyMessage', () => {
     expect(friendlyMessage('RATE_LIMITED', '')).toContain('Too many requests');
   });
 });
+
+describe('technical messages', () => {
+  it('hides raw JSON and stack traces behind the sentence for the code', () => {
+    expect(friendlyMessage('PROVIDER_ERROR', '{"ok":false,"error_code":400}')).toBe('The network could not publish the post.');
+    expect(friendlyMessage('INTERNAL', 'Error: boom\n    at run (/app/x.js:1:1)')).toContain('our side');
+  });
+  it('no longer carries a catch-all "failed" OAuth entry', () => {
+    expect(describeErrorCode('failed')).toBe('Something went wrong. Please try again.');
+  });
+});

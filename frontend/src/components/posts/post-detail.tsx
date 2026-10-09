@@ -4,14 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { usePrefs } from '@/components/prefs-provider';
-import { ErrorState, LoadingRows, Notice, PageHeader, Section } from '@/components/states';
+import { ErrorState, InlineError, LoadingRows, Notice, PageHeader, Section } from '@/components/states';
 import { AttemptStatusBadge, PostStatusBadge, TargetStatusBadge } from '@/components/status-badge';
 import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/input';
+import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
-import { describeErrorCode } from '@/lib/errors';
+import { describeErrorCode, friendlyMessage, isTechnicalMessage } from '@/lib/errors';
 import { postLabel } from '@/lib/format';
 import { providerLabel } from '@/lib/normalize';
 import { postActions } from '@/lib/status';
@@ -32,7 +33,8 @@ function Targets({ post }: { post: Post }) {
           <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{t.content}</p>
           {t.error_message ? (
             <Notice tone="danger">
-              <span className="font-medium">{describeErrorCode(t.error_code)}</span> {t.error_message}
+              <span className="font-medium">{describeErrorCode(t.error_code)}</span>
+              {isTechnicalMessage(t.error_message) ? null : <> {t.error_message}</>}
             </Notice>
           ) : null}
           {t.status === 'needs_review' ? (
@@ -61,32 +63,30 @@ function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Po
   const platformOf = (id: string) => providerLabel(post.targets.find((t) => t.id === id)?.platform ?? '');
   if (attempts.length === 0) return <p className="text-sm text-muted-foreground">No publication attempts yet.</p>;
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2 font-medium">Target</th>
-            <th className="px-3 py-2 font-medium">#</th>
-            <th className="px-3 py-2 font-medium">Started</th>
-            <th className="px-3 py-2 font-medium">Result</th>
-            <th className="px-3 py-2 font-medium">Error</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {attempts.map((a) => (
-            <tr key={a.id}>
-              <td className="px-3 py-2">{platformOf(a.post_target_id)}</td>
-              <td className="px-3 py-2 tabular-nums">{a.attempt_no}</td>
-              <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(a.started_at, timezone)}</td>
-              <td className="px-3 py-2">
-                <AttemptStatusBadge status={a.status} />
-              </td>
-              <td className="px-3 py-2 text-muted-foreground">{a.error_message ?? '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table label="Publication attempts">
+      <Thead>
+        <Tr>
+          <Th>Target</Th>
+          <Th>#</Th>
+          <Th>Started</Th>
+          <Th>Result</Th>
+          <Th>Error</Th>
+        </Tr>
+      </Thead>
+      <Tbody>
+        {attempts.map((a) => (
+          <Tr key={a.id}>
+            <Td label="Target">{platformOf(a.post_target_id)}</Td>
+            <Td label="Attempt" className="tabular-nums">{a.attempt_no}</Td>
+            <Td label="Started" className="whitespace-nowrap">{formatDateTime(a.started_at, timezone)}</Td>
+            <Td label="Result">
+              <AttemptStatusBadge status={a.status} />
+            </Td>
+            <Td label="Error" className="text-muted-foreground max-md:text-foreground">{a.error_message ? friendlyMessage(null, a.error_message) : '—'}</Td>
+          </Tr>
+        ))}
+      </Tbody>
+    </Table>
   );
 }
 
@@ -125,7 +125,7 @@ function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpe
             <Input id="s-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </Field>
         </div>
-        {error ? <p role="alert" className="mt-3 text-sm text-danger">{error}</p> : null}
+        {error ? <InlineError className="mt-3">{error}</InlineError> : null}
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => void go()} disabled={busy}>{busy ? 'Scheduling…' : 'Schedule'}</Button>
@@ -154,7 +154,7 @@ export function PostDetail({ id }: { id: string }) {
   }, [inFlight, reload]);
 
   if (loading && !post) return <LoadingRows rows={4} />;
-  if (error || !post) return <ErrorState error={error} onRetry={reload} />;
+  if (error || !post) return <ErrorState title="Could not load this post" error={error} onRetry={reload} />;
   const can = postActions(post.status);
 
   const act = (fn: () => Promise<unknown>, msg: string) => async () => {

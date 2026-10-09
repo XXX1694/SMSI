@@ -14,12 +14,12 @@ func TestAcceptanceFlow(t *testing.T) {
 	c.register("alice@example.com")
 
 	me := c.must("GET", "/api/v1/me", nil, 200)
-	if me["auth_type"] != "session" || len(me["scopes"].([]any)) != 9 || me["csrf_token"] != c.csrf {
+	if me["auth_type"] != "session" || len(me["scopes"].([]any)) != 10 || me["csrf_token"] != c.csrf {
 		t.Fatalf("unexpected /me: %v", me)
 	}
 	providers := c.must("GET", "/api/v1/social/providers", nil, 200)["items"].([]any)
-	if len(providers) != 10 {
-		t.Fatalf("expected 10 providers (linkedin, telegram, mock + 7 stubs), got %d", len(providers))
+	if len(providers) != 16 {
+		t.Fatalf("expected 16 providers (linkedin, telegram, discord, mastodon, mock, mocktoken + 10 stubs), got %d", len(providers))
 	}
 
 	accountID := c.connectMock()
