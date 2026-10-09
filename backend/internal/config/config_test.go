@@ -23,7 +23,7 @@ func TestLoadDefaults(t *testing.T) {
 		c.SessionTTL != 7*24*time.Hour || c.WorkerConc != 10 || c.CookieSecure || c.MockProviders || c.TrustProxy {
 		t.Fatalf("unexpected defaults: %+v", c)
 	}
-	if c.RateLimitRPS != 10 || c.RateLimitBurst != 40 || c.AuthRateBurst != 10 || c.MigrateOnStart {
+	if c.RateLimitRPS != 10 || c.RateLimitBurst != 40 || c.AuthRateBurst != 10 || c.PasswordHashConcurrency != 2 || c.PasswordHashMemoryMiB != 48 || c.MigrateOnStart {
 		t.Fatalf("rate limit defaults: %+v", c)
 	}
 	if len(c.CORSOrigins) != 1 || c.CORSOrigins[0] != "http://localhost:3000" {

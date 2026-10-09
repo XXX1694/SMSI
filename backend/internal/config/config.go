@@ -16,49 +16,53 @@ import (
 
 // Config is the full runtime configuration (API + worker).
 type Config struct {
-	Env             string // development | production | test
-	HTTPAddr        string
-	DatabaseURL     string
-	DBMaxConns      int32
-	RedisURL        string
-	QueueName       string
-	EncryptionKey   string // base64 32 bytes
-	APIPublicURL    string // public base of the API (OAuth redirect base)
-	WebBaseURL      string // frontend base for post-connect redirects
-	MCPPublicURL    string
-	GatewaySecret   string // MCP_GATEWAY_SECRET, shared with the MCP server; empty = never trust X-SocialOS-Client-IP
-	CORSOrigins     []string
-	CookieSecure    bool
-	CookieDomain    string
-	SessionTTL      time.Duration
-	MetricsToken    string
-	MigrateOnStart  bool
-	LogLevel        string
-	LogFormat       string // json | text
-	MockProviders   bool
-	RateLimitRPS    float64
-	RateLimitBurst  int
-	AuthRateRPS     float64
-	AuthRateBurst   int
-	TrustProxy      bool
-	TrustedProxies  []netip.Prefix // networks whose X-Forwarded-For is believed; empty = ignore the header (see proxies.go)
-	Warnings        []string       // valid but suspicious settings; the binaries log them at startup (LogWarnings)
-	WorkerConc      int
-	ReconcileEvery  time.Duration
-	StorageDriver   string // s3 | memory
-	S3Endpoint      string
-	S3PublicURL     string
-	S3AccessKey     string
-	S3SecretKey     string
-	S3Bucket        string
-	S3Region        string
-	S3UseSSL        bool
-	S3AutoCreate    bool
-	LinkedInID      string
-	LinkedInSecret  string
-	LinkedInVersion string
-	LinkedInPKCE    bool
-	TelegramToken   string
+	Env            string // development | production | test
+	HTTPAddr       string
+	DatabaseURL    string
+	DBMaxConns     int32
+	RedisURL       string
+	QueueName      string
+	EncryptionKey  string // base64 32 bytes
+	APIPublicURL   string // public base of the API (OAuth redirect base)
+	WebBaseURL     string // frontend base for post-connect redirects
+	MCPPublicURL   string
+	GatewaySecret  string // MCP_GATEWAY_SECRET, shared with the MCP server; empty = never trust X-SocialOS-Client-IP
+	CORSOrigins    []string
+	CookieSecure   bool
+	CookieDomain   string
+	SessionTTL     time.Duration
+	MetricsToken   string
+	MigrateOnStart bool
+	LogLevel       string
+	LogFormat      string // json | text
+	MockProviders  bool
+	RateLimitRPS   float64
+	RateLimitBurst int
+	AuthRateRPS    float64
+	AuthRateBurst  int
+	// PasswordHashConcurrency caps argon2 hash/verify operations running at once; PasswordHashMemoryMiB caps their
+	// combined memory (an old 64 MiB hash runs alone).
+	PasswordHashConcurrency int
+	PasswordHashMemoryMiB   int
+	TrustProxy              bool
+	TrustedProxies          []netip.Prefix // networks whose X-Forwarded-For is believed; empty = ignore the header (see proxies.go)
+	Warnings                []string       // valid but suspicious settings; the binaries log them at startup (LogWarnings)
+	WorkerConc              int
+	ReconcileEvery          time.Duration
+	StorageDriver           string // s3 | memory
+	S3Endpoint              string
+	S3PublicURL             string
+	S3AccessKey             string
+	S3SecretKey             string
+	S3Bucket                string
+	S3Region                string
+	S3UseSSL                bool
+	S3AutoCreate            bool
+	LinkedInID              string
+	LinkedInSecret          string
+	LinkedInVersion         string
+	LinkedInPKCE            bool
+	TelegramToken           string
 	// TelegramUpdatesMode selects how the bot receives the messages that prove
 	// chat ownership: "polling" (worker long-polls getUpdates, needs no public
 	// URL; default) or "webhook" (Telegram calls POST /api/v1/webhooks/telegram).
@@ -95,47 +99,49 @@ const (
 // Load reads and validates configuration.
 func Load() (*Config, error) {
 	c := &Config{
-		Env:             env("APP_ENV", "development"),
-		HTTPAddr:        env("HTTP_ADDR", ":8080"),
-		DatabaseURL:     env("DATABASE_URL", ""),
-		DBMaxConns:      int32(envInt("DB_MAX_CONNS", 20)),
-		RedisURL:        env("REDIS_URL", "redis://localhost:6379/0"),
-		QueueName:       env("QUEUE_NAME", "publish"),
-		EncryptionKey:   env("ENCRYPTION_KEY", ""),
-		APIPublicURL:    strings.TrimRight(env("API_PUBLIC_URL", "http://localhost:8080"), "/"),
-		WebBaseURL:      strings.TrimRight(env("WEB_BASE_URL", "http://localhost:3000"), "/"),
-		MCPPublicURL:    env("MCP_PUBLIC_URL", "http://localhost:3333/mcp"),
-		GatewaySecret:   env("MCP_GATEWAY_SECRET", ""),
-		CORSOrigins:     list(env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
-		CookieSecure:    envBool("COOKIE_SECURE", false),
-		CookieDomain:    env("COOKIE_DOMAIN", ""),
-		SessionTTL:      envDuration("SESSION_TTL", 7*24*time.Hour),
-		MetricsToken:    env("METRICS_TOKEN", ""),
-		MigrateOnStart:  envBool("MIGRATE_ON_START", false),
-		LogLevel:        env("LOG_LEVEL", "info"),
-		LogFormat:       env("LOG_FORMAT", "json"),
-		MockProviders:   envBool("SOCIAL_MOCK_PROVIDERS", false),
-		RateLimitRPS:    envFloat("RATE_LIMIT_RPS", 10),
-		RateLimitBurst:  envInt("RATE_LIMIT_BURST", 40),
-		AuthRateRPS:     envFloat("AUTH_RATE_LIMIT_RPS", 0.2),
-		AuthRateBurst:   envInt("AUTH_RATE_LIMIT_BURST", 10),
-		TrustProxy:      envBool("TRUST_PROXY", false),
-		WorkerConc:      envInt("WORKER_CONCURRENCY", 10),
-		ReconcileEvery:  envDuration("RECONCILE_INTERVAL", time.Minute),
-		StorageDriver:   env("STORAGE_DRIVER", "s3"),
-		S3Endpoint:      env("S3_ENDPOINT", "localhost:9000"),
-		S3PublicURL:     env("S3_PUBLIC_ENDPOINT", ""),
-		S3AccessKey:     env("S3_ACCESS_KEY", ""),
-		S3SecretKey:     env("S3_SECRET_KEY", ""),
-		S3Bucket:        env("S3_BUCKET", "socialos-media"),
-		S3Region:        env("S3_REGION", "us-east-1"),
-		S3UseSSL:        envBool("S3_USE_SSL", false),
-		S3AutoCreate:    envBool("S3_AUTO_CREATE_BUCKET", true),
-		LinkedInID:      env("LINKEDIN_CLIENT_ID", ""),
-		LinkedInSecret:  env("LINKEDIN_CLIENT_SECRET", ""),
-		LinkedInVersion: env("LINKEDIN_API_VERSION", "202606"),
-		LinkedInPKCE:    envBool("LINKEDIN_USE_PKCE", true),
-		TelegramToken:   env("TELEGRAM_BOT_TOKEN", ""),
+		Env:                     env("APP_ENV", "development"),
+		HTTPAddr:                env("HTTP_ADDR", ":8080"),
+		DatabaseURL:             env("DATABASE_URL", ""),
+		DBMaxConns:              envInt32("DB_MAX_CONNS", 20),
+		RedisURL:                env("REDIS_URL", "redis://localhost:6379/0"),
+		QueueName:               env("QUEUE_NAME", "publish"),
+		EncryptionKey:           env("ENCRYPTION_KEY", ""),
+		APIPublicURL:            strings.TrimRight(env("API_PUBLIC_URL", "http://localhost:8080"), "/"),
+		WebBaseURL:              strings.TrimRight(env("WEB_BASE_URL", "http://localhost:3000"), "/"),
+		MCPPublicURL:            env("MCP_PUBLIC_URL", "http://localhost:3333/mcp"),
+		GatewaySecret:           env("MCP_GATEWAY_SECRET", ""),
+		CORSOrigins:             list(env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
+		CookieSecure:            envBool("COOKIE_SECURE", false),
+		CookieDomain:            env("COOKIE_DOMAIN", ""),
+		SessionTTL:              envDuration("SESSION_TTL", 7*24*time.Hour),
+		MetricsToken:            env("METRICS_TOKEN", ""),
+		MigrateOnStart:          envBool("MIGRATE_ON_START", false),
+		LogLevel:                env("LOG_LEVEL", "info"),
+		LogFormat:               env("LOG_FORMAT", "json"),
+		MockProviders:           envBool("SOCIAL_MOCK_PROVIDERS", false),
+		RateLimitRPS:            envFloat("RATE_LIMIT_RPS", 10),
+		RateLimitBurst:          envInt("RATE_LIMIT_BURST", 40),
+		AuthRateRPS:             envFloat("AUTH_RATE_LIMIT_RPS", 0.2),
+		AuthRateBurst:           envInt("AUTH_RATE_LIMIT_BURST", 10),
+		PasswordHashConcurrency: envInt("PASSWORD_HASH_CONCURRENCY", 2),
+		PasswordHashMemoryMiB:   envInt("PASSWORD_HASH_MEMORY_MIB", 48),
+		TrustProxy:              envBool("TRUST_PROXY", false),
+		WorkerConc:              envInt("WORKER_CONCURRENCY", 10),
+		ReconcileEvery:          envDuration("RECONCILE_INTERVAL", time.Minute),
+		StorageDriver:           env("STORAGE_DRIVER", "s3"),
+		S3Endpoint:              env("S3_ENDPOINT", "localhost:9000"),
+		S3PublicURL:             env("S3_PUBLIC_ENDPOINT", ""),
+		S3AccessKey:             env("S3_ACCESS_KEY", ""),
+		S3SecretKey:             env("S3_SECRET_KEY", ""),
+		S3Bucket:                env("S3_BUCKET", "socialos-media"),
+		S3Region:                env("S3_REGION", "us-east-1"),
+		S3UseSSL:                envBool("S3_USE_SSL", false),
+		S3AutoCreate:            envBool("S3_AUTO_CREATE_BUCKET", true),
+		LinkedInID:              env("LINKEDIN_CLIENT_ID", ""),
+		LinkedInSecret:          env("LINKEDIN_CLIENT_SECRET", ""),
+		LinkedInVersion:         env("LINKEDIN_API_VERSION", "202606"),
+		LinkedInPKCE:            envBool("LINKEDIN_USE_PKCE", true),
+		TelegramToken:           env("TELEGRAM_BOT_TOKEN", ""),
 
 		TelegramUpdatesMode:   strings.ToLower(env("TELEGRAM_UPDATES_MODE", TelegramModePolling)),
 		TelegramWebhookSecret: env("TELEGRAM_WEBHOOK_SECRET", ""),
@@ -187,6 +193,12 @@ func (c *Config) validate(extra ...error) error {
 	}
 	if n := len(c.GatewaySecret); n > 0 && n < 32 {
 		problems = append(problems, "MCP_GATEWAY_SECRET must be at least 32 characters (openssl rand -hex 32)")
+	}
+	if c.PasswordHashConcurrency < 1 {
+		problems = append(problems, "PASSWORD_HASH_CONCURRENCY must be at least 1")
+	}
+	if c.PasswordHashMemoryMiB < 1 {
+		problems = append(problems, "PASSWORD_HASH_MEMORY_MIB must be at least 1")
 	}
 	if c.StorageDriver != "s3" && c.StorageDriver != "memory" {
 		problems = append(problems, "STORAGE_DRIVER must be s3 or memory")
@@ -280,6 +292,15 @@ func envInt(key string, def int) int {
 		return def
 	}
 	return v
+}
+
+// envInt32 parses a 32-bit integer so an out-of-range value falls back to the default instead of wrapping.
+func envInt32(key string, def int32) int32 {
+	v, err := strconv.ParseInt(env(key, strconv.Itoa(int(def))), 10, 32)
+	if err != nil {
+		return def
+	}
+	return int32(v)
 }
 
 func envFloat(key string, def float64) float64 {

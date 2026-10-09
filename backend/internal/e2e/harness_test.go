@@ -94,7 +94,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 	}
 	a, err := app.Build(context.Background(), cfg, log, app.Overrides{
 		Storage: store, Providers: o.providers, Mailer: o.mailer,
-		Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}),
+		Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}, 2, 0),
 	})
 	if err != nil {
 		t.Fatalf("build app: %v", err)
