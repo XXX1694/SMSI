@@ -20,7 +20,7 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
           <li>Content: your posts, their schedule and status, and the media you upload.</li>
           <li>Audit log: what was done, by you or by an AI agent using one of your API keys, and when. It holds no post text and no secrets.</li>
           <li>Approval requests: when an AI agent asks to publish, delete or schedule soon, a copy of the post title and text it wants to act on is kept so you can review it. Decided and expired requests are deleted after a retention period (30 days by default).</li>
-          <li>Sessions: a hash of each session, the browser's user-agent string (up to 256 characters) and the IP address it came from. API keys: a hash of each key and when it was last used. Key secrets are shown once and stored only as hashes.</li>
+          <li>Sessions: a hash of each session, the browser user-agent string (up to 256 characters) and the IP address it came from. API keys: a hash of each key and when it was last used. Key secrets are shown once and stored only as hashes.</li>
           <li>IP addresses: used to rate-limit requests and kept in sessions and the audit log for security.</li>
         </ul>
       </LegalSection>
