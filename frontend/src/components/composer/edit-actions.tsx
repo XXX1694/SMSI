@@ -11,9 +11,10 @@ import { postHref } from '@/lib/demo/config';
 import { buildUpdate, formFromPost, freshness, type FormValues } from '@/lib/post-edit';
 import { postActions, postStatusView } from '@/lib/status';
 import type { Post, Provider, SocialAccount } from '@/lib/types';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
 import { Feedback } from './issue-list';
 import type { ComposerFields } from './use-composer-fields';
+import { useTranslations } from '@/i18n/use-translations';
 
 export interface Baseline {
   post: Post;
@@ -32,22 +33,22 @@ interface Props {
 type Kind = 'save' | 'schedule';
 
 function Conflict({ latest, onLoad, onForce }: { latest: Post; onLoad: () => void; onForce: () => void }) {
+  const t = useTranslations();
+  const tc = useTranslations('composer');
   const stillEditable = postActions(latest.status).edit;
   return (
     <div className="space-y-3" role="alert">
       <Notice tone="danger">
-        <span className="font-medium">This post changed since you opened it.</span>{' '}
-        {stillEditable
-          ? 'A newer version was saved in another tab or by an agent. Saving now overwrites it.'
-          : `It is now ${postStatusView(latest.status).label} and cannot be edited.`}
+        <span className="font-medium">{tc('conflictTitle')}</span>{' '}
+        {stillEditable ? tc('conflictEditable') : tc('conflictLocked', { status: postStatusView(latest.status, t).label })}
       </Notice>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={onLoad}>
-          Load the latest version
+          {tc('loadLatest')}
         </Button>
         {stillEditable ? (
           <Button variant="ghost" size="sm" onClick={onForce}>
-            Save mine anyway
+            {tc('saveAnyway')}
           </Button>
         ) : null}
       </div>
@@ -56,6 +57,9 @@ function Conflict({ latest, onLoad, onForce }: { latest: Post; onLoad: () => voi
 }
 
 export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, providers }: Props) {
+  const t = useTranslations();
+  const tc = useTranslations('composer');
+  const errorText = useErrorText();
   const router = useRouter();
   const toast = useToast();
   const { post } = baseline;
@@ -68,7 +72,7 @@ export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, p
   async function save(kind: Kind, force: boolean) {
     const timeChanged = form.date !== baseline.values.date || form.time !== baseline.values.time;
     const needTime = kind === 'schedule' || (post.status === 'scheduled' && (timeChanged || !form.date));
-    const found = validateComposer(state, accounts, providers, { requireSchedule: needTime });
+    const found = validateComposer(state, accounts, providers, t, { requireSchedule: needTime });
     setIssues(found);
     setApiError(null);
     if (found.length > 0) return;
@@ -85,11 +89,11 @@ export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, p
       const saved = await api.posts.update(post.id, buildUpdate(state, form, baseline.values, post.status));
       onBaseline({ post: { ...post, ...saved }, values: form });
       if (kind === 'schedule' && state.scheduledAtUtc && !(await schedule(state.scheduledAtUtc))) return;
-      toast.success(kind === 'schedule' ? 'Changes saved and post scheduled' : 'Changes saved');
+      toast.success(kind === 'schedule' ? tc('changesSavedScheduled') : tc('changesSaved'));
       onLeave();
       router.push(postHref(post.id));
     } catch (e) {
-      setApiError(errorMessage(e));
+      setApiError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -101,7 +105,7 @@ export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, p
       await api.posts.schedule(post.id, at);
       return true;
     } catch (e) {
-      setApiError(`Changes saved, but the post was not scheduled: ${errorMessage(e, false)}`);
+      setApiError(tc('savedNotScheduled', { reason: errorText(e, false) }));
       return false;
     }
   }
@@ -121,15 +125,15 @@ export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, p
       {conflict ? <Conflict latest={conflict} onLoad={loadLatest} onForce={() => void save('save', true)} /> : null}
       <div className="flex flex-wrap gap-2 border-t pt-6">
         <Button loading={busy} onClick={() => void save('save', false)}>
-          {busy ? 'Saving…' : 'Save changes'}
+          {busy ? t('common.saving') : tc('saveChanges')}
         </Button>
         {post.status === 'draft' ? (
           <Button variant="secondary" disabled={busy} onClick={() => void save('schedule', false)}>
-            Save and schedule
+            {tc('saveAndSchedule')}
           </Button>
         ) : null}
         <Button variant="ghost" asChild>
-          <Link href={postHref(post.id)}>Cancel</Link>
+          <Link href={postHref(post.id)}>{t('common.cancel')}</Link>
         </Button>
       </div>
     </>
