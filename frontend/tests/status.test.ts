@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { accountStatusView, attemptStatusView, postActions, postStatusView, targetStatusView } from '@/lib/status';
+import {
+  ACCOUNT_LOOK,
+  APPROVAL_LOOK,
+  ATTEMPT_LOOK,
+  POST_LOOK,
+  TARGET_LOOK,
+  accountStatusView,
+  attemptStatusView,
+  postActions,
+  postStatusView,
+  targetStatusView,
+} from '@/lib/status';
 import { enT } from '@/i18n/en';
 
 describe('state to badge mapping', () => {
@@ -17,18 +28,11 @@ describe('state to badge mapping', () => {
     expect(targetStatusView('needs_review', enT).label).toBe('Unconfirmed');
     expect(attemptStatusView('unknown', enT).label).toBe('Unconfirmed');
   });
-  it('gives every known status a glyph, one shape per meaning', () => {
-    const post = ['draft', 'scheduled', 'publishing', 'published', 'partially_published', 'failed', 'cancelled'].map((s) => postStatusView(s, enT).glyph);
-    expect(post.every(Boolean)).toBe(true);
-    expect(new Set(post).size).toBe(post.length);
-    for (const [view, list] of [
-      [targetStatusView, ['pending', 'publishing', 'published', 'failed', 'cancelled', 'needs_review']],
-      [accountStatusView, ['active', 'expired', 'revoked', 'error']],
-      [attemptStatusView, ['started', 'succeeded', 'failed', 'unknown']],
-    ] as const) {
-      const glyphs = list.map((s) => view(s, enT).glyph);
-      expect(glyphs.every(Boolean)).toBe(true);
-      expect(new Set(glyphs).size).toBe(glyphs.length);
+  it('gives every status a glyph, one shape per meaning within each set', () => {
+    for (const [name, looks] of Object.entries({ POST_LOOK, TARGET_LOOK, ACCOUNT_LOOK, ATTEMPT_LOOK, APPROVAL_LOOK })) {
+      const glyphs = Object.values(looks).map(([, glyph]) => glyph);
+      expect(glyphs.every(Boolean), name).toBe(true);
+      expect(new Set(glyphs).size, name).toBe(glyphs.length);
     }
   });
   it('falls back for unknown values', () => {

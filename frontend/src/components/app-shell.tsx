@@ -65,13 +65,16 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative z-10 flex items-center gap-2.5 rounded-md px-2.5 py-3 text-sm transition-colors md:py-1.5',
-        active ? 'font-medium text-secondary-foreground group-data-[indicator=off]/nav:bg-secondary' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+        // Forced colours drop the sliding highlight, so the active row also gets an outline there.
+        active
+          ? 'font-medium text-secondary-foreground group-data-[indicator=off]/nav:bg-secondary forced-colors:outline forced-colors:outline-1 forced-colors:-outline-offset-1'
+          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
       )}
     >
       <Icon className="h-4 w-4" aria-hidden />
       {t(item.labelKey)}
       {badge ? (
-        <span className="ml-auto inline-grid h-[1.125rem] min-w-5 place-items-center rounded px-1 text-2xs font-semibold leading-none tabular-nums text-foreground bg-foreground/[0.08]">
+        <span className="ml-auto inline-grid h-count min-w-count place-items-center rounded-tag bg-foreground/10 px-1 text-2xs font-semibold leading-none tabular-nums text-foreground">
           {badge > 99 ? '99+' : badge}
           <span className="sr-only"> {ts('waiting')}</span>
         </span>
@@ -185,7 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header data-app-header className="glass-chrome sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 md:hidden">
         <Logo animate />
         {pending ? (
-          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium tabular-nums text-foreground hover:bg-foreground/5">
+          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium tabular-nums text-foreground hover:bg-secondary/60">
             <StatusGlyph name="waiting" className="text-warning" />
             <span aria-hidden className="sm:hidden">
               {pending}
@@ -200,7 +203,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside
         id="sidebar"
         className={cn(
-          'glass-chrome flex-col border-b p-3 md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r',
+          // The open mobile menu sits in the scrolling page, and blur is never applied to anything that scrolls (BRAND.md section 4).
+          'glass-chrome flex-col border-b p-3 max-md:backdrop-filter-none md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r',
           open ? 'flex' : 'hidden',
         )}
       >

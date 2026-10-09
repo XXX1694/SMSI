@@ -138,6 +138,10 @@ jobs:
         working-directory: site
         run: npm ci
 
+      - name: Test the site scripts
+        working-directory: site
+        run: npm test
+
       - name: Build the site
         working-directory: site
         env:

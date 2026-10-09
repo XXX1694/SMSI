@@ -53,7 +53,7 @@ const SHAPES: Record<GlyphName, React.ReactNode> = {
 
 export function StatusGlyph({ name, className }: { name: GlyphName; className?: string }) {
   return (
-    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden focusable="false" data-glyph={name} className={cn('shrink-0', className)}>
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden focusable="false" data-glyph={name} className={cn('shrink-0 forced-colors:text-[CanvasText]', className)}>
       {SHAPES[name]}
     </svg>
   );

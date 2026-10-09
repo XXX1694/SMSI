@@ -5,12 +5,12 @@ import type { GlyphName } from '@/lib/status';
 import { cn } from '@/lib/utils';
 
 /**
- * A tag, not a pill (D-024, BRAND.md section 5): 5 px radius, a hairline border, no fill. With a `glyph` (statuses) only the
- * glyph carries the tone and the label stays in the text colour; without one (risk, trust, capability) the label takes the
- * tone. Every tone colour is AA on the background and on glass, so either way the text passes.
+ * A tag, not a pill (D-024, BRAND.md section 5): a small radius, a hairline border, no fill. Without a glyph (risk, trust,
+ * capability) the label takes the tone. With a `glyph` (statuses) the glyph takes the tone and the label keeps the text
+ * colour, muted for the quiet neutral statuses. Every tone colour is AA on the background and on glass.
  */
 const badgeVariants = cva(
-  'inline-flex h-[1.375rem] items-center gap-1.5 whitespace-nowrap rounded-[5px] border px-1.5 text-xs font-medium leading-none tabular-nums',
+  'inline-flex h-tag items-center gap-1.5 whitespace-nowrap rounded-tag border px-1.5 text-xs font-medium leading-none tabular-nums',
   {
     variants: {
       tone: {
@@ -22,36 +22,24 @@ const badgeVariants = cva(
         warning: 'border-warning/35 text-warning',
         danger: 'border-danger/35 text-danger',
       },
-      withGlyph: { true: '', false: '' },
     },
-    compoundVariants: [
-      { withGlyph: true, tone: ['info', 'accent', 'success', 'warning'], className: 'border-border text-foreground' },
-      { withGlyph: true, tone: 'danger', className: 'text-foreground' },
-    ],
-    defaultVariants: { tone: 'neutral', withGlyph: false },
+    defaultVariants: { tone: 'neutral' },
   },
 );
 
-const GLYPH_TONE: Record<NonNullable<BadgeProps['tone']>, string> = {
-  neutral: 'text-muted-foreground',
-  outline: 'text-muted-foreground',
-  info: 'text-info',
-  accent: 'text-accent',
-  success: 'text-success',
-  warning: 'text-warning',
-  danger: 'text-danger',
-};
-
-export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, Omit<VariantProps<typeof badgeVariants>, 'withGlyph'> {
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {
   /** The status shape before the label; see StatusGlyph. */
   glyph?: GlyphName;
 }
 
 export function Badge({ className, tone, glyph, children, ...props }: BadgeProps) {
+  // With a glyph the tag keeps its tone, the glyph takes it through currentColor, and the label goes back to the text
+  // colour (quiet neutral statuses stay muted). The tinted border stays only on the failed tag, as a second cue.
+  const loud = glyph && tone && tone !== 'neutral' && tone !== 'outline';
   return (
-    <span className={cn(badgeVariants({ tone, withGlyph: Boolean(glyph) }), className)} {...props}>
-      {glyph ? <StatusGlyph name={glyph} className={GLYPH_TONE[tone ?? 'neutral']} /> : null}
-      {children}
+    <span className={cn(badgeVariants({ tone }), loud && tone !== 'danger' && 'border-border', className)} {...props}>
+      {glyph ? <StatusGlyph name={glyph} /> : null}
+      {loud ? <span className="text-foreground">{children}</span> : children}
     </span>
   );
 }
