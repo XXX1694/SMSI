@@ -281,6 +281,7 @@ step for two short pages. Operator values in the backend config: an extra API ca
 **Consequences.** Breaking for API clients that register users (the MCP server never does). Existing accounts have an empty
 `terms_version` and carry on; when the texts change in meaning, bumping the version only affects new accounts. Re-acceptance
 for existing users is a later decision. The texts are a template: the operator must review them.
+
 ## D-017: The landing page moves with CSS and a few small scripts, no animation library (2026-10-09)
 
 **Decision.** The landing page has its own layout (`site/src/layout-landing.html`); docs keep the calm one. Motion is CSS
