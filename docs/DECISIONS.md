@@ -463,14 +463,15 @@ single `DELETE FROM users` would run one huge transaction and could trip `post_m
 - Success schedules the deletion `ACCOUNT_DELETION_GRACE_DAYS` ahead (default 7, 1 to 30; `users.deletion_scheduled_at`,
   migration 00006) and answers `202 {status:"scheduled", scheduled_for}`. In one transaction every session is deleted, every
   API key and MCP connection is revoked, an `account_deletions` record is written and `account.deletion_scheduled` is
-  audited; before that, every scheduled post goes back to a draft (queue tasks removed), so nothing is published during the
-  grace period. The owner gets a mail (`account_deletion_scheduled`) that says how to cancel, which is also the alarm when
+  audited; after the commit, every scheduled post goes back to a draft (queue tasks removed), and the publisher skips
+  whatever is still due (a scheduled post becomes a draft the same way; a publishing one fails its target with
+  `ACCOUNT_DELETION_SCHEDULED` and can be retried after a cancel), so nothing is published during the grace period. The owner gets a mail (`account_deletion_scheduled`) that says how to cancel, which is also the alarm when
   someone else did it. The cookies are cleared.
 - The account stays `active` during the grace period. Signing in works, `/me` carries `user.deletion_scheduled_at`, the web
   app shows a banner with **Cancel deletion** (`POST /account/delete/cancel`, session, `409` when nothing is scheduled), and
   export still works. Cancelling clears the schedule and the record; sessions and keys stay revoked and posts stay drafts.
   Signing in alone does **not** cancel: an accidental sign-in must not undo a decision, and the banner makes the state visible.
-- The hourly worker sweep queues `account:purge {user_id}` (Asynq `Unique(45m)`, `MaxRetry(12)`) for accounts whose date
+- The hourly worker sweep queues `account:purge {user_id}` (on the maintenance queue `<queue>-exports`, one at a time, Asynq `Unique(55m)`, `MaxRetry(2)`; the hourly sweep is the outer retry loop) for accounts whose date
   has passed, and for accounts a previous purge left half done. The purge: (1) **claims** the account atomically
   (`status='deleted'`, `deleted_at`; from then on login, sessions and keys fail on their own); a cancelled, unknown or
   not-yet-due account is a no-op; (2) fails with a retryable error while a post is `publishing` or an export is being built;
@@ -479,7 +480,7 @@ single `DELETE FROM users` would run one huge transaction and could trip `post_m
   (6) export archives; (7) one transaction deletes the user row (cascades to sessions, accounts and their encrypted
   credentials, keys, MCP connections, link codes, tokens, export rows) and stamps `account_deletions.purged_at`;
   (8) mails `account_deleted`. Every step deletes only what is still there, so a retry or a concurrent run is safe.
-- Posts go before media (`RESTRICT`) and before social accounts (`post_targets` has no cascade). Migration 00006 adds the
+- Posts go before media (`RESTRICT`) and before social accounts (`post_targets` has no cascade). Migration 00007 adds, concurrently, the
   missing indexes on `scheduled_jobs(post_target_id)` and `analytics(post_target_id)`, which the cascades would otherwise
   scan per deleted target.
 - What stays: `account_deletions(user_id, requested_at, purged_at, counts)`: numbers and ids, no email, no content, no foreign

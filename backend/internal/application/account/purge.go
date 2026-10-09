@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/socialos/backend/internal/adapters/mail"
+	"github.com/socialos/backend/internal/domain/dataexport"
 )
 
 // purgeBatch bounds how many rows one statement deletes, so no transaction runs long or holds many locks.
@@ -55,7 +56,7 @@ func (s *DeletionService) Purge(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 	if s.d.Prefixes != nil {
-		if err := s.d.Prefixes.DeletePrefix(ctx, "users/"+userID.String()+"/"); err != nil {
+		if err := s.d.Prefixes.DeletePrefix(ctx, dataexport.UserPrefix(userID)); err != nil {
 			return fmt.Errorf("delete remaining objects: %w", err)
 		}
 	}

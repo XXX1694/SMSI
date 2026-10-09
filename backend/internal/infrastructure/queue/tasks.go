@@ -168,12 +168,13 @@ func ExportHandler(build func(ctx context.Context, exportID uuid.UUID) error) fu
 	}
 }
 
-// Purge task options. A purge that finds a post being published fails and is retried with the queue's backoff, so
-// MaxRetry is generous; Unique collapses the hourly sweep's re-queueing while one is waiting or running.
+// Purge task options. A purge runs on the maintenance queue (see ExportQueueName). It retries only twice: the hourly
+// sweep re-queues every account that is still due or half purged, so it is the outer retry loop (D-019). Unique is a
+// little shorter than the sweep period plus the retries' backoff, so a waiting or running purge is not queued twice.
 const (
-	purgeMaxRetry = 12
+	purgeMaxRetry = 2
 	purgeTimeout  = 30 * time.Minute
-	purgeUnique   = 45 * time.Minute
+	purgeUnique   = 55 * time.Minute
 )
 
 type purgePayload struct {
@@ -192,7 +193,7 @@ func (q *PurgeQueue) EnqueuePurge(ctx context.Context, userID uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountPurge, payload), asynq.Queue(q.c.queue),
+	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountPurge, payload), asynq.Queue(ExportQueueName(q.c.queue)),
 		asynq.MaxRetry(purgeMaxRetry), asynq.Retention(0), asynq.Timeout(purgeTimeout), asynq.Unique(purgeUnique))
 	if errors.Is(err, asynq.ErrDuplicateTask) {
 		return nil

@@ -132,7 +132,7 @@ func (s *Service) Unschedule(ctx context.Context, a actor.Actor, id uuid.UUID) (
 	if err := a.Require(apikey.PostsSchedule); err != nil {
 		return nil, err
 	}
-	return s.stopPost(ctx, a, id, post.StatusDraft, post.TargetPending, audit.ActionPostUnscheduled)
+	return s.stopPost(ctx, a, id, post.StatusDraft, post.TargetPending, audit.ActionPostUnscheduled, nil)
 }
 
 // Cancel cancels a draft or scheduled post.
@@ -140,10 +140,10 @@ func (s *Service) Cancel(ctx context.Context, a actor.Actor, id uuid.UUID) (*pos
 	if err := a.Require(apikey.PostsWrite); err != nil {
 		return nil, err
 	}
-	return s.stopPost(ctx, a, id, post.StatusCancelled, post.TargetCancelled, audit.ActionPostCancelled)
+	return s.stopPost(ctx, a, id, post.StatusCancelled, post.TargetCancelled, audit.ActionPostCancelled, nil)
 }
 
-func (s *Service) stopPost(ctx context.Context, a actor.Actor, id uuid.UUID, to post.Status, targetTo post.TargetStatus, action string) (*post.Post, error) {
+func (s *Service) stopPost(ctx context.Context, a actor.Actor, id uuid.UUID, to post.Status, targetTo post.TargetStatus, action string, details map[string]any) (*post.Post, error) {
 	err := s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
 		p, err := s.repo.GetForUpdate(ctx, a.UserID, id)
 		if err != nil {
@@ -167,7 +167,7 @@ func (s *Service) stopPost(ctx context.Context, a actor.Actor, id uuid.UUID, to 
 		if err := s.setTargets(ctx, p, targetTo, post.TargetPending); err != nil {
 			return nil, err
 		}
-		return nil, s.audit.Record(ctx, a, action, "post", p.ID.String(), nil)
+		return nil, s.audit.Record(ctx, a, action, "post", p.ID.String(), details)
 	})
 	if err != nil {
 		return nil, err
@@ -205,10 +205,20 @@ func (s *Service) UnscheduleAll(ctx context.Context, userID uuid.UUID) (int, err
 			return stopped, nil
 		}
 		for _, p := range batch {
-			if _, err := s.stopPost(ctx, a, p.ID, post.StatusDraft, post.TargetPending, audit.ActionPostUnscheduled); err != nil {
+			if _, err := s.stopPost(ctx, a, p.ID, post.StatusDraft, post.TargetPending, audit.ActionPostUnscheduled,
+				map[string]any{"reason": "account_deletion"}); err != nil {
 				return stopped, err
 			}
 			stopped++
 		}
 	}
+}
+
+// UnscheduleForOwner takes one scheduled post back to draft because its owner can no longer publish (reason is audited:
+// account_deletion or owner_disabled). The publisher calls it from its own transaction, which this joins: every active
+// job of the post is cancelled, so a later re-schedule creates fresh jobs instead of hitting the one-active-job index.
+func (s *Service) UnscheduleForOwner(ctx context.Context, userID, postID uuid.UUID, reason string) error {
+	_, err := s.stopPost(ctx, actor.System(userID, reason), postID, post.StatusDraft, post.TargetPending,
+		audit.ActionPostUnscheduled, map[string]any{"reason": reason})
+	return err
 }

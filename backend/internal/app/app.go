@@ -210,7 +210,7 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
 			Tx: db, Audit: auditSvc, Clock: clk, MCPPublicURL: cfg.MCPPublicURL, APIPublicURL: cfg.APIPublicURL}),
 	}
-	a.Publisher = scheduler.NewPublisher(scheduler.Deps{Owners: postgres.NewUsers(db), Targets: postRepo, Posts: postRepo, Jobs: jobRepo,
+	a.Publisher = scheduler.NewPublisher(scheduler.Deps{Owners: postgres.NewUsers(db), Unscheduler: postSvc, Targets: postRepo, Posts: postRepo, Jobs: jobRepo,
 		Accounts: accountsAdapter{repo: accountRepo, svc: accountSvc}, Vault: accountSvc.Vault(),
 		Media: mediaAdapter{repo: mediaRepo, storage: a.Storage}, Metrics: analyticsSvc, Registry: a.Registry,
 		Tx: db, Audit: auditSvc, Clock: clk, Log: log, Queue: a.Queue,

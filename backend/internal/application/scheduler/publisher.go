@@ -3,7 +3,6 @@ package scheduler
 import (
 	"context"
 	"errors"
-	"github.com/socialos/backend/internal/domain/audit"
 	"log/slog"
 	"time"
 
@@ -31,6 +30,7 @@ var errTooEarly = errors.New("task fired before the job run_at")
 // Publisher executes publish:target jobs.
 type Publisher struct {
 	owners   Owners
+	unsched  Unscheduler
 	targets  Targets
 	posts    Posts
 	jobs     Jobs
@@ -58,12 +58,14 @@ type Deps struct {
 	Media    MediaStore
 	Metrics  Metrics
 	// Owners (optional) lets the publisher skip accounts that are deleted or scheduled for deletion.
-	Owners   Owners
-	Registry *provider.Registry
-	Tx       port.TxRunner
-	Audit    port.AuditRecorder
-	Clock    port.Clock
-	Log      *slog.Logger
+	Owners Owners
+	// Unscheduler (required with Owners) returns a scheduled post of a blocked owner to draft.
+	Unscheduler Unscheduler
+	Registry    *provider.Registry
+	Tx          port.TxRunner
+	Audit       port.AuditRecorder
+	Clock       port.Clock
+	Log         *slog.Logger
 	// OnOutcome (optional) is called after each settled attempt with
 	// outcome published | failed | retry | needs_review (metrics hook).
 	OnOutcome func(provider, outcome string)
@@ -81,7 +83,7 @@ func NewPublisher(d Deps) *Publisher {
 	if d.Sleep == nil {
 		d.Sleep = sleepCtx
 	}
-	return &Publisher{owners: d.Owners, queue: d.Queue, sleep: d.Sleep, targets: d.Targets, posts: d.Posts, jobs: d.Jobs, accounts: d.Accounts, vault: d.Vault,
+	return &Publisher{owners: d.Owners, unsched: d.Unscheduler, queue: d.Queue, sleep: d.Sleep, targets: d.Targets, posts: d.Posts, jobs: d.Jobs, accounts: d.Accounts, vault: d.Vault,
 		media: d.Media, metrics: d.Metrics, registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, log: d.Log, observe: d.OnOutcome}
 }
 
@@ -161,15 +163,15 @@ func (p *Publisher) prepare(ctx context.Context, pl Payload, t *post.Target) (*r
 		return nil, err
 	}
 	r := &run{target: t, post: ps, actor: actor.Scheduler(t.UserID), payload: pl}
-	if skipped, err := p.skipForOwner(ctx, r); err != nil || skipped {
-		return nil, err
-	}
 	if t.Status == post.TargetPublished || t.Status == post.TargetCancelled || t.Status == post.TargetNeedsReview ||
 		(ps.Status != post.StatusScheduled && ps.Status != post.StatusPublishing) {
 		return nil, p.jobs.MarkDoneForTarget(ctx, t.ID)
 	}
 	if t.ExternalPostID != "" { // published earlier but status not committed
 		return nil, p.markPublishedLocked(ctx, r, provider.PublishResult{ExternalID: t.ExternalPostID, URL: t.ExternalURL}, nil)
+	}
+	if skipped, err := p.skipForOwner(ctx, r); err != nil || skipped {
+		return nil, err
 	}
 	acc, err := p.accounts.Get(ctx, t.UserID, t.SocialAccountID)
 	if err != nil {
@@ -253,25 +255,38 @@ func (p *Publisher) startAttempt(ctx context.Context, r *run) error {
 	return p.targets.InsertAttempt(ctx, r.attempt)
 }
 
-// skipForOwner stops a due job whose owner is deleted or scheduled for deletion: the post goes back to a draft, the job
-// is finished and nothing is sent to a network (D-019). It runs inside the begin tx with the post and target locked.
+// skipForOwner stops a due job whose owner is deleted, disabled or scheduled for deletion; nothing is sent to a network
+// (D-019). It runs inside the begin tx with the post and target locked, after the terminal checks, so it only sees a
+// target that would really publish.
+//   - A scheduled post goes back to a draft through the same code as the owner's unschedule: every job of the post is
+//     cancelled and its targets reset, so re-scheduling later finds no active job.
+//   - A post already publishing (an earlier target ran, or this is a retry) cannot become a draft: the target fails with
+//     ACCOUNT_DELETION_SCHEDULED and the post settles to failed/partially_published, retryable once the owner is back.
 func (p *Publisher) skipForOwner(ctx context.Context, r *run) (bool, error) {
 	if p.owners == nil {
 		return false, nil
 	}
-	ok, err := p.owners.Publishable(ctx, r.target.UserID)
-	if err != nil || ok {
+	reason, err := p.owners.BlockReason(ctx, r.target.UserID)
+	if err != nil || reason == "" {
 		return false, err
 	}
 	if r.post.Status == post.StatusScheduled {
-		r.post.Status, r.post.ScheduledAt = post.StatusDraft, nil
-		if err := p.posts.Update(ctx, r.post); err != nil {
-			return false, err
+		if p.unsched == nil {
+			return false, errors.New("scheduler: Owners is set without an Unscheduler")
 		}
+		return true, p.unsched.UnscheduleForOwner(ctx, r.target.UserID, r.post.ID, reason)
 	}
-	if err := p.jobs.MarkDoneForTarget(ctx, r.target.ID); err != nil {
+	t := r.target
+	code, msg := "ACCOUNT_DELETION_SCHEDULED", "the account is scheduled for deletion; cancel the deletion and retry"
+	if reason == SkipOwnerDisabled {
+		code, msg = "OWNER_DISABLED", "the account is disabled"
+	}
+	t.Status, t.ErrorCode, t.ErrorMessage = post.TargetFailed, code, msg
+	if err := p.targets.UpdateTarget(ctx, t); err != nil {
 		return false, err
 	}
-	return true, p.audit.Record(ctx, r.actor, audit.ActionPostUnscheduled, "post", r.post.ID.String(),
-		map[string]any{"reason": "account_deletion", "post_target_id": r.target.ID.String()})
+	if err := p.jobs.MarkDoneForTarget(ctx, t.ID); err != nil {
+		return false, err
+	}
+	return true, p.settle(ctx, r)
 }

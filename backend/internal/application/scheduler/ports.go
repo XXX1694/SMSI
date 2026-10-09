@@ -103,8 +103,22 @@ type Metrics interface {
 	Increment(ctx context.Context, userID, accountID, targetID uuid.UUID, metric string, value int64) error
 }
 
+// Why an owner's due job is skipped (audited, and the code of a target that fails because of it).
+const (
+	SkipAccountDeletion = "account_deletion"
+	SkipOwnerDisabled   = "owner_disabled"
+)
+
 // Owners tells the publisher whether an owner's posts may still go out.
 type Owners interface {
-	// Publishable is false for an account that is deleted or scheduled for deletion (D-019).
-	Publishable(ctx context.Context, userID uuid.UUID) (bool, error)
+	// BlockReason is "" while the owner may publish, SkipOwnerDisabled for a disabled owner and SkipAccountDeletion
+	// for one that is deleted, gone or scheduled for deletion (D-019). It locks the owner row FOR SHARE until the
+	// transaction ends, so the purge's claim waits for a publisher that is already past this check.
+	BlockReason(ctx context.Context, userID uuid.UUID) (string, error)
+}
+
+// Unscheduler takes a scheduled post back to draft the way the owner would (posts.Service.UnscheduleForOwner). It
+// joins the caller's transaction.
+type Unscheduler interface {
+	UnscheduleForOwner(ctx context.Context, userID, postID uuid.UUID, reason string) error
 }

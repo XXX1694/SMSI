@@ -15,7 +15,7 @@ import (
 // Deletions implements account.DeletionRepo. Indexes used: users_deletion_due_idx and users_deleted_idx (sweep),
 // post_targets_user_status_idx and data_exports_active_uniq (busy check), posts_user_id_idx, audit_logs_user_id_idx,
 // media_user_id_idx and action_approvals_user_id_idx (batches), analytics_user_captured_idx, and the foreign-key
-// indexes scheduled_jobs_target_idx / analytics_target_idx (00006) for the cascades.
+// indexes scheduled_jobs_target_idx / analytics_target_idx (00007) for the cascades.
 type Deletions struct{ db *DB }
 
 // NewDeletions creates the repo.
@@ -47,7 +47,7 @@ func (r *Deletions) Cancel(ctx context.Context, userID uuid.UUID) error {
 // Due lists the users the sweep must queue (system).
 func (r *Deletions) Due(ctx context.Context, now time.Time, limit int) ([]uuid.UUID, error) {
 	rows, err := r.db.q(ctx).Query(ctx, `SELECT id FROM users
-		WHERE (status = 'active' AND deletion_scheduled_at <= $1) OR status = 'deleted' ORDER BY id LIMIT $2`, now, limit)
+		WHERE (status = 'active' AND deletion_scheduled_at IS NOT NULL AND deletion_scheduled_at <= $1) OR status = 'deleted' ORDER BY id LIMIT $2`, now, limit)
 	if err != nil {
 		return nil, mapErr(err, "user")
 	}
@@ -67,7 +67,7 @@ func (r *Deletions) Due(ctx context.Context, now time.Time, limit int) ([]uuid.U
 func (r *Deletions) Claim(ctx context.Context, userID uuid.UUID, now time.Time) (string, bool, error) {
 	var email string
 	err := r.db.q(ctx).QueryRow(ctx, `UPDATE users SET status = 'deleted', deleted_at = COALESCE(deleted_at, $2)
-		WHERE id = $1 AND ((status = 'active' AND deletion_scheduled_at <= $2) OR status = 'deleted') RETURNING email::text`, userID, now).Scan(&email)
+		WHERE id = $1 AND ((status = 'active' AND deletion_scheduled_at IS NOT NULL AND deletion_scheduled_at <= $2) OR status = 'deleted') RETURNING email::text`, userID, now).Scan(&email)
 	if err != nil {
 		if errs.Is(mapErr(err, "user"), errs.NotFound) {
 			return "", false, nil

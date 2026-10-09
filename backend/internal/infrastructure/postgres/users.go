@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/application/auth"
+	"github.com/socialos/backend/internal/application/scheduler"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/user"
 )
@@ -117,12 +118,22 @@ func (r *Sessions) DeleteAllForUser(ctx context.Context, userID, except uuid.UUI
 	return tag.RowsAffected(), mapErr(err, "session")
 }
 
-// Publishable reports whether the user exists, is active and has no deletion scheduled (system: the publisher's check).
-func (r *Users) Publishable(ctx context.Context, id uuid.UUID) (bool, error) {
-	var ok bool
-	err := r.db.q(ctx).QueryRow(ctx, `SELECT status = 'active' AND deletion_scheduled_at IS NULL FROM users WHERE id = $1`, id).Scan(&ok)
+// BlockReason says why the user's due posts must not go out ("" when they may): the publisher's check (system). The row
+// is locked FOR SHARE, so a purge claim (UPDATE) waits for a publisher transaction that is already past the check.
+func (r *Users) BlockReason(ctx context.Context, id uuid.UUID) (string, error) {
+	var status string
+	var scheduled bool
+	err := r.db.q(ctx).QueryRow(ctx, `SELECT status, deletion_scheduled_at IS NOT NULL FROM users WHERE id = $1 FOR SHARE`, id).Scan(&status, &scheduled)
 	if errs.Is(mapErr(err, "user"), errs.NotFound) {
-		return false, nil
+		return scheduler.SkipAccountDeletion, nil
 	}
-	return ok, err
+	switch {
+	case err != nil:
+		return "", err
+	case status == string(user.StatusDisabled):
+		return scheduler.SkipOwnerDisabled, nil
+	case status != string(user.StatusActive) || scheduled:
+		return scheduler.SkipAccountDeletion, nil
+	}
+	return "", nil
 }

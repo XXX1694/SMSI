@@ -352,7 +352,7 @@ func TestUploadRemovesTheObjectWhenTheOwnerIsNoLongerActive(t *testing.T) {
 	st := newSink()
 	svc := NewService(&failingRepo{}, st, noAudit{}, fixedClock{})
 	_, err := svc.Upload(context.Background(), owner(), UploadInput{File: bytes.NewReader(tinyPNG(t)), OriginalName: "a.png"})
-	wantCode(t, err, errs.Forbidden)
+	_ = wantCode(t, err, errs.Forbidden)
 	if st.count() != 0 || len(st.deleted) == 0 {
 		t.Fatalf("objects left = %d, deleted = %v; the stored object must be removed", st.count(), st.deleted)
 	}

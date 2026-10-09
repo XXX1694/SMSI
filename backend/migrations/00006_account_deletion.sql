@@ -1,6 +1,8 @@
 -- +goose Up
 -- Account deletion with a grace period (D-019). users.status 'deleted', users.deleted_at and account_deletions already
--- exist (00003); this adds the schedule and the indexes the batched purge needs.
+-- exist (00003); this adds the schedule and the indexes the batched purge needs (the foreign-key indexes are in 00007, built concurrently).
+-- Fail fast instead of queueing behind a long transaction on these hot tables (a queued ALTER blocks everything behind it).
+SET LOCAL lock_timeout = '5s';
 ALTER TABLE users ADD COLUMN deletion_scheduled_at timestamptz;
 -- Serves the worker sweep for accounts whose grace period is over.
 CREATE INDEX users_deletion_due_idx ON users(deletion_scheduled_at) WHERE deletion_scheduled_at IS NOT NULL;
