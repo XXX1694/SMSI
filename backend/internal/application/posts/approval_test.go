@@ -135,14 +135,17 @@ func TestStateFingerprintCoversEverythingThatWillBePublished(t *testing.T) {
 func TestSummaryShowsEverythingTheOwnerApproves(t *testing.T) {
 	p := testPost()
 	p.Content = strings.Repeat("é", 1000)
-	p.Targets = []post.Target{{Platform: "linkedin", Content: p.Content}, {Platform: "telegram", Content: "short override"}}
+	p.Targets = []post.Target{{Platform: "linkedin", SocialAccountID: uuid.New(), Content: p.Content}, {Platform: "telegram", SocialAccountID: uuid.New(), Content: "short override"}}
 	p.MediaIDs = []uuid.UUID{uuid.New(), uuid.New()}
 	at := now0.Add(time.Minute)
-	sum := summarize(p, []media.Media{{Kind: media.KindImage}, {Kind: media.KindVideo}}, &at)
+	sum := summarize(p, []media.Media{{Kind: media.KindImage}, {Kind: media.KindVideo}}, &at, map[uuid.UUID]string{p.Targets[1].SocialAccountID: "@team"})
 	if sum["content"] != p.Content {
 		t.Fatal("the full text must be in the summary, not a prefix")
 	}
 	overrides := sum["targets"].([]map[string]any)
+	if sum["accounts"].([]string)[1] != "telegram · @team" || overrides[0]["account"] != "telegram · @team" {
+		t.Fatalf("accounts must be told apart: %v", sum["accounts"])
+	}
 	if len(overrides) != 1 || overrides[0]["platform"] != "telegram" || overrides[0]["content"] != "short override" {
 		t.Fatalf("per-network text: %v", overrides)
 	}
@@ -152,7 +155,7 @@ func TestSummaryShowsEverythingTheOwnerApproves(t *testing.T) {
 	}
 	same := testPost()
 	same.Targets[0].Content = same.Content
-	if _, ok := summarize(same, nil, nil)["targets"]; ok {
+	if _, ok := summarize(same, nil, nil, nil)["targets"]; ok {
 		t.Fatal("no overrides, no targets entry")
 	}
 }

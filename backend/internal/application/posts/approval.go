@@ -4,8 +4,10 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/media"
@@ -38,8 +40,9 @@ func (s *Service) require(ctx context.Context, a actor.Actor, g gated) error {
 			return err
 		}
 	}
+	names := s.accountNames(ctx, g.p)
 	req := approval.Request{Action: g.action, ResourceType: "post", ResourceID: g.p.ID.String(), Fingerprint: g.fingerprint,
-		Summary: summarize(g.p, ms, g.at)}
+		Summary: summarize(g.p, ms, g.at, names)}
 	if g.resource != "" {
 		req.ResourceType, req.ResourceID = g.resource, ""
 	}
@@ -69,18 +72,37 @@ func stateFingerprint(id string, p *post.Post, at time.Time) string {
 	return approval.Fingerprint(parts...)
 }
 
-// summarize is what the owner reads before deciding, and it shows everything the fingerprint covers: the full text
-// (validation caps it at MaxContentLen), every per-network text that differs from it, the media and the run time.
-func summarize(p *post.Post, ms []media.Media, at *time.Time) map[string]any {
-	platforms := make([]string, 0, len(p.Targets))
-	var overrides []map[string]any
+// accountNames maps each target's account to "@username" for the owner's summary, so two accounts on one network can be
+// told apart. An account that cannot be read is shown by its network alone: the summary is advice, the fingerprint is
+// the binding.
+func (s *Service) accountNames(ctx context.Context, p *post.Post) map[uuid.UUID]string {
+	out := make(map[uuid.UUID]string, len(p.Targets))
 	for _, t := range p.Targets {
-		platforms = append(platforms, t.Platform)
-		if t.Content != p.Content {
-			overrides = append(overrides, map[string]any{"platform": t.Platform, "content": t.Content})
+		if acc, err := s.accounts.Get(ctx, p.UserID, t.SocialAccountID); err == nil && acc.Username != "" {
+			out[t.SocialAccountID] = "@" + strings.TrimPrefix(acc.Username, "@")
 		}
 	}
-	out := map[string]any{"title": p.Title, "content": p.Content, "platforms": platforms, "status": string(p.Status),
+	return out
+}
+
+// summarize is what the owner reads before deciding, and it shows everything the fingerprint covers: the full text
+// (validation caps it at MaxContentLen), every per-network text that differs from it, the media and the run time.
+func summarize(p *post.Post, ms []media.Media, at *time.Time, names map[uuid.UUID]string) map[string]any {
+	platforms := make([]string, 0, len(p.Targets))
+	accounts := make([]string, 0, len(p.Targets))
+	var overrides []map[string]any
+	for _, t := range p.Targets {
+		label := t.Platform
+		if n := names[t.SocialAccountID]; n != "" {
+			label += " · " + n
+		}
+		platforms = append(platforms, t.Platform)
+		accounts = append(accounts, label)
+		if t.Content != p.Content {
+			overrides = append(overrides, map[string]any{"platform": t.Platform, "account": label, "content": t.Content})
+		}
+	}
+	out := map[string]any{"title": p.Title, "content": p.Content, "platforms": platforms, "accounts": accounts, "status": string(p.Status),
 		"media": mediaSummary(len(p.MediaIDs), ms)}
 	if len(overrides) > 0 {
 		out["targets"] = overrides
