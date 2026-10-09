@@ -140,7 +140,7 @@
 .lp-wrap.lp-footer-inner { padding-top: 0; }
 .lp-footer-word { margin: 0 0 1rem; font-size: clamp(4.5rem, 19vw, 17rem); line-height: 0.82; font-weight: 700; letter-spacing: -0.07em; user-select: none; white-space: nowrap; }
 /* Drawn as pseudo-element content: it is decoration, so it is not text and carries no contrast requirement. */
-.lp-footer-word::before { content: 'SocialOS'; color: hsl(var(--foreground) / 0.06); }
+.lp-footer-word::before { content: 'Steerpost'; color: hsl(var(--foreground) / 0.06); }
 .lp-footer-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 3rem; padding-top: 1.5rem; border-top: 1px solid hsl(var(--border)); }
 .lp-footer-row p { margin: 0; max-width: 34rem; }
 .lp-footer nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }

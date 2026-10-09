@@ -9,23 +9,23 @@
 :root {
   /* Colour (light) */
   --background: 0 0% 100%;
-  --surface: 220 14% 98%;
-  --foreground: 224 20% 12%;
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 9% 40%;
-  --border: 220 13% 91%;
-  --input: 220 13% 86%;
-  --ring: 233 72% 56%;
-  --accent: 233 72% 56%;
+  --surface: 196 20% 97.5%;
+  --foreground: 205 32% 11%;
+  --muted: 196 16% 95%;
+  --muted-foreground: 205 12% 36%;
+  --border: 200 14% 89%;
+  --input: 200 14% 82%;
+  --ring: 191 88% 27%;
+  --accent: 191 88% 27%;
   --accent-foreground: 0 0% 100%;
-  --accent-soft: 233 80% 96%;
-  --success: 152 60% 28%;
-  --success-soft: 152 50% 94%;
+  --accent-soft: 190 55% 94%;
+  --success: 142 58% 26%;
+  --success-soft: 142 45% 94%;
   --warning: 32 90% 30%;
   --warning-soft: 40 90% 93%;
   --danger: 0 68% 42%;
   --danger-soft: 0 80% 96%;
-  --shadow-pop: 0 1px 2px hsl(224 20% 12% / 0.05), 0 18px 40px -18px hsl(224 20% 12% / 0.22);
+  --shadow-pop: 0 1px 2px hsl(205 32% 11% / 0.05), 0 18px 40px -18px hsl(205 32% 11% / 0.22);
 
   /* Type scale: size / line height */
   --text-2xs: 0.6875rem;
@@ -75,24 +75,27 @@
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  /* The steering motif: a path eases in, bends and settles. Used for drawn lines and the hero flow, never for UI chrome. */
+  --ease-steer: cubic-bezier(0.45, 0, 0.15, 1);
+  --duration-path: 900ms;
   --distance-enter: 0.5rem;
   --stagger-step: 40ms;
 }
 
 .dark {
-  --background: 224 20% 8%;
-  --surface: 224 18% 10%;
-  --foreground: 220 14% 94%;
-  --muted: 224 16% 14%;
-  --muted-foreground: 220 9% 66%;
-  --border: 224 14% 18%;
-  --input: 224 14% 24%;
-  --ring: 233 90% 72%;
-  --accent: 233 85% 72%;
-  --accent-foreground: 224 20% 8%;
-  --accent-soft: 233 40% 16%;
-  --success: 152 55% 55%;
-  --success-soft: 152 40% 12%;
+  --background: 205 28% 7%;
+  --surface: 205 24% 9.5%;
+  --foreground: 195 14% 94%;
+  --muted: 205 20% 13%;
+  --muted-foreground: 200 10% 66%;
+  --border: 205 16% 17%;
+  --input: 205 16% 24%;
+  --ring: 187 72% 56%;
+  --accent: 187 72% 56%;
+  --accent-foreground: 205 30% 8%;
+  --accent-soft: 190 45% 14%;
+  --success: 145 52% 55%;
+  --success-soft: 145 38% 12%;
   --warning: 38 90% 62%;
   --warning-soft: 38 50% 12%;
   --danger: 0 85% 70%;

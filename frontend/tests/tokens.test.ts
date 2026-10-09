@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import config from '../tailwind.config';
+import { BRAND_HEX } from '../src/lib/brand';
 
 const tokensPath = path.resolve(__dirname, '../src/styles/tokens.css');
 const css = readFileSync(tokensPath, 'utf8');
@@ -38,7 +39,7 @@ describe('design tokens', () => {
     for (const k of colours) expect(light, k).toHaveProperty(k);
   });
 
-  // Pairs the UI relies on for body text. Values are unchanged from before tokens moved to one file.
+  // Pairs the UI relies on for body text. Brand pairs (accent, success, warning on the page) are included so the palette cannot drift below AA.
   const pairs: [string, string][] = [
     ['foreground', 'background'],
     ['foreground', 'surface'],
@@ -46,6 +47,11 @@ describe('design tokens', () => {
     ['muted-foreground', 'muted'],
     ['accent-foreground', 'accent'],
     ['accent', 'accent-soft'],
+    ['accent', 'background'],
+    ['accent', 'surface'],
+    ['muted-foreground', 'surface'],
+    ['success', 'background'],
+    ['warning', 'background'],
     ['success', 'success-soft'],
     ['warning', 'warning-soft'],
     ['danger', 'danger-soft'],
@@ -62,6 +68,25 @@ describe('design tokens', () => {
     const used = [...source.matchAll(/var\(--([\w-]+)\)/g)].map((m) => m[1] ?? '');
     expect(used.length).toBeGreaterThan(20);
     for (const name of used) expect(light, name).toHaveProperty(name);
+  });
+});
+
+function toHex(channels: string): string {
+  const [h = 0, s = 0, l = 0] = channels.split(/\s+/).map((v) => parseFloat(v));
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+describe('brand hex values', () => {
+  it('match the HSL tokens they mirror (manifest, theme-color)', () => {
+    const darkTheme = { ...light, ...dark };
+    expect(BRAND_HEX.light).toEqual({ background: toHex(light.background ?? ''), accent: toHex(light.accent ?? '') });
+    expect(BRAND_HEX.dark).toEqual({ background: toHex(darkTheme.background ?? ''), accent: toHex(darkTheme.accent ?? '') });
   });
 });
 
