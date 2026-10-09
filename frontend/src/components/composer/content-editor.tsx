@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/input';
 import { effectiveContent } from '@/lib/composer';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import type { Provider, SocialAccount } from '@/lib/types';
 import { CharCounter } from './char-counter';
 import { useTranslations } from '@/i18n/use-translations';
@@ -19,6 +19,7 @@ interface Props {
 
 export function ContentEditor({ content, overrides, selected, providers, onContent, onOverride }: Props) {
   const t = useTranslations('composer');
+  const providerName = useProviderName();
   const maxFor = (a: SocialAccount) => providers.find((p) => p.id === a.provider)?.capabilities.maxTextLength ?? 0;
   const strictest = selected.length ? Math.min(...selected.map(maxFor).filter((n) => n > 0), Number.MAX_SAFE_INTEGER) : 0;
   const strictMax = strictest === Number.MAX_SAFE_INTEGER ? 0 : strictest;
@@ -29,7 +30,7 @@ export function ContentEditor({ content, overrides, selected, providers, onConte
         <TabsTrigger value="all">{t('allNetworks')}</TabsTrigger>
         {selected.map((a) => (
           <TabsTrigger key={a.id} value={a.id}>
-            {providerLabel(a.provider)}
+            {providerName(a.provider)}
             <span className="ml-1 max-w-[10rem] truncate text-muted-foreground">{a.display_name}</span>
             {overrides[a.id]?.trim() ? ' •' : ''}
             <span className="sr-only">{overrides[a.id]?.trim() ? ` ${t('customTextSr')}` : ''}</span>
@@ -56,7 +57,7 @@ export function ContentEditor({ content, overrides, selected, providers, onConte
         return (
           <TabsContent key={a.id} value={a.id} className="space-y-1.5">
             <Textarea
-              aria-label={t('contentFor', { network: providerLabel(a.provider), account: a.display_name })}
+              aria-label={t('contentFor', { network: providerName(a.provider), account: a.display_name })}
               rows={8}
               placeholder={content || t('customPlaceholder')}
               value={overrides[a.id] ?? ''}
@@ -72,7 +73,7 @@ export function ContentEditor({ content, overrides, selected, providers, onConte
                     {t('reset')}
                   </Button>
                 ) : null}
-                <CharCounter text={text} max={maxFor(a)} label={t('networkContent', { network: providerLabel(a.provider) })} />
+                <CharCounter text={text} max={maxFor(a)} label={t('networkContent', { network: providerName(a.provider) })} />
               </div>
             </div>
           </TabsContent>

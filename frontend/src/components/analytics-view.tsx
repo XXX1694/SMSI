@@ -7,13 +7,14 @@ import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { metricLabel, summarizeMetrics } from '@/lib/analytics';
 import { joinList } from '@/lib/format';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import { useAsync } from '@/hooks';
 import { useTranslations } from '@/i18n/use-translations';
 import { useFormat } from '@/i18n/use-format';
 
 export function AnalyticsView() {
   const t = useTranslations();
+  const providerName = useProviderName();
   const fmt = useFormat();
   const [days, setDays] = useState(30);
   const load = useCallback(async () => {
@@ -45,7 +46,7 @@ export function AnalyticsView() {
       {withAnalytics.length === 0 ? (
         <Notice tone="info">{t('analytics.none')}</Notice>
       ) : (
-        <p className="text-sm text-muted-foreground">{t('analytics.supportedBy', { networks: joinList(withAnalytics.map((p) => providerLabel(p.id)), t) })}</p>
+        <p className="text-sm text-muted-foreground">{t('analytics.supportedBy', { networks: joinList(withAnalytics.map((p) => providerName(p.id)), t) })}</p>
       )}
       {data.metrics.length === 0 ? (
         <EmptyState title={t('analytics.emptyTitle')}>{t('analytics.emptyBody')}</EmptyState>

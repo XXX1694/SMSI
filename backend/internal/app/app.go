@@ -18,6 +18,7 @@ import (
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/adapters/stubs"
 	"github.com/socialos/backend/internal/adapters/telegram"
+	"github.com/socialos/backend/internal/application/account"
 	"github.com/socialos/backend/internal/application/accounts"
 	"github.com/socialos/backend/internal/application/analytics"
 	"github.com/socialos/backend/internal/application/approvals"
@@ -193,6 +194,9 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	analyticsSvc := analytics.NewService(analyticsRepo, clk)
 	a.Services = transport.Services{
 		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc, Approvals: approvalSvc, Quota: quotaSvc,
+		Exports: account.NewExportService(account.Deps{Exports: postgres.NewExports(db), Data: postgres.NewExportData(db),
+			Store: a.Storage, Queue: a.Queue.ExportQueue(), Tx: db, Audit: auditSvc, Clock: clk, Log: log,
+			Retention: cfg.ExportRetention()}),
 		Posts: posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
 			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc, Quota: quotaSvc,
 			MinAgentLead: cfg.AgentMinScheduleLead, NoAgentLead: cfg.AgentMinScheduleLead == 0}),

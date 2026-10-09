@@ -57,5 +57,9 @@ const (
 	ActionApprovalApproved  = "approval.approved"
 	ActionApprovalDenied    = "approval.denied"
 	ActionApprovalUsed      = "approval.used"
+	ActionExportRequested   = "account.export_requested"
+	ActionExportReady       = "account.export_ready"
+	ActionExportFailed      = "account.export_failed"
+	ActionExportDownloaded  = "account.export_downloaded"
 	ActionMCPToolCall       = "mcp.tool_call" // one MCP tool call made with an API key (X-MCP-Tool header)
 )

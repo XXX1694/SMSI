@@ -3,6 +3,7 @@ import type {
   ApiKey,
   Approval,
   AuditLog,
+  DataExport,
   McpConnection,
   Media,
   Post,
@@ -49,6 +50,8 @@ export interface DemoState {
   mcp_connections: McpConnection[];
   audit: AuditLog[];
   approvals: Approval[];
+  /** Data exports; absent in a copy saved before exports existed. */
+  exports?: DataExport[];
   links: DemoLink[];
   /** Request counts per key / connection id, shown on the usage panel. */
   usage: Record<string, number>;

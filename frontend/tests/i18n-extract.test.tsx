@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import { afterAll, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -8,6 +9,18 @@ import { CapabilityBadges } from '@/components/capability-badges';
 import { EmptyState, ErrorState } from '@/components/states';
 import { ForgotPasswordView } from '@/components/forgot-password-view';
 import { PostRow } from '@/components/post-row';
+import { AccountsView } from '@/components/accounts-view';
+import { CalendarViewPage } from '@/components/calendar-view';
+import { ComposerView } from '@/components/composer/composer-view';
+import { DashboardView } from '@/components/dashboard-view';
+import { ApiKeysView } from '@/components/developer/api-keys-view';
+import { McpView } from '@/components/developer/mcp-view';
+import { UsageView } from '@/components/developer/usage-view';
+import { PostDetail } from '@/components/posts/post-detail';
+import { ToastProvider } from '@/components/toast';
+import { SettingsView } from '@/components/settings-view';
+import { SEEDED_POST_IDS } from '@/lib/demo/ids';
+import { buildSeed } from '@/lib/demo/seed';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { ScopePicker } from '@/components/developer/scope-picker';
 import { TrustedPolicyField } from '@/components/developer/trusted-policy';
@@ -28,7 +41,8 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => '/',
 }));
-vi.mock('@/components/auth-provider', () => ({ useAuth: () => ({ login: vi.fn(), register: vi.fn(), user: null, refresh: vi.fn() }) }));
+const authState = vi.hoisted(() => ({ user: null as null | Record<string, unknown> }));
+vi.mock('@/components/auth-provider', () => ({ useAuth: () => ({ login: vi.fn(), register: vi.fn(), user: authState.user, refresh: vi.fn() }) }));
 
 const tFor = (locale: string) => createTranslator({ locale, messages: en, onMissing: () => {} });
 
@@ -161,8 +175,9 @@ function visibleStrings(root: HTMLElement): string[] {
 }
 
 /** In en-XA every catalog message is accented and bracketed, so plain English that is left over is a hard-coded string. */
-function expectNoPlainEnglish(root: HTMLElement, allowed: RegExp[] = []) {
-  const plain = visibleStrings(root).filter((s) => /[A-Za-z]{3,}/.test(s) && !/[À-ɏ]/.test(s) && !allowed.some((r) => r.test(s)));
+function expectNoPlainEnglish(root: HTMLElement, allowed: (RegExp | ((s: string) => boolean))[] = []) {
+  const ok = (s: string) => allowed.some((a) => (typeof a === 'function' ? a(s) : a.test(s)));
+  const plain = visibleStrings(root).filter((s) => /[A-Za-z]{3,}/.test(s) && !/[À-ɏ]/.test(s) && !ok(s));
   expect(plain).toEqual([]);
 }
 
@@ -170,7 +185,9 @@ function inPseudo(ui: React.ReactElement) {
   window.localStorage.setItem('steerpost_locale', 'en-XA');
   return render(
     <PrefsProvider>
-      <LocaleProvider enabled={['en']}>{ui}</LocaleProvider>
+      <LocaleProvider enabled={['en']}>
+        <ToastProvider>{ui}</ToastProvider>
+      </LocaleProvider>
     </PrefsProvider>,
   );
 }
@@ -231,4 +248,49 @@ describe('no plain English is left on screen in the pseudo-locale', () => {
     // Scope ids (`posts:publish`), the agent name, the network name, the post title and the dates (Intl month names) are data, not copy.
     expectNoPlainEnglish(container, [/^[a-z]+:[a-z]+$/, /^Claude Desktop$/, /^(LinkedIn|Telegram)$/, /^x+$/, /^Launch$/, /^\d{1,2} \w{3} \d{4}, \d{2}:\d{2}$/]);
   });
+});
+
+describe('the app screens are fully translated in the pseudo-locale (demo data, no network)', () => {
+  const seed = JSON.stringify(buildSeed(new Date()));
+  /** Names, titles, post text, key names and other data the user typed or the server sent are not catalog copy. */
+  const isSeedData = (s: string) => seed.includes(s) || s.split(/\s·\s|\n/).every((part) => seed.includes(part.trim()));
+  const data: (RegExp | ((s: string) => boolean))[] = [
+    isSeedData,
+    /^[a-z]+:[a-z]+(, [a-z]+:[a-z]+)*$/,
+    /^(LinkedIn|Telegram|Test network|Claude Desktop|UTC|free|English|Discord|Mastodon|Bluesky|Instagram|Facebook|TikTok|YouTube|Threads|Pinterest)$/,
+    /^(LinkedIn|Telegram|Test network)(, (LinkedIn|Telegram|Test network))*$/, // network names joined with the catalog separator
+    /^[A-Z][A-Za-z_-]+\/[A-Za-z_/-]+$/, // time zone ids
+    /^\d{1,2} \w{3,4} \d{4}, \d{2}:\d{2}$/,
+    /^(\d+ \w+ ago|yesterday|tomorrow|in \d+ \w+)$/, // Intl relative times: the pseudo-locale formats like en
+    /^Authorization: Bearer /, // a code sample
+    /^(Personal profile only|Add the Steerpost bot|Test network\.|Posts to one channel|Mastodon and|Text up to|Not available yet)/, // provider notes: the server sends them in English (D-021)
+    /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w* ?\d*$/, // weekday names come from Intl, in the locale
+    /^(January|February|March|April|May|June|July|August|September|October|November|December)( \d{4})?$/,
+  ];
+  beforeAll(() => {
+    vi.stubEnv('NEXT_PUBLIC_DEMO', 'true');
+    authState.user = { id: 'u1', email: 'demo@example.com', display_name: 'Demo', email_verified: true, verification_enforced: false };
+  });
+  afterAll(() => {
+    vi.unstubAllEnvs();
+    authState.user = null;
+  });
+  async function check(ui: React.ReactElement, loaded: RegExp) {
+    const { container, unmount } = inPseudo(ui);
+    await vi.waitFor(() => expect(container.textContent ?? '').toMatch(loaded), { timeout: 4000 });
+    expectNoPlainEnglish(container, data);
+    unmount();
+  }
+  const accented = /[\u00C0-\u024F]{3,}/;
+  it('dashboard', async () => check(<DashboardView />, /Failed|Ƒ|Ŕéçéñţ/));
+  it('calendar', async () => check(<CalendarViewPage />, accented));
+  it('accounts', async () => check(<AccountsView />, accented));
+  it('settings', async () => check(<SettingsView />, accented));
+  it('developer: API keys, MCP connections and usage', async () => {
+    await check(<ApiKeysView />, accented);
+    await check(<McpView />, accented);
+    await check(<UsageView />, accented);
+  });
+  it('composer', async () => check(<ComposerView />, accented));
+  it('post detail', async () => check(<PostDetail id={SEEDED_POST_IDS[0] ?? ''} />, accented));
 });
