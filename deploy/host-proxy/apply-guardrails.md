@@ -59,7 +59,7 @@ systemctl show socialos.slice -p CPUQuotaPerSecUSec,MemoryHigh,MemoryMax,MemoryS
 ```
 
 Verify: `CPUQuotaPerSecUSec=1s`, `MemoryHigh=645922816`, `MemoryMax=696254464`, `MemorySwapMax=0`, `TasksMax=512`,
-`IOReadBandwidthMax=/var/lib/docker 62914560` (no write cap on purpose, README section 16). Irbisa check.
+`IOReadBandwidthMax=/var/lib/docker 60000000` (systemd reads `60M` as 60 x 1000^2 bytes; no write cap on purpose, README section 16). Irbisa check.
 Rollback: `rm /etc/systemd/system/socialos.slice && systemctl daemon-reload`.
 
 ## Step 2: install the new files in /opt/socialos (risk: none; running containers are not changed)
@@ -98,10 +98,10 @@ systemctl status socialos.slice --no-pager | head -8
 ```
 
 Verify: every container shows `socialos.slice`, Memory equal to MemorySwap, PidsLimit 128; the slice files show
-`696254464`, `645922816`, `0`, `512`, `100000 100000` and `8:0 rbps=62914560 wbps=max riops=max wiops=max`; `deploy.sh` ended with
+`696254464`, `645922816`, `0`, `512`, `100000 100000` and `8:0 rbps=60000000 wbps=max riops=max wiops=max`; `deploy.sh` ended with
 `DEPLOYED`; `systemctl show socialos.slice -p MemoryCurrent` is about 300-400 MB (with page cache; `grep ^anon /sys/fs/cgroup/socialos.slice/memory.stat` is
 the figure the guard uses, expect about 120-250 MB, well under its 300 MB threshold); `ls /sys/fs/cgroup/system.slice | grep
-docker-` prints nothing; `docker compose exec backend env | grep GOMEMLIMIT` says `100MiB`. Irbisa check. Watch for
+docker-` prints nothing; `docker inspect -f "{{range .Config.Env}}{{println .}}{{end}}" socialos-backend-1 | grep GOMEMLIMIT` says `100MiB` (the image has no `env` binary). Irbisa check. Watch for
 10 minutes: `journalctl -k --since -10min | grep -i oom` empty.
 
 Then the load check (needs the owner's OK for the test account and the test files; run it from outside the server, at a
