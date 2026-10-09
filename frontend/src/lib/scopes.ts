@@ -10,14 +10,14 @@ export interface ScopeInfo {
 }
 
 export const SCOPES: readonly ScopeInfo[] = [
-  { scope: 'social:read', label: 'Read accounts', description: 'List connected accounts and providers.', risk: 'safe' },
+  { scope: 'social:read', label: 'Read accounts', description: 'List connected accounts and networks.', risk: 'safe' },
   { scope: 'posts:read', label: 'Read posts', description: 'List posts, statuses and attempts.', risk: 'safe' },
   { scope: 'analytics:read', label: 'Read analytics', description: 'Read analytics data.', risk: 'safe' },
   { scope: 'posts:write', label: 'Create and edit drafts', description: 'Create drafts, edit and cancel posts.', risk: 'safe' },
   { scope: 'media:write', label: 'Upload media', description: 'Upload files to the media library.', risk: 'safe' },
-  { scope: 'posts:schedule', label: 'Schedule posts', description: 'Queue posts for later publication.', risk: 'medium' },
+  { scope: 'posts:schedule', label: 'Schedule posts', description: 'Schedule posts to publish later.', risk: 'medium' },
   { scope: 'posts:publish', label: 'Publish immediately', description: 'Publish to live social accounts right now.', risk: 'dangerous' },
-  { scope: 'posts:delete', label: 'Delete posts', description: 'Permanently remove posts.', risk: 'dangerous' },
+  { scope: 'posts:delete', label: 'Delete posts', description: 'Delete posts from Steerpost. Published copies stay on the networks.', risk: 'dangerous' },
   { scope: 'social:disconnect', label: 'Disconnect accounts', description: 'Remove connected social accounts.', risk: 'dangerous' },
   { scope: 'social:connect', label: 'Connect accounts', description: 'Hand a network credential (token, app password, webhook URL) to Steerpost. Anyone holding this key can attach accounts.', risk: 'dangerous' },
 ];
@@ -60,8 +60,8 @@ export interface McpPermission {
 
 export const MCP_PERMISSIONS: readonly McpPermission[] = [
   { id: 'read', label: 'Read posts', description: 'Agents can list accounts, posts, statuses and analytics.', scopes: ['social:read', 'posts:read', 'analytics:read'], risk: 'safe', defaultOn: true },
-  { id: 'draft', label: 'Create drafts', description: 'Agents can create and edit drafts and upload media.', scopes: ['posts:write', 'media:write'], risk: 'safe', defaultOn: true },
-  { id: 'schedule', label: 'Schedule', description: 'Agents can queue posts for later publication.', scopes: ['posts:schedule'], risk: 'medium', defaultOn: false },
+  { id: 'draft', label: 'Create drafts', description: 'Agents can create and edit drafts with media you uploaded.', scopes: ['posts:write', 'media:write'], risk: 'safe', defaultOn: true },
+  { id: 'schedule', label: 'Schedule', description: 'Agents can schedule posts to publish later.', scopes: ['posts:schedule'], risk: 'medium', defaultOn: false },
   { id: 'publish', label: 'Publish', description: 'Agents can publish to live accounts immediately.', scopes: ['posts:publish'], risk: 'dangerous', defaultOn: false },
   { id: 'delete', label: 'Delete', description: 'Agents can delete posts.', scopes: ['posts:delete'], risk: 'dangerous', defaultOn: false },
   { id: 'disconnect', label: 'Disconnect', description: 'Agents can disconnect social accounts.', scopes: ['social:disconnect'], risk: 'dangerous', defaultOn: false },

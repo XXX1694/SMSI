@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * End-to-end smoke test of the built site, run in a real browser against dist/ served below /SMSI/
+ * End-to-end smoke test of the built site, run in a real browser against dist/ served below /steerpost/
  * (exactly how GitHub Pages serves a project site). SITE_BASE overrides the base path.
  *
  *   npm run build && npm run smoke
@@ -20,8 +20,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const dist = resolve(here, process.env.SITE_DIST ?? '../dist');
 const PORT = Number(process.env.SMOKE_PORT ?? 4190);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
-// The base the site was built for (SITE_BASE, default /SMSI/ as on GitHub Pages project sites).
-const BASE = `/${(process.env.SITE_BASE ?? '/SMSI/').replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
+// The base the site was built for (SITE_BASE, default /steerpost/ as on GitHub Pages project sites).
+const BASE = `/${(process.env.SITE_BASE ?? '/steerpost/').replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
 const SITE = `${ORIGIN}${BASE.slice(0, -1)}`;
 const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const out = process.env.SMOKE_OUT ? resolve(process.env.SMOKE_OUT) : mkdtempSync(join(tmpdir(), 'site-smoke-'));
@@ -79,7 +79,7 @@ console.log(`site smoke: ${dist} at ${SITE}/`);
 
 await step('landing page', async () => {
   await page.goto(`${SITE}/`);
-  await visible(page.getByRole('heading', { level: 1, name: /AI agents draft and schedule your posts/ }));
+  await visible(page.getByRole('heading', { level: 1, name: /AI agents draft posts\.\s*You stay in control\./ }));
   const demo = page.getByRole('link', { name: 'Try the demo' }).first();
   expect((await demo.getAttribute('href')) === `${BASE}demo/`, `Try the demo should link to ${BASE}demo/`);
   const docs = page.getByRole('link', { name: /docs/i }).first();
@@ -111,24 +111,32 @@ await step('landing scroll motion and story', async () => {
   expect(revealed === 0, `${revealed} reveal element(s) in view are still hidden`);
 });
 
-await step('motion switch stops every loop and is remembered', async () => {
+await step('motion switch stops all motion, exposes its state and is remembered', async () => {
   await page.goto(`${SITE}/`);
   await page.waitForSelector('.stage.is-playing', { timeout: 10_000 });
   const btn = page.getByRole('button', { name: 'Pause motion' });
+  expect((await btn.getAttribute('aria-pressed')) === 'false', 'Pause motion should start unpressed');
   await btn.focus();
   await page.keyboard.press('Enter');
-  await visible(page.getByRole('button', { name: 'Play motion' }));
+  await page.waitForSelector('[data-motion][aria-pressed="true"]');
+  await page.locator('.facts-band').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
   const s = await page.evaluate(() => ({
     off: document.documentElement.classList.contains('motion-off'),
     video: document.querySelector('.stage video').paused,
     loops: ['.blob', '.marquee-track'].map((q) => getComputedStyle(document.querySelector(q)).animationPlayState),
+    // scroll-driven animations (parallax, hero exit, clip reveals, the route) must not run either, and nothing may stay hidden
+    running: document.getAnimations().filter((a) => a.playState === 'running' && !(a.timeline instanceof DocumentTimeline)).length,
+    hiddenReveals: [...document.querySelectorAll('.reveal')].filter((e) => getComputedStyle(e).opacity === '0' && e.getBoundingClientRect().top < innerHeight).length,
     saved: localStorage.getItem('socialos_landing_motion'),
   }));
   expect(s.off && s.video && s.loops.every((x) => x === 'paused') && s.saved === 'off', `motion switch left something running: ${JSON.stringify(s)}`);
+  expect(s.running === 0 && s.hiddenReveals === 0, `paused motion should stop scroll animations and show everything: ${JSON.stringify(s)}`);
   await page.reload();
-  await visible(page.getByRole('button', { name: 'Play motion' }));
+  await page.waitForSelector('[data-motion][aria-pressed="true"]');
   expect(await page.evaluate(() => document.querySelector('.stage video').paused), 'the choice should survive a reload');
-  await page.getByRole('button', { name: 'Play motion' }).click();
+  await page.getByRole('button', { name: 'Pause motion' }).click();
+  await page.waitForSelector('[data-motion][aria-pressed="false"]');
   await page.waitForSelector('.stage.is-playing', { timeout: 10_000 });
 });
 
@@ -144,6 +152,23 @@ await step('a failing enhancement never hides the page', async () => {
   const hidden = await p.evaluate(() => [...document.querySelectorAll('.reveal')].filter((e) => getComputedStyle(e).opacity === '0' && e.getBoundingClientRect().top > 0 && e.getBoundingClientRect().top < innerHeight * 0.5).length);
   expect(hidden === 0, `${hidden} section(s) stayed hidden after a script failure`);
   await ctx2.close();
+});
+
+await step('headings stay visible when the reveal script fails', async () => {
+  const ctx3 = await browser.newContext({ viewport: { width: 1280, height: 800 }, javaScriptEnabled: false });
+  const p = await ctx3.newPage();
+  await p.goto(`${SITE}/`);
+  const hidden = await p.evaluate(() => [...document.querySelectorAll('h1, h2')].filter((e) => getComputedStyle(e).opacity === '0' || e.getBoundingClientRect().width === 0).length);
+  expect(hidden === 0, `${hidden} heading(s) hidden without JS`);
+  await ctx3.close();
+  const ctx4 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const q = await ctx4.newPage();
+  await q.addInitScript(() => { window.IntersectionObserver = class { constructor() { throw new Error('no IO'); } }; });
+  await q.goto(`${SITE}/`);
+  await q.waitForTimeout(800);
+  const clipped = await q.evaluate(() => [...document.querySelectorAll('.lp-h2')].filter((h) => [...h.querySelectorAll('.sw-i')].some((w) => getComputedStyle(w).transform !== 'none')).length);
+  expect(clipped === 0, `${clipped} split heading(s) hidden after the reveal setup failed`);
+  await ctx4.close();
 });
 
 await step('landing respects reduced motion and phones', async () => {
@@ -166,6 +191,43 @@ await step('landing respects reduced motion and phones', async () => {
   expect(!m.src, 'phones get the poster, not the video');
   expect(m.over <= 0, `horizontal overflow of ${m.over}px at 390px`);
   await phone.close();
+});
+
+await step('landing nav stays on one line and covers what scrolls under it', async () => {
+  for (const [w, h] of [[320, 640], [360, 780], [390, 844], [414, 896], [768, 1024]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: w < 700, hasTouch: w < 700 });
+    const p = await ctx.newPage();
+    await p.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+    await p.goto(`${SITE}/`);
+    await p.waitForTimeout(600);
+    const nav = await p.evaluate(() => [...document.querySelectorAll('.lp-nav .nav a')].filter((a) => a.offsetParent).map((a) => ({ t: a.textContent.trim(), h: a.getBoundingClientRect().height, r: a.getBoundingClientRect().right })));
+    expect(nav.every((a) => a.h < 50 && a.r <= w), `${w}px: nav links wrap or overflow: ${JSON.stringify(nav)}`);
+    expect(w >= 768 || nav.every((a) => ['Docs', 'Try the demo'].includes(a.t)), `${w}px: only Docs and Try the demo should show: ${JSON.stringify(nav)}`);
+    for (const y of [900, 1500, 2100, 2800, 3600]) {
+      await p.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), y);
+      await p.waitForTimeout(250);
+      const bad = await p.evaluate(() => {
+        const heads = [document.querySelector('.lp-nav-bar'), ...(getComputedStyle(document.querySelector('.story-stage')).position === 'sticky' && innerWidth <= 896 ? [document.querySelector('.story-stage')] : [])];
+        const out = [];
+        for (const el of document.querySelectorAll('h1, h2, h3, p, li, summary, figcaption')) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.bottom < 0 || r.top > innerHeight || el.closest('.lp-nav, .story-stage, [aria-hidden=true]')) continue;
+          for (const hd of heads) {
+            const b = hd.getBoundingClientRect();
+            const x0 = Math.max(r.left, b.left), x1 = Math.min(r.right, b.right), y0 = Math.max(r.top, b.top), y1 = Math.min(r.bottom, b.bottom);
+            if (x1 - x0 < 4 || y1 - y0 < 2) continue;
+            // text may scroll under the header only if the header is opaque there
+            const top = document.elementFromPoint((x0 + x1) / 2, (y0 + y1) / 2);
+            const alpha = Number((getComputedStyle(hd).backgroundColor.match(/[\d.]+/g) ?? [])[3] ?? 1);
+            if (!(top && hd.contains(top)) || alpha < 0.9) out.push(`${el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+          }
+        }
+        return out;
+      });
+      expect(bad.length === 0, `${w}px at ${y}: text shows through the sticky header: ${bad.join(', ')}`);
+    }
+    await ctx.close();
+  }
 });
 
 await step('docs pages render', async () => {

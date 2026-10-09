@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { ApprovalsView } from '@/components/approvals/approvals-view';
 import { PageHeader } from '@/components/states';
 
@@ -6,9 +7,11 @@ export default function Page() {
     <>
       <PageHeader
         title="Approvals"
-        description="Agents and API keys ask here before they publish now, delete, disconnect an account, connect one or schedule within minutes. Nothing happens until you approve."
+        description="Dangerous actions by agents and API keys wait here. Nothing happens until you approve."
       />
-      <ApprovalsView />
+      <Suspense>
+        <ApprovalsView />
+      </Suspense>
     </>
   );
 }

@@ -141,7 +141,7 @@ GitHub Actions workflows and a single-server deployment kit:
 
 ## Website and demo
 
-The landing page, the docs and a **browser-only demo of the real app** are published to GitHub Pages by [`pages.yml`](../.github/workflows/pages.yml): <https://xxx1694.github.io/SMSI/>, with the demo at <https://xxx1694.github.io/SMSI/demo/>. The docs are rendered from the repository's markdown: the root [`README.md`](../README.md), this file, [`integrations/README.md`](integrations/README.md), [`API.md`](API.md), [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`mcp/README.md`](../mcp/README.md). The sources are in [`site/`](../site/) (plain HTML and CSS plus a small Node build script) and in the demo mode of [`frontend/`](../frontend/). The workflow skips the deployment, with a note, when Pages is not enabled for the repository. Pushes to `main` that touch `frontend/`, `site/`, `docs/`, `README.md` or `mcp/README.md` redeploy it.
+The landing page, the docs and a **browser-only demo of the real app** are published to GitHub Pages by [`pages.yml`](../.github/workflows/pages.yml): <https://xxx1694.github.io/steerpost/>, with the demo at <https://xxx1694.github.io/steerpost/demo/>. The docs are rendered from the repository's markdown: the root [`README.md`](../README.md), this file, [`integrations/README.md`](integrations/README.md), [`API.md`](API.md), [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`mcp/README.md`](../mcp/README.md). The sources are in [`site/`](../site/) (plain HTML and CSS plus a small Node build script) and in the demo mode of [`frontend/`](../frontend/). The workflow skips the deployment, with a note, when Pages is not enabled for the repository. Pushes to `main` that touch `frontend/`, `site/`, `docs/`, `README.md` or `mcp/README.md` redeploy it.
 
 **How the demo works.** It is the production frontend built with `NEXT_PUBLIC_DEMO=true` as a static export. A typed in-browser backend ([`frontend/src/lib/demo/`](../frontend/src/lib/demo/), a port of `frontend/scripts/mock-api.mjs` that shares the real API types) answers every API call: a demo user who is already signed in, LinkedIn, Telegram and mock accounts, drafts, scheduled, published and failed posts across this and next month, API keys, MCP connections and an audit log. The scheduler is simulated client-side, state lives in `localStorage` (the banner's **Reset** restores the seed) and nothing leaves the browser. Actions that need a real network, such as LinkedIn OAuth and the Telegram link code, are simulated and say so. The demo is not part of the production build: `npm run build` is unchanged.
 
@@ -150,8 +150,8 @@ The landing page, the docs and a **browser-only demo of the real app** are publi
 ```bash
 (cd frontend && npm ci && npm run build:demo)   # static demo -> frontend/out
 (cd site && npm ci && npm run build)            # site + demo  -> site/dist
-(cd site && npm run preview)                    # http://localhost:4173/SMSI/
+(cd site && npm run preview)                    # http://localhost:4173/steerpost/
 (cd site && npm run check && npm run smoke)     # link check + browser smoke test (needs Chrome or Chromium)
 ```
 
-The landing page screenshots are real captures of the demo and are committed; after a visible UI change, re-capture them with `(cd site && npm run screenshots)`. The site serves from `/SMSI/` by default; `SITE_BASE` (site) and `NEXT_PUBLIC_BASE_PATH` (demo, `<SITE_BASE>demo`) change that, which the workflow derives from the repository name.
+The landing page screenshots are real captures of the demo and are committed; after a visible UI change, re-capture them with `(cd site && npm run screenshots)`. The site serves from `/steerpost/` by default; `SITE_BASE` (site) and `NEXT_PUBLIC_BASE_PATH` (demo, `<SITE_BASE>demo`) change that, which the workflow derives from the repository name.

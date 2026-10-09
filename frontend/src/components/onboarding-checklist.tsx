@@ -38,11 +38,11 @@ function NoAccountYet() {
       title="Connect your first account"
       action={
         <Button asChild>
-          <Link href="/accounts">Go to accounts</Link>
+          <Link href="/accounts">Connect account</Link>
         </Button>
       }
     >
-      Connect LinkedIn, Telegram or the mock provider to start publishing.
+      Connect a network to start publishing.
     </EmptyState>
   );
 }
@@ -69,6 +69,24 @@ export function OnboardingChecklist({ connectedAccounts }: { connectedAccounts: 
   return <Checklist connectedAccounts={connectedAccounts} onDismiss={dismiss} onComplete={markComplete} />;
 }
 
+function SetUpLine({ onExpand, onDismiss }: { onExpand: () => void; onDismiss: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-3 rounded-lg border px-4 py-2 text-sm">
+      <p className="flex items-center gap-2 font-medium">
+        <Check className="h-4 w-4 text-success" aria-hidden /> Set up
+      </p>
+      <span className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={onExpand}>
+          Show steps
+        </Button>
+        <Button variant="ghost" size="icon" onClick={onDismiss} aria-label="Dismiss setup checklist">
+          <X className="h-4 w-4" aria-hidden />
+        </Button>
+      </span>
+    </div>
+  );
+}
+
 function Checklist({ connectedAccounts, onDismiss, onComplete }: { connectedAccounts: number; onDismiss: () => void; onComplete: () => void }) {
   const load = useCallback(async (): Promise<Omit<OnboardingFacts, 'connectedAccounts'>> => {
     const [posts, apiKeys, mcpConnections, approvals] = await Promise.all([
@@ -80,6 +98,7 @@ function Checklist({ connectedAccounts, onDismiss, onComplete }: { connectedAcco
     return { hasPost: posts.items.length > 0, apiKeys, mcpConnections, hasApproval: approvals.items.length > 0 };
   }, []);
   const { data, error } = useAsync(load);
+  const [expanded, setExpanded] = useState(false);
   const steps = data ? onboardingSteps({ ...data, connectedAccounts }) : null;
   const complete = steps ? requiredDone(steps) : false;
   useEffect(() => {
@@ -91,6 +110,10 @@ function Checklist({ connectedAccounts, onDismiss, onComplete }: { connectedAcco
 
   if (error && connectedAccounts === 0) return <NoAccountYet />;
   if (!steps) return null;
+  // Everything required is done: one quiet line instead of the whole list. "Show steps" expands it.
+  if (complete && !expanded) {
+    return <SetUpLine onExpand={() => setExpanded(true)} onDismiss={onDismiss} />;
+  }
   const doneCount = steps.filter((s) => s.done).length;
   const nextId = steps.find((s) => !s.done && !s.optional)?.id;
 

@@ -6,10 +6,10 @@
  */
 export const DEMO = process.env.NEXT_PUBLIC_DEMO === 'true';
 
-/** Where the static export is served, e.g. `/SMSI/demo` on GitHub Pages. Empty at the domain root. */
-export const BASE_PATH = DEMO ? (process.env.NEXT_PUBLIC_BASE_PATH ?? '/SMSI/demo') : '';
+/** Where the static export is served, e.g. `/steerpost/demo` on GitHub Pages. Empty at the domain root. */
+export const BASE_PATH = DEMO ? (process.env.NEXT_PUBLIC_BASE_PATH ?? '/steerpost/demo') : '';
 
-/** The marketing/docs site that sits one level above the demo (`/SMSI/demo` -> `/SMSI/`). */
+/** The marketing/docs site that sits one level above the demo (`/steerpost/demo` -> `/steerpost/`). */
 export const SITE_HREF = `${BASE_PATH.replace(/\/demo\/?$/, '').replace(/\/$/, '')}/`;
 
 /** localStorage key of the saved demo state. */

@@ -97,14 +97,14 @@ Full user stories and acceptance criteria are in the issues.
 
 | # | Item | User story (short) | Done when | Depends on | Score |
 |---|---|---|---|---|---|
-| [#75](https://github.com/XXX1694/SMSI/issues/75) | Failure notifications | I learn a post failed and how to fix it | One email per failed post after the last attempt; banner in every mail mode | Mail port; real domain for prod email | 3·2·0.9/0.5 = 10.8 |
-| [#76](https://github.com/XXX1694/SMSI/issues/76) | Onboarding checklist | I get from sign-up to a scheduled post and a connected agent fast | Checklist driven by API state, only configured networks offered | None | 3·2·0.7/0.5 = 8.4 |
-| [#77](https://github.com/XXX1694/SMSI/issues/77) | MCP setup per client | I paste one config into Claude Code, Cursor or Claude Desktop | Copy-ready tabs; no unpublished npm package | None | 2·2·1/0.5 = 8.0 |
-| [#79](https://github.com/XXX1694/SMSI/issues/79) | Token connect + Discord | I connect a network without a developer app | PLATFORMS PR0a, PR0b, PR1 and the 5-step adapter acceptance | Tier 1; DECISIONS entries | 3·3·0.9/1.5 = 5.4 |
-| [#80](https://github.com/XXX1694/SMSI/issues/80) | Mastodon + Bluesky | One draft reaches the fediverse and Bluesky | PR2, PR3; SSRF guard proven by negative tests | Tier 1; #79 | 3·3·0.8/1.5 = 4.8 |
-| [#81](https://github.com/XXX1694/SMSI/issues/81) | Agent review inbox | I approve, edit or discard what agents drafted | Filtered list with agent name, actions audited as me | None | 2·3·0.8/1 = 4.8 |
-| [#82](https://github.com/XXX1694/SMSI/issues/82) | Drag-and-drop calendar | I rearrange my week by dragging | Drafts and scheduled posts move; keyboard "Move to…" | None | 2·2·0.9/1 = 3.6 |
-| [#78](https://github.com/XXX1694/SMSI/issues/78) | Data export, account deletion | I can leave with my data at any time | ZIP export; password-confirmed deletion; tenant tests | Migration 00003; security review | Gate (1·3·0.9/1.5 = 1.8) |
+| [#75](https://github.com/XXX1694/steerpost/issues/75) | Failure notifications | I learn a post failed and how to fix it | One email per failed post after the last attempt; banner in every mail mode | Mail port; real domain for prod email | 3·2·0.9/0.5 = 10.8 |
+| [#76](https://github.com/XXX1694/steerpost/issues/76) | Onboarding checklist | I get from sign-up to a scheduled post and a connected agent fast | Checklist driven by API state, only configured networks offered | None | 3·2·0.7/0.5 = 8.4 |
+| [#77](https://github.com/XXX1694/steerpost/issues/77) | MCP setup per client | I paste one config into Claude Code, Cursor or Claude Desktop | Copy-ready tabs; no unpublished npm package | None | 2·2·1/0.5 = 8.0 |
+| [#79](https://github.com/XXX1694/steerpost/issues/79) | Token connect + Discord | I connect a network without a developer app | PLATFORMS PR0a, PR0b, PR1 and the 5-step adapter acceptance | Tier 1; DECISIONS entries | 3·3·0.9/1.5 = 5.4 |
+| [#80](https://github.com/XXX1694/steerpost/issues/80) | Mastodon + Bluesky | One draft reaches the fediverse and Bluesky | PR2, PR3; SSRF guard proven by negative tests | Tier 1; #79 | 3·3·0.8/1.5 = 4.8 |
+| [#81](https://github.com/XXX1694/steerpost/issues/81) | Agent review inbox | I approve, edit or discard what agents drafted | Filtered list with agent name, actions audited as me | None | 2·3·0.8/1 = 4.8 |
+| [#82](https://github.com/XXX1694/steerpost/issues/82) | Drag-and-drop calendar | I rearrange my week by dragging | Drafts and scheduled posts move; keyboard "Move to…" | None | 2·2·0.9/1 = 3.6 |
+| [#78](https://github.com/XXX1694/steerpost/issues/78) | Data export, account deletion | I can leave with my data at any time | ZIP export; password-confirmed deletion; tenant tests | Migration 00003; security review | Gate (1·3·0.9/1.5 = 1.8) |
 
 ### Next (after Now, roughly a quarter)
 

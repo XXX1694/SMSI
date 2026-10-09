@@ -1,5 +1,6 @@
 {
   "name": "socialos-site",
+  "license": "AGPL-3.0-only",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +12,7 @@
     "build": "node build.mjs",
     "check": "node scripts/check.mjs",
     "record": "node scripts/record-hero.mjs",
-    "preview": "node scripts/serve.mjs dist 4173 /SMSI/",
+    "preview": "node scripts/serve.mjs dist 4173 /steerpost/",
     "screenshots": "node scripts/screenshots.mjs",
     "smoke": "node scripts/smoke.mjs"
   },

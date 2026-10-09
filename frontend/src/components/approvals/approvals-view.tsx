@@ -1,4 +1,5 @@
 'use client';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
 import { useToast } from '@/components/toast';
@@ -30,8 +31,7 @@ function useNow(): Date {
 function Empty({ tab }: { tab: Tab }) {
   return tab === 'pending' ? (
     <EmptyState title="Nothing is waiting for you">
-      When an agent or API key tries to publish, delete, disconnect, connect an account or schedule within minutes, the request shows up here and
-      nothing happens until you decide.
+      Requests from agents appear here.
     </EmptyState>
   ) : (
     <EmptyState title="No decisions yet">Approved and denied requests are listed here.</EmptyState>
@@ -41,7 +41,11 @@ function Empty({ tab }: { tab: Tab }) {
 export function ApprovalsView() {
   const toast = useToast();
   const now = useNow();
-  const [tab, setTab] = useState<Tab>('pending');
+  const router = useRouter();
+  const params = useSearchParams();
+  // The tab lives in the URL (?tab=history) so a reload or a shared link opens the same list.
+  const tab: Tab = params.get('tab') === 'history' ? 'all' : 'pending';
+  const setTab = (t: Tab) => router.replace(t === 'all' ? '/approvals?tab=history' : '/approvals');
   const [busyId, setBusyId] = useState<string | null>(null);
   const load = useCallback(() => api.approvals.list(tab, 50), [tab]);
   const { data, error, loading, reload } = useAsync(load);
@@ -50,7 +54,8 @@ export function ApprovalsView() {
     setBusyId(a.id);
     try {
       await (approve ? api.approvals.approve(a.id) : api.approvals.deny(a.id));
-      toast.success(approve ? `Approved: ${actionLabel(a.action)}. The agent can repeat its call now.` : `Denied: ${actionLabel(a.action)}.`);
+      // Translator note: "Approved: {action}": {action} is a label such as "Publish now" or "Delete post", shown as a name.
+      toast.success(approve ? `Approved: ${actionLabel(a.action)}. ${a.actor_label} can go ahead now.` : `Denied: ${actionLabel(a.action)}.`);
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {

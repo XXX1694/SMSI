@@ -6,7 +6,7 @@
  *   (cd ../frontend && npm run build:demo) && npm run screenshots
  *
  * Output: src/assets/screens/<name>-<light|dark>.png (committed; re-run when the UI changes).
- * The demo is served at /SMSI/demo/ from ../frontend/out, with the clock fixed so the data is stable.
+ * The demo is served at /steerpost/demo/ from ../frontend/out, with the clock fixed so the data is stable.
  */
 import { spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -19,13 +19,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, process.argv[2] ?? '../src/assets/screens');
 const demoDir = resolve(here, process.env.DEMO_DIR ?? '../../frontend/out');
 const PORT = 4181;
-const ORIGIN = `http://127.0.0.1:${PORT}/SMSI/demo`;
+const ORIGIN = `http://127.0.0.1:${PORT}/steerpost/demo`;
 // Mid-month, mid-week: the calendar looks lived in and "now" is stable between runs.
 const NOW = new Date('2026-10-14T10:20:00Z');
 const VIEWPORT = { width: 1280, height: 800 };
 
 mkdirSync(out, { recursive: true });
-const server = await startServer({ dir: demoDir, port: PORT, base: '/SMSI/demo/' });
+const server = await startServer({ dir: demoDir, port: PORT, base: '/steerpost/demo/' });
 const browser = await launch();
 
 try {

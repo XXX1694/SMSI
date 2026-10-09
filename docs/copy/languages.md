@@ -5,11 +5,24 @@ Legend: **[S]** comes from secondary sources (listed at the end). **[U]** has no
 
 ## Decision
 
-| Wave | Languages | When |
+> **Superseded by [D-021](../DECISIONS.md) (2026-10-09).** The owner's locale set replaces the wave table below. Rollout
+> order: `en` (source), `ru`; `es`, `pt-BR`, `de`, `fr`, `id`; `ja`, `zh-CN`; `kk`; `ar` last (after the logical-CSS
+> migration). `uk` leaves the first set and is first in line for the next one. A locale is enabled in
+> `frontend/src/i18n/locales.ts` only when its catalog is complete and the checks are green. Machine-drafted locales ship
+> labelled "Beta translation" until `docs/copy/review/{locale}.md` records a native review. `kk` is not offered in the
+> switcher until that review exists. `zh-CN` serves `zh-Hans` and `zh-SG` browsers; `zh-TW`, `zh-HK` and `zh-Hant` get `en`.
+> The zh-CN pages must not claim "works with Claude" (same rule as `ru`, below). The ranking table that follows is kept
+> as market background.
+
+| Step | Languages | Notes |
 |---|---|---|
-| **1 (launch, 8)** | `en` (source), `ru`, `uk`, `kk`, `es`, `pt-BR`, `de`, `ja` | UI and emails at launch. The landing page gets the hero and the networks table in each language. Docs stay English. |
-| **2 (5)** | `fr`, `id`, `tr`, `ko`, then `ar` | `fr`, `id` and `tr` come right after launch. `ko` comes with Threads (Tier 2). `ar` comes once the RTL work below is done. |
-| Not planned | `zh-CN`, `hi` | Revisit when the triggers below are met. |
+| **T1** | `en` (source), `ru` | The owner reviews `ru` natively, so the pipeline is checked once with a real reviewer. |
+| **T2** | `es`, `pt-BR`, `de`, `fr`, `id` | Latin script, no new engineering. `de` and `fr` stress the length budget. |
+| **T3** | `ja`, `zh-CN` | CJK: system fonts, line-break CSS, IME guard. |
+| **T4** | `kk` | Hidden from the switcher until a native reviewer signs it off. |
+| **T5** | `ar` | Last: RTL needs every LTR screen stable first. |
+| Next in line | `uk`, `tr`, `ko` | `uk` browsers get `en`, never `ru`. |
+| Not planned | `hi` | Revisit when the triggers below are met. |
 
 Covered by `en` until then: India, Nigeria, the Philippines and the Nordics. Developers there mostly use English UIs.
 
@@ -40,15 +53,15 @@ Covered by `en` until then: India, Nigeria, the Philippines and the Nordics. Dev
 | tr | TR | Telegram, LinkedIn, Bluesky (spikes during X blocks) | large | high | medium: suffixes after placeholders | 2 |
 | ko | KR | Threads (Tier 2), Discord. Kakao and Naver are not supported | top 5 in Claude usage [S] | high | CJK work, particles after placeholders | 2 (with Threads) |
 | ar | EG, SA, AE, MA | Telegram, LinkedIn (Gulf) | growing | high | **RTL work** | 2 (last) |
-| zh-CN | CN | Telegram, LinkedIn, Discord, X and Bluesky are blocked in mainland China; Claude is not offered there [U] | huge but cannot use the product | — | CJK | revisit when WeChat or Weibo appear in PLATFORMS |
+| zh-CN | CN | Telegram, LinkedIn, Discord, X and Bluesky are blocked in mainland China; Claude is not offered there [U] | huge but cannot use the product | medium | CJK | T3 (D-021). Do not claim "works with Claude" on zh-CN pages |
 | hi | IN | Telegram (#1 market [S]), LinkedIn | huge, but developers there use English UIs | low | Devanagari fonts | revisit when non-developer users ask for it |
 
-Why `kk` is in wave 1 although its market is small: the owner is in Kazakhstan, Telegram is the main channel there,
+Why `kk` is in the first set (T4) although its market is small: the owner is in Kazakhstan, Telegram is the main channel there,
 and a Kazakh UI earns local trust and partners (Astana Hub, local agencies). The value grows when Instagram (Tier 2) lands.
 `uz` (Uzbek, Latin script) is a wave-3 candidate for the same reason: Telegram dominates there. Until then, `ru` covers
 many Uzbek users.
 
-Why `uk` is in wave 1 next to `ru`: Ukrainian developers are a large Telegram and LinkedIn audience. Offering `ru` without
+Why `uk` was ranked next to `ru` (D-021 moved it to the next set): Ukrainian developers are a large Telegram and LinkedIn audience. Offering `ru` without
 `uk` would push them to Russian. The rules below make sure a Ukrainian browser never falls back to Russian.
 
 Claude is not offered in Russia or mainland China [U]. MCP works with any client, so the `ru` audience can use other MCP

@@ -8,9 +8,9 @@
  *   /assets/...      css, js, font, screenshots
  *
  * Environment:
- *   SITE_BASE      URL path the site is served from (default /SMSI/, as on GitHub Pages project sites)
+ *   SITE_BASE      URL path the site is served from (default /steerpost/, as on GitHub Pages project sites)
  *   SITE_URL       origin, used for canonical links and the sitemap (default https://xxx1694.github.io)
- *   SITE_REPO_URL  repository URL for "Source" links (default https://github.com/XXX1694/SMSI)
+ *   SITE_REPO_URL  repository URL for "Source" links (default https://github.com/XXX1694/steerpost)
  *   DEMO_DIR       the demo export to copy to /demo (default ../frontend/out)
  * Flags:
  *   --no-demo      skip the demo (docs-only preview)
@@ -27,9 +27,9 @@ const dist = join(here, 'dist');
 const src = join(here, 'src');
 
 const normalizeBase = (b) => `/${b.replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
-const BASE = normalizeBase(process.env.SITE_BASE ?? '/SMSI/');
+const BASE = normalizeBase(process.env.SITE_BASE ?? '/steerpost/');
 const SITE_URL = (process.env.SITE_URL ?? 'https://xxx1694.github.io').replace(/\/+$/, '');
-const REPO_URL = (process.env.SITE_REPO_URL ?? 'https://github.com/XXX1694/SMSI').replace(/\/+$/, '');
+const REPO_URL = (process.env.SITE_REPO_URL ?? 'https://github.com/XXX1694/steerpost').replace(/\/+$/, '');
 const DEMO_DIR = resolve(here, process.env.DEMO_DIR ?? '../frontend/out');
 const WITH_DEMO = !process.argv.includes('--no-demo');
 

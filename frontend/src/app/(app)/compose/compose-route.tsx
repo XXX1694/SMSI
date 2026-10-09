@@ -10,7 +10,7 @@ export function ComposeRoute() {
     <>
       <PageHeader
         title={postId ? 'Edit post' : 'Compose'}
-        description={postId ? 'Change the text, accounts, media or time, then save.' : 'Write once, tailor per platform, publish or schedule.'}
+        description={postId ? 'Change the text, accounts, media or time, then save.' : 'Write once, adjust per network, then schedule or publish.'}
       />
       <ComposerView postId={postId} />
     </>

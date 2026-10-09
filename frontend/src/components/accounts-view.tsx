@@ -21,12 +21,13 @@ import type { Provider, SocialAccount } from '@/lib/types';
 import { errorMessage, useAsync } from '@/hooks';
 
 function unavailableReason(p: Provider): string {
-  if (p.unsupported || p.capabilities.requiresApproval) return 'Not supported yet. Requires platform approval.';
-  if (!p.configured) return 'Not configured on this server.';
-  return 'Not supported yet.';
+  // Each unavailable network states its own reason in capabilities.notes (Medium, X and Hashnode are not about approval).
+  if (p.capabilities.notes) return p.capabilities.notes;
+  if (!p.unsupported && !p.configured) return 'Not configured on this server.';
+  return 'Not available yet.';
 }
 
-function AccountItem({ account, onDisconnect }: { account: SocialAccount; onDisconnect: (a: SocialAccount) => void }) {
+function AccountItem({ account, provider, onDisconnect, onConnected }: { account: SocialAccount; provider: Provider; onDisconnect: (a: SocialAccount) => void; onConnected: () => void }) {
   const { timezone } = usePrefs();
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 py-2">
@@ -38,6 +39,7 @@ function AccountItem({ account, onDisconnect }: { account: SocialAccount; onDisc
       </div>
       <div className="flex items-center gap-2">
         <AccountStatusBadge status={account.status} />
+        {account.status === 'expired' ? <ConnectAction provider={provider} hasAccounts={false} label="Reconnect" onConnected={onConnected} /> : null}
         <Button variant="ghost" size="sm" onClick={() => onDisconnect(account)} aria-label={`Disconnect ${account.display_name || account.username}`}>
           Disconnect
         </Button>
@@ -59,11 +61,12 @@ function isTokenProvider(p: Provider): boolean {
 }
 
 /** The Connect button: a form for token providers, a redirect for OAuth ones, an instant sample account in the demo. Telegram has its own panel. */
-function ConnectAction({ provider, hasAccounts, onConnected }: { provider: Provider; hasAccounts: boolean; onConnected: () => void }) {
+function ConnectAction({ provider, hasAccounts, label: forced, onConnected }: { provider: Provider; hasAccounts: boolean; label?: string; onConnected: () => void }) {
   const toast = useToast();
   const [connecting, setConnecting] = useState(false);
   const [tokenOpen, setTokenOpen] = useState(false);
-  const label = hasAccounts ? 'Connect another' : 'Connect';
+  // Translator note: "Connect" and "Connect another" sit next to a network name; the object is that network's account. "Reconnect" is its own key.
+  const label = forced ?? (hasAccounts ? 'Connect another' : 'Connect');
 
   async function connectDemo() {
     setConnecting(true);
@@ -138,21 +141,17 @@ function ProviderRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold">{provider.name}</h2>
-          {provider.id === 'mock' ? <Badge tone="outline">Mock · for testing</Badge> : null}
         </div>
         <ConnectAction provider={provider} hasAccounts={accounts.length > 0} onConnected={onConnected} />
       </div>
       <CapabilityBadges caps={caps} />
       {caps.notes ? <p className="text-xs text-muted-foreground">{caps.notes}</p> : null}
       {DEMO ? <DemoNote provider={provider} /> : null}
-      {caps.requiresApproval ? (
-        <p className="text-xs text-muted-foreground">Some features (e.g. company pages) require platform approval.</p>
-      ) : null}
       {provider.id === 'telegram' ? <TelegramConnect onConnected={onConnected} /> : null}
       {accounts.length > 0 ? (
         <ul className="divide-y rounded-md border px-3" aria-label={`${provider.name} accounts`}>
           {accounts.map((a) => (
-            <AccountItem key={a.id} account={a} onDisconnect={onDisconnect} />
+            <AccountItem key={a.id} account={a} provider={provider} onDisconnect={onDisconnect} onConnected={onConnected} />
           ))}
         </ul>
       ) : null}
@@ -175,7 +174,7 @@ function useConnectResult(): ConnectResult | null {
   const failed = params.get('error');
   const provider = params.get('provider');
   useEffect(() => {
-    if (connected) setResult({ tone: 'info', text: `Connected ${providerLabel(connected)} successfully.` });
+    if (connected) setResult({ tone: 'info', text: `${providerLabel(connected)} connected.` });
     else if (failed) {
       const who = provider ? providerLabel(provider) : 'the account';
       setResult({ tone: 'danger', text: `Could not connect ${who}. ${describeErrorCode(failed)}` });
@@ -222,12 +221,12 @@ export function AccountsView() {
           />
         ))}
       </ul>
-      {orphans.length > 0 ? <p className="text-xs text-muted-foreground">{orphans.length} account(s) belong to providers no longer offered.</p> : null}
+      {orphans.length > 0 ? <p className="text-xs text-muted-foreground">{orphans.length === 1 ? '1 account belongs to a network that is no longer available.' : `${orphans.length} accounts belong to a network that is no longer available.`}</p> : null}
       <ConfirmDialog
         open={target !== null}
         onOpenChange={(o) => !o && setTarget(null)}
         title="Disconnect account?"
-        description={`Scheduled posts targeting ${target?.display_name || target?.username || 'this account'} will no longer publish. You can reconnect later.`}
+        description={`Posts scheduled for ${target?.display_name || target?.username || 'this account'} fail unless you connect it again before they are due. Published posts stay on ${target ? providerLabel(target.provider) : 'the network'}.`}
         confirmLabel="Disconnect"
         destructive
         onConfirm={async () => {

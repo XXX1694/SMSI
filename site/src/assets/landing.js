@@ -13,16 +13,17 @@ const guard = (name, fn) => {
   }
 };
 
-// 0. Motion switch (WCAG 2.2.2). One toggle stops every looping animation: the video, the flow canvas, the glow blobs,
-//    the marquee and the story sweep. It is remembered per visitor. With reduced motion the page starts paused and the
-//    switch is not offered, because nothing moves.
+// 0. Motion switch (WCAG 2.2.2). One toggle stops all motion: the video, the flow canvas, the glow blobs, the marquee,
+//    scroll parallax, reveals, the pointer effects and the story route (CSS keys off html.motion-off). The label stays
+//    "Pause motion" and the state is exposed with aria-pressed. It is remembered per visitor. With reduced motion the page
+//    starts paused and the switch is not offered, because nothing moves.
 const KEY = 'socialos_landing_motion';
 const readPref = () => guard('motion preference', () => localStorage.getItem(KEY)) ?? null;
 const motion = { off: reduced.matches || readPref() === 'off', listeners: [] };
 const toggle = document.querySelector('[data-motion]');
 const applyMotion = () => {
   root.classList.toggle('motion-off', motion.off);
-  if (toggle) toggle.textContent = motion.off ? 'Play motion' : 'Pause motion';
+  if (toggle) toggle.setAttribute('aria-pressed', String(motion.off));
   motion.listeners.forEach((fn) => guard('motion listener', () => fn(motion.off)));
 };
 if (toggle) {
@@ -36,12 +37,34 @@ if (toggle) {
 root.classList.toggle('motion-off', motion.off);
 
 // 1. Scroll reveals: a class flips once, CSS does the motion (scroll.css). Items that arrive together are staggered.
+//    Headlines are first split into words, each in its own mask, so they rise line by line.
+guard('split headlines', () => {
+  if (reduced.matches) return;
+  for (const el of document.querySelectorAll('.split')) {
+    const text = el.textContent.trim().replace(/\s+/g, ' ');
+    el.setAttribute('aria-label', text);
+    el.replaceChildren(
+      ...text.split(' ').flatMap((word, i) => {
+        const outer = document.createElement('span');
+        outer.className = 'sw';
+        outer.setAttribute('aria-hidden', 'true');
+        const inner = document.createElement('span');
+        inner.className = 'sw-i';
+        inner.style.setProperty('--i', String(i));
+        inner.textContent = word;
+        outer.append(inner);
+        return i ? [' ', outer] : [outer];
+      }),
+    );
+    el.classList.add('is-split');
+  }
+});
 guard('reveals', () => {
-  const reveals = [...document.querySelectorAll('.reveal')];
+  const reveals = [...document.querySelectorAll('.reveal, .split, .clip')];
   const io = new IntersectionObserver(
     (entries) => {
       entries.filter((e) => e.isIntersecting).forEach((e, i) => {
-        e.target.style.transitionDelay = `${i * 70}ms`;
+        if (e.target.classList.contains('reveal') && !e.target.classList.contains('clip')) e.target.style.transitionDelay = `${i * 70}ms`;
         e.target.classList.add('in');
         io.unobserve(e.target);
       });

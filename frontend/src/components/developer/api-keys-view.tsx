@@ -39,6 +39,7 @@ function RawKeyDialog({ created, onClose }: { created: CreatedApiKey | null; onC
 }
 
 const EXPIRY: { label: string; days: number | null }[] = [
+  // Translator note: "Never" is the option "Expires: Never" for an API key.
   { label: 'Never', days: null },
   { label: '30 days', days: 30 },
   { label: '90 days', days: 90 },
@@ -98,7 +99,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
           </Field>
           <ScopePicker value={scopes} onChange={setScopes} />
           {dangerous ? (
-            <CheckboxField checked={ack} onCheckedChange={(c) => setAck(c === true)} label="I understand this key can publish, delete or disconnect on my behalf." />
+            <CheckboxField checked={ack} onCheckedChange={(c) => setAck(c === true)} label="I understand this key can ask to publish, delete or disconnect. Each request waits for my approval." />
           ) : null}
           {dangerous ? <TrustedPolicyField trusted={trusted} confirmed={trustAck} onTrusted={(v) => { setTrusted(v); if (!v) setTrustAck(false); }} onConfirmed={setTrustAck} /> : null}
           {error ? <InlineError>{error}</InlineError> : null}

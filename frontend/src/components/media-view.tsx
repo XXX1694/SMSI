@@ -97,7 +97,7 @@ export function MediaView() {
         open={target !== null}
         onOpenChange={(o) => !o && setTarget(null)}
         title="Delete this file?"
-        description={`${target?.original_name ?? 'The file'} will be removed from your library. Drafts using it may lose the attachment.`}
+        description={`${target?.original_name ?? 'The file'} will be removed from your library. Files used in a post cannot be deleted.`}
         confirmLabel="Delete"
         destructive
         onConfirm={async () => {

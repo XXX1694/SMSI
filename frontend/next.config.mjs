@@ -1,10 +1,10 @@
 /** @type {import('next').NextConfig} */
 
 // Demo build (`npm run build:demo`): a static export that runs the whole app in the browser against
-// an in-memory mock API. It is served from a sub-path (GitHub Pages: /SMSI/demo) and never proxies.
+// an in-memory mock API. It is served from a sub-path (GitHub Pages: /steerpost/demo) and never proxies.
 const demo = process.env.NEXT_PUBLIC_DEMO === 'true';
 // An empty NEXT_PUBLIC_BASE_PATH means "serve at the domain root".
-const demoBasePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '/SMSI/demo').replace(/\/+$/, '');
+const demoBasePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '/steerpost/demo').replace(/\/+$/, '');
 
 const demoConfig = {
   output: 'export',

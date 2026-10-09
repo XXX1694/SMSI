@@ -117,7 +117,7 @@ export function PostsView() {
           action={
             filtered ? undefined : (
               <Button asChild>
-                <Link href="/compose">Compose your first post</Link>
+                <Link href="/compose">Write a post</Link>
               </Button>
             )
           }

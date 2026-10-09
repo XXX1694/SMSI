@@ -1,0 +1,16 @@
+{
+  "nav.dashboard": { "type": "nav", "description": "Sidebar link to the overview page", "maxLength": 16 },
+  "nav.compose": { "type": "nav", "description": "Sidebar link to the post composer", "maxLength": 16 },
+  "nav.posts": { "type": "nav", "description": "Sidebar link to the list of posts", "maxLength": 16 },
+  "nav.calendar": { "type": "nav", "description": "Sidebar link to the calendar of scheduled posts", "maxLength": 16 },
+  "nav.media": { "type": "nav", "description": "Sidebar link to the media library", "maxLength": 16 },
+  "nav.analytics": { "type": "nav", "description": "Sidebar link to the analytics page", "maxLength": 16 },
+  "nav.accounts": { "type": "nav", "description": "Sidebar link to connected social accounts", "maxLength": 16 },
+  "nav.approvals": { "type": "nav", "description": "Sidebar link to posts waiting for human approval", "maxLength": 16 },
+  "nav.developer": { "type": "nav", "description": "Sidebar link to API keys and MCP connections", "maxLength": 16 },
+  "nav.settings": { "type": "nav", "description": "Sidebar link to account settings", "maxLength": 16 },
+  "language.label": { "type": "title", "description": "Label of the interface language selector (Settings and sidebar)" },
+  "language.hint": { "type": "body", "description": "Help text under the language selector in Settings" },
+  "language.optionBeta": { "type": "body", "description": "Option text for a machine-drafted language; {name} is the language's own name" },
+  "language.pseudo": { "type": "body", "description": "Option text for the developer-only pseudo-locale" }
+}

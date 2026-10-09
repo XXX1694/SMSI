@@ -15,9 +15,9 @@ describe('approvals helpers', () => {
     expect(actionLabel('something.new')).toBe('something.new');
   });
 
-  it('flags only delete and disconnect as irreversible', () => {
-    expect(['post.delete', 'social_account.disconnect'].every(isIrreversible)).toBe(true);
-    expect(['post.publish', 'post.retry_now', 'post.schedule_soon', 'social_account.connect_token'].some(isIrreversible)).toBe(false);
+  it('flags delete, disconnect, publish now and retry now as irreversible', () => {
+    expect(['post.delete', 'social_account.disconnect', 'post.publish', 'post.retry_now'].every(isIrreversible)).toBe(true);
+    expect(['post.schedule_soon', 'social_account.connect_token'].some(isIrreversible)).toBe(false);
   });
 
   it('counts down and reports expiry', () => {
@@ -42,7 +42,7 @@ describe('approvals helpers', () => {
     expect(summaryLines(a, 'UTC')).toEqual([
       { label: 'Title', value: 'Launch', long: false },
       { label: 'Text', value: 'Hello', long: false },
-      { label: 'Networks', value: 'linkedin, telegram', long: false },
+      { label: 'Networks', value: 'LinkedIn, Telegram', long: false },
       { label: 'Scheduled for', value: expect.stringContaining('12:02'), long: false },
       { label: 'Instance url', value: 'social.example.com', long: false },
     ]);
@@ -57,7 +57,7 @@ describe('approvals helpers', () => {
     );
     expect(lines).toEqual([
       { label: 'Text', value: long, long: true },
-      { label: 'Text on telegram', value: 'short one', long: false },
+      { label: 'Text on Telegram', value: 'short one', long: false },
       { label: 'Media', value: '2 images, 1 video', long: false },
     ]);
     expect(summaryLines({ ...base, summary: { content: 'a\nb\nc\nd\ne' } }, 'UTC')[0]!.long).toBe(true);
@@ -75,7 +75,35 @@ describe('approvals helpers', () => {
       },
       'UTC',
     );
-    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on linkedin · @alex', 'Text on linkedin · @team', 'Accounts']);
-    expect(lines.at(-1)!.value).toBe('linkedin · @alex, linkedin · @team');
+    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on LinkedIn · @alex', 'Text on LinkedIn · @team', 'Accounts']);
+    expect(lines.at(-1)!.value).toBe('LinkedIn · @alex, LinkedIn · @team');
+  });
+});
+
+describe('approval copy', () => {
+  it('names the real dangerous actions in plain words', () => {
+    expect(actionLabel('post.schedule_soon')).toBe('Schedule in the next few minutes');
+    expect(actionLabel('post.publish')).toBe('Publish now');
+  });
+});
+
+describe('summary shows network names, not ids', () => {
+  it('maps platform ids in text lines, networks and accounts', () => {
+    const a = {
+      summary: { platforms: ['telegram'], accounts: ['linkedin · @demo', 'telegram · @chan'], targets: [{ platform: 'telegram', content: 'Hi' }] },
+    } as unknown as Parameters<typeof summaryLines>[0];
+    const lines = summaryLines(a, 'UTC');
+    expect(lines.find((l) => l.label === 'Accounts')?.value).toBe('LinkedIn · @demo, Telegram · @chan');
+    expect(lines.find((l) => l.label === 'Text on Telegram')?.value).toBe('Hi');
+  });
+});
+
+describe('post status in a summary', () => {
+  it('shows a status code as the badge text', () => {
+    const a = { summary: { status: 'draft', provider: 'mock' } } as unknown as Parameters<typeof summaryLines>[0];
+    expect(summaryLines(a, 'UTC')).toEqual([
+      { label: 'Network', value: 'Test network', long: false },
+      { label: 'Status', value: 'Draft', long: false },
+    ]);
   });
 });

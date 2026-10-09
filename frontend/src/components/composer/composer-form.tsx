@@ -52,7 +52,6 @@ export function ComposerForm({ accounts, providers, edit }: Props) {
           date={form.date}
           time={form.time}
           timezone={timezone}
-          utcIso={state.scheduledAtUtc}
           onDate={(date) => patch({ date })}
           onTime={(time) => patch({ time })}
           note={baseline?.post.status === 'scheduled' ? 'Leave the time as it is to keep the current schedule.' : undefined}

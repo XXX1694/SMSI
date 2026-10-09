@@ -14,7 +14,8 @@ const buttonVariants = cva(
         danger: 'bg-danger text-background hover:bg-danger/90',
         link: 'text-accent underline-offset-4 hover:underline',
       },
-      size: { default: 'h-9 px-4', sm: 'h-8 px-3 text-compact', icon: 'h-9 w-9' },
+      // Below md the minimum is 44 px (touch targets); from md up the compact sizes stay.
+      size: { default: 'h-9 px-4 max-md:h-11', sm: 'h-8 px-3 text-compact max-md:h-11', icon: 'h-9 w-9 max-md:h-11 max-md:w-11' },
     },
     defaultVariants: { variant: 'primary', size: 'default' },
   },

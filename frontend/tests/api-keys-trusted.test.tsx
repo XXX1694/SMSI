@@ -28,7 +28,7 @@ async function openCreate() {
 }
 
 const tick = (id: string) => userEvent.click(document.getElementById(id) as HTMLElement);
-const tickAck = () => userEvent.click(screen.getByLabelText(/I understand this key can publish/));
+const tickAck = () => userEvent.click(screen.getByLabelText(/I understand this key can ask to publish/));
 
 describe('key policy in the key list', () => {
   it('shows which keys act without asking and which ask first; a revoked key shows neither', async () => {

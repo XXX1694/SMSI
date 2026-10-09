@@ -74,7 +74,7 @@ describe('AuditView', () => {
     render(<AuditView />);
     expect(await screen.findByRole('alert')).toHaveTextContent('boom');
     expect(screen.getByRole('button', { name: 'Agent actions' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('list_posts')).toBeInTheDocument();
   });
 

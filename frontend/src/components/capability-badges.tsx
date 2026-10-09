@@ -6,7 +6,7 @@ export function CapabilityBadges({ caps }: { caps: Capabilities }) {
     ['Text', caps.canPublishText],
     ['Image', caps.canPublishImage],
     ['Video', caps.canPublishVideo],
-    ['Native scheduling', caps.canSchedule],
+    ['Scheduled by network', caps.canSchedule],
     ['Delete', caps.canDelete],
     ['Analytics', caps.canAnalytics],
   ];
@@ -22,7 +22,7 @@ export function CapabilityBadges({ caps }: { caps: Capabilities }) {
       ))}
       {caps.maxTextLength > 0 ? (
         <li>
-          <Badge tone="outline">{caps.maxTextLength.toLocaleString()} chars</Badge>
+          <Badge tone="outline">{caps.maxTextLength.toLocaleString()} characters</Badge>
         </li>
       ) : null}
     </ul>

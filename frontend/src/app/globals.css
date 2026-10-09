@@ -15,11 +15,20 @@
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
 }
 
-/* Demo build only (html[data-demo]): leave room for the fixed 1.75rem banner so the page never gets a stray scrollbar. */
-html[data-demo] body { padding-top: 1.75rem; }
-html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
+/* viewport-fit=cover (root layout) lets the page draw under notches and the home bar; keep content inside the safe area. */
+body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+[data-app-header] { top: env(safe-area-inset-top); }
+
+/* Demo build only (html[data-demo]): leave room for the fixed 1.75rem banner (plus the top inset) so the page never gets a stray scrollbar. */
+html[data-demo] body { padding-top: calc(1.75rem + env(safe-area-inset-top)); }
+html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem - env(safe-area-inset-top)); }
+html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)); }
+/* Anchors and focused elements must not hide under the sticky mobile header. */
+@media (max-width: 767px) {
+  html { scroll-padding-top: 4rem; }
+}
 @media (min-width: 768px) {
-  html[data-demo] #sidebar { top: 1.75rem; height: calc(100vh - 1.75rem); }
+  html[data-demo] #sidebar { top: calc(1.75rem + env(safe-area-inset-top)); height: calc(100vh - 1.75rem - env(safe-area-inset-top)); }
 }
 
 /* Keyframes used by name from plain CSS live here: Tailwind only emits keyframes for animate-* utilities it sees. */

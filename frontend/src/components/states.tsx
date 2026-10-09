@@ -7,15 +7,16 @@ import { errorMessage } from '@/hooks';
 
 export function LoadingRows({ rows = 3 }: { rows?: number }) {
   return (
-    <div role="status" aria-label="Loading" className="space-y-3 animate-fade-in">
+    <div role="status" className="space-y-3 animate-fade-in">
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }
 
-export function ErrorState({ error, onRetry, title = 'Could not load this', showRef = true }: { error: unknown; onRetry?: () => void; title?: string; showRef?: boolean }) {
+export function ErrorState({ error, onRetry, title = 'Loading failed', showRef = true }: { error: unknown; onRetry?: () => void; title?: string; showRef?: boolean }) {
   return (
     <div role="alert" className="flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-sm">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
@@ -25,7 +26,8 @@ export function ErrorState({ error, onRetry, title = 'Could not load this', show
       </div>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
-          Retry
+          {/* Translator note: "Try again" reloads data after a failed load. "Retry" publishes a post again. Never merge the two keys. */}
+          Try again
         </Button>
       ) : null}
     </div>
