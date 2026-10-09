@@ -83,7 +83,7 @@ export function DashboardView() {
         </dl>
       </div>
       <OnboardingChecklist connectedAccounts={summary.connected_accounts} />
-      <div className="stagger grid gap-10 lg:grid-cols-2">
+      <div className="stagger grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-2">
         <PostSection name="upcoming" posts={summary.upcoming} href="/posts?status=scheduled" />
         <PostSection name="drafts" posts={drafts} href="/posts?status=draft" />
         <PostSection name="recent" posts={summary.recent} href="/posts?status=published" />

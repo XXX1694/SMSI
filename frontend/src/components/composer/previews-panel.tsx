@@ -1,5 +1,5 @@
 import { effectiveContent } from '@/lib/composer';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import type { Media, SocialAccount } from '@/lib/types';
 import { PlatformPreview } from './previews';
 import { useTranslations } from '@/i18n/use-translations';
@@ -16,6 +16,7 @@ export function PreviewsPanel({
   media: Media[];
 }) {
   const t = useTranslations('composer');
+  const providerName = useProviderName();
   return (
     <section aria-label={t('previewsLabel')} className="space-y-3">
       <h2 className="text-sm font-semibold">{t('preview')}</h2>
@@ -26,7 +27,7 @@ export function PreviewsPanel({
       ) : (
         selected.map((a) => (
           <div key={a.id} className="space-y-1.5">
-            <p className="text-xs text-muted-foreground">{providerLabel(a.provider)} · {a.display_name}</p>
+            <p className="text-xs text-muted-foreground">{providerName(a.provider)} · {a.display_name}</p>
             <PlatformPreview
               provider={a.provider}
               author={a.display_name || a.username}

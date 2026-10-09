@@ -1,5 +1,5 @@
 /** Timezone helpers built on Intl only (no date library). */
-import { formatDateTime as formatDateTimeIn, formatRelativeTime } from '@/i18n/format';
+import { formatRelativeTime } from '@/i18n/format';
 import type { AppT } from '@/i18n/translate';
 import { addDays } from '@/lib/calendar';
 
@@ -98,12 +98,6 @@ export function utcToZonedInputs(iso: string, tz: string): { date: string; time:
   const p = zonedParts(new Date(iso), tz);
   const pad = (n: number) => String(n).padStart(2, '0');
   return { date: `${p.year}-${pad(p.month)}-${pad(p.day)}`, time: `${pad(p.hour)}:${pad(p.minute)}` };
-}
-
-/** "9 Oct 2026, 14:30" in the locale and time zone; a dash for no value. */
-export function formatDateTime(iso: string | null | undefined, tz: string, locale: string): string {
-  if (!iso) return '—';
-  return formatDateTimeIn(iso, locale, tz);
 }
 
 /** "2 hours ago", "yesterday"; `Never` and `just now` come from the catalog. */

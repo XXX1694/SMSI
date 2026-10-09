@@ -17,8 +17,8 @@ export function CapabilityBadges({ caps }: { caps: Capabilities }) {
       {items.map(([key, on]) => (
         <li key={key}>
           <Badge tone={on ? 'neutral' : 'outline'} className={on ? '' : 'line-through'}>
-            <span className="sr-only">{on ? t('caps.supports') : t('caps.no')} </span>
-            {t(`caps.${key}`)}
+            <span className="sr-only">{t(on ? 'caps.supports' : 'caps.lacks', { capability: key })}</span>
+            <span aria-hidden>{t(`caps.${key}`)}</span>
           </Badge>
         </li>
       ))}
