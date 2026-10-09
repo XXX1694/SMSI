@@ -168,8 +168,10 @@ func TestQuotaHoldsUnderConcurrency(t *testing.T) {
 		t.Errorf("%d concurrent scheduled posts passed, want exactly 2", got)
 	}
 	png := noisePNG(t, 1)
-	if got := race(8, func(i int) bool { return c.upload("n.png", png).status == 201 }); got != 3 {
-		t.Errorf("%d concurrent uploads passed, want exactly 3", got)
+	// One upload per user runs at a time (D-015), so most of these are refused with 429 before they reach the quota;
+	// what matters is that the limit (3 files) is never exceeded.
+	if got := race(8, func(i int) bool { return c.upload("n.png", png).status == 201 }); got < 1 || got > 3 {
+		t.Errorf("%d concurrent uploads passed, want 1 to 3", got)
 	}
 }
 
