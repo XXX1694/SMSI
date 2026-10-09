@@ -17,7 +17,8 @@ type Users struct{ db *DB }
 // NewUsers creates the repo.
 func NewUsers(db *DB) *Users { return &Users{db: db} }
 
-const userCols = `id, email, password_hash, display_name, status, created_at, email_verified_at, plan, deleted_at, terms_accepted_at, terms_version, deletion_scheduled_at`
+// password_hash is NULL for users who signed up through a provider; the domain sees "" (user.HasPassword).
+const userCols = `id, email, COALESCE(password_hash, ''), display_name, status, created_at, email_verified_at, plan, deleted_at, terms_accepted_at, terms_version, deletion_scheduled_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*user.User, error) {
 	var u user.User
@@ -33,7 +34,7 @@ func (r *Users) Create(ctx context.Context, u *user.User) error {
 	err := r.db.q(ctx).QueryRow(ctx,
 		`INSERT INTO users (email, password_hash, display_name, status, terms_accepted_at, terms_version)
 		 VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, created_at`,
-		u.Email, u.PasswordHash, u.DisplayName, u.Status, u.TermsAcceptedAt, u.TermsVersion).Scan(&u.ID, &u.CreatedAt)
+		u.Email, nullIfEmpty(u.PasswordHash), u.DisplayName, u.Status, u.TermsAcceptedAt, u.TermsVersion).Scan(&u.ID, &u.CreatedAt)
 	if err != nil {
 		mapped := mapErr(err, "user")
 		if errs.Is(mapped, errs.Conflict) {
@@ -116,6 +117,14 @@ func (r *Sessions) DeleteExpired(ctx context.Context, now time.Time) (int64, err
 func (r *Sessions) DeleteAllForUser(ctx context.Context, userID, except uuid.UUID) (int64, error) {
 	tag, err := r.db.q(ctx).Exec(ctx, `DELETE FROM sessions WHERE user_id = $1 AND id <> $2`, userID, except)
 	return tag.RowsAffected(), mapErr(err, "session")
+}
+
+// nullIfEmpty maps "" to SQL NULL.
+func nullIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 // BlockReason says why the user's due posts must not go out ("" when they may): the publisher's check (system). The row
