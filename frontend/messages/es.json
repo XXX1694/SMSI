@@ -686,7 +686,7 @@
     "draftSaved": "Borrador guardado",
     "postScheduled": "Publicación programada",
     "publishStarted": "Publicación iniciada",
-    "publishFailedAfterSave": "Guardado como borrador, pero no se pudo publicar: {reason}",
+    "publishFailedAfterSave": "La publicación se guardó, pero no se pudo publicar: {reason} Vuelve a publicarla aquí cuando esté resuelto.",
     "conflictTitle": "Esta publicación cambió desde que la abriste.",
     "conflictEditable": "Se guardó una versión más reciente en otra pestaña o por un agente. Si guardas ahora, la sobrescribes.",
     "conflictLocked": "{status, select, publishing {Se está publicando ahora mismo y no se puede editar.} published {Ahora está publicada y no se puede editar.} partially_published {Ahora está publicada en parte y no se puede editar.} failed {Ahora ha fallado y no se puede editar.} cancelled {Ahora está cancelada y no se puede editar.} other {Ahora está en un estado que no permite editarla.}}",

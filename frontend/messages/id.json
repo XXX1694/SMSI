@@ -686,7 +686,7 @@
     "draftSaved": "Draf disimpan",
     "postScheduled": "Pos dijadwalkan",
     "publishStarted": "Publikasi dimulai",
-    "publishFailedAfterSave": "Disimpan sebagai draf, tetapi gagal dipublikasikan: {reason}",
+    "publishFailedAfterSave": "Postingan tersimpan, tetapi gagal dipublikasikan: {reason} Publikasikan lagi di sini setelah masalahnya diperbaiki.",
     "conflictTitle": "Pos ini berubah sejak Anda membukanya.",
     "conflictEditable": "Versi yang lebih baru disimpan di tab lain atau oleh agen. Menyimpan sekarang akan menimpanya.",
     "conflictLocked": "{status, select, publishing {Pos sedang dipublikasikan sekarang dan tidak dapat diedit.} published {Pos sekarang sudah terbit dan tidak dapat diedit.} partially_published {Pos sekarang terbit sebagian dan tidak dapat diedit.} failed {Pos sekarang gagal dan tidak dapat diedit.} cancelled {Pos sekarang dibatalkan dan tidak dapat diedit.} other {Pos sekarang dalam status yang tidak dapat diedit.}}",

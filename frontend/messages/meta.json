@@ -329,7 +329,7 @@
   "composer.draftSaved": { "type": "toast", "description": "Success toast" },
   "composer.postScheduled": { "type": "toast", "description": "Success toast" },
   "composer.publishStarted": { "type": "toast", "description": "Success toast" },
-  "composer.publishFailedAfterSave": { "type": "toast", "description": "Error toast: the post was saved, then publishing it failed. {reason} is the error sentence from the server. The user is taken to the saved draft next." },
+  "composer.publishFailedAfterSave": { "type": "toast", "description": "Error toast: the post was saved, then publishing it failed. {reason} is a full sentence from the server (ends with a period). The user is taken to the saved post next, where the Publish now button is." },
   "composer.conflictTitle": { "type": "title", "description": "Bold lead-in of the edit conflict notice" },
   "composer.conflictEditable": { "type": "body", "description": "Edit conflict notice" },
   "composer.conflictLocked": { "type": "body", "description": "Edit conflict notice; {status} is the post status code: publishing, published, partially_published, failed, cancelled" },

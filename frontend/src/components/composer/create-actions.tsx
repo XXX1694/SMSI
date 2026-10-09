@@ -65,7 +65,7 @@ export function CreateActions({ state, title, accounts, providers, selected, onL
     }
     if (action === 'publish') {
       try {
-        await Promise.all([api.posts.publish(post.id), heroWipe()]);
+        await api.posts.publish(post.id);
       } catch (e) {
         // The post exists now. Staying here would let "Publish now" create it a second time (#127), so go to the
         // saved draft, where it can be published again once the cause is fixed.
@@ -75,6 +75,8 @@ export function CreateActions({ state, title, accounts, providers, selected, onL
         return;
       }
     }
+    // The wipe celebrates a publish that went through, so it plays only after success.
+    if (action === 'publish') await heroWipe();
     toast.success(tc(DONE[action]));
     onLeave();
     router.push(postHref(post.id));

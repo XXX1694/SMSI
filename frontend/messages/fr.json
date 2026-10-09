@@ -686,7 +686,7 @@
     "draftSaved": "Brouillon enregistré",
     "postScheduled": "Post planifié",
     "publishStarted": "Publication lancée",
-    "publishFailedAfterSave": "Enregistré comme brouillon, mais la publication a échoué : {reason}",
+    "publishFailedAfterSave": "La publication a été enregistrée, mais l’envoi a échoué : {reason} Publiez-la à nouveau ici une fois le problème réglé.",
     "conflictTitle": "Ce post a changé depuis que vous l’avez ouvert.",
     "conflictEditable": "Une version plus récente a été enregistrée dans un autre onglet ou par un agent. Enregistrer maintenant l’écrase.",
     "conflictLocked": "{status, select, publishing {Il est en cours de publication et ne peut pas être modifié.} published {Il est désormais publié et ne peut pas être modifié.} partially_published {Il est désormais partiellement publié et ne peut pas être modifié.} failed {Il est désormais en échec et ne peut pas être modifié.} cancelled {Il est désormais annulé et ne peut pas être modifié.} other {Il est désormais dans un état qui ne permet pas la modification.}}",

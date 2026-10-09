@@ -45,12 +45,16 @@ describe('CreateActions publish now', () => {
 
   // #127: the post was created, publishing failed; trying again must not create a second post.
   it('goes to the saved draft when publishing fails after the post was created', async () => {
-    apiMock.posts.publish.mockRejectedValue(new ApiError(422, 'SOCIAL_ACCOUNT_EXPIRED', 'expired'));
+    apiMock.posts.publish.mockRejectedValue(new ApiError(422, 'SOCIAL_ACCOUNT_EXPIRED', 'This account needs reconnecting. Reconnect it in Accounts.'));
     const onLeave = renderActions();
     await publishNow();
     await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining('p1')));
     expect(onLeave).toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/^Saved as a draft, but publishing failed: /));
+    expect(apiMock.posts.publish).toHaveBeenCalledWith('p1');
+    expect(toast.error).toHaveBeenCalledWith(
+      'The post was saved, but publishing failed: This account needs reconnecting. Reconnect it in Accounts. Publish it again here once that is fixed.',
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(toast.success).not.toHaveBeenCalled();
     expect(apiMock.posts.create).toHaveBeenCalledTimes(1);
   });

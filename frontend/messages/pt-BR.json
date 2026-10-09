@@ -686,7 +686,7 @@
     "draftSaved": "Rascunho salvo",
     "postScheduled": "Post agendado",
     "publishStarted": "Publicação iniciada",
-    "publishFailedAfterSave": "Salvo como rascunho, mas a publicação falhou: {reason}",
+    "publishFailedAfterSave": "O post foi salvo, mas a publicação falhou: {reason} Publique novamente aqui quando isso for corrigido.",
     "conflictTitle": "Este post mudou desde que você o abriu.",
     "conflictEditable": "Uma versão mais nova foi salva em outra aba ou por um agente. Salvar agora a sobrescreve.",
     "conflictLocked": "{status, select, publishing {Ele está sendo publicado agora e não pode ser editado.} published {Ele agora está publicado e não pode ser editado.} partially_published {Ele agora está publicado em parte e não pode ser editado.} failed {Ele agora falhou e não pode ser editado.} cancelled {Ele agora está cancelado e não pode ser editado.} other {Ele agora está em um estado que não permite edição.}}",
