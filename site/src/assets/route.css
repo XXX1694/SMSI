@@ -72,8 +72,9 @@ html.motion-off .drw, html.motion-off .gate-ring, html.motion-off .gate-check, h
 /* Small screens: the route becomes a slim strip that stays under the nav while the three steps scroll past. */
 @media (max-width: 56rem) {
   .story-grid { display: flex; flex-direction: column; gap: 1rem; }
+  .step { scroll-margin-top: 12rem; }
   .story-stage { order: -1; align-self: stretch; top: calc(max(0.75rem, env(safe-area-inset-top, 0px)) + 3.25rem + 0.5rem); z-index: 2; padding: 0.35rem 0.75rem; border: 1px solid hsl(var(--border)); border-radius: 18px;
-    background: color-mix(in srgb, hsl(var(--background)) 94%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    background: hsl(var(--background)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
   .story-frame { display: none; }
   .route { max-width: 17.5rem; margin-inline: auto; }
   .route-svg { --sw: 2.6; }

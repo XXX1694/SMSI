@@ -58,7 +58,7 @@ code, pre, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, mon
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: hsl(var(--foreground)); font-weight: 600; text-decoration: none; letter-spacing: -0.01em; }
 .brand .mark { flex: none; width: 1.625rem; height: 1.625rem; color: hsl(var(--accent)); }
 .nav { display: flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; }
-.nav a:not(.btn) { color: hsl(var(--muted-foreground)); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; }
+.nav a:not(.btn) { white-space: nowrap; color: hsl(var(--muted-foreground)); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; }
 .nav a:not(.btn):hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
 .nav a[aria-current="page"] { color: hsl(var(--foreground)); font-weight: 500; }
 .nav .btn { margin-left: 0.5rem; }

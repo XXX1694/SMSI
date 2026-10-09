@@ -176,6 +176,43 @@ await step('landing respects reduced motion and phones', async () => {
   await phone.close();
 });
 
+await step('landing nav stays on one line and covers what scrolls under it', async () => {
+  for (const [w, h] of [[320, 640], [360, 780], [390, 844], [414, 896], [768, 1024]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: w < 700, hasTouch: w < 700 });
+    const p = await ctx.newPage();
+    await p.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+    await p.goto(`${SITE}/`);
+    await p.waitForTimeout(600);
+    const nav = await p.evaluate(() => [...document.querySelectorAll('.lp-nav .nav a')].filter((a) => a.offsetParent).map((a) => ({ t: a.textContent.trim(), h: a.getBoundingClientRect().height, r: a.getBoundingClientRect().right })));
+    expect(nav.every((a) => a.h < 50 && a.r <= w), `${w}px: nav links wrap or overflow: ${JSON.stringify(nav)}`);
+    expect(w >= 768 || nav.every((a) => ['Docs', 'Try the demo'].includes(a.t)), `${w}px: only Docs and Try the demo should show: ${JSON.stringify(nav)}`);
+    for (const y of [900, 1500, 2100, 2800, 3600]) {
+      await p.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), y);
+      await p.waitForTimeout(250);
+      const bad = await p.evaluate(() => {
+        const heads = [document.querySelector('.lp-nav-bar'), ...(getComputedStyle(document.querySelector('.story-stage')).position === 'sticky' && innerWidth <= 896 ? [document.querySelector('.story-stage')] : [])];
+        const out = [];
+        for (const el of document.querySelectorAll('h1, h2, h3, p, li, summary, figcaption')) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.bottom < 0 || r.top > innerHeight || el.closest('.lp-nav, .story-stage, [aria-hidden=true]')) continue;
+          for (const hd of heads) {
+            const b = hd.getBoundingClientRect();
+            const x0 = Math.max(r.left, b.left), x1 = Math.min(r.right, b.right), y0 = Math.max(r.top, b.top), y1 = Math.min(r.bottom, b.bottom);
+            if (x1 - x0 < 4 || y1 - y0 < 2) continue;
+            // text may scroll under the header only if the header is opaque there
+            const top = document.elementFromPoint((x0 + x1) / 2, (y0 + y1) / 2);
+            const alpha = Number((getComputedStyle(hd).backgroundColor.match(/[\d.]+/g) ?? [])[3] ?? 1);
+            if (!(top && hd.contains(top)) || alpha < 0.9) out.push(`${el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+          }
+        }
+        return out;
+      });
+      expect(bad.length === 0, `${w}px at ${y}: text shows through the sticky header: ${bad.join(', ')}`);
+    }
+    await ctx.close();
+  }
+});
+
 await step('docs pages render', async () => {
   for (const [path, heading] of [
     ['docs/', 'Overview'],
