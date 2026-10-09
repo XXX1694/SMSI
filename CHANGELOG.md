@@ -12,7 +12,6 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - When `MAIL_PROVIDER=smtp`, unverified accounts get `403 EMAIL_NOT_VERIFIED` on connecting networks, scheduling, publishing, editing scheduled posts and creating API keys. With the log provider nothing is restricted and the dashboard says mail is off. Existing accounts start unverified.
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.
 - Database migration `00003` also prepares plans, quotas, data export and account deletion; it needs no manual step.
-
 - Connect a network with a pasted credential: `POST /api/v1/social/accounts/token` and the provider capability fields `connect_fields`, `max_image_bytes` and `requires_title`. It needs the new critical API-key scope `social:connect`, which is never in a default set (D-009).
 - Posts are checked against the stricter of the network limits and the account's own limits, and networks that need a title reject posts without one.
 - SSRF-safe HTTP client for hosts users supply (D-010).
