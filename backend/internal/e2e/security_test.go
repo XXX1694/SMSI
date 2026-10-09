@@ -544,7 +544,7 @@ func TestApprovalsAreTenantScoped(t *testing.T) {
 
 // Quotas are per user: one user's usage never counts against, or shows in, another user's.
 func TestQuotaIsPerUser(t *testing.T) {
-	e := newEnv(t, withQuota(config.QuotaConfig{QuotaAccounts: 1, QuotaPostsPerMonth: 1, QuotaMediaMB: 1}))
+	e := newEnv(t, withQuota(config.QuotaConfig{QuotaAccounts: 1, QuotaPostsPerMonth: 1, QuotaMediaMB: 1, QuotaAgentRPM: -1}))
 	alice, bob := e.browser(), e.browser()
 	alice.register("alice@quota.test")
 	bob.register("bob@quota.test")

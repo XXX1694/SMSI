@@ -40,8 +40,8 @@ func TestCheckMessagesSayWhatToDo(t *testing.T) {
 }
 
 func TestLimitsFor(t *testing.T) {
-	l := Limits{Accounts: 1, PostsPerMonth: 2, MediaBytes: 3}
-	if l.For(ConnectedAccounts) != 1 || l.For(ScheduledPostsMonth) != 2 || l.For(MediaBytes) != 3 || l.For("x") != Unlimited {
+	l := Limits{Accounts: 1, PostsPerMonth: 2, MediaBytes: 3, AgentRPM: 4}
+	if l.For(ConnectedAccounts) != 1 || l.For(ScheduledPostsMonth) != 2 || l.For(MediaBytes) != 3 || l.For(AgentRPM) != 4 || l.For("x") != Unlimited {
 		t.Fatalf("%+v", l)
 	}
 }

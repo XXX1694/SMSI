@@ -122,6 +122,9 @@ func housekeeping(ctx context.Context, a *app.App) {
 			a.APILimiter.Sweep()
 			a.AuthLimit.Sweep()
 			a.MailLimit.Sweep()
+			if a.AgentLimit != nil {
+				a.AgentLimit.Sweep()
+			}
 			if n, err := a.Services.Auth.PurgeExpiredSessions(ctx); err != nil {
 				a.Log.Warn("session purge failed", slog.Any("error", err))
 			} else if n > 0 {

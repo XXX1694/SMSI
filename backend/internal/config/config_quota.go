@@ -10,6 +10,7 @@ type QuotaConfig struct {
 	QuotaAccounts      int
 	QuotaPostsPerMonth int
 	QuotaMediaMB       int
+	QuotaAgentRPM      int
 }
 
 func loadQuotaConfig() QuotaConfig {
@@ -17,6 +18,7 @@ func loadQuotaConfig() QuotaConfig {
 		QuotaAccounts:      envInt("QUOTA_ACCOUNTS", quota.Unlimited),
 		QuotaPostsPerMonth: envInt("QUOTA_POSTS_PER_MONTH", quota.Unlimited),
 		QuotaMediaMB:       envInt("QUOTA_MEDIA_MB", quota.Unlimited),
+		QuotaAgentRPM:      envInt("QUOTA_AGENT_RPM", quota.Unlimited),
 	}
 }
 
@@ -26,7 +28,7 @@ func (c QuotaConfig) QuotaLimits() quota.Limits {
 	if c.QuotaMediaMB >= 0 {
 		bytes = int64(c.QuotaMediaMB) << 20
 	}
-	return quota.Limits{Accounts: c.QuotaAccounts, PostsPerMonth: c.QuotaPostsPerMonth, MediaBytes: bytes}
+	return quota.Limits{Accounts: c.QuotaAccounts, PostsPerMonth: c.QuotaPostsPerMonth, MediaBytes: bytes, AgentRPM: c.QuotaAgentRPM}
 }
 
 func (c *Config) validateQuota() []string {
@@ -34,7 +36,7 @@ func (c *Config) validateQuota() []string {
 	for _, l := range []struct {
 		name string
 		v    int
-	}{{"QUOTA_ACCOUNTS", c.QuotaAccounts}, {"QUOTA_POSTS_PER_MONTH", c.QuotaPostsPerMonth}, {"QUOTA_MEDIA_MB", c.QuotaMediaMB}} {
+	}{{"QUOTA_ACCOUNTS", c.QuotaAccounts}, {"QUOTA_POSTS_PER_MONTH", c.QuotaPostsPerMonth}, {"QUOTA_MEDIA_MB", c.QuotaMediaMB}, {"QUOTA_AGENT_RPM", c.QuotaAgentRPM}} {
 		if l.v < quota.Unlimited || l.v == 0 {
 			p = append(p, l.name+" must be -1 (unlimited) or a positive number")
 		}

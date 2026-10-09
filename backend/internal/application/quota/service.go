@@ -106,7 +106,7 @@ func (s *Service) EnforceMedia(ctx context.Context, userID uuid.UUID, size int64
 	return quota.Check(quota.MediaBytes, n, size, s.limits.MediaBytes)
 }
 
-// Item is one line of the usage report. Used is nil for limits that are not counted.
+// Item is one line of the usage report. Used is nil for limits that are not counted (the request rate).
 type Item struct {
 	Used  *int64
 	Limit int64
@@ -146,5 +146,6 @@ func (s *Service) Report(ctx context.Context, a actor.Actor) (*Report, error) {
 		quota.ConnectedAccounts:   {Used: &accounts, Limit: s.limits.For(quota.ConnectedAccounts)},
 		quota.ScheduledPostsMonth: {Used: &posts, Limit: s.limits.For(quota.ScheduledPostsMonth)},
 		quota.MediaBytes:          {Used: &bytes, Limit: s.limits.For(quota.MediaBytes)},
+		quota.AgentRPM:            {Limit: s.limits.For(quota.AgentRPM)},
 	}}, nil
 }

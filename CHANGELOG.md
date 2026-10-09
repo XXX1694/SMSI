@@ -6,6 +6,11 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- Agent request limit `QUOTA_AGENT_RPM`: requests per minute for all API keys and MCP connections of a user together, answered with `429 RATE_LIMITED`. Off by default (`-1`), like the other plan limits (D-014).
+- MCP tool `get_usage` (the 14th, scope `analytics:read`) shows the plan, the period and what is used against each limit.
+
 ## [0.2.0] - 2026-10-09
 
 ### Security

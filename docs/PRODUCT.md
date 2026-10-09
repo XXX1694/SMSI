@@ -42,7 +42,7 @@ Checked on the vendors' own pages on 2026-10-09; prices are the lowest listed an
 
 | Product | Agent / MCP | Self-host | Networks (Telegram?) | Price from | Open source |
 |---|---|---|---|---|---|
-| **SocialOS** | Built in, 13 tools, scoped API key; OAuth planned | Yes | 2 live (yes) | Free (self-host) | Licence not chosen |
+| **SocialOS** | Built in, 14 tools, scoped API key; OAuth planned | Yes | 2 live (yes) | Free (self-host) | Licence not chosen |
 | [Buffer](https://buffer.com/mcp) | Hosted MCP on every plan, API key | No | 12 (no) | Free 3 channels; $5/channel/month | No |
 | [Hootsuite](https://www.hootsuite.com/integrations/mcp) | Hosted MCP, account sign-in | No | 9 (no) | $99/user/month, annual | No |
 | [Typefully](https://support.typefully.com/en/articles/13128440-typefully-mcp-server) | Hosted MCP, OAuth or key, on Free | No | 6 (no) | Free 10 posts/month; $10/month | No |

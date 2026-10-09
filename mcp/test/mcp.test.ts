@@ -7,12 +7,12 @@ afterAll(async () => { await s.stop(); });
 beforeEach(() => { s.api.calls.length = 0; s.api.replies.clear(); });
 
 const EXPECTED_TOOLS = [
-  "list_social_accounts", "get_social_account", "list_posts", "get_post", "get_post_status", "get_analytics",
+  "list_social_accounts", "get_social_account", "list_posts", "get_post", "get_post_status", "get_analytics", "get_usage",
   "create_draft", "update_post", "schedule_post", "cancel_scheduled_post", "publish_post", "delete_post", "disconnect_account",
 ];
 
 describe("tool listing", () => {
-  it("lists all 13 tools with annotations and risk labels for a full-scope key", async () => {
+  it("lists all 14 tools with annotations and risk labels for a full-scope key", async () => {
     const c = await connect(s.mcpUrl);
     const { tools } = await c.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([...EXPECTED_TOOLS].sort());
@@ -62,6 +62,7 @@ describe("tool -> REST mapping", () => {
     { name: "list_posts", args: { status: "draft", limit: 5, cursor: "c1" }, method: "GET", path: "/posts?status=draft&limit=5&cursor=c1" },
     { name: "get_post", args: { post_id: "p1" }, method: "GET", path: "/posts/p1" },
     { name: "get_post_status", args: { post_id: "p1" }, method: "GET", path: "/posts/p1/status" },
+    { name: "get_usage", args: {}, method: "GET", path: "/account/usage" },
     { name: "get_analytics", args: { from: "2026-01-01T00:00:00Z" }, method: "GET", path: "/analytics?from=2026-01-01T00%3A00%3A00Z" },
     {
       name: "create_draft",
@@ -211,6 +212,7 @@ describe("error mapping", () => {
   const errs: [number, string, string][] = [
     [403, "INSUFFICIENT_SCOPE", "scope"],
     [403, "EMAIL_NOT_VERIFIED", "verification link"],
+    [403, "QUOTA_EXCEEDED", "get_usage"],
     [422, "SOCIAL_ACCOUNT_EXPIRED", "reconnect"],
     [409, "INVALID_STATE_TRANSITION", "get_post_status"],
     [404, "NOT_FOUND", "does not exist"],
@@ -306,7 +308,7 @@ describe("HTTP edge", () => {
   it("serves independent stateless requests concurrently", async () => {
     const clients = await Promise.all([connect(s.mcpUrl), connect(s.mcpUrl), connect(s.mcpUrl)]);
     const lists = await Promise.all(clients.map((c) => c.listTools()));
-    for (const l of lists) expect(l.tools).toHaveLength(ALL_SCOPES.length >= 9 ? 13 : 0);
+    for (const l of lists) expect(l.tools).toHaveLength(ALL_SCOPES.length >= 9 ? 14 : 0);
     await Promise.all(clients.map((c) => c.close()));
   });
 });

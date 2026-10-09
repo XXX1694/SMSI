@@ -48,6 +48,7 @@ x-backend-env: &backend-env
   QUOTA_ACCOUNTS: ${QUOTA_ACCOUNTS:--1}
   QUOTA_POSTS_PER_MONTH: ${QUOTA_POSTS_PER_MONTH:--1}
   QUOTA_MEDIA_MB: ${QUOTA_MEDIA_MB:--1}
+  QUOTA_AGENT_RPM: ${QUOTA_AGENT_RPM:--1}
 
 services:
   postgres:

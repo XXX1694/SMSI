@@ -67,6 +67,8 @@ type App struct {
 	Publisher  *scheduler.Publisher
 	Reconciler *scheduler.Reconciler
 	APILimiter *middleware.Limiter
+	// AgentLimit caps API-key requests per user (nil when QUOTA_AGENT_RPM=-1).
+	AgentLimit *middleware.Limiter
 	AuthLimit  *middleware.Limiter
 	MailLimit  *middleware.Limiter
 }
@@ -208,6 +210,9 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	a.APILimiter = middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 	a.AuthLimit = middleware.NewLimiter(cfg.AuthRateRPS, cfg.AuthRateBurst)
 	a.MailLimit = middleware.NewLimiter(1.0/60, 3)
+	if rpm := cfg.QuotaLimits().AgentRPM; rpm > 0 {
+		a.AgentLimit = middleware.NewLimiter(float64(rpm)/60, rpm)
+	}
 	return nil
 }
 
@@ -238,7 +243,7 @@ func (a *App) Router() http.Handler {
 	return transport.NewRouter(a.Services, transport.Options{
 		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
 		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, UploadMinKBps: a.Cfg.UploadMinKBps, GatewaySecret: a.Cfg.GatewaySecret,
-		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
+		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit, AgentLimiter: a.AgentLimit,
 		MailLimiter: a.MailLimit, MailDelivery: mailDelivery(a.Cfg), RequireVerification: requireVerification(a.Cfg),
 		TelegramWebhookSecret: webhookSecret,
 		Ready: []transport.ReadyCheck{

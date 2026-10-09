@@ -20,7 +20,7 @@ func withQuota(q config.QuotaConfig) envOpts {
 	return envOpts{mutate: func(c *config.Config) { c.QuotaConfig = q }}
 }
 
-var unlimited = config.QuotaConfig{QuotaAccounts: -1, QuotaPostsPerMonth: -1, QuotaMediaMB: -1}
+var unlimited = config.QuotaConfig{QuotaAccounts: -1, QuotaPostsPerMonth: -1, QuotaMediaMB: -1, QuotaAgentRPM: -1}
 
 func quotaOf(q config.QuotaConfig, f func(*config.QuotaConfig)) config.QuotaConfig { f(&q); return q }
 
@@ -139,7 +139,7 @@ func TestQuotaMediaBytes(t *testing.T) {
 
 // Concurrent requests must not all pass the check before any of them records its change.
 func TestQuotaHoldsUnderConcurrency(t *testing.T) {
-	e := newEnv(t, withQuota(config.QuotaConfig{QuotaAccounts: 3, QuotaPostsPerMonth: 2, QuotaMediaMB: 1}))
+	e := newEnv(t, withQuota(config.QuotaConfig{QuotaAccounts: 3, QuotaPostsPerMonth: 2, QuotaMediaMB: 1, QuotaAgentRPM: -1}))
 	c := e.browser()
 	c.register("race-quota@example.com")
 	acc := c.connectToken(tokenKey(0))
@@ -194,6 +194,32 @@ func TestQuotaHoldsUnderConcurrency(t *testing.T) {
 	}
 }
 
+func TestQuotaAgentRequestsAreCappedPerUser(t *testing.T) {
+	e := newEnv(t, withQuota(quotaOf(unlimited, func(q *config.QuotaConfig) { q.QuotaAgentRPM = 4 })))
+	c := e.browser()
+	c.register("agent-quota@example.com")
+	k1 := e.apiKeyClient(c.createKey("one", "posts:read"))
+	k2 := e.apiKeyClient(c.createKey("two", "posts:read"))
+
+	for i := 0; i < 2; i++ {
+		k1.must("GET", "/api/v1/posts", nil, 200)
+		k2.must("GET", "/api/v1/posts", nil, 200)
+	}
+	// Two keys share one budget: the fifth request is refused whichever key sends it.
+	r := k2.do("GET", "/api/v1/posts", nil)
+	if r.status != http.StatusTooManyRequests || r.errCode(t) != "RATE_LIMITED" || r.header.Get("Retry-After") == "" {
+		t.Fatalf("want 429 RATE_LIMITED with Retry-After, got %d %s", r.status, r.body)
+	}
+	// The owner in the browser is not an agent and is not limited.
+	for i := 0; i < 8; i++ {
+		c.must("GET", "/api/v1/posts", nil, 200)
+	}
+	// Another user has a budget of their own.
+	other := e.browser()
+	other.register("agent-quota-2@example.com")
+	e.apiKeyClient(other.createKey("x", "posts:read")).must("GET", "/api/v1/posts", nil, 200)
+}
+
 func TestQuotaUnlimitedAndUsageReport(t *testing.T) {
 	e := newEnv(t, withQuota(unlimited))
 	c := e.browser()
@@ -208,6 +234,9 @@ func TestQuotaUnlimitedAndUsageReport(t *testing.T) {
 	q := rep["quotas"].(map[string]any)
 	if acc := q["connected_accounts"].(map[string]any); acc["used"].(float64) != 7 || acc["limit"].(float64) != -1 {
 		t.Fatalf("accounts: %v", acc)
+	}
+	if rpm := q["agent_requests_per_minute"].(map[string]any); rpm["limit"].(float64) != -1 || rpm["used"] != nil {
+		t.Fatalf("agent rpm: %v", rpm)
 	}
 	// A key needs analytics:read to see the usage.
 	denied := e.apiKeyClient(c.createKey("noscope", "posts:read"))

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/transport/middleware"
 )
 
@@ -148,4 +150,37 @@ func TestLimiterCapsTrackedKeys(t *testing.T) {
 			t.Fatalf("tracking %d keys, want 50", n)
 		}
 	})
+}
+
+func TestAgentRateLimit(t *testing.T) {
+	user := uuid.New()
+	as := func(typ actor.Type, id string, uid uuid.UUID) func(*http.Request) {
+		return func(r *http.Request) {
+			*r = *r.WithContext(actor.With(r.Context(), actor.Actor{UserID: uid, Type: typ, ID: id}))
+		}
+	}
+	h := func(l *middleware.Limiter) http.Handler {
+		return middleware.RequestID(middleware.AgentRateLimit(l, nil)(http.HandlerFunc(ok)))
+	}
+	l := middleware.NewLimiter(0.001, 2)
+	// Two different keys of one user draw from the same budget.
+	if c := do(h(l), "GET", "/", as(actor.TypeAPIKey, "k1", user)).Code; c != 204 {
+		t.Fatal(c)
+	}
+	if c := do(h(l), "GET", "/", as(actor.TypeAPIKey, "k2", user)).Code; c != 204 {
+		t.Fatal(c)
+	}
+	if r := do(h(l), "GET", "/", as(actor.TypeAPIKey, "k3", user)); r.Code != 429 || r.Header().Get("Retry-After") == "" {
+		t.Fatalf("third request: %d", r.Code)
+	}
+	// Sessions are not agents, other users have their own budget, a nil limiter is off.
+	if c := do(h(l), "GET", "/", as(actor.TypeUser, "u", user)).Code; c != 204 {
+		t.Errorf("session: %d", c)
+	}
+	if c := do(h(l), "GET", "/", as(actor.TypeAPIKey, "k1", uuid.New())).Code; c != 204 {
+		t.Errorf("other user: %d", c)
+	}
+	if c := do(h(nil), "GET", "/", as(actor.TypeAPIKey, "k1", user)).Code; c != 204 {
+		t.Errorf("nil limiter: %d", c)
+	}
 }

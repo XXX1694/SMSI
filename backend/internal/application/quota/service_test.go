@@ -43,7 +43,7 @@ var oct = time.Date(2026, 10, 31, 23, 59, 0, 0, time.FixedZone("x", 3*3600)) // 
 
 func TestEnforceLocksCountsAndRefuses(t *testing.T) {
 	u := &fakeUsage{accounts: 5, posts: 60, bytes: 10 << 20}
-	s := NewService(u, domain.Limits{Accounts: 5, PostsPerMonth: 60, MediaBytes: 10 << 20}, clk{oct})
+	s := NewService(u, domain.Limits{Accounts: 5, PostsPerMonth: 60, MediaBytes: 10 << 20, AgentRPM: 1}, clk{oct})
 	ctx := context.Background()
 	if err := s.EnforceAccount(ctx, uuid.New(), "mock", "id1"); !errs.Is(err, errs.QuotaExceeded) {
 		t.Fatalf("accounts: %v", err)
@@ -74,7 +74,7 @@ func TestEnforceLocksCountsAndRefuses(t *testing.T) {
 
 func TestUnlimitedSkipsEverything(t *testing.T) {
 	u := &fakeUsage{accounts: 1000, posts: 1000, bytes: 1 << 40}
-	s := NewService(u, domain.Limits{Accounts: -1, PostsPerMonth: -1, MediaBytes: -1}, clk{oct})
+	s := NewService(u, domain.Limits{Accounts: -1, PostsPerMonth: -1, MediaBytes: -1, AgentRPM: -1}, clk{oct})
 	ctx := context.Background()
 	if s.EnforceAccount(ctx, uuid.New(), "m", "i") != nil || s.EnforcePost(ctx, uuid.New()) != nil || s.EnforceMedia(ctx, uuid.New(), 1<<40) != nil || u.locks != 0 {
 		t.Fatalf("unlimited must not check or lock (locks=%d)", u.locks)
@@ -82,7 +82,7 @@ func TestUnlimitedSkipsEverything(t *testing.T) {
 }
 
 func TestReportNeedsAnalyticsScope(t *testing.T) {
-	s := NewService(&fakeUsage{posts: 3}, domain.Limits{PostsPerMonth: 60}, clk{oct})
+	s := NewService(&fakeUsage{posts: 3}, domain.Limits{PostsPerMonth: 60, AgentRPM: 120}, clk{oct})
 	key := actor.Actor{UserID: uuid.New(), Type: actor.TypeAPIKey, Scopes: []apikey.Scope{apikey.PostsRead}}
 	if _, err := s.Report(context.Background(), key); !errs.Is(err, errs.InsufficientScope) {
 		t.Fatalf("err=%v", err)
@@ -92,7 +92,7 @@ func TestReportNeedsAnalyticsScope(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !rep.PeriodEnd.Equal(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)) || *rep.Items[domain.ScheduledPostsMonth].Used != 3 {
+	if !rep.PeriodEnd.Equal(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)) || *rep.Items[domain.ScheduledPostsMonth].Used != 3 || rep.Items[domain.AgentRPM].Used != nil {
 		t.Fatalf("%+v", rep)
 	}
 }

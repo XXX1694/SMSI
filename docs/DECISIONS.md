@@ -262,7 +262,7 @@ confirmation under the "Dangerous" heading. Changing the policy of an existing k
 
 ## D-014: Plan limits are counted in the application layer under a per-user row lock (2026-10-09)
 
-**Context.** A public instance needs caps (accounts, posts per month, media storage) so one user cannot
+**Context.** A public instance needs caps (accounts, posts per month, media storage, agent request rate) so one user cannot
 exhaust the shared host (D-012), and self-hosters need to switch them off. Migration `00003` already carries
 `users.plan` and `posts.quota_counted_at`.
 
@@ -275,9 +275,13 @@ post counts when it is scheduled or published (`quota_counted_at`), and again wh
 post cannot bank an allowance by being scheduled at month end); within a month unschedule/schedule and retries are free
 and deleting does not refund. Quota is checked before the owner's approval is asked for or spent, and a cheap
 no-lock pre-check runs before an OAuth start and before a token connect's approval and live check. A chat link that hits
-the limit is dropped (logged, the code stays unused) rather than retried, because the Telegram poller is shared. Posts are counted per UTC month. A refusal is the typed error
-`QUOTA_EXCEEDED` (403), mapped once in `httpx`. Usage is shown by `GET /account/usage`. The per-user cap on agent requests follows
-in the next PR.
+the limit is dropped (logged, the code stays unused) rather than retried, because the Telegram poller is shared. The
+request rate is a token bucket in memory per API instance, keyed by user (not by key) and applied to API-key actors only;
+the rate cap stays `RATE_LIMITED` (429). Usage is shown by `GET /account/usage`, the MCP tool `get_usage` and a card in
+Settings. Posts are counted per UTC month. A refusal is the typed error
+`QUOTA_EXCEEDED` (403), mapped once in `httpx`. The request rate is a token bucket in memory per API instance, keyed by user (not by key) and applied to API-key
+actors only; the rate cap stays `RATE_LIMITED` (429). Usage is shown by `GET /account/usage`, the MCP tool `get_usage` and
+a card in Settings.
 
 **Alternatives.** A `plans` table: no second plan exists yet, and env is enough for self-hosters (the column stays for it).
 A database trigger or constraint: hides the rule from the code and the tests and cannot say what to do about it.
@@ -286,7 +290,7 @@ lock: not tied to the row and invisible in `pg_locks` joins with users. A counte
 paths that forget it. Counting scheduled posts instead of first-scheduled ones: lets a user cycle posts forever.
 
 **Consequences.** Every counted change takes one row lock per user for the length of its transaction (short, and only
-for users who have limits switched on). Media: concurrent uploads cannot overshoot, but the size of a streamed upload is only known once it has been
+for users who have limits switched on). The agent cap is per instance, so with N API replicas the effective cap is up to N times the setting. Media: concurrent uploads cannot overshoot, but the size of a streamed upload is only known once it has been
 read, so the check runs with the insert and a refused upload has already been stored and then has its object deleted. Existing users are counted from the first day of use; nothing is retro-fitted, so a
 user already above a limit keeps what they have and cannot add more. Raising a limit needs only an env change.
 ## D-015: Stream media uploads to S3 in bounded parts, cap them, and send big uploads around the Next.js proxy (2026-10-09)
