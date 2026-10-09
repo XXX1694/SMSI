@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayKey, formatRelative, isValidTimezone, utcToZonedInputs, zonedToUtcIso } from '@/lib/time';
+import { dayKey, formatRelative, isValidTimezone, utcToZonedInputs, zonedDayRangeIso, zonedToUtcIso } from '@/lib/time';
 
 describe('timezone conversion', () => {
   it('converts Almaty wall time (UTC+5) to UTC', () => {
@@ -40,5 +40,15 @@ describe('formatRelative', () => {
     expect(formatRelative('2026-01-01T10:00:00Z', now)).toBe('2 hours ago');
     expect(formatRelative('2026-01-03T12:00:00Z', now)).toBe('in 2 days');
     expect(formatRelative('2026-01-01T12:00:10Z', now)).toBe('just now');
+  });
+});
+
+describe('zonedDayRangeIso', () => {
+  it('returns the UTC bounds of whole days in the given timezone', () => {
+    expect(zonedDayRangeIso('2026-10-01', '2026-10-01', 'Pacific/Kiritimati')).toEqual({
+      from: '2026-09-30T10:00:00Z',
+      to: '2026-10-01T09:59:59Z',
+    });
+    expect(zonedDayRangeIso('', '', 'UTC')).toEqual({ from: undefined, to: undefined });
   });
 });
