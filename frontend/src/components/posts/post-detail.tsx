@@ -18,6 +18,7 @@ import { SCHEDULE_TOO_SOON } from '@/lib/composer';
 import { describeErrorCode, friendlyMessage, isTechnicalMessage } from '@/lib/errors';
 import { editHref } from '@/lib/demo/config';
 import { postLabel } from '@/lib/format';
+import { RetryPostDialog } from '@/components/posts/retry-post-dialog';
 import { providerLabel } from '@/lib/normalize';
 import { editBlockedReason, postActions } from '@/lib/status';
 import { formatDateTime, zonedToUtcIso } from '@/lib/time';
@@ -221,7 +222,7 @@ export function PostDetail({ id }: { id: string }) {
         </Section>
       </div>
       <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title="Publish now?" description={`This posts to ${[...new Set(post.targets.map((t) => providerLabel(t.platform)))].join(', ')} now. Steerpost cannot undo it.`} confirmLabel="Publish now" onConfirm={act(() => api.posts.publish(id), 'Publishing started')} />
-      <ConfirmDialog open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} title="Retry failed accounts?" description="Steerpost publishes again only to the accounts that failed." confirmLabel="Retry" onConfirm={act(() => api.posts.retry(id), 'Retry started')} />
+      <RetryPostDialog postId={id} open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} onRetried={() => { toast.success('Retry started'); reload(); }} />
       <ConfirmDialog open={dlg === 'cancel'} onOpenChange={(o) => !o && setDlg(null)} title="Cancel this post?" description="It will never publish, and this cannot be undone. To reuse the text, write a new post." confirmLabel="Cancel post" dismissLabel="Keep post" destructive onConfirm={act(() => api.posts.cancel(id), 'Post canceled')} />
       <ConfirmDialog
         open={dlg === 'delete'}

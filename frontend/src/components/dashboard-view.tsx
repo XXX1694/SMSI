@@ -4,11 +4,12 @@ import { useCallback, useState } from 'react';
 import { OnboardingChecklist } from '@/components/onboarding-checklist';
 import { PostList } from '@/components/post-row';
 import { ErrorState, LoadingRows } from '@/components/states';
+import { RetryPostDialog } from '@/components/posts/retry-post-dialog';
 import { useToast } from '@/components/toast';
 import { Section } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import type { DashboardSummary, Post } from '@/lib/types';
-import { errorMessage, useAsync } from '@/hooks';
+import { useAsync } from '@/hooks';
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: 'danger' }) {
   return (
@@ -25,10 +26,9 @@ interface SectionProps {
   empty: string;
   href?: string;
   onRetry?: (post: Post) => void;
-  retryingId?: string | null;
 }
 
-function PostSection({ title, posts, empty, href, onRetry, retryingId }: SectionProps) {
+function PostSection({ title, posts, empty, href, onRetry }: SectionProps) {
   return (
     <Section
       title={title}
@@ -44,7 +44,7 @@ function PostSection({ title, posts, empty, href, onRetry, retryingId }: Section
         ) : null
       }
     >
-      {posts.length === 0 ? <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">{empty}</p> : <PostList posts={posts} onRetry={onRetry} retryingId={retryingId} />}
+      {posts.length === 0 ? <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">{empty}</p> : <PostList posts={posts} onRetry={onRetry} />}
     </Section>
   );
 }
@@ -60,20 +60,7 @@ export function DashboardView() {
   }, []);
   const { data, error, loading, reload } = useAsync(load);
   const toast = useToast();
-  const [retryingId, setRetryingId] = useState<string | null>(null);
-
-  async function retry(post: Post) {
-    setRetryingId(post.id);
-    try {
-      await api.posts.retry(post.id);
-      toast.success('Retry started');
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setRetryingId(null);
-      reload();
-    }
-  }
+  const [retryTarget, setRetryTarget] = useState<Post | null>(null);
 
   if (loading && !data) return <LoadingRows rows={4} />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
@@ -95,8 +82,17 @@ export function DashboardView() {
         <PostSection title="Upcoming" posts={summary.upcoming} empty="Nothing scheduled." href="/posts?status=scheduled" />
         <PostSection title="Drafts" posts={drafts} empty="No drafts." href="/posts?status=draft" />
         <PostSection title="Recently published" posts={summary.recent} empty="Nothing published yet." href="/posts?status=published" />
-        <PostSection title="Failed" posts={failed} empty="No failed posts." href="/posts?status=failed" onRetry={(p) => void retry(p)} retryingId={retryingId} />
+        <PostSection title="Failed" posts={failed} empty="No failed posts." href="/posts?status=failed" onRetry={setRetryTarget} />
       </div>
+      <RetryPostDialog
+        postId={retryTarget?.id ?? ''}
+        open={retryTarget !== null}
+        onOpenChange={(o) => !o && setRetryTarget(null)}
+        onRetried={() => {
+          toast.success('Retry started');
+          reload();
+        }}
+      />
     </div>
   );
 }

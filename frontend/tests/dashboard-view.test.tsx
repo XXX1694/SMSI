@@ -31,21 +31,34 @@ beforeEach(() => {
 });
 
 describe('DashboardView failed posts', () => {
-  it('offers a Retry next step on a failed post and reloads afterwards', async () => {
+  it('asks before retrying and does nothing on Cancel', async () => {
     render(<DashboardView />);
-    const section = (await screen.findByRole('heading', { name: 'Failed' })).closest('section')!;
-    await userEvent.click(within(section).getByRole('button', { name: 'Retry Broken launch' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Retry Broken launch' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Retry failed accounts?')).toBeInTheDocument();
+    expect(apiMock.posts.retry).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(apiMock.posts.retry).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('retries only after Confirm, then reloads', async () => {
+    render(<DashboardView />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Retry Broken launch' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Retry' }));
     expect(apiMock.posts.retry).toHaveBeenCalledWith('p1');
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Retry started'));
     await waitFor(() => expect(apiMock.dashboard.summary).toHaveBeenCalledTimes(2));
   });
 
-  it('shows the error and keeps the row when the retry is refused', async () => {
-    apiMock.posts.retry.mockRejectedValue(new Error('needs approval'));
+  it('shows a refusal inside the dialog and keeps it open', async () => {
+    apiMock.posts.retry.mockRejectedValue(new Error('Approval needed'));
     render(<DashboardView />);
     await userEvent.click(await screen.findByRole('button', { name: 'Retry Broken launch' }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(await screen.findByRole('button', { name: 'Retry Broken launch' })).toBeEnabled();
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Retry' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Approval needed');
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('gives each View all link a distinct name and the stats row a heading', async () => {

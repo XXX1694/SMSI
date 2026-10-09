@@ -11,12 +11,11 @@ import type { Post } from '@/lib/types';
 
 interface RowProps {
   post: Post;
-  /** Shown for failed posts: retries the failed targets. The detail page stays one click away on the row itself. */
+  /** Shown for failed posts: asks the caller to retry (the caller confirms first). The detail page stays one click away on the row. */
   onRetry?: (post: Post) => void;
-  retrying?: boolean;
 }
 
-export function PostRow({ post, onRetry, retrying = false }: RowProps) {
+export function PostRow({ post, onRetry }: RowProps) {
   const { timezone } = usePrefs();
   return (
     <li className="flex items-center gap-2 pr-1 sm:pr-3">
@@ -39,8 +38,8 @@ export function PostRow({ post, onRetry, retrying = false }: RowProps) {
           </Link>
         </Button>
       ) : onRetry && postActions(post.status).retry ? (
-        <Button size="sm" variant="secondary" className="shrink-0" loading={retrying} onClick={() => onRetry(post)} aria-label={`Retry ${postLabel(post)}`}>
-          {retrying ? 'Retrying…' : 'Retry'}
+        <Button size="sm" variant="secondary" className="shrink-0" onClick={() => onRetry(post)} aria-label={`Retry ${postLabel(post)}`}>
+          Retry
         </Button>
       ) : (
         <span aria-hidden className="w-12 shrink-0 max-sm:hidden" />
@@ -49,11 +48,11 @@ export function PostRow({ post, onRetry, retrying = false }: RowProps) {
   );
 }
 
-export function PostList({ posts, onRetry, retryingId }: { posts: Post[]; onRetry?: (post: Post) => void; retryingId?: string | null }) {
+export function PostList({ posts, onRetry }: { posts: Post[]; onRetry?: (post: Post) => void }) {
   return (
     <ul className="stagger divide-y overflow-hidden rounded-lg border">
       {posts.map((p) => (
-        <PostRow key={p.id} post={p} onRetry={onRetry} retrying={retryingId === p.id} />
+        <PostRow key={p.id} post={p} onRetry={onRetry} />
       ))}
     </ul>
   );

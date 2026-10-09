@@ -192,7 +192,7 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 - Design for +35 % text length (de, ru, es) and for CJK width. Buttons never truncate, and labels wrap rather than clip.
 - Never put text in images. Screenshots on the landing page are per-locale assets or keep English UI with a caption.
 
-## 13. Per-language decisions (wave 1)
+## 13. Per-language decisions
 
 | | Address | Buttons | Body text | Quotes | Notes |
 |---|---|---|---|---|---|
@@ -203,6 +203,10 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 | **pt-BR** | **você** | infinitive: «Salvar», «Agendar» | «Conecte uma conta.» | “…” | Brazilian forms only: tela, arquivo, usuário (not ecrã, ficheiro, utilizador). "post" is the accepted term. |
 | **de** | **du**, lowercase (the norm for developer and SaaS tools in German) | infinitive: «Speichern», «Planen» | «Verbinde ein Konto.» | „…“ | Nouns capitalized by grammar. Address the reader as "du" to avoid gendered nouns like "Nutzer". Prefer short verbs to keep within the length budget. |
 | **ja** | no pronoun (never あなた); です/ます sentences | noun or short verb: 「保存」「今すぐ投稿」「削除」 | 「アカウントを連携してください。」 | 「…」 | Full-width 。、, half-width letters and digits, no space between ja and Latin (JTF style). Katakana long-vowel mark: サーバー, ユーザー. Error pattern: 〜できませんでした。〜してください。 |
+| **fr** | **vous** | infinitive: «Enregistrer», «Programmer» | «Connectez un compte.» | « … » with narrow no-break spaces | Space before `:`, `;`, `?`, `!` is a narrow no-break space (U+202F), never `!` in UI copy. Long words: check the length budget. Draft: needs a native pass. |
+| **id** | **Anda**, capitalized | base verb: «Simpan», «Jadwalkan» | «Hubungkan akun.» | “…” | No plurals; repeat the noun for emphasis only when needed. Use «akun», «unggah», «pos» (established loans). Draft: needs a native pass. |
+| **zh-CN** | no pronoun; 你 only when unavoidable | verb or short verb-object: 「保存」「立即发布」 | 请连接账号。 | 「」 not used; use “…” | Simplified Chinese only. Full-width punctuation, no spaces between Chinese and Latin or digits is acceptable but be consistent. No `!`. Do not claim "works with Claude". Draft: needs a native pass. |
+| **ar** | formal second person, gender-neutral where possible | verbal noun: «حفظ», «جدولة» | «اربط حسابًا.» | «…» | Modern Standard Arabic. Latin digits (`ar-u-nu-latn`). All six plural categories. Wrap placeholders in bidi isolation. Draft: needs a native pass, last in the rollout. |
 
 ## 14. Do not translate
 

@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react';
+import { useTranslations } from '@/i18n/use-translations';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
 import { useAuth } from '@/components/auth-provider';
@@ -24,33 +25,37 @@ import { PageTransition } from '@/components/page-transition';
 import { TransitionLink } from '@/components/transition-link';
 import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
+import { LanguageSelect } from '@/i18n/language-select';
+import { useLocaleSettings } from '@/i18n/locale-provider';
 import { cn } from '@/lib/utils';
+import type en from '../../messages/en.json';
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: keyof typeof en.nav;
   icon: ComponentType<{ className?: string }>;
 }
 
 const NAV: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/compose', label: 'Compose', icon: PenSquare },
-  { href: '/posts', label: 'Posts', icon: FileText },
-  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/media', label: 'Media', icon: ImageIcon },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/accounts', label: 'Accounts', icon: Link2 },
-  { href: '/approvals', label: 'Approvals', icon: ShieldCheck },
+  { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+  { href: '/compose', labelKey: 'compose', icon: PenSquare },
+  { href: '/posts', labelKey: 'posts', icon: FileText },
+  { href: '/calendar', labelKey: 'calendar', icon: CalendarDays },
+  { href: '/media', labelKey: 'media', icon: ImageIcon },
+  { href: '/analytics', labelKey: 'analytics', icon: BarChart3 },
+  { href: '/accounts', labelKey: 'accounts', icon: Link2 },
+  { href: '/approvals', labelKey: 'approvals', icon: ShieldCheck },
 ];
 const NAV_BOTTOM: NavItem[] = [
-  { href: '/developer', label: 'Developer', icon: Code2 },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/developer', labelKey: 'developer', icon: Code2 },
+  { href: '/settings', labelKey: 'settings', icon: Settings },
 ];
 
 function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () => void; badge?: number | null }) {
   const pathname = usePathname();
   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
+  const t = useTranslations('nav');
   return (
     <TransitionLink
       href={item.href}
@@ -62,7 +67,7 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       )}
     >
       <Icon className="h-4 w-4" aria-hidden />
-      {item.label}
+      {t(item.labelKey)}
       {badge ? (
         <span className="ml-auto rounded-full bg-warning-soft px-1.5 text-xs font-medium text-warning">
           {badge > 99 ? '99+' : badge}
@@ -130,6 +135,28 @@ function SkipLink() {
   );
 }
 
+function SidebarFooter({ email, name, onSignOut }: { email?: string; name?: string; onSignOut: () => void }) {
+  const { available } = useLocaleSettings();
+  return (
+    <>
+      <LegalLinks className="mt-3 px-2.5" />
+      {available.length > 1 ? (
+        <div className="mt-3 px-2.5">
+          <LanguageSelect compact />
+        </div>
+      ) : null}
+      <div className="mt-3 flex items-center justify-between gap-2 border-t px-2.5 pt-3">
+        <span className="truncate text-xs text-muted-foreground" title={email}>
+          {name || email}
+        </span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onSignOut} aria-label="Sign out">
+          <LogOut className="h-4 w-4" aria-hidden />
+        </Button>
+      </div>
+    </>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
@@ -191,15 +218,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </div>
         </nav>
-        <LegalLinks className="mt-3 px-2.5" />
-        <div className="mt-3 flex items-center justify-between gap-2 border-t px-2.5 pt-3">
-          <span className="truncate text-xs text-muted-foreground" title={user?.email}>
-            {user?.display_name || user?.email}
-          </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut} aria-label="Sign out">
-            <LogOut className="h-4 w-4" aria-hidden />
-          </Button>
-        </div>
+        <SidebarFooter email={user?.email} name={user?.display_name} onSignOut={signOut} />
       </aside>
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
         <EmailBanner />

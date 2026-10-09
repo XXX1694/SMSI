@@ -18,7 +18,7 @@ export function DemoBanner() {
   return (
     <aside
       aria-label="Demo"
-      className="fixed inset-x-0 top-0 z-banner flex h-7 items-center justify-between gap-3 border-b bg-muted px-3 text-xs text-muted-foreground"
+      className="fixed inset-x-0 top-0 z-banner flex h-[calc(1.75rem+env(safe-area-inset-top))] items-center justify-between gap-3 border-b bg-muted px-3 pt-[env(safe-area-inset-top)] text-xs text-muted-foreground"
     >
       <p className="flex min-w-0 items-center gap-1">
         <span className="truncate">
