@@ -27,7 +27,7 @@ export const viewport: Viewport = {
   ],
 };
 
-const THEME = `try{var t=localStorage.getItem('socialos_theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}`;
+const THEME = `try{var t=localStorage.getItem('socialos_theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);if(localStorage.getItem('socialos_motion')==='off')document.documentElement.classList.add('motion-off')}catch(e){}`;
 
 const PENDING_CSS = 'html[data-i18n-pending] body{visibility:hidden}';
 
