@@ -13,6 +13,8 @@ import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
+import { LOCALES } from '../i18n/locales.mjs';
 import { launch } from './lib.mjs';
 import { startServer } from './serve.mjs';
 
@@ -200,7 +202,7 @@ await step('landing nav stays on one line and covers what scrolls under it', asy
     await p.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
     await p.goto(`${SITE}/`);
     await p.waitForTimeout(600);
-    const nav = await p.evaluate(() => [...document.querySelectorAll('.lp-nav .nav a')].filter((a) => a.offsetParent).map((a) => ({ t: a.textContent.trim(), h: a.getBoundingClientRect().height, r: a.getBoundingClientRect().right })));
+    const nav = await p.evaluate(() => [...document.querySelectorAll('.lp-nav .nav > a')].filter((a) => a.offsetParent).map((a) => ({ t: a.textContent.trim(), h: a.getBoundingClientRect().height, r: a.getBoundingClientRect().right })));
     expect(nav.every((a) => a.h < 50 && a.r <= w), `${w}px: nav links wrap or overflow: ${JSON.stringify(nav)}`);
     expect(w >= 768 || nav.every((a) => ['Docs', 'Try the demo'].includes(a.t)), `${w}px: only Docs and Try the demo should show: ${JSON.stringify(nav)}`);
     for (const y of [900, 1500, 2100, 2800, 3600]) {
@@ -227,6 +229,91 @@ await step('landing nav stays on one line and covers what scrolls under it', asy
       expect(bad.length === 0, `${w}px at ${y}: text shows through the sticky header: ${bad.join(', ')}`);
     }
     await ctx.close();
+  }
+});
+
+await step('every landing locale: lang and dir, no overflow, one-line nav, motion switch', async () => {
+  const built = LOCALES.filter((l) => existsSync(join(dist, l.slug, 'index.html')));
+  expect(built.length >= 10, `expected the landing in every locale, found ${built.map((l) => l.code).join(',')}`);
+  for (const loc of built) {
+    for (const [w, h] of [[320, 640], [390, 844], [1440, 900]]) {
+      const c = await browser.newContext({ viewport: { width: w, height: h }, isMobile: w < 700, hasTouch: w < 700, locale: 'en-GB', timezoneId: 'UTC' });
+      const p = await c.newPage();
+      const errs = [];
+      p.on('pageerror', (e) => errs.push(e.message));
+      p.on('console', (m) => m.type() === 'error' && !external(m.location().url ?? '') && errs.push(m.text()));
+      await p.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+      await p.goto(`${SITE}/${loc.slug ? `${loc.slug}/` : ''}`);
+      await p.waitForTimeout(500);
+      const m = await p.evaluate(() => {
+        const nav = [...document.querySelectorAll('.lp-nav .nav > a, .lp-nav .lang-btn')].filter((a) => a.offsetParent).map((a) => { const r = a.getBoundingClientRect(); return { t: a.textContent.trim(), h: r.height, r: r.right }; });
+        const bar = document.querySelector('.lp-nav-bar').getBoundingClientRect();
+        const clipped = [...document.querySelectorAll('.btn-pill, .lp-nav .btn, .badge, .lang-btn')].filter((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent.trim());
+        return { lang: document.documentElement.lang, dir: document.documentElement.dir, over: document.documentElement.scrollWidth - innerWidth, nav, barRight: bar.right, barLeft: bar.left, clipped, left: document.querySelectorAll('[data-locale]').length };
+      });
+      const tag = `${loc.code} at ${w}px`;
+      expect(m.lang === loc.lang && m.dir === loc.dir, `${tag}: html lang/dir are ${m.lang}/${m.dir}`);
+      expect(m.over <= 0, `${tag}: horizontal overflow of ${m.over}px`);
+      expect(m.nav.every((a) => a.h < 50 && a.r <= m.barRight + 1 && a.r >= m.barLeft - 1), `${tag}: nav wraps or leaves its bar: ${JSON.stringify(m.nav)}`);
+      expect(m.clipped.length === 0, `${tag}: clipped labels: ${m.clipped.join(', ')}`);
+      if (!loc.hidden) expect(m.left >= 2 * (built.filter((l) => !l.hidden).length), `${tag}: the language list is missing entries`);
+      if (w === 1440) {
+        // The motion switch behaves the same in every language: label, toggle, remembered, and gone with reduced motion.
+        const btn = p.locator('[data-motion]');
+        expect((await btn.getAttribute('aria-pressed')) === 'false', `${tag}: motion switch should start unpressed`);
+        // Keyboard, not a pointer click: the hero is still animating and Playwright waits for a stable box.
+        await btn.focus();
+        await p.keyboard.press('Enter');
+        expect((await btn.getAttribute('aria-pressed')) === 'true', `${tag}: motion switch should toggle`);
+        expect(await p.evaluate(() => document.documentElement.classList.contains('motion-off') && localStorage.getItem('socialos_landing_motion') === 'off'), `${tag}: motion-off class and saved preference`);
+        if (!loc.hidden) await p.screenshot({ path: join(out, `locale-${loc.code}.png`) });
+      }
+      expect(errs.length === 0, `${tag}: console problems: ${errs.join('; ')}`);
+      await c.close();
+    }
+    const r = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', locale: 'en-GB' });
+    const rp = await r.newPage();
+    await rp.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+    await rp.goto(`${SITE}/${loc.slug ? `${loc.slug}/` : ''}`);
+    expect(await rp.locator('[data-motion]').isHidden(), `${loc.code}: the motion switch is not offered with reduced motion`);
+    expect(await rp.evaluate(() => document.documentElement.classList.contains('motion-off')), `${loc.code}: reduced motion starts paused`);
+    await r.close();
+  }
+});
+
+await step('first-visit suggestion: offered, never redirects, remembered', async () => {
+  const c = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE' });
+  const p = await c.newPage();
+  await p.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+  await p.goto(`${SITE}/`);
+  const bar = p.locator('.lang-suggest');
+  await bar.waitFor({ state: 'visible', timeout: 5000 });
+  expect(new URL(p.url()).pathname === BASE, 'a German browser must stay on the English page (no redirect)');
+  expect((await bar.getAttribute('lang')) === 'de' && /Deutsch/.test(await bar.innerText()), 'the suggestion is written in German');
+  const over = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  expect(over <= 0, `the suggestion causes horizontal overflow of ${over}px`);
+  await p.locator('.lang-suggest button').click();
+  expect((await bar.count()) === 0, 'dismissing removes the suggestion');
+  await p.reload();
+  await p.waitForTimeout(600);
+  expect((await p.locator('.lang-suggest').count()) === 0, 'a dismissed suggestion does not come back');
+  expect(await p.evaluate(() => localStorage.getItem('steerpost_lang_suggest') === 'dismissed' && localStorage.getItem('steerpost_locale') === null), 'dismissing uses its own key and leaves the app locale alone');
+  // Following the link goes to the German page and is remembered for the next visit to the root.
+  await p.evaluate(() => localStorage.clear());
+  await p.reload();
+  await p.locator('.lang-suggest a').click();
+  await p.waitForURL(new RegExp(`${BASE}de/`));
+  expect((await p.evaluate(() => localStorage.getItem('steerpost_locale'))) === 'de', 'the choice is stored');
+  await c.close();
+  // English and Ukrainian browsers get no suggestion.
+  for (const locale of ['en-US', 'uk-UA']) {
+    const e = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale });
+    const ep = await e.newPage();
+    await ep.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+    await ep.goto(`${SITE}/`);
+    await ep.waitForTimeout(600);
+    expect((await ep.locator('.lang-suggest').count()) === 0, `${locale} should not be offered another language`);
+    await e.close();
   }
 });
 
