@@ -5,24 +5,25 @@ import (
 	"testing"
 )
 
-func TestQuotaDefaultsAndUnlimited(t *testing.T) {
+func TestQuotaIsOffByDefaultAndConfigurable(t *testing.T) {
 	validEnv(t)
 	c, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if l := c.QuotaLimits(); l.Accounts != 5 || l.PostsPerMonth != 60 || l.MediaBytes != 500<<20 || l.AgentRPM != 120 {
+	if l := c.QuotaLimits(); l.Accounts != -1 || l.PostsPerMonth != -1 || l.MediaBytes != -1 || l.AgentRPM != -1 {
 		t.Fatalf("defaults: %+v", l)
 	}
-	for _, k := range []string{"QUOTA_ACCOUNTS", "QUOTA_POSTS_PER_MONTH", "QUOTA_MEDIA_MB", "QUOTA_AGENT_RPM"} {
-		t.Setenv(k, "-1")
-	}
+	t.Setenv("QUOTA_ACCOUNTS", "5")
+	t.Setenv("QUOTA_POSTS_PER_MONTH", "60")
+	t.Setenv("QUOTA_MEDIA_MB", "500")
+	t.Setenv("QUOTA_AGENT_RPM", "120")
 	c, err = Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if l := c.QuotaLimits(); l.Accounts != -1 || l.PostsPerMonth != -1 || l.MediaBytes != -1 || l.AgentRPM != -1 {
-		t.Fatalf("-1 must stay unlimited: %+v", l)
+	if l := c.QuotaLimits(); l.Accounts != 5 || l.PostsPerMonth != 60 || l.MediaBytes != 500<<20 || l.AgentRPM != 120 {
+		t.Fatalf("configured limits: %+v", l)
 	}
 }
 

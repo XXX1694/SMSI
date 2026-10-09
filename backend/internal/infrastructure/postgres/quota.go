@@ -30,6 +30,14 @@ func (r *Quota) CountAccounts(ctx context.Context, userID uuid.UUID, exceptProvi
 	return n, mapErr(err, "social account")
 }
 
+// HasProvider reports whether the user has a non-revoked account on the provider.
+func (r *Quota) HasProvider(ctx context.Context, userID uuid.UUID, provider string) (bool, error) {
+	var ok bool
+	err := r.db.q(ctx).QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM social_accounts WHERE user_id = $1 AND provider = $2 AND status <> 'revoked')`,
+		userID, provider).Scan(&ok)
+	return ok, mapErr(err, "social account")
+}
+
 // CountPostsSince counts posts counted against the monthly quota at or after t (deleted posts included on purpose).
 func (r *Quota) CountPostsSince(ctx context.Context, userID uuid.UUID, t time.Time) (int64, error) {
 	var n int64

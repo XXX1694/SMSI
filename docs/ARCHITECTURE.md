@@ -211,14 +211,14 @@ Security properties: user B cannot connect user A's channel without posting a co
 `GET /audit-logs?limit=&cursor=&action=` (session only; `action` keeps one action, e.g. `mcp.tool_call` for agent actions)
 
 ### Plan limits (D-014)
-One `free` plan; the limits come from env and `-1` switches one off. The application layer counts under a per-user lock (`SELECT … FOR NO KEY UPDATE` on the user row, taken in the same transaction as the change), so parallel requests cannot pass the check together. A refusal is `403 QUOTA_EXCEEDED` with `fields.quota` naming the metric and a message that says what to do; nothing is changed.
+One `free` plan; the limits come from env and are **off by default** (`-1` = unlimited, so an update never caps an existing install); a public instance sets positive numbers. The application layer counts under a per-user lock (`SELECT … FOR NO KEY UPDATE` on the user row, taken in the same transaction as the change), so parallel requests cannot pass the check together. A refusal is `403 QUOTA_EXCEEDED` with `fields.quota` naming the metric and a message that says what to do; nothing is changed.
 
 | Metric (`fields.quota`) | Env, default | Counted | Checked in |
 |---|---|---|---|
-| `connected_accounts` | `QUOTA_ACCOUNTS=5` | non-revoked social accounts; reconnecting one you have is free | `accounts.connectAccount` (OAuth, token and chat connects) |
-| `scheduled_posts_month` | `QUOTA_POSTS_PER_MONTH=60` | posts whose `quota_counted_at` is in the current UTC month; set once, when a post is first scheduled or published. Drafts are free, unschedule then schedule does not count twice, deleting does not give it back | `posts.scheduleLocked`, `posts.startPublishing` |
-| `media_bytes` | `QUOTA_MEDIA_MB=500` | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (early refusal before the object is stored, authoritative check with the insert) |
-| `agent_requests_per_minute` | `QUOTA_AGENT_RPM=120` | requests of all API keys and MCP connections of one user together (in memory, per API instance); browser sessions are not limited | `middleware.AgentRateLimit`; over the cap it is `429 RATE_LIMITED` with `Retry-After` |
+| `connected_accounts` | `QUOTA_ACCOUNTS` (e.g. 5) | non-revoked social accounts; reconnecting one you have is free | `accounts.connectAccount` (OAuth, token and chat connects); an early `PrecheckAccount` (no lock) runs before an OAuth start and before a token connect spends its approval; a chat link refused at the limit is dropped, not retried |
+| `scheduled_posts_month` | `QUOTA_POSTS_PER_MONTH` (e.g. 60) | posts whose `quota_counted_at` is in the current UTC month; set when a post is scheduled or published, and set again (counted anew) when it is scheduled or published in a later month. Drafts are free, unschedule then schedule within the month does not count twice, deleting does not give it back | `posts.scheduleLocked`, `posts.startPublishing`; checked before the approval, so the owner is not asked about an action the plan refuses |
+| `media_bytes` | `QUOTA_MEDIA_MB` (e.g. 500) | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (early refusal before the object is stored, authoritative check with the insert) |
+| `agent_requests_per_minute` | `QUOTA_AGENT_RPM` (e.g. 120) | requests of all API keys and MCP connections of one user together (in memory, per API instance); browser sessions are not limited | `middleware.AgentRateLimit`; over the cap it is `429 RATE_LIMITED` with `Retry-After` |
 
 `GET /account/usage` (scope `analytics:read`) → `{plan, period_start, period_end, quotas:{connected_accounts:{used,limit}, scheduled_posts_month:{used,limit}, media_bytes:{used,limit}, agent_requests_per_minute:{limit}}}`; `limit` -1 = unlimited. The MCP tool `get_usage` returns it.
 
@@ -278,13 +278,15 @@ Dangerous tools carry no `confirm` flag any more: the REST API answers `APPROVAL
 
 1. `schedule`: tx { post → `scheduled`, `scheduled_at`; per target insert `scheduled_jobs(pending)` } → enqueue Asynq task `publish:target` `ProcessAt(scheduled_at)`, `TaskID = target.id + ":" + run_at`, `MaxRetry(5)`, `Retention`. Store `asynq_task_id`, mark `enqueued`.
 2. Worker handler `publish:target(target_id)`:
-   1. tx: lock target `FOR UPDATE SKIP LOCKED`; skip if status ∈ {published, cancelled}; if `external_post_id` set → mark published, return. Move post `scheduled → publishing` (idempotent), target → `publishing`, insert attempt `started` (`attempt_no = attempt_count+1`).
+   1. tx: lock the post, then the target `FOR UPDATE SKIP LOCKED` (see lock order below); skip if status ∈ {published, cancelled}; if `external_post_id` set → mark published, return. Move post `scheduled → publishing` (idempotent), target → `publishing`, insert attempt `started` (`attempt_no = attempt_count+1`).
    2. Load account; if `expires_at` within 5 min → `provider.RefreshToken`; failure → account `expired`, target `failed` with `SOCIAL_ACCOUNT_EXPIRED` (non-retryable).
    3. Load media (presigned/streamed from S3), call `provider.PublishPost(ctx, req{IdempotencyKey: target.id})`.
    4. Success: in one tx set `external_post_id`, `published`, attempt `succeeded`, recompute post status. Failure: classify retryable (network, 5xx, 429) vs permanent; retryable → attempt `failed`, return error so Asynq retries with exponential backoff (`30s·2^n`, jitter, max 5); permanent or retries exhausted → target `failed`.
    5. Crash between provider success and DB commit: attempt row remains `started`. On the next try the worker sees a stale `started` attempt → marks it `unknown` and, if provider supports `GetPost`/lookup by idempotency key (Telegram: none; LinkedIn: none) sets target `needs_review` instead of re-posting blindly, unless the adapter declares `SafeToRetryAfterUnknown`. This prefers a missed post over a duplicate and is visible in UI.
 3. `cancel` before run: target/jobs → `cancelled`, Asynq task deleted; worker also re-checks status so a late job is a no-op.
 4. **Reconciler** (worker, every minute): finds `scheduled_jobs` `pending|enqueued` with `run_at < now() - 1m` without a live task and re-enqueues; also recovers `publishing` targets stuck > 15 min.
+
+**Lock order (#38).** Every transaction that locks rows takes the **post first, then its targets**, then anything else (`scheduled_jobs`, `publication_attempts`, `action_approvals`, user-level advisory rows). The `users` row taken for the quota (`FOR NO KEY UPDATE`, D-014) is locked last, after the post and its targets. The API (`cancel`, `unschedule`, `publish`, `retry`, `schedule`, edits, approval consumption inside them) starts with `GetForUpdate(post)`. The worker follows the same order: `LockTarget` (used by `begin` and the reconciler's `lockedRun`) reads the target's post id, locks the post, and only then locks the target; `relock` locks the post, then the target. The post lock is the gate: while it is held nobody else can lock that post's targets or jobs, so the lower rows cannot deadlock. A path must never take a post lock while holding a target, job or approval lock. Postgres deadlock (`40P01`) and serialization (`40001`) errors are mapped to `CONFLICT` with a `Retry-After: 1` header (other conflicts, such as duplicates, carry no `Retry-After`) instead of a 500 as a safety net.
 
 ## 7. OAuth flow
 ```

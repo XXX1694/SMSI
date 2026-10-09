@@ -51,6 +51,9 @@ func (s *Service) BeginOAuth(ctx context.Context, a actor.Actor, providerName, r
 	if err != nil {
 		return "", err
 	}
+	if err := s.quota.PrecheckAccount(ctx, a.UserID, providerName); err != nil {
+		return "", err
+	}
 	state, err := crypto.RandomToken(32)
 	if err != nil {
 		return "", err

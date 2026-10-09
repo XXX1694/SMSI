@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
 import { PasswordForm } from '@/components/password-form';
-import { Section } from '@/components/states';
+import { Section } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
 import { browserTimezone, formatDateTime, isValidTimezone } from '@/lib/time';
 
@@ -40,8 +40,8 @@ export function SettingsView() {
       </Section>
       <Section title="Preferences">
         <div className="space-y-4">
-          <Field label="Timezone" htmlFor="tz" hint={`Scheduled times are entered in this zone and stored as UTC. Now: ${formatDateTime(new Date().toISOString(), timezone)}.`}>
-            <Select id="tz" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+          <Field label="Timezone" hint={`Scheduled times are entered in this zone and stored as UTC. Now: ${formatDateTime(new Date().toISOString(), timezone)}.`}>
+            <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
               {zones.map((z) => (
                 <option key={z} value={z}>
                   {z}
@@ -49,8 +49,8 @@ export function SettingsView() {
               ))}
             </Select>
           </Field>
-          <Field label="Theme" htmlFor="theme">
-            <Select id="theme" value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
+          <Field label="Theme">
+            <Select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
               <option value="system">System</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -59,8 +59,8 @@ export function SettingsView() {
         </div>
       </Section>
       <Section title="Security">
-        <Field label="Session" htmlFor="sess" hint="You are signed in with a secure session cookie. Sign out from the sidebar.">
-          <Input id="sess" value="Active" readOnly disabled />
+        <Field label="Session" hint="You are signed in with a secure session cookie. Sign out from the sidebar.">
+          <Input value="Active" readOnly disabled />
         </Field>
       </Section>
       <Section title="Password">

@@ -67,6 +67,9 @@ func (s *Service) Create(ctx context.Context, a actor.Actor, in CreateInput) (*p
 	}
 	err = s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
 		if schedule {
+			if err := s.quota.EnforcePost(ctx, a.UserID); err != nil {
+				return nil, err
+			}
 			if err := s.requireSoonCreate(ctx, a, p, mediaList, *in.ScheduledAt); err != nil {
 				return nil, err
 			}
