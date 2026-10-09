@@ -6,6 +6,22 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- Sign in with Google or GitHub, web side (D-023). `/login` and `/register` share one screen: "Continue with Google / GitHub" buttons on top (only the providers `GET /auth/providers` lists; the block and its divider are hidden when there are none, and a failed list says so and keeps the email form), then the email form. The buttons are links to `/api/v1/auth/oauth/{provider}/start?next=`, so `next` survives the provider round trip. New page `/signup/complete`: the provider's verified email read-only, the name prefilled and editable, an explicit Terms checkbox (D-016) and "Create account"; with no waiting sign-up (a 404) it goes back to `/login?error=signup_expired`. `/login?error=<code>` shows plain-language copy for every code the API sends (`oauth_cancelled`, `oauth_state_invalid`, `oauth_provider_error`, `email_unverified`, `account_exists`, `identity_in_use`, `account_unavailable`); an optional `provider=github|google` in that URL names the provider. Deleting the account with a session too old for a password-less user (`403 REAUTH_REQUIRED`) now offers "Sign in again with {provider}" and returns to Settings; the password field there is optional for people who signed up with a provider. The demo and `scripts/mock-api.mjs` answer every new endpoint (GitHub and Google, a simulated redirect to `/signup/complete`). 28 new strings in every enabled locale and `kk` (machine drafts).
+
+### Changed
+
+- Registration asks for email and password only; the name is no longer collected there (the API already accepts an empty one). Errors appear under their field when it loses focus and for every `fields.*` the server refuses; the submit button is never silently disabled (an incomplete form lists what is missing and focuses the first field); the password has a show/hide toggle; the email input is `autocapitalize="none"` with spell-check off. A taken email offers "Sign in" and "Forgot password?".
+
+### Fixed
+
+- The "Create one" and "Sign in" links between `/login` and `/register` dropped `?next=`; they keep it now, and only same-origin paths are accepted.
+
+### Removed
+
+- The "Email delivery is not configured on this server" notice above every signed-in screen: it spoke to the server's admin, so on a server without mail every user saw it. The forgot-password page still says honestly that no mail will arrive, and the verification banner is unchanged.
+
 ## [0.4.0] - 2026-10-09
 
 ### Added

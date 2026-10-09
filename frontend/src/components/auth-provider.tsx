@@ -12,6 +12,8 @@ interface AuthState {
   retry: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, acceptTerms: boolean) => Promise<void>;
+  /** Finishes a provider sign-up after the Terms were accepted and signs the new user in. */
+  completeSignup: (displayName: string, acceptTerms: boolean) => Promise<void>;
   logout: () => Promise<void>;
   /** Re-reads /me, e.g. after the email was verified. A failure keeps the current user. */
   refresh: () => Promise<void>;
@@ -73,6 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [adopt],
   );
+  const completeSignup = useCallback(
+    async (displayName: string, acceptTerms: boolean) => {
+      adopt(await api.auth.completeSignup({ display_name: displayName, accept_terms: acceptTerms }));
+    },
+    [adopt],
+  );
   const logout = useCallback(async () => {
     try {
       await api.auth.logout();
@@ -98,8 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ user, loading, error, retry, login, register, logout, refresh, endSession, endedBy }),
-    [user, loading, error, retry, login, register, logout, refresh, endSession, endedBy],
+    () => ({ user, loading, error, retry, login, register, completeSignup, logout, refresh, endSession, endedBy }),
+    [user, loading, error, retry, login, register, completeSignup, logout, refresh, endSession, endedBy],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

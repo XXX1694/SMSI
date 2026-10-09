@@ -23,6 +23,7 @@ import { cancelDeletion, DEMO_GRACE_DAYS, requestDeletion } from './deletion';
 import { handleExports } from './exports';
 import type { DemoLink, DemoPost, DemoRequest, DemoResponse, DemoState, WireProvider } from './model';
 import { PROVIDERS } from './providers';
+import { completeSignup, pendingSignup, SIGN_IN_PROVIDERS, startSocialSignIn } from './social-signin';
 import { demoQuotaError, demoUsage } from './quota';
 
 const MIN = 60_000;
@@ -278,6 +279,21 @@ export class DemoEngine {
       s.signed_in = true;
       this.audit(this.user, 'user.login', 'user', s.user.id);
       return ok(200, this.me());
+    }
+
+    // Provider sign-in (D-023): simulated, nothing leaves the browser.
+    if (path === '/auth/providers' && m === 'GET') return ok(200, { providers: SIGN_IN_PROVIDERS });
+    if ((r = path.match(/^\/auth\/oauth\/(\w+)\/start$/)) && m === 'GET') {
+      const res = startSocialSignIn(s, r[1] ?? '', query?.next);
+      if (res.status === 200) this.touch();
+      return res;
+    }
+    if (path === '/auth/oauth/pending' && m === 'GET') return pendingSignup(s);
+    if (path === '/auth/oauth/complete' && m === 'POST') {
+      const res = completeSignup(s, body);
+      if (res.status !== 201) return res;
+      this.audit(this.user, 'user.registered', 'user', s.user.id);
+      return ok(201, this.me());
     }
 
     // Mail-driven flows. The demo sends no mail, so any token works except "expired".

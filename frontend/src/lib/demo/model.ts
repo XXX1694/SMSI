@@ -39,6 +39,14 @@ export interface DemoLink {
   account_id: string | null;
 }
 
+/** A provider sign-in that is waiting for the Terms (`/signup/complete`). */
+export interface DemoPendingSignup {
+  provider: string;
+  email: string;
+  display_name: string;
+  next: string;
+}
+
 export interface DemoState {
   version: 1;
   seeded_at: string;
@@ -55,6 +63,8 @@ export interface DemoState {
   /** Data exports; absent in a copy saved before exports existed. */
   exports?: DataExport[];
   links: DemoLink[];
+  /** Set by the simulated provider redirect; absent in a copy saved before provider sign-in existed. */
+  oauth_pending?: DemoPendingSignup | null;
   /** Request counts per key / connection id, shown on the usage panel. */
   usage: Record<string, number>;
 }

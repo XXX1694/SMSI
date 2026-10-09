@@ -23,6 +23,9 @@ const PORT = Number(process.env.PORT ?? 8080);
 // MOCK_VERIFICATION=enforced starts every new user unverified and restricted (the server with MAIL_PROVIDER=smtp);
 // MOCK_VERIFICATION=log mimics MAIL_PROVIDER=log (no restrictions, but the "mail is off" notice shows).
 const VERIFICATION = process.env.MOCK_VERIFICATION ?? '';
+// MOCK_SIGN_IN_PROVIDERS="" hides the "Continue with ..." buttons (a server with no provider configured).
+const SIGN_IN_PROVIDERS = (process.env.MOCK_SIGN_IN_PROVIDERS ?? 'github,google').split(',').filter(Boolean).map((id) => ({ id, name: id === 'github' ? 'GitHub' : id === 'google' ? 'Google' : id }));
+const pendingSignups = new Map();
 const LINK_DELAY_MS = Number(process.env.MOCK_LINK_DELAY_MS ?? 5000);
 const LINK_TTL_S = Number(process.env.MOCK_LINK_TTL_SECONDS ?? 900);
 const MAX_ACTIVE_LINKS = 3;
@@ -184,6 +187,7 @@ const canMove = (p, to) => (TRANSITIONS[p.status] ?? []).includes(to);
 
 async function handle(req, res) {
   const url = new URL(req.url, 'http://x');
+  let r;
   const m = req.method ?? 'GET';
   const path = url.pathname.replace(/^\/api\/v1/, '') || '/';
   if (!url.pathname.startsWith('/api/v1')) return fail(res, 404, 'NOT_FOUND', 'Not found');
@@ -208,6 +212,32 @@ async function handle(req, res) {
     return send(res, 200, meBody(u, s), { 'Set-Cookie': sessionCookies(s) });
   }
 
+  // Provider sign-in: no provider is visited; /start goes straight to the sign-up page for a new person.
+  if (path === '/auth/providers' && m === 'GET') return send(res, 200, { providers: SIGN_IN_PROVIDERS });
+  if ((r = path.match(/^\/auth\/oauth\/(\w+)\/start$/)) && m === 'GET') {
+    if (!SIGN_IN_PROVIDERS.some((p) => p.id === r[1])) return fail(res, 404, 'NOT_FOUND', 'sign-in provider not found');
+    const ticket = randomBytes(16).toString('hex');
+    const next = url.searchParams.get('next') ?? '';
+    pendingSignups.set(ticket, { provider: r[1], email: 'sam.rivera@example.com', display_name: 'Sam Rivera', next: next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard' });
+    res.writeHead(302, { Location: '/signup/complete', 'Set-Cookie': [`socialos_oauth_ticket=${ticket}; Path=/api/v1/auth/oauth; HttpOnly; SameSite=Lax`] });
+    return res.end();
+  }
+  if (path === '/auth/oauth/pending' && m === 'GET') {
+    const pending = pendingSignups.get(cookies(req).socialos_oauth_ticket ?? '');
+    return pending ? send(res, 200, pending) : fail(res, 404, 'NOT_FOUND', 'no sign-up is waiting');
+  }
+  if (path === '/auth/oauth/complete' && m === 'POST') {
+    const ticket = cookies(req).socialos_oauth_ticket ?? '';
+    const pending = pendingSignups.get(ticket);
+    if (!pending) return fail(res, 404, 'NOT_FOUND', 'no sign-up is waiting');
+    if (body.accept_terms !== true) return fail(res, 400, 'VALIDATION_ERROR', 'You must accept the Terms and the Privacy Policy', { accept_terms: 'must be accepted' });
+    pendingSignups.delete(ticket);
+    const u = users.get(pending.email) ?? addUser(pending.email, '', String(body.display_name ?? '').trim());
+    u.verified = true;
+    const sess = newSession(u);
+    return send(res, 201, meBody(u, sess), { 'Set-Cookie': [...sessionCookies(sess), 'socialos_oauth_ticket=; Path=/api/v1/auth/oauth; Max-Age=0'] });
+  }
+
   // Mail-driven flows. No mail is sent: the token "valid-token" works, "expired" and anything else is a 400.
   if (path === '/auth/verify-email' && m === 'POST') {
     if (body.token !== 'valid-token') return badLink(res);
@@ -229,7 +259,6 @@ async function handle(req, res) {
   if (!user) return fail(res, 401, 'UNAUTHENTICATED', 'Authentication required');
   if (sess && m !== 'GET' && req.headers['x-csrf-token'] !== sess.csrf) return fail(res, 403, 'FORBIDDEN', 'Missing or invalid CSRF token');
   const mine = (arr) => arr.filter((x) => x.user_id === user.id);
-  let r;
 
   if (path === '/auth/logout' && m === 'POST') { sessions.delete(sess?.token); return send(res, 204, undefined, { 'Set-Cookie': ['socialos_session=; Path=/; Max-Age=0'] }); }
   if (path === '/me') return send(res, 200, meBody(user, sess ?? { csrf: '' }));

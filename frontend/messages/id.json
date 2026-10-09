@@ -100,7 +100,8 @@
     "NETWORK": "Tidak dapat menjangkau server. Periksa koneksi Anda lalu coba lagi.",
     "UNKNOWN": "Terjadi kesalahan. Coba lagi.",
     "access_denied": "Proses masuk dibatalkan, atau akses tidak diberikan.",
-    "withRef": "{text} (ref {id})"
+    "withRef": "{text} (ref {id})",
+    "REAUTH_REQUIRED": "Masuk lagi untuk melanjutkan."
   },
   "shell": {
     "skipToContent": "Lompat ke konten",
@@ -115,10 +116,7 @@
       "verifyHeading": "Verifikasi email Anda.",
       "verifyBody": "Steerpost mengirim tautan ke <addr>{email}</addr>. Sebelum Anda membukanya, Anda tidak dapat menghubungkan akun, menjadwalkan atau memublikasikan pos, atau membuat kunci API.",
       "sent": "Tautan terkirim. Periksa kotak masuk Anda.",
-      "resend": "Kirim ulang email",
-      "logHeading": "Pengiriman email belum diatur di server ini.",
-      "logBody": "Email verifikasi dan atur ulang kata sandi tidak dikirim. Admin server Anda dapat mengatur email.",
-      "dismiss": "Tutup pemberitahuan email"
+      "resend": "Kirim ulang email"
     },
     "demo": {
       "label": "Demo",
@@ -158,7 +156,6 @@
     "createAccount": "Buat akun",
     "noAccount": "Belum punya akun? <link>Buat akun</link>",
     "haveAccount": "Sudah punya akun? <link>Masuk</link>",
-    "passwordShort": "Kata sandi minimal 8 karakter.",
     "acceptTerms": "Setujui Ketentuan dan Kebijakan Privasi untuk membuat akun.",
     "backToSignIn": "Kembali ke halaman masuk",
     "repeatPassword": "Ulangi kata sandi baru",
@@ -197,7 +194,36 @@
       "invalidBody": "Tautan mungkin sudah kedaluwarsa atau pernah dipakai. Tautan hanya berlaku sekali dan selama 48 jam.",
       "signInToRequest": "Masuk untuk meminta tautan baru"
     },
-    "deletedNotice": "Penghapusan akun Anda sudah dijadwalkan. Semua sesi telah dikeluarkan dan kunci API dicabut. Masuk sebelum masa tenggang berakhir untuk melihat tanggalnya dan membatalkannya."
+    "deletedNotice": "Penghapusan akun Anda sudah dijadwalkan. Semua sesi telah dikeluarkan dan kunci API dicabut. Masuk sebelum masa tenggang berakhir untuk melihat tanggalnya dan membatalkannya.",
+    "continueWith": "Lanjutkan dengan {provider}",
+    "signInAgainWith": "Masuk lagi dengan {provider}",
+    "orDivider": "atau",
+    "providersLoading": "Memuat opsi masuk…",
+    "providersFailed": "Opsi masuk tidak dapat dimuat. Anda masih bisa memakai email.",
+    "providerFallback": "penyedia",
+    "emailRequired": "Masukkan alamat email Anda.",
+    "emailInvalid": "Masukkan alamat email yang valid, misalnya nama@example.com.",
+    "passwordRequired": "Masukkan kata sandi Anda.",
+    "passwordLength": "Gunakan 8–128 karakter.",
+    "fixFields": "Perbaiki kolom yang ditandai untuk melanjutkan.",
+    "duplicateEmail": "Akun dengan email ini sudah ada. Masuk, atau setel ulang kata sandi Anda.",
+    "loginError": {
+      "oauth_cancelled": "Proses masuk dibatalkan. Coba lagi, atau gunakan email dan kata sandi Anda.",
+      "oauth_state_invalid": "Tautan masuk sudah kedaluwarsa atau dibuka di browser lain. Mulai lagi dari halaman ini.",
+      "oauth_provider_error": "Proses masuk tidak selesai: {provider} melaporkan masalah. Coba lagi sebentar lagi, atau gunakan email Anda.",
+      "email_unverified": "Alamat email Anda belum diverifikasi. Verifikasi email utama Anda di {provider}, lalu coba lagi.",
+      "account_exists": "Akun dengan email ini sudah ada. Masuk dengan kata sandi Anda, lalu hubungkan {provider} di Pengaturan.",
+      "identity_in_use": "Akun itu sudah terhubung ke akun Steerpost lain. Masuk ke akun tersebut.",
+      "account_unavailable": "Akun ini tidak dapat masuk saat ini. Hubungi orang yang mengelola server ini.",
+      "signup_expired": "Pendaftaran sudah kedaluwarsa. Mulai lagi dari halaman ini.",
+      "unknown": "Proses masuk gagal. Coba lagi."
+    },
+    "signupComplete": {
+      "title": "Selesaikan pembuatan akun Anda",
+      "intro": "Anda masuk dengan {provider}. Setujui Ketentuan untuk membuat akun Anda.",
+      "emailHint": "Diverifikasi oleh {provider}. Anda tidak dapat mengubahnya di sini.",
+      "nameTooLong": "Gunakan maksimal 100 karakter."
+    }
   },
   "posts": {
     "editBlockedPublishing": "Pos ini sedang diterbitkan, jadi tidak dapat diubah.",
@@ -318,7 +344,9 @@
       "yourEmail": "email Anda",
       "wrongPassword": "Itu bukan kata sandi Anda saat ini.",
       "wrongConfirm": "Ketik alamat email Anda persis seperti yang ditampilkan.",
-      "submit": "Hapus akun saya"
+      "submit": "Hapus akun saya",
+      "passwordHint": "Mendaftar dengan Google atau GitHub? Biarkan kolom ini kosong.",
+      "reauthBody": "Demi keamanan, masuk lagi untuk menghapus akun Anda. Setelah itu Anda kembali ke Pengaturan."
     }
   },
   "dashboard": {

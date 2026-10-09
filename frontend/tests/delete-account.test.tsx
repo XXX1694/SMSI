@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Me } from '@/lib/types';
 
-const apiMock = vi.hoisted(() => ({ account: { requestDeletion: vi.fn(), cancelDeletion: vi.fn() } }));
+const apiMock = vi.hoisted(() => ({
+  account: { requestDeletion: vi.fn(), cancelDeletion: vi.fn() },
+  auth: { signInProviders: vi.fn(), socialStartUrl: vi.fn() },
+}));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/lib/api', () => ({
   api: apiMock,
   ApiError: class ApiError extends Error {
@@ -35,6 +39,9 @@ const me = (over: Partial<Me> = {}): Me => ({
 beforeEach(() => {
   apiMock.account.requestDeletion.mockReset();
   apiMock.account.cancelDeletion.mockReset();
+  apiMock.auth.signInProviders.mockReset();
+  apiMock.auth.socialStartUrl.mockReset();
+  apiMock.auth.socialStartUrl.mockImplementation((p: string, next: string | null) => `/api/v1/auth/oauth/${p}/start?next=${next}`);
   auth.endSession.mockReset();
   auth.refresh.mockReset();
   auth.user = me();
@@ -53,11 +60,11 @@ describe('DeleteAccount', () => {
     expect(apiMock.account.requestDeletion).not.toHaveBeenCalled();
   });
 
-  it('keeps the button disabled until the password is filled and the email is typed exactly', async () => {
+  it('keeps the button disabled until the email is typed exactly; the password is optional for sign-ups through Google or GitHub', async () => {
     await openDialog();
     const submit = screen.getByRole('button', { name: 'Delete my account' });
     expect(submit).toBeDisabled();
-    await userEvent.type(screen.getByLabelText('Your password'), 'secret-pw');
+    expect(screen.getByText('Signed up with Google or GitHub? Leave this empty.')).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@exampl');
     expect(submit).toBeDisabled();
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'e.com');
@@ -81,6 +88,30 @@ describe('DeleteAccount', () => {
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@example.com');
     await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
     expect(await screen.findByText('That is not your current password.')).toBeInTheDocument();
+    expect(auth.endSession).not.toHaveBeenCalled();
+  });
+
+  it('lets a password-less user delete with the email alone', async () => {
+    apiMock.account.requestDeletion.mockResolvedValue({ scheduled_for: '2026-10-16T12:00:00Z' });
+    await openDialog();
+    await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
+    await waitFor(() => expect(auth.endSession).toHaveBeenCalledWith('deleted'));
+    expect(apiMock.account.requestDeletion).toHaveBeenCalledWith('', 'owner@example.com');
+  });
+
+  it('offers "Sign in again with" each provider, returning to Settings, when the session is too old', async () => {
+    apiMock.account.requestDeletion.mockRejectedValue(new ApiError(403, 'REAUTH_REQUIRED', 'sign in again to delete your account'));
+    apiMock.auth.signInProviders.mockResolvedValue([{ id: 'github', name: 'GitHub' }, { id: 'google', name: 'Google' }]);
+    await openDialog();
+    expect(apiMock.auth.signInProviders).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
+    expect(await screen.findByText(/sign in again to delete your account/i)).toBeInTheDocument();
+    const github = await screen.findByRole('link', { name: 'Sign in again with GitHub' });
+    expect(github).toHaveAttribute('href', '/api/v1/auth/oauth/github/start?next=/settings');
+    expect(screen.getByRole('link', { name: 'Sign in again with Google' })).toBeInTheDocument();
+    expect(screen.queryByText('That is not your current password.')).toBeNull();
     expect(auth.endSession).not.toHaveBeenCalled();
   });
 

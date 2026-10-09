@@ -65,15 +65,11 @@ describe('EmailBanner', () => {
     expect(b.container).toBeEmptyDOMElement();
   });
 
-  it('says honestly that email delivery is off, and remembers the dismissal', async () => {
+  it('does not show the "email delivery is off" notice to regular users, even when the server only logs mail', () => {
     authMock.user = me({ verification_enforced: false, mail_delivery: 'log' });
-    const first = render(<EmailBanner />);
-    expect(screen.getByRole('note')).toHaveTextContent('Email delivery is not configured on this server');
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss email notice' }));
-    expect(first.container).toBeEmptyDOMElement();
-    first.unmount();
-    const again = render(<EmailBanner />);
-    expect(again.container).toBeEmptyDOMElement();
+    const { container } = render(<EmailBanner />);
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText(/Email delivery is not configured/)).toBeNull();
   });
 
   it('renders nothing while signed out', () => {

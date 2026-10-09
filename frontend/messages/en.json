@@ -100,7 +100,8 @@
     "NETWORK": "Cannot reach the server. Check your connection and try again.",
     "UNKNOWN": "Something went wrong. Try again.",
     "access_denied": "The sign-in was canceled, or access was not granted.",
-    "withRef": "{text} (ref {id})"
+    "withRef": "{text} (ref {id})",
+    "REAUTH_REQUIRED": "Sign in again to continue."
   },
   "shell": {
     "skipToContent": "Skip to content",
@@ -115,10 +116,7 @@
       "verifyHeading": "Verify your email.",
       "verifyBody": "Steerpost sent a link to <addr>{email}</addr>. Until you open it you cannot connect accounts, schedule or publish posts, or create API keys.",
       "sent": "Link sent. Check your inbox.",
-      "resend": "Resend email",
-      "logHeading": "Email delivery is not configured on this server.",
-      "logBody": "Verification and password-reset emails are not sent. Your server admin can set up email.",
-      "dismiss": "Dismiss email notice"
+      "resend": "Resend email"
     },
     "demo": {
       "label": "Demo",
@@ -158,7 +156,6 @@
     "createAccount": "Create account",
     "noAccount": "No account? <link>Create one</link>",
     "haveAccount": "Have an account? <link>Sign in</link>",
-    "passwordShort": "Password must be at least 8 characters.",
     "acceptTerms": "Accept the Terms and the Privacy Policy to create an account.",
     "backToSignIn": "Back to sign in",
     "repeatPassword": "Repeat the new password",
@@ -197,7 +194,36 @@
       "invalidBody": "It may have expired or already been used. Links work once and last 48 hours.",
       "signInToRequest": "Sign in to request a new link"
     },
-    "deletedNotice": "Deletion of your account is scheduled. All sessions were signed out and API keys revoked. Sign in before the grace period ends to see the date and cancel it."
+    "deletedNotice": "Deletion of your account is scheduled. All sessions were signed out and API keys revoked. Sign in before the grace period ends to see the date and cancel it.",
+    "continueWith": "Continue with {provider}",
+    "signInAgainWith": "Sign in again with {provider}",
+    "orDivider": "or",
+    "providersLoading": "Loading sign-in options…",
+    "providersFailed": "Sign-in options could not be loaded. You can still use your email.",
+    "providerFallback": "the provider",
+    "emailRequired": "Enter your email address.",
+    "emailInvalid": "Enter a valid email address, for example name@example.com.",
+    "passwordRequired": "Enter your password.",
+    "passwordLength": "Use 8–128 characters.",
+    "fixFields": "Fix the highlighted fields to continue.",
+    "duplicateEmail": "An account with this email already exists. Sign in instead, or reset your password.",
+    "loginError": {
+      "oauth_cancelled": "Sign-in was canceled. Try again, or use your email and password.",
+      "oauth_state_invalid": "The sign-in link expired or was opened in another browser. Start again from this page.",
+      "oauth_provider_error": "Sign-in did not finish: {provider} reported a problem. Try again in a moment, or use your email.",
+      "email_unverified": "Your email address was not verified. Verify your primary email on {provider}, then try again.",
+      "account_exists": "An account with this email already exists. Sign in with your password, then connect {provider} in Settings.",
+      "identity_in_use": "That account is already connected to another Steerpost account. Sign in to that account instead.",
+      "account_unavailable": "This account cannot sign in right now. Contact the person who runs this server.",
+      "signup_expired": "Your sign-up expired. Start again from this page.",
+      "unknown": "Sign-in did not work. Try again."
+    },
+    "signupComplete": {
+      "title": "Finish creating your account",
+      "intro": "You signed in with {provider}. Accept the Terms to create your account.",
+      "emailHint": "Verified by {provider}. You cannot change it here.",
+      "nameTooLong": "Use 100 characters or fewer."
+    }
   },
   "posts": {
     "editBlockedPublishing": "This post is being published right now, so it cannot be changed.",
@@ -318,7 +344,9 @@
       "yourEmail": "your email",
       "wrongPassword": "That is not your current password.",
       "wrongConfirm": "Type your email address exactly as shown.",
-      "submit": "Delete my account"
+      "submit": "Delete my account",
+      "passwordHint": "Signed up with Google or GitHub? Leave this empty.",
+      "reauthBody": "For your security, sign in again to delete your account. You come back to Settings afterwards."
     }
   },
   "dashboard": {
