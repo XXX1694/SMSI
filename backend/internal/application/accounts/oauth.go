@@ -9,6 +9,7 @@ import (
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/errs"
+	redirectpath "github.com/socialos/backend/internal/domain/redirect"
 	"github.com/socialos/backend/internal/domain/socialaccount"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 )
@@ -18,15 +19,6 @@ const StateTTL = 10 * time.Minute
 
 // DefaultRedirect is where the browser returns after connecting.
 const DefaultRedirect = "/accounts"
-
-// SafeRedirectPath allow-lists post-connect redirects to same-site relative paths.
-func SafeRedirectPath(p string) string {
-	if p == "" || !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") ||
-		strings.ContainsAny(p, "\\\r\n\t") || strings.Contains(p, "://") || len(p) > 512 {
-		return DefaultRedirect
-	}
-	return p
-}
 
 // CallbackURL returns the redirect_uri registered with the provider.
 func (s *Service) CallbackURL(providerName string) string {
@@ -68,7 +60,7 @@ func (s *Service) BeginOAuth(ctx context.Context, a actor.Actor, providerName, r
 	}
 	st := &OAuthState{
 		UserID: a.UserID, Provider: providerName, StateHash: crypto.SHA256Hex(state),
-		CodeVerifierEnc: verifierEnc, RedirectAfter: SafeRedirectPath(redirect),
+		CodeVerifierEnc: verifierEnc, RedirectAfter: redirectpath.SafePath(redirect, DefaultRedirect),
 		ExpiresAt: s.clock.Now().Add(StateTTL),
 	}
 	if err := s.states.Create(ctx, st); err != nil {

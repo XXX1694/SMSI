@@ -36,6 +36,8 @@ type Service struct {
 	webURL string
 	// requireVerified makes unverified owners fail RequireVerified guards.
 	requireVerified bool
+	// social is nil when no sign-in provider is configured.
+	social *socialState
 }
 
 // Deps bundles Service dependencies.
@@ -57,6 +59,8 @@ type Deps struct {
 	WebBaseURL string
 	// RequireVerification enforces email verification (set when mail can really be delivered).
 	RequireVerification bool
+	// Social enables sign-in with external providers (D-023); nil leaves it off.
+	Social *SocialDeps
 }
 
 // NewService creates the auth service.
@@ -74,10 +78,16 @@ func NewService(d Deps) (*Service, error) {
 	if d.Log == nil {
 		d.Log = slog.Default()
 	}
-	return &Service{users: d.Users, sessions: d.Sessions, keys: d.APIKeys, hasher: d.Hasher, tx: d.Tx,
+	svc := &Service{users: d.Users, sessions: d.Sessions, keys: d.APIKeys, hasher: d.Hasher, tx: d.Tx,
 		audit: d.Audit, clock: d.Clock, sessionTTL: d.SessionTTL, dummyHash: dummy,
 		tokens: d.Tokens, mail: d.Mail, forgot: d.Forgot, log: d.Log, webURL: strings.TrimRight(d.WebBaseURL, "/"),
-		requireVerified: d.RequireVerification}, nil
+		requireVerified: d.RequireVerification}
+	if d.Social != nil {
+		if svc.social, err = newSocialState(*d.Social); err != nil {
+			return nil, err
+		}
+	}
+	return svc, nil
 }
 
 // RegisterInput is the registration payload.
@@ -117,10 +127,8 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, ci ClientInfo)
 			return err
 		}
 		var err error
-		if issued, err = s.newSession(ctx, u.ID, ci); err != nil {
-			return err
-		}
-		return s.audit.Record(ctx, userActor(u, ci), audit.ActionUserRegistered, "user", u.ID.String(), nil)
+		issued, err = s.startSession(ctx, u, ci, audit.ActionUserRegistered, nil)
+		return err
 	})
 	if err != nil {
 		return nil, IssuedSession{}, err
@@ -168,10 +176,8 @@ func (s *Service) Login(ctx context.Context, email, password string, ci ClientIn
 	var issued IssuedSession
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
-		if issued, err = s.newSession(ctx, u.ID, ci); err != nil {
-			return err
-		}
-		return s.audit.Record(ctx, userActor(u, ci), audit.ActionUserLogin, "user", u.ID.String(), nil)
+		issued, err = s.startSession(ctx, u, ci, audit.ActionUserLogin, nil)
+		return err
 	})
 	return u, issued, err
 }
@@ -202,6 +208,16 @@ func (s *Service) rehashIfOutdated(ctx context.Context, u *user.User, password s
 	}
 }
 
+// startSession issues a fresh session (a new token every time, so a session id planted before sign-in is never reused)
+// and records how the user got in. Callers run it inside the transaction that decided the sign-in.
+func (s *Service) startSession(ctx context.Context, u *user.User, ci ClientInfo, action string, meta map[string]any) (IssuedSession, error) {
+	issued, err := s.newSession(ctx, u.ID, ci)
+	if err != nil {
+		return IssuedSession{}, err
+	}
+	return issued, s.audit.Record(ctx, userActor(u, ci), action, "user", u.ID.String(), meta)
+}
+
 func (s *Service) newSession(ctx context.Context, userID uuid.UUID, ci ClientInfo) (IssuedSession, error) {
 	token, err := crypto.RandomToken(32)
 	if err != nil {
@@ -213,7 +229,7 @@ func (s *Service) newSession(ctx context.Context, userID uuid.UUID, ci ClientInf
 	}
 	sess := &Session{
 		UserID: userID, TokenHash: crypto.SHA256Hex(token), CSRFToken: csrf,
-		ExpiresAt: s.clock.Now().Add(s.sessionTTL), UserAgent: truncate(ci.UserAgent, 256), IP: ci.IP,
+		CreatedAt: s.clock.Now(), ExpiresAt: s.clock.Now().Add(s.sessionTTL), UserAgent: truncate(ci.UserAgent, 256), IP: ci.IP,
 	}
 	if err := s.sessions.Create(ctx, sess); err != nil {
 		return IssuedSession{}, err
