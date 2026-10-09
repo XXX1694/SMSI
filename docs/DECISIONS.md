@@ -419,8 +419,9 @@ container's layer.
   redo hours of work. Migration 00003's partial unique index allows one `pending|running` export per user (`409`).
   A successful export blocks the next request for 24 hours (`429` with `Retry-After`); when a new one is made the old
   ZIP is expired and deleted, so each user holds at most one archive.
-- The worker claims the row atomically (`pending` to `running`; a second delivery finds nothing to claim) and builds one
-  archive at a time per process. The ZIP is written into an `io.Pipe` that `Storage.Put` reads with unknown size, which
+- Exports run on their own queue (`<queue>-exports`) served by a second Asynq server with concurrency 1: one build at a
+  time per worker, and a long build never takes a slot from publishing. The worker claims the row atomically (`pending` to
+  `running`; a second delivery finds nothing to claim). The ZIP is written into an `io.Pipe` that `Storage.Put` reads with unknown size, which
   D-015 already made a bounded 5 MiB part upload: no temp file, no whole-archive buffer. JSON is deflated and read from
   Postgres in keyset batches of 200 rows (`id > after`, `(user_id, id)` indexes in migration 00005); media files are
   copied from S3 through a 32 KiB buffer and stored uncompressed. Worker memory is the batch plus one part, independent
@@ -434,7 +435,7 @@ container's layer.
 - The archive lives at `users/<uid>/exports/<id>.zip`. `GET /account/exports/{id}` (session, tenant-scoped, audited)
   returns a presigned URL valid for 5 minutes, only while the export is `ready` and before `expires_at`
   (`EXPORT_RETENTION_DAYS`, default 7, at most 30). An hourly worker sweep deletes expired archives, fails a `running`
-  export older than 2 hours (a crashed worker) and re-enqueues a `pending` one older than 10 minutes (a lost task).
+  export older than 2 hours (a crashed worker) and re-enqueues a `pending` one older than 10 minutes (a lost task) and fails one older than 2 hours.
 - Audit: `account.export_requested`, `account.export_ready`, `account.export_failed`, `account.export_downloaded`.
 
 **Alternatives.** A synchronous JSON response: no media, and a request that holds memory. Proxying the download through

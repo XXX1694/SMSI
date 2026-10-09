@@ -179,3 +179,37 @@ func TestAccountExportOneAtATime(t *testing.T) {
 		t.Fatalf("export without CSRF: %d %s", r.status, r.body)
 	}
 }
+
+// blockingBuilder never finishes a build until released.
+type blockingBuilder struct {
+	started chan struct{}
+	release chan struct{}
+}
+
+func (b *blockingBuilder) Build(ctx context.Context, _ uuid.UUID) error {
+	b.started <- struct{}{}
+	select {
+	case <-b.release:
+	case <-ctx.Done():
+	}
+	return nil
+}
+
+// A build that runs for a long time must not take a worker slot from publishing: exports have their own queue.
+func TestRunningExportDoesNotBlockPublishing(t *testing.T) {
+	b := &blockingBuilder{started: make(chan struct{}, 4), release: make(chan struct{})}
+	t.Cleanup(func() { close(b.release) })
+	e := newEnv(t, envOpts{startWorker: true, exportTasks: b})
+	c := e.browser()
+	c.register("slow-export@example.com")
+	acc := c.connectMock()
+	c.must("POST", "/api/v1/account/exports", nil, 202)
+	select {
+	case <-b.started:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the export build never started")
+	}
+	p := c.must("POST", "/api/v1/posts", map[string]any{"content": "still goes out", "social_account_ids": []string{acc}}, 201)
+	c.must("POST", "/api/v1/posts/"+p["id"].(string)+"/publish", nil, 202)
+	c.waitStatus(p["id"].(string), "published", 15*time.Second)
+}

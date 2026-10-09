@@ -47,6 +47,9 @@ type AuthTasks interface {
 type Server struct {
 	srv *asynq.Server
 	mux *asynq.ServeMux
+	// exports runs data exports on their own queue with one worker (nil without ServerConfig.Exports).
+	exports *asynq.Server
+	exMux   *asynq.ServeMux
 }
 
 // NewServer wires the publisher into an Asynq server.
@@ -88,10 +91,19 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	if cfg.Auth != nil {
 		mux.HandleFunc(TypeAuthForgot, ForgotHandler(cfg.Auth.ProcessForgot))
 	}
+	s := &Server{srv: srv, mux: mux}
 	if cfg.Exports != nil {
-		mux.HandleFunc(TypeAccountExport, ExportHandler(cfg.Exports.Build))
+		s.exports = asynq.NewServer(redis, asynq.Config{
+			Concurrency: 1, Queues: map[string]int{ExportQueueName(cfg.Queue): 1}, ShutdownTimeout: cfg.ShutdownTimeout,
+			Logger: asynqLogger{log: log},
+			ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, t *asynq.Task, err error) {
+				log.WarnContext(ctx, "export task returned error", slog.String("type", t.Type()), slog.Any("error", err))
+			}),
+		})
+		s.exMux = asynq.NewServeMux()
+		s.exMux.HandleFunc(TypeAccountExport, ExportHandler(cfg.Exports.Build))
 	}
-	return &Server{srv: srv, mux: mux}
+	return s
 }
 
 // Handler adapts the publisher to an Asynq handler.
@@ -111,11 +123,24 @@ func Handler(pub *scheduler.Publisher) func(context.Context, *asynq.Task) error 
 }
 
 // Start begins processing in the background.
-func (s *Server) Start() error { return s.srv.Start(s.mux) }
+func (s *Server) Start() error {
+	if err := s.srv.Start(s.mux); err != nil {
+		return err
+	}
+	if s.exports != nil {
+		return s.exports.Start(s.exMux)
+	}
+	return nil
+}
 
 // Shutdown stops taking new tasks and waits for in-flight ones, up to ShutdownTimeout; after that the unfinished
 // tasks are aborted and returned to the queue.
-func (s *Server) Shutdown() { s.srv.Shutdown() }
+func (s *Server) Shutdown() {
+	if s.exports != nil {
+		s.exports.Shutdown()
+	}
+	s.srv.Shutdown()
+}
 
 type asynqLogger struct{ log *slog.Logger }
 

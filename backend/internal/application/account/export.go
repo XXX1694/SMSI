@@ -47,8 +47,7 @@ type Deps struct {
 
 // ExportService requests, builds, lists and expires data exports.
 type ExportService struct {
-	d    Deps
-	slot chan struct{} // one build at a time per worker (D-018)
+	d Deps
 }
 
 // NewExportService creates the service. A zero Retention means DefaultExportRetention.
@@ -59,7 +58,7 @@ func NewExportService(d Deps) *ExportService {
 	if d.Log == nil {
 		d.Log = slog.Default()
 	}
-	return &ExportService{d: d, slot: make(chan struct{}, 1)}
+	return &ExportService{d: d}
 }
 
 // Request starts an export for the session user. 409 while one is being prepared; 429 within the cooldown after a
@@ -160,7 +159,13 @@ func (s *ExportService) Sweep(ctx context.Context) error {
 		e := &due[i]
 		switch e.Status {
 		case dataexport.StatusPending:
-			err = s.d.Queue.EnqueueExport(ctx, e.ID)
+			// A task that never ran for hours is lost for good (queue flushed, task archived): fail the row so the
+			// user is not blocked, otherwise queue it again.
+			if e.UpdatedAt.Before(now.Add(-runningLimit)) {
+				err = s.d.Exports.MarkFailed(ctx, e.ID, dataexport.ErrTimedOut)
+			} else {
+				err = s.d.Queue.EnqueueExport(ctx, e.ID)
+			}
 		case dataexport.StatusRunning:
 			err = s.d.Exports.MarkFailed(ctx, e.ID, dataexport.ErrTimedOut)
 		default:

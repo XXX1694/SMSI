@@ -3,7 +3,6 @@ package queue
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -138,18 +137,19 @@ type ExportQueue struct{ c *Client }
 // ExportQueue returns the account.ExportQueue backed by this client.
 func (c *Client) ExportQueue() *ExportQueue { return &ExportQueue{c: c} }
 
-// EnqueueExport schedules the build. The task id is the export id, so the sweep re-enqueueing a pending export while
-// its task is still queued collapses into one task.
+// ExportQueueName is the queue of a main queue's export builds. It has its own Asynq server with concurrency 1, so a
+// build that runs for an hour never occupies a slot of the publishing workers (D-018).
+func ExportQueueName(main string) string { return main + "-exports" }
+
+// EnqueueExport schedules the build. No task id or uniqueness key: an archived task would keep its id and block the
+// sweep from ever queueing that export again, and a duplicate task is harmless because the build claims the row.
 func (q *ExportQueue) EnqueueExport(ctx context.Context, exportID uuid.UUID) error {
 	payload, err := json.Marshal(exportPayload{ExportID: exportID})
 	if err != nil {
 		return err
 	}
-	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountExport, payload), asynq.Queue(q.c.queue),
-		asynq.TaskID("export:"+exportID.String()), asynq.MaxRetry(0), asynq.Retention(0), asynq.Timeout(exportTimeout))
-	if errors.Is(err, asynq.ErrTaskIDConflict) {
-		return nil
-	}
+	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountExport, payload), asynq.Queue(ExportQueueName(q.c.queue)),
+		asynq.MaxRetry(0), asynq.Retention(0), asynq.Timeout(exportTimeout))
 	if err != nil {
 		return fmt.Errorf("queue: enqueue export: %w", err)
 	}
