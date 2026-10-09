@@ -131,9 +131,10 @@ func (a *Adapter) retryAfter(h http.Header) time.Duration {
 func instanceBase(raw string) (base, host string, err error) {
 	u, perr := url.Parse(strings.TrimSpace(raw))
 	if perr != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil ||
+		(u.Port() != "" && u.Port() != "443") ||
 		(u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
 		return "", "", &provider.Error{Kind: provider.KindPermanent, Provider: Name, Code: "INVALID_INSTANCE_URL",
-			Message: "Mastodon: the instance URL must be an https address such as https://mastodon.social"}
+			Message: "Mastodon: the instance URL must be an https address on the default port, such as https://mastodon.social"}
 	}
 	host = strings.ToLower(u.Host)
 	return "https://" + host, host, nil

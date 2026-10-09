@@ -82,6 +82,8 @@ func TestVerifyRejectsBadInput(t *testing.T) {
 		"path":        fieldsFor("https://example.com/mastodon"),
 		"query":       fieldsFor("https://example.com/?x=1"),
 		"credentials": fieldsFor("https://user:pw@example.com"),
+		"port 8443":   fieldsFor("https://example.com:8443"),
+		"port 22":     fieldsFor("https://example.com:22"),
 		"no host":     fieldsFor("https://"),
 		"empty":       fieldsFor(""),
 		"no token":    {"instance_url": "https://example.com"},
@@ -112,7 +114,7 @@ func TestVerifyMapsAuthAndNonMastodon(t *testing.T) {
 // The production client refuses private destinations before any request is made.
 func TestDefaultClientBlocksPrivateInstances(t *testing.T) {
 	a := New(Config{})
-	for _, host := range []string{"https://127.0.0.1", "https://[::1]", "https://169.254.169.254", "https://10.0.0.5:8443", "https://[fec0::1]"} {
+	for _, host := range []string{"https://127.0.0.1", "https://[::1]", "https://169.254.169.254", "https://10.0.0.5:443", "https://[fec0::1]"} {
 		_, _, err := a.Verify(context.Background(), fieldsFor(host))
 		if provider.Classify(err) != provider.KindPermanent || provider.CodeOf(err) != "INSTANCE_NOT_ALLOWED" {
 			t.Errorf("%s: want INSTANCE_NOT_ALLOWED, got %v", host, err)

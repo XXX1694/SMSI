@@ -3,6 +3,7 @@ package mastodon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -140,7 +141,7 @@ func TestPublishRefusesVideo(t *testing.T) {
 	f := newFake(t)
 	m := imageFile("x")
 	m.Kind = "video"
-	if _, err := f.adapter().Publish(context.Background(), publishReq("v", m)); provider.Classify(err) != provider.KindPermanent {
+	if _, err := f.adapter().Publish(context.Background(), publishReq("v", m)); provider.Classify(err) != provider.KindUnsupported || !errors.Is(err, provider.ErrUnsupported) {
 		t.Fatalf("got %v", err)
 	}
 }

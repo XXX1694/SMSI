@@ -126,7 +126,7 @@ func accountBase(acc provider.AccountRef) (string, error) {
 // waits until the server finished processing it.
 func (a *Adapter) uploadMedia(ctx context.Context, base, token string, m provider.MediaFile) (string, error) {
 	if m.Kind != "image" {
-		return "", &provider.Error{Kind: provider.KindPermanent, Provider: Name, Code: "UNSUPPORTED_MEDIA", Message: "Mastodon: only images are supported"}
+		return "", &provider.Error{Kind: provider.KindUnsupported, Provider: Name, Code: "UNSUPPORTED_MEDIA", Message: "Mastodon: only images are supported", Err: provider.ErrUnsupported}
 	}
 	if m.Size > maxUploadBytes {
 		return "", &provider.Error{Kind: provider.KindPermanent, Provider: Name, Code: "MEDIA_TOO_LARGE", Message: "Mastodon: the image is too large"}
