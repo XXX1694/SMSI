@@ -6,7 +6,7 @@
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-# setup: a calm host (50% RAM available, no stalls, disk 40%, data 1 GB, slice installed and using 300 MB) and a running
+# setup: a calm host (50% RAM available, no stalls, disk 40%, data 1 GB, slice installed: 200 MB anonymous memory plus 160 MB page cache) and a running
 # SocialOS stack.
 setup() {
   new_sb
@@ -18,7 +18,7 @@ setup() {
     mkdir -p "$SB/cg/system.slice/$unit"
     for res in cpu io memory; do psi "$SB/cg/system.slice/$unit/$res.pressure" 0; done
   done
-  slice_mem 300
+  slice_mem 200
   echo "usage_usec 1000000" >"$SB/cg/socialos.slice/cpu.stat"
   echo "8:0 rbytes=1000 wbytes=1000 rios=1 wios=1" >"$SB/cg/socialos.slice/io.stat"
   echo 40 >"$SB/disk"
@@ -74,7 +74,10 @@ mem() { # mem AVAILABLE_PCT [SWAP_USED_PCT]
   printf 'MemTotal: 2000000 kB\nMemAvailable: %s kB\nSwapTotal: 2000000 kB\nSwapFree: %s kB\n' \
     $((20000 * $1)) $((20000 * (100 - ${2:-0}))) >"$SB/proc/meminfo"
 }
-slice_mem() { echo $(($1 * 1048576)) >"$SB/cg/socialos.slice/memory.current"; }
+slice_mem() { # slice_mem ANON_MB [CACHE_MB]: memory.stat anon/file and memory.current (their sum, as in the kernel)
+  printf 'anon %s\nfile %s\nkernel 1000\n' $(($1 * 1048576)) $((${2:-160} * 1048576)) >"$SB/cg/socialos.slice/memory.stat"
+  echo $((($1 + ${2:-160}) * 1048576 + 1000)) >"$SB/cg/socialos.slice/memory.current"
+}
 psi() { printf 'some avg10=0.00 avg60=%s.50 avg300=0.00 total=1\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=1\n' "$2" >"$1"; }
 NOW=1000000
 guard() { # guard [ARGS]: sets $out and $rc; the clock is $NOW
@@ -100,7 +103,7 @@ assert_no_file "calm: not shed" "$SB/$G/shed"
 assert_no_file "calm: no pressure alert" "$SB/$G/alerts/pressure"
 assert_has "calm: logs level 0" "$out" "level 0"
 
-# 2. memory pressure while SocialOS uses 450 MB: the worker is stopped gracefully (no pause), and started after 3 calm runs
+# 2. memory pressure while SocialOS uses 450 MB anon: the worker is stopped gracefully (no pause), and started after 3 calm runs
 setup
 mem 12
 slice_mem 450
@@ -111,7 +114,7 @@ assert_has "pressure: a docker stop with the container's own grace period" "$(ca
 assert_lacks "pressure: never paused" "$(cat "$SB/docker.calls")" "pause"
 assert_eq "pressure: shed level 1" 1 "$(cat "$SB/$G/shed")"
 assert_has "pressure: reason" "$(pressure_last)" "available memory 12% < 15%"
-assert_has "pressure: usage" "$(pressure_last)" "SocialOS uses 450 MB"
+assert_has "pressure: usage" "$(pressure_last)" "SocialOS uses 450 MB anon"
 mem 50
 calm_runs 2
 assert_eq "two calm runs: still stopped" exited "$(cat "$SB/docker/worker")"
@@ -120,7 +123,7 @@ assert_eq "third calm run: started again" "$ALL_RUNNING" "$(states)"
 assert_no_file "resumed: shed marker gone" "$SB/$G/shed"
 assert_no_file "resumed: alerts cleared" "$SB/$G/alerts/pressure"
 
-# 3. pressure that SocialOS does not cause (300 MB, no CPU, no IO): alert, but nothing is stopped
+# 3. pressure that SocialOS does not cause (200 MB anon, no CPU, no IO): alert, but nothing is stopped
 setup
 mem 5
 guard
@@ -129,6 +132,33 @@ assert_eq "not a contributor: stack untouched" "$ALL_RUNNING" "$(states)"
 assert_eq "not a contributor: no docker action" 0 "$(actions)"
 assert_has "not a contributor: alert says why" "$(pressure_last)" "not a real contributor, so no action"
 assert_no_file "not a contributor: not shed" "$SB/$G/shed"
+
+# 3b. a lot of page cache but little anonymous memory: memory.current is 700 MB, yet SocialOS is not a contributor
+setup
+mem 5
+slice_mem 150 550
+guard
+guard
+assert_eq "high cache, low anon: stack untouched" "$ALL_RUNNING" "$(states)"
+assert_eq "high cache, low anon: no docker action" 0 "$(actions)"
+assert_has "high cache, low anon: usage counts anon only" "$(pressure_last)" "SocialOS uses 150 MB anon"
+assert_no_file "high cache, low anon: not shed" "$SB/$G/shed"
+
+# 3c. no memory.stat: falls back to memory.current minus "file"... and to memory.current alone without both
+setup
+mem 12
+slice_mem 100 500
+rm "$SB/cg/socialos.slice/memory.stat"
+guard
+assert_eq "no memory.stat: memory.current used as the last resort, worker stopped" exited "$(cat "$SB/docker/worker")"
+
+# 3d. high anon and pressure: the worker is stopped (also with little cache)
+setup
+mem 12
+slice_mem 350 0
+guard
+assert_eq "high anon, pressure: worker stopped" exited "$(cat "$SB/docker/worker")"
+assert_has "high anon, pressure: usage" "$(pressure_last)" "SocialOS uses 350 MB anon"
 
 # 4. SocialOS contributes through CPU: the rate needs two runs (60% of one CPU over 120 s)
 setup

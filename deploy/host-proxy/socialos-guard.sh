@@ -9,7 +9,7 @@
 #
 # Pressure: little RAM left, swap almost full, tasks waiting for memory, or a protected service (GUARD_PROTECTED_UNITS,
 # default irbisa.service caddy.service) waiting for CPU, IO or memory. The guard acts only when SocialOS is also a real
-# contributor (socialos.slice above GUARD_SLICE_MEM_MB, GUARD_SLICE_CPU_PCT or GUARD_SLICE_IO_MBPS); otherwise it alerts.
+# contributor (socialos.slice anonymous memory, page cache excluded, above GUARD_SLICE_MEM_MB, GUARD_SLICE_CPU_PCT or GUARD_SLICE_IO_MBPS); otherwise it alerts.
 #   level 1 (pressure)  stop the SocialOS worker gracefully (its stop grace period); no publishing, no jobs;
 #   level 2 (critical, 2 runs in a row)  also stop GUARD_SHED_SERVICES (default worker mcp frontend).
 # It starts again only what it stopped, after GUARD_RESUME_AFTER calm runs (level 1) or GUARD_RESUME_AFTER_CRIT calm runs

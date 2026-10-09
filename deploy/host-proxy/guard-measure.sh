@@ -50,7 +50,7 @@ load_settings() {
   UNIT_PSI_CRIT=$(cfg_int GUARD_UNIT_PSI_CRIT 50)
   DISK_WARN=$(cfg_int GUARD_DISK_WARN 80)             # % of the disk in use: alert (stopping containers frees no space)
   DATA_BUDGET_GB=$(cfg_int GUARD_DATA_BUDGET_GB 15)   # SocialOS data on disk: alert above this
-  SLICE_MEM_MB=$(cfg_int GUARD_SLICE_MEM_MB 400)     # SocialOS counts as a contributor from this much memory ...
+  SLICE_MEM_MB=$(cfg_int GUARD_SLICE_MEM_MB 300)     # SocialOS counts as a contributor from this much anonymous memory ...
   SLICE_CPU_PCT=$(cfg_int GUARD_SLICE_CPU_PCT 40)     # ... or this % of one CPU since the last run ...
   SLICE_IO_MBPS=$(cfg_int GUARD_SLICE_IO_MBPS 10)     # ... or this many MB/s of disk IO since the last run
   CRIT_RUNS=$(cfg_int GUARD_CRIT_RUNS 2)              # consecutive critical runs before containers are stopped
@@ -139,7 +139,26 @@ counter_rate() {
   printf '%s' $((($2 - prev_v) / (now - prev_t)))
 }
 
+# slice_anon_bytes CGROUP: anonymous memory (heaps, stacks: what cannot be dropped under pressure) from memory.stat. Page
+# cache is left out on purpose: it is reclaimable, makes memory.current look 100-200 MB bigger and would make the check
+# nearly always pass. Without memory.stat (or an anon line) it falls back to memory.current minus its "file" line, and
+# to memory.current alone as the last resort.
+slice_anon_bytes() {
+  local cg=$1 anon file cur
+  anon=$(awk '$1 == "anon" { print $2 }' "$cg/memory.stat" 2>/dev/null || true)
+  if [[ "$anon" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$anon"
+    return 0
+  fi
+  cur=$(cat "$cg/memory.current")
+  file=$(awk '$1 == "file" { print $2 }' "$cg/memory.stat" 2>/dev/null || true)
+  if [[ "$file" =~ ^[0-9]+$ ]] && ((file <= cur)); then cur=$((cur - file)); fi
+  printf '%s' "$cur"
+}
+
 # assess_socialos: is SocialOS a real contributor to the pressure? Sets CONTRIBUTES (true/false) and SOCIALOS_USAGE.
+# Memory counts as anonymous memory only; CPU is the slice's own usage_usec rate and IO its own io.stat rate (never the
+# host-wide PSI, which also covers the other service).
 # Without the slice's cgroup files (slice not installed) it cannot tell, and assumes yes: the guard then keeps protecting.
 assess_socialos() {
   local cg=$CGROUP_ROOT/socialos.slice mem cpu io cpu_rate io_rate
@@ -148,7 +167,7 @@ assess_socialos() {
     SOCIALOS_USAGE="socialos.slice not found"
     return 0
   fi
-  mem=$(($(cat "$cg/memory.current") / 1048576))
+  mem=$(($(slice_anon_bytes "$cg") / 1048576))
   cpu=$(awk '$1 == "usage_usec" { print $2 }' "$cg/cpu.stat" 2>/dev/null || true)
   io=$(awk '{ for (i = 2; i <= NF; i++) if ($i ~ /^[rw]bytes=/) { split($i, a, "="); s += a[2] } } END { print s + 0 }' \
     "$cg/io.stat" 2>/dev/null || true)
@@ -156,7 +175,7 @@ assess_socialos() {
   io_rate=$(counter_rate slice-io "${io:-0}")    # bytes per second
   cpu=$((${cpu_rate:-0} / 10000))                # % of one CPU
   io=$((${io_rate:-0} / 1048576))                # MB/s
-  SOCIALOS_USAGE="SocialOS uses ${mem} MB, ${cpu}% CPU, ${io} MB/s IO"
+  SOCIALOS_USAGE="SocialOS uses ${mem} MB anon, ${cpu}% CPU, ${io} MB/s IO"
   CONTRIBUTES=false
   if ((mem >= SLICE_MEM_MB || cpu >= SLICE_CPU_PCT || io >= SLICE_IO_MBPS)); then CONTRIBUTES=true; fi
 }

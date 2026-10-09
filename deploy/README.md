@@ -680,13 +680,12 @@ URLs whose failure is reported. Tune a slice value with a drop-in (`systemctl ed
 unit, so that a refresh of `/opt/socialos` does not undo it.
 
 **What the guard does, and does not do.** Each run measures the host (RAM available, swap, memory stall time, and the
-protected services' own CPU, IO and memory stall times from their PSI files) and SocialOS's share (the slice's memory, and
-its CPU and disk IO since the last run). It acts only when both say so; the thresholds are `GUARD_*` in `.env`:
+protected services' own CPU, IO and memory stall times from their PSI files) and SocialOS's share (Xits CPU and disk IO since the last run). It acts only when both say so; the thresholds are `GUARD_*` in `.env`:
 
 | Level | When (defaults) | Action |
 |---|---|---|
 | 0 | none of the below | nothing; what the guard stopped is started again after 3 calm runs (level 1) or 5 (level 2, doubled for each level 2 within a day, at most 2 hours) |
-| 1, pressure | RAM available < 15%, swap > 80% used, memory stall > 10%, or a protected service waits > 20% of the time for CPU, IO or memory; **and** SocialOS uses ≥ 400 MB, ≥ 40% of a CPU or ≥ 10 MB/s of disk IO | stop the worker gracefully (its stop grace period): scheduled posts go out late, not lost |
+| 1, pressure | RAM available < 15%, swap > 80% used, memory stall > 10%, or a protected service waits > 20% of the time for CPU, IO or memory; **and** SocialOS uses ≥ 300 MB of anonymous memory (page cache does not count), ≥ 40% of a CPU or ≥ 10 MB/s of disk IO | stop the worker gracefully (its stop grace period): scheduled posts go out late, not lost |
 | 2, critical, twice in a row | RAM available < 8%, memory stall > 30%, a protected service stalls > 50%; and SocialOS contributes as above | also stop `GUARD_SHED_SERVICES` (`worker mcp frontend`); Postgres, Redis, MinIO and the API keep running |
 
 If the pressure comes from elsewhere (the other service itself, apt, journald), the guard only raises the `pressure` alert

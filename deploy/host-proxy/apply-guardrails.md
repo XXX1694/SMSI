@@ -99,7 +99,8 @@ systemctl status socialos.slice --no-pager | head -8
 
 Verify: every container shows `socialos.slice`, Memory equal to MemorySwap, PidsLimit 128; the slice files show
 `696254464`, `645922816`, `0`, `512`, `100000 100000` and `8:0 rbps=62914560 wbps=max riops=max wiops=max`; `deploy.sh` ended with
-`DEPLOYED`; `systemctl show socialos.slice -p MemoryCurrent` is about 300-400 MB; `ls /sys/fs/cgroup/system.slice | grep
+`DEPLOYED`; `systemctl show socialos.slice -p MemoryCurrent` is about 300-400 MB (with page cache; `grep ^anon /sys/fs/cgroup/socialos.slice/memory.stat` is
+the figure the guard uses, expect about 120-250 MB, well under its 300 MB threshold); `ls /sys/fs/cgroup/system.slice | grep
 docker-` prints nothing; `docker compose exec backend env | grep GOMEMLIMIT` says `100MiB`. Irbisa check. Watch for
 10 minutes: `journalctl -k --since -10min | grep -i oom` empty.
 
@@ -145,7 +146,8 @@ values to the running units without a restart:
 containerd -p MemoryPeak` again: a peak far above `MemoryHigh` means the daemon was throttled (and may have swapped); raise
 the value in a drop-in and report it. After the next reboot: `journalctl -b | grep -i 'ordering cycle'` prints nothing.
 Rollback: `rm /etc/systemd/system/{docker,containerd}.service.d/socialos.conf && systemctl daemon-reload`; if the cgroup
-files keep the values, `systemctl set-property --runtime docker.service CPUQuota= MemoryHigh=infinity` (same for containerd).
+files keep the values, reset every property the drop-in set, including the weight:
+`systemctl set-property --runtime docker.service CPUQuota= CPUWeight= MemoryHigh=infinity` (same for containerd).
 
 ## Step 5: Caddy start pre-check (risk: low; Caddy is not restarted or reloaded)
 
@@ -182,6 +184,12 @@ Irbisa check.
 Rollback: `systemctl disable --now socialos-guard.timer && ./host-proxy/socialos-guard.sh --resume` (starts what it
 stopped), then remove the two unit files and `daemon-reload`.
 
+The guard counts SocialOS as a contributor from 300 MB of **anonymous** memory (`anon` in the slice's `memory.stat`), not
+from `memory.current`: that also holds page cache (about 150-250 MB here), which the kernel gives back under pressure and
+which would make the check pass nearly always, so that Irbisa's own spike could shed SocialOS. 300 MB is about half of
+`MemoryMax` and well above the 120-250 MB the stack uses at rest. After a day, compare `anon` with the threshold and tune
+`GUARD_SLICE_MEM_MB` in `.env`. The CPU test uses the slice's own `cpu.stat` (`usage_usec`) rate, never host-wide PSI.
+
 ## Step 7 (optional, needs the owner's OK): Irbisa in the uptime checks
 
 `UPTIME_URLS` replaces the default targets of `.github/workflows/uptime.yml`, so list ours too:
@@ -192,6 +200,40 @@ gh workflow run uptime.yml
 ```
 
 Alert only: an outage opens an `incident` issue in this repository. Rollback: `gh variable delete UPTIME_URLS`.
+
+## Full rollback, in reverse order (6 to 1)
+
+Undo the steps in the opposite order, one at a time, with the Irbisa check after each. The order matters: step 3's rollback
+(containers back out of the slice) must be finished before step 1's (the slice unit removed), otherwise the containers keep
+a cgroup parent that no longer exists and fail to start; and the guard goes first so that it does not stop or start
+containers while you work.
+
+```bash
+cd /opt/socialos
+# 7: gh variable delete UPTIME_URLS (if you set it)
+# 6: guard
+systemctl disable --now socialos-guard.timer && ./host-proxy/socialos-guard.sh --resume
+rm /etc/systemd/system/socialos-guard.{service,timer}
+# 5: Caddy pre-check
+systemctl disable socialos-caddy-precheck.service && rm /etc/systemd/system/socialos-caddy-precheck.service
+# 4: daemon drop-ins
+rm /etc/systemd/system/{docker,containerd}.service.d/socialos.conf
+systemctl daemon-reload
+systemctl set-property --runtime docker.service CPUQuota= CPUWeight= MemoryHigh=infinity
+systemctl set-property --runtime containerd.service CPUQuota= CPUWeight= MemoryHigh=infinity
+# 3: containers out of the slice (SocialOS restarts, about 1 minute); wait for it before step 1
+systemctl stop socialos-autoupdate.timer
+echo 'SOCIALOS_CGROUP_PARENT=' >>.env && docker compose up -d --wait
+for c in $(docker compose ps -q); do docker inspect -f '{{.Name}} {{.HostConfig.CgroupParent}}' "$c"; done   # none says socialos.slice
+# 2: files (the step-0 archive); then the timer
+tar -C /opt -xzf /root/socialos-files-<timestamp>.tgz && systemctl start socialos-autoupdate.timer
+# 1: the slice unit, last
+rm /etc/systemd/system/socialos.slice && systemctl daemon-reload
+```
+
+Then `systemctl daemon-reload` once more, `systemctl status socialos.slice` (not found or inactive) and the Irbisa check.
+Restoring the step-0 archive also restores the old compose files and `.env` (without the `SOCIALOS_CGROUP_PARENT=` line); the
+containers already run outside the slice by then, so nothing needs recreating.
 
 ## Afterwards
 

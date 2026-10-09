@@ -176,7 +176,7 @@ uses the systemd cgroup driver on cgroup v2, so no daemon change or restart): `C
 gets `memswap_limit = mem_limit` and `pids_limit`; backend and worker keep 160m with `GOMEMLIMIT=100MiB` for upload buffers.
 Drop-ins give dockerd and containerd `CPUQuota=25%`, `CPUWeight=50` and a soft `MemoryHigh` (192M / 128M), with no boot
 ordering. Slice plus daemons: 984M, half of the RAM. A guard timer reads host and per-service pressure (PSI) and SocialOS's
-share; only when the host is under pressure and SocialOS contributes (slice ≥ 400 MB, ≥ 40% of a CPU or ≥ 10 MB/s IO) it
+share; only when the host is under pressure and SocialOS contributes (slice anon ≥ 300 MB, ≥ 40% of a CPU or ≥ 10 MB/s IO) it
 stops the worker, then the non-essential containers, and starts what it stopped after calm runs (level 2 with a doubling
 backoff). It alerts but never acts on the other service. A Caddy pre-check quarantines a SocialOS snippet that would stop
 Caddy from starting.
