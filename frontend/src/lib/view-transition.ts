@@ -8,11 +8,18 @@
  */
 type StartViewTransition = (update: () => Promise<void>) => unknown;
 
-const TIMEOUT_MS = 1000;
+// A navigation that never commits (an error, a redirect to the same path) freezes the page until this passes; keep it short.
+const TIMEOUT_MS = 300;
 let pending: (() => void) | null = null;
 
+/** Set on <html> by Pause motion; globals.css stops every animation under it. */
+export const MOTION_OFF_CLASS = 'motion-off';
+
+/** True under the system's reduced-motion setting or the app's own Pause motion (`html.motion-off`). */
 export function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof window === 'undefined') return false;
+  if (document.documentElement.classList.contains(MOTION_OFF_CLASS)) return true;
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 export function supportsViewTransitions(): boolean {

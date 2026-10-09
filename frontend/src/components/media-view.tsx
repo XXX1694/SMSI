@@ -79,7 +79,7 @@ export function MediaView() {
       ) : data.length === 0 ? (
         <EmptyState title={t('media.noneTitle')}>{t('media.noneBody')}</EmptyState>
       ) : (
-        <ul className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {data.map((m) => (
             <li key={m.id} className="card-lift overflow-hidden rounded-lg border bg-background">
               <Thumb m={m} />

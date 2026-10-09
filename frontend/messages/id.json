@@ -302,6 +302,8 @@
     "themeSystem": "Sistem",
     "themeLight": "Terang",
     "themeDark": "Gelap",
+    "pauseMotion": "Jeda gerakan",
+    "pauseMotionHint": "Mematikan animasi di aplikasi pada perangkat ini. Pengaturan sistem untuk mengurangi gerakan melakukan hal yang sama.",
     "password": "Kata sandi",
     "legal": "Legal",
     "legalText": "Baca <terms>Ketentuan Layanan</terms> dan <privacy>Kebijakan Privasi</privacy>. Admin server bertanggung jawab atas keduanya.",

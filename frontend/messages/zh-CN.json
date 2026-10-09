@@ -302,6 +302,8 @@
     "themeSystem": "跟随系统",
     "themeLight": "浅色",
     "themeDark": "深色",
+    "pauseMotion": "暂停动效",
+    "pauseMotionHint": "在此设备上关闭应用中的动画。系统的“减弱动态效果”设置也有同样作用。",
     "password": "密码",
     "legal": "法律信息",
     "legalText": "请阅读<terms>服务条款</terms>和<privacy>隐私政策</privacy>。两者均由服务器管理员负责。",

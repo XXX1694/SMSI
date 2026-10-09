@@ -302,6 +302,8 @@
     "themeSystem": "System",
     "themeLight": "Hell",
     "themeDark": "Dunkel",
+    "pauseMotion": "Bewegung pausieren",
+    "pauseMotionHint": "Schaltet Animationen in der App auf diesem Gerät aus. Die Systemeinstellung „Bewegung reduzieren“ bewirkt dasselbe.",
     "password": "Passwort",
     "legal": "Rechtliches",
     "legalText": "Lies die <terms>Nutzungsbedingungen</terms> und die <privacy>Datenschutzerklärung</privacy>. Dafür ist der Server-Admin verantwortlich.",

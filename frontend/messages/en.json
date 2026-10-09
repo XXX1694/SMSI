@@ -302,6 +302,8 @@
     "themeSystem": "System",
     "themeLight": "Light",
     "themeDark": "Dark",
+    "pauseMotion": "Pause motion",
+    "pauseMotionHint": "Turns off animations in the app on this device. Your system's reduce motion setting does the same.",
     "password": "Password",
     "legal": "Legal",
     "legalText": "Read the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>. The server admin is responsible for both.",

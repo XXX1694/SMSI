@@ -302,6 +302,8 @@
     "themeSystem": "Sistema",
     "themeLight": "Claro",
     "themeDark": "Escuro",
+    "pauseMotion": "Pausar movimento",
+    "pauseMotionHint": "Desativa as animações do app neste dispositivo. A configuração do sistema para reduzir movimento faz o mesmo.",
     "password": "Senha",
     "legal": "Legal",
     "legalText": "Leia os <terms>Termos de Serviço</terms> e a <privacy>Política de Privacidade</privacy>. O administrador do servidor é responsável por ambos.",

@@ -138,7 +138,7 @@ function Checklist({ connectedAccounts, onDismiss, onComplete }: { connectedAcco
           <X className="h-4 w-4" aria-hidden />
         </Button>
       </div>
-      <ol className="stagger divide-y rounded-md border bg-background">
+      <ol className="divide-y rounded-md border bg-background">
         {steps.map((s) => (
           <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3" data-done={s.done}>
             <span
