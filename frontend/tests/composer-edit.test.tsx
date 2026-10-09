@@ -221,12 +221,12 @@ describe('ComposerView unsaved changes guard', () => {
 
 describe('ComposerView review fixes', () => {
   it('Discard hands the router a path without the deploy base path', async () => {
-    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/SMSI/demo');
+    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/steerpost/demo');
     try {
       await open();
       type('Half written');
       const a = document.createElement('a');
-      a.href = '/SMSI/demo/posts/view?id=p1';
+      a.href = '/steerpost/demo/posts/view?id=p1';
       a.textContent = 'Back to post';
       document.body.appendChild(a);
       await userEvent.click(a);

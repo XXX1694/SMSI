@@ -12,16 +12,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/XXX1694/SMSI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/XXX1694/SMSI/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/XXX1694/SMSI/actions/workflows/security.yml"><img alt="Security" src="https://github.com/XXX1694/SMSI/actions/workflows/security.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/XXX1694/SMSI/releases"><img alt="Release" src="https://img.shields.io/github/v/release/XXX1694/SMSI?sort=semver"></a>
+  <a href="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/XXX1694/steerpost/actions/workflows/security.yml"><img alt="Security" src="https://github.com/XXX1694/steerpost/actions/workflows/security.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/XXX1694/steerpost/releases"><img alt="Release" src="https://img.shields.io/github/v/release/XXX1694/steerpost?sort=semver"></a>
   <a href="#license"><img alt="License: to be decided" src="https://img.shields.io/badge/license-to%20be%20decided-lightgrey"></a>
 </p>
 
 <p align="center">
-  <a href="https://xxx1694.github.io/SMSI/demo/"><strong>Try the live demo</strong></a> ·
-  <a href="https://xxx1694.github.io/SMSI/">Website</a> ·
-  <a href="https://xxx1694.github.io/SMSI/docs/">Docs</a> ·
+  <a href="https://xxx1694.github.io/steerpost/demo/"><strong>Try the live demo</strong></a> ·
+  <a href="https://xxx1694.github.io/steerpost/">Website</a> ·
+  <a href="https://xxx1694.github.io/steerpost/docs/">Docs</a> ·
   <a href="#use-with-your-ai-agent">Connect an agent</a> ·
   <a href="docs/ROADMAP.md">Roadmap</a>
 </p>
@@ -182,7 +182,7 @@ Or run the Steerpost MCP server itself in stdio mode from a checkout (`cd mcp &&
   "mcpServers": {
     "steerpost": {
       "command": "node",
-      "args": ["/path/to/SMSI/mcp/dist/index.js", "--stdio"],
+      "args": ["/path/to/steerpost/mcp/dist/index.js", "--stdio"],
       "env": {
         "SOCIALOS_API_URL": "https://api.example.com",
         "SOCIALOS_API_KEY": "sk_live_..."
@@ -202,7 +202,7 @@ Telegram."* More clients and every server option: [mcp/README](mcp/README.md).
 You need Docker with Compose, `make` and `openssl`.
 
 ```bash
-git clone https://github.com/XXX1694/SMSI.git socialos && cd socialos
+git clone https://github.com/XXX1694/steerpost.git socialos && cd socialos
 make up                       # writes .env with a fresh ENCRYPTION_KEY, then docker compose up -d --build
 open http://localhost:3000    # register, then connect the "Mock Network" to try the whole flow
 ```
