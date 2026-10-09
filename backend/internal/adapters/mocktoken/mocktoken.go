@@ -49,7 +49,7 @@ func (p *Provider) Capabilities() provider.Capabilities {
 		{Name: "api_key", Label: "API key", Help: "Any value starting with mt_ is accepted.", Placeholder: "mt_...", Kind: provider.FieldSecret, Secret: true, Required: true},
 		{Name: "handle", Label: "Handle", Help: "Optional display handle.", Placeholder: "my_handle", Kind: provider.FieldText},
 	}
-	c.Notes = "MOCK token provider for development and tests only. Nothing is posted anywhere."
+	c.Notes = "Test network with a token form. Nothing is posted anywhere."
 	return c
 }
 

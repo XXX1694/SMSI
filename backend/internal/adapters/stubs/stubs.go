@@ -20,22 +20,22 @@ func (u Unsupported) Capabilities() provider.Capabilities {
 	return provider.Capabilities{
 		RequiresApproval: true,
 		ConnectMethod:    provider.ConnectNone,
-		Notes:            "UNSUPPORTED in this release: " + u.notes,
+		Notes:            "Not available yet: " + u.notes,
 	}
 }
 
 // All returns the stub providers.
 func All() []provider.Provider {
 	return []provider.Provider{
-		Unsupported{"instagram", "Instagram", "requires Meta app review for instagram_content_publish and a Business/Creator account."},
-		Unsupported{"facebook", "Facebook", "requires Meta app review for pages_manage_posts."},
-		Unsupported{"tiktok", "TikTok", "requires TikTok Content Posting API audit; unaudited apps can only post privately."},
-		Unsupported{"youtube", "YouTube", "requires Google OAuth verification for youtube.upload scope."},
-		Unsupported{"x", "X (Twitter)", "the API is pay-per-use (about $0.015 per post, $0.20 per post with a link) and needs a paid developer account; the free tier is closed to new developers."},
-		Unsupported{"threads", "Threads", "requires Meta app review for threads_content_publish."},
-		Unsupported{"pinterest", "Pinterest", "requires Pinterest API standard access approval."},
-		Unsupported{"reddit", "Reddit", "new API credentials reportedly need Reddit's Responsible Builder approval first."},
-		Unsupported{"medium", "Medium", "Medium reportedly no longer issues new integration tokens, so new accounts cannot connect."},
-		Unsupported{"hashnode", "Hashnode", "API access reportedly needs a paid Hashnode Pro plan."},
+		Unsupported{"instagram", "Instagram", "needs an Instagram Business or Creator account. Posting for other people needs Meta review."},
+		Unsupported{"facebook", "Facebook", "posting to Pages needs Meta app review."},
+		Unsupported{"tiktok", "TikTok", "until TikTok audits the app, posts can only be private."},
+		Unsupported{"youtube", "YouTube", "until Google verifies the app, uploads can only be private."},
+		Unsupported{"x", "X (Twitter)", "X charges per post through its paid API."},
+		Unsupported{"threads", "Threads", "needs Meta app review."},
+		Unsupported{"pinterest", "Pinterest", "needs Pinterest API approval."},
+		Unsupported{"reddit", "Reddit", "new API access reportedly needs Reddit approval first."},
+		Unsupported{"medium", "Medium", "Medium reportedly no longer issues new integration tokens."},
+		Unsupported{"hashnode", "Hashnode", "Hashnode reportedly needs a paid Pro plan for API access."},
 	}
 }

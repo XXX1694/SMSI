@@ -198,7 +198,7 @@ func (s *Service) Delete(ctx context.Context, a actor.Actor, id uuid.UUID) error
 		return err
 	}
 	if used {
-		return errs.New(errs.Conflict, "media is attached to a post")
+		return errs.New(errs.Conflict, "This file is used in a post. Remove it from the post first.")
 	}
 	if err := s.repo.Delete(ctx, a.UserID, id); err != nil {
 		return err

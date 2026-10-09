@@ -25,7 +25,7 @@ func kindOf(err error) provider.Kind {
 func TestIdentityAndLabel(t *testing.T) {
 	p := New()
 	c := p.Capabilities()
-	if p.Name() != "mock" || !p.Supported() || !p.Configured() || !strings.Contains(c.Notes, "MOCK") || c.RequiresApproval || c.ConnectMethod != provider.ConnectOAuth {
+	if p.Name() != "mock" || !p.Supported() || !p.Configured() || !strings.Contains(c.Notes, "Test network") || c.RequiresApproval || c.ConnectMethod != provider.ConnectOAuth {
 		t.Fatalf("%s %+v", p.Name(), c)
 	}
 	if c.SafeToRetryAfterUnknown {

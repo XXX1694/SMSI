@@ -95,8 +95,6 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 			{Name: "app_password", Label: "App password", Help: "Create one in Settings > Privacy and security > App passwords. Never use your main password.", Placeholder: "xxxx-xxxx-xxxx-xxxx", Kind: provider.FieldSecret, Secret: true, Required: true},
 			{Name: "pds", Label: "Server (optional)", Help: "Only if you host your own PDS. Leave empty for bsky.social.", Placeholder: "https://bsky.social", Kind: provider.FieldURL},
 		},
-		Notes: "Text up to 300 graphemes (Steerpost checks 300 characters, which is stricter for emoji), up to 4 images of 2 MB each without alt text, " +
-			"links and hashtags become clickable, delete supported. Mentions are not linked. Uses an app password; Bluesky prefers OAuth for new apps, " +
-			"so OAuth connect is planned. No native scheduling; Steerpost schedules.",
+		Notes: "Text up to 300 characters, up to 4 images of 2 MB. Links and hashtags are clickable; mentions are not.",
 	}
 }
