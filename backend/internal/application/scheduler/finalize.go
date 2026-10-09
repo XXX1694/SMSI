@@ -15,15 +15,15 @@ const (
 	MetricFailed    = "posts_failed"
 )
 
-// relock re-acquires target then post locks inside a new tx. The order
-// (target → post) matches begin, so the two paths cannot deadlock; the post
-// lock serialises sibling targets settling the same post.
+// relock re-acquires the post then the target lock inside a new tx. The order (post → target) is the one the API
+// and begin use everywhere (issue #38), so no path can deadlock with a cancel; the post lock also serialises sibling
+// targets settling the same post.
 func (p *Publisher) relock(ctx context.Context, r *run) error {
-	if err := p.targets.LockTargetWait(ctx, r.target.UserID, r.target.ID); err != nil {
-		return err
-	}
 	ps, err := p.posts.GetForUpdate(ctx, r.target.UserID, r.target.PostID)
 	if err != nil {
+		return err
+	}
+	if err := p.targets.LockTargetWait(ctx, r.target.UserID, r.target.ID); err != nil {
 		return err
 	}
 	r.post = ps

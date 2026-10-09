@@ -110,6 +110,9 @@ func mapErr(err error, resource string) error {
 			return errs.Wrap(errs.Validation, "referenced "+resource+" does not exist", err)
 		case "22P02":
 			return errs.Wrap(errs.Validation, "invalid identifier", err)
+		case "40P01", "40001":
+			// Deadlock or serialization failure: nothing was committed and a retry is safe.
+			return errs.Wrap(errs.Conflict, "the resource was modified concurrently; retry", err)
 		}
 	}
 	return err
