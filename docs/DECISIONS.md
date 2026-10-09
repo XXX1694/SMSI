@@ -408,6 +408,54 @@ and story sweep (WCAG 2.2.2); it is not offered under reduced motion, where noth
 from the `mermaid` npm package (MIT, 3.5 MB, loaded only on pages with diagrams) instead of jsDelivr, so the site makes no
 third-party request.
 
+## D-018: Account data export is a ZIP streamed by the worker into the user's S3 prefix (2026-10-09)
+
+**Context.** The Privacy Policy promised export "later". An export has to include media files, so it cannot be one JSON
+response, and the production caps (backend 160m, worker 160m, D-015) rule out building an archive in memory or on the
+container's layer.
+
+**Decision.**
+- A browser session (never an API key) asks `POST /account/exports`. The API inserts a `data_exports` row (`pending`) and
+  enqueues `account:export {export_id}` with the export id as the Asynq task id, `MaxRetry(0)` and `Retention(0)`. A
+  failed build is recorded on the row (`failed` plus a short `error_code`) and the user asks again; retrying blindly would
+  redo hours of work. Migration 00003's partial unique index allows one `pending|running` export per user (`409`).
+  A successful export blocks the next request for 24 hours (`429` with `Retry-After`); when a new one is made the old
+  ZIP is expired and deleted, so each user holds at most one archive.
+- Exports run on their own queue (`<queue>-exports`) served by a second Asynq server with concurrency 1: one build at a
+  time per worker, and a long build never takes a slot from publishing. The worker claims the row atomically (`pending` to
+  `running`; a second delivery finds nothing to claim). The ZIP is written into an `io.Pipe` that `Storage.Put` reads with unknown size, which
+  D-015 already made a bounded 5 MiB part upload: no temp file, no whole-archive buffer. JSON is deflated and read from
+  Postgres in keyset batches of 200 rows (`id > after`, `(user_id, id)` indexes in migration 00005); media files are
+  copied from S3 through a 32 KiB buffer and stored uncompressed. Worker memory is the batch plus one part, independent
+  of the account size.
+- Each dataset is one SQL statement with an explicit column list that renders JSON in the database, so no password hash,
+  token hash, key hash, encrypted credential, session or CSRF value is selected at all, and a column added later is not
+  exported until someone adds it. Contents: `profile`, `social_accounts` (no credentials), `posts` (with targets and
+  attempts), `media` and `media/<id><ext>`, `api_keys` and `mcp_connections` (prefix only), `approvals`, `audit_logs`,
+  `README.txt`. An unreadable media object is listed in `media/MISSING.txt`; any other failure fails the export and the
+  object is deleted.
+- The archive lives at `users/<uid>/exports/<id>.zip`. `GET /account/exports/{id}` (session, tenant-scoped, audited)
+  returns a presigned URL valid for 5 minutes, only while the export is `ready` and before `expires_at`
+  (`EXPORT_RETENTION_DAYS`, default 7, at most 30). An hourly worker sweep deletes expired archives, fails a `running`
+  export older than 2 hours (a crashed worker) and re-enqueues a `pending` one older than 10 minutes (a lost task) and fails one older than 2 hours.
+- Audit: `account.export_requested`, `account.export_ready`, `account.export_failed`, `account.export_downloaded`.
+
+**Alternatives.** A synchronous JSON response: no media, and a request that holds memory. Proxying the download through
+the API: the API's 160m would carry multi-hundred-megabyte transfers; a presigned URL sends the bytes from S3 directly (the
+same as media URLs). A temp file then `Put` with the known size: needs disk the containers do not have. An email with the
+link: mail may be off (`MAIL_PROVIDER=log`) and the link would sit in a mailbox for days; the Settings page polls instead.
+
+**Consequences.** A presigned URL is a bearer link for five minutes; anyone who gets it can download the archive in that
+window, which is why it is short and why `GET` is audited. The 5 MiB part size caps an archive at about 50 GB on S3, far
+above the per-user media quota. The partial unique index means a crash that leaves a row `running` blocks the user until
+the sweep fails it (at most 2 hours plus the sweep interval).
+
+Accepted for now: with concurrency 1, an export queued behind others for more than 2 hours is failed by the sweep while
+still `pending` (`export.go`, `runningLimit`), and the user asks again. A build also needs its `MarkReady` to find the row
+`running`; if the sweep failed it first, the archive is deleted and the failure stands. On shutdown the export server waits
+only `ExportShutdownTimeout` (5 s by default) in parallel with the publish server, so a build in flight is marked
+`interrupted`; the upload itself is bounded by the build budget (90 minutes), not the 30 minutes of an ordinary upload.
+
 ## D-020: The product is renamed Steerpost; stored and host identifiers keep the `socialos` name (2026-10-09)
 
 **Decision.** The product, the MCP server, the generated client configs, the images, the npm packages and the Go module are

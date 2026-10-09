@@ -9,6 +9,7 @@
     "max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
     "max-lines-per-function": ["error", { "max": 80, "skipBlankLines": true, "skipComments": true }],
     "no-restricted-imports": ["error", {
+      "patterns": [{ "group": ["**/api-http", "@/lib/api-http"], "message": "Import from '@/lib/api'; only lib/api.ts may use the HTTP core." }],
       "paths": [
         { "name": "@/lib/time", "importNames": ["formatDateTime"], "message": "Use useFormat() or '@/i18n/format': they follow the user's locale and time zone." },
         { "name": "./time", "importNames": ["formatDateTime"], "message": "Use useFormat() or '@/i18n/format': they follow the user's locale and time zone." }
@@ -17,10 +18,15 @@
   },
   "overrides": [
     {
+      "files": ["src/lib/api.ts"],
+      "rules": { "no-restricted-imports": "off" }
+    },
+    {
       // UI code names networks through useProviderName() (an empty id reads "Unknown") and formats through useFormat().
       "files": ["src/components/**", "src/app/**"],
       "rules": {
         "no-restricted-imports": ["error", {
+          "patterns": [{ "group": ["**/api-http", "@/lib/api-http"], "message": "Import from '@/lib/api'; only lib/api.ts may use the HTTP core." }],
           "paths": [
             { "name": "@/lib/time", "importNames": ["formatDateTime"], "message": "Use useFormat() or '@/i18n/format': they follow the user's locale and time zone." },
             { "name": "@/lib/normalize", "importNames": ["providerLabel"], "message": "Use useProviderName(): an empty network id must read \"Unknown\", not an empty string." }

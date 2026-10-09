@@ -53,10 +53,13 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
 
       <LegalSection title="Export and deletion">
         <p>
-          Today: you can delete single posts and media and disconnect a network in the app. Disconnecting removes the stored credentials.
-          Self-service export of all your data and self-service account deletion do not exist yet (they are listed in the project roadmap).
+          Export: in Settings, under &quot;Your data&quot;, you can download a ZIP of everything you have in SocialOS: your profile, posts, connected
+          accounts (without credentials), API key names, approvals, the audit log and your media files. The file is deleted from storage after a few days.
         </p>
-        <p>Until they do, ask the operator at the contact address below to send you your data or to delete your account.</p>
+        <p>
+          Deletion: you can delete single posts and media and disconnect a network in the app (disconnecting removes the stored credentials).
+          Self-service deletion of the whole account does not exist yet (it is listed in the project roadmap). Until it does, ask the operator at the contact address below to delete your account.
+        </p>
       </LegalSection>
 
       <LegalSection title="Your rights">
