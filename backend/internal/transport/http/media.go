@@ -13,24 +13,49 @@ import (
 	"github.com/socialos/backend/internal/transport/httpx"
 )
 
-// UploadIdleTimeout cuts an upload whose client sends nothing for this long; UploadMaxDuration bounds the whole upload.
-// Together they stop a 1 byte/s client from holding an upload slot (the server-wide ReadTimeout would allow minutes).
+// An upload is cut when its client sends nothing for UploadIdleTimeout, or, after UploadGrace, when its average speed
+// since the start is below the floor (UPLOAD_MIN_KBPS). The total time is bounded by size limit / floor, so one rule
+// covers all three: a 1 byte/s client cannot hold an upload slot (the server-wide ReadTimeout would allow minutes).
 var (
 	UploadIdleTimeout = 30 * time.Second
-	UploadMaxDuration = 20 * time.Minute
+	UploadGrace       = 5 * time.Second
 )
 
-// deadlineBody moves the connection read deadline forward before every read: idle after the last progress, never past end.
+const defaultUploadMinKBps = 32
+
+// deadlineBody moves the connection read deadline before every read. Below the speed floor the deadline is "now", so the
+// read fails and the handler returns, which frees the upload slot.
 type deadlineBody struct {
-	rc   *http.ResponseController
-	r    io.ReadCloser
-	idle time.Duration
-	end  time.Time
+	rc       *http.ResponseController
+	r        io.ReadCloser
+	start    time.Time
+	bytes    int64
+	minBps   float64
+	idle     time.Duration
+	grace    time.Duration
+	deadline time.Time // start + size limit / floor
+}
+
+func newDeadlineBody(w http.ResponseWriter, body io.ReadCloser, minKBps int) *deadlineBody {
+	if minKBps < 1 {
+		minKBps = defaultUploadMinKBps
+	}
+	bps := float64(minKBps) * 1024
+	now := time.Now()
+	return &deadlineBody{rc: http.NewResponseController(w), r: body, start: now, minBps: bps, idle: UploadIdleTimeout,
+		grace: UploadGrace, deadline: now.Add(time.Duration(float64(maxUploadBody) / bps * float64(time.Second)))}
 }
 
 func (d *deadlineBody) Read(p []byte) (int, error) {
-	_ = d.rc.SetReadDeadline(minTime(time.Now().Add(d.idle), d.end)) // unsupported writers just keep the server default
-	return d.r.Read(p)
+	now := time.Now()
+	dl := minTime(now.Add(d.idle), d.deadline)
+	if el := now.Sub(d.start); el > d.grace && float64(d.bytes) < d.minBps*el.Seconds() {
+		dl = now
+	}
+	_ = d.rc.SetReadDeadline(dl) // unsupported writers just keep the server default
+	n, err := d.r.Read(p)
+	d.bytes += int64(n)
+	return n, err
 }
 
 func (d *deadlineBody) Close() error { return d.r.Close() }
@@ -51,8 +76,7 @@ func (a *API) uploadMedia(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, tooLarge())
 		return
 	}
-	r.Body = http.MaxBytesReader(w, &deadlineBody{rc: http.NewResponseController(w), r: r.Body, idle: UploadIdleTimeout,
-		end: time.Now().Add(UploadMaxDuration)}, maxUploadBody)
+	r.Body = http.MaxBytesReader(w, newDeadlineBody(w, r.Body, a.opt.UploadMinKBps), maxUploadBody)
 	part, err := filePart(r)
 	if err != nil {
 		httpx.Error(w, r, err)

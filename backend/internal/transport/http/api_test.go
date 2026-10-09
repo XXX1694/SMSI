@@ -970,6 +970,44 @@ func TestMediaStalledUploadIsCutAndFreesTheSlot(t *testing.T) {
 	}
 }
 
+// A client dripping bytes below the speed floor is cut within the window, even though it never goes fully idle.
+func TestMediaSlowDripUploadIsCut(t *testing.T) {
+	oi, og := httptransport.UploadIdleTimeout, httptransport.UploadGrace
+	httptransport.UploadIdleTimeout, httptransport.UploadGrace = 5*time.Second, 300*time.Millisecond
+	t.Cleanup(func() { httptransport.UploadIdleTimeout, httptransport.UploadGrace = oi, og })
+	h := newHarness(t, opts{tune: func(c *config.Config) { c.MediaUploadConcurrency = 1; c.UploadMinKBps = 32 }})
+	a := h.anon()
+	a.register("media-drip@example.com")
+	key := a.req("POST", "/api/v1/developer/api-keys", map[string]any{"name": "k", "scopes": []string{"media:write"}}).obj(t)["key"].(string)
+
+	conn, err := net.Dial("tcp", h.srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	_, _ = fmt.Fprintf(conn, "POST /api/v1/media HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer %s\r\nContent-Type: multipart/form-data; boundary=zz\r\nContent-Length: 100000\r\n\r\n--zz\r\nContent-Disposition: form-data; name=\"file\"; filename=\"v.mp4\"\r\n\r\n%s", key, mp4Header)
+	start := time.Now()
+	go func() { // 1 byte every 100 ms: never idle for long, far below 32 KiB/s
+		for i := 0; i < 100; i++ {
+			time.Sleep(100 * time.Millisecond)
+			if _, err := conn.Write([]byte{0}); err != nil {
+				return
+			}
+		}
+	}()
+	_ = conn.SetReadDeadline(time.Now().Add(4 * time.Second))
+	line, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil || !strings.Contains(line, " 400 ") {
+		t.Fatalf("slow drip: %q %v", line, err)
+	}
+	if took := time.Since(start); took > 2*time.Second {
+		t.Fatalf("cut after %v, want within about the grace period", took)
+	}
+	if r := h.bearer(key).upload("a.png", pngBytes(t, 2, 2)); r.status != 201 {
+		t.Fatalf("a normal-speed upload after the cut: %d %s", r.status, r.body)
+	}
+}
+
 func TestMediaScopesAndLifecycle(t *testing.T) {
 	h := newHarness(t, opts{})
 	owner, other := h.anon(), h.anon()

@@ -44,6 +44,7 @@ type Config struct {
 	// combined memory (an old 64 MiB hash runs alone).
 	PasswordHashConcurrency int
 	PasswordHashMemoryMiB   int
+	UploadMinKBps           int // slowest accepted media upload, KiB/s (D-015)
 	MediaUploadConcurrency  int // media uploads streaming at once, each holding a 5 MiB part buffer (D-015)
 	TrustProxy              bool
 	TrustedProxies          []netip.Prefix // networks whose X-Forwarded-For is believed; empty = ignore the header (see proxies.go)
@@ -128,6 +129,7 @@ func Load() (*Config, error) {
 		AuthRateBurst:           envInt("AUTH_RATE_LIMIT_BURST", 10),
 		PasswordHashConcurrency: envInt("PASSWORD_HASH_CONCURRENCY", 2),
 		MediaUploadConcurrency:  envInt("MEDIA_UPLOAD_CONCURRENCY", 2),
+		UploadMinKBps:           envInt("UPLOAD_MIN_KBPS", 32),
 		PasswordHashMemoryMiB:   envInt("PASSWORD_HASH_MEMORY_MIB", 48),
 		TrustProxy:              envBool("TRUST_PROXY", false),
 		WorkerConc:              envInt("WORKER_CONCURRENCY", 10),
@@ -201,6 +203,9 @@ func (c *Config) validate(extra ...error) error {
 	}
 	if c.PasswordHashConcurrency < 1 {
 		problems = append(problems, "PASSWORD_HASH_CONCURRENCY must be at least 1")
+	}
+	if c.UploadMinKBps < 1 {
+		problems = append(problems, "UPLOAD_MIN_KBPS must be at least 1")
 	}
 	if c.MediaUploadConcurrency < 1 {
 		problems = append(problems, "MEDIA_UPLOAD_CONCURRENCY must be at least 1")

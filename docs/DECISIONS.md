@@ -286,8 +286,12 @@ arrive.
 - At most `MEDIA_UPLOAD_CONCURRENCY` (default 2) uploads run at once, the same pattern as D-011: a caller waits up to 5 s for
   a slot, then gets `429 RATE_LIMITED` with `Retry-After: 5`. The slot is taken before the body is read. A user holds at
   most one slot: a second concurrent upload by the same user is refused at once, so one account cannot starve the rest.
-  A connection read deadline moves forward on every read (30 s idle, 20 min in total), so a client sending 1 byte/s is cut
-  and frees its slot.
+  Speed floor: the connection read deadline
+  moves forward on every read (30 s idle), but once an upload is 5 s old it is cut as soon as its average speed since the
+  start is below `UPLOAD_MIN_KBPS` (default 32 KiB/s), and the total time is bounded by the size limit divided by that
+  floor (about 54 min for 101 MiB). One rule, so a 1 byte/25 s client is cut within the idle window and frees its slot. A
+  client can still bank speed with a fast burst and then slow down, but only until the average falls to the floor, and the
+  bytes it sent are bounded by the 100 MB limit.
 - MinIO is unchanged: with 5 MiB parts and at most two in flight its working set stayed at 44 of 80 MiB, and
   `MINIO_API_REQUESTS_MAX` made no difference in the same test, so no new setting was added. The caps (784m, within the
   664 MB slice as before) are unchanged.

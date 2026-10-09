@@ -235,7 +235,7 @@ func (a *App) Router() http.Handler {
 	}
 	return transport.NewRouter(a.Services, transport.Options{
 		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
-		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, GatewaySecret: a.Cfg.GatewaySecret,
+		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, UploadMinKBps: a.Cfg.UploadMinKBps, GatewaySecret: a.Cfg.GatewaySecret,
 		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
 		MailLimiter: a.MailLimit, MailDelivery: mailDelivery(a.Cfg), RequireVerification: requireVerification(a.Cfg),
 		TelegramWebhookSecret: webhookSecret,
