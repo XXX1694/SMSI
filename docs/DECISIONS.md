@@ -450,6 +450,12 @@ window, which is why it is short and why `GET` is audited. The 5 MiB part size c
 above the per-user media quota. The partial unique index means a crash that leaves a row `running` blocks the user until
 the sweep fails it (at most 2 hours plus the sweep interval).
 
+Accepted for now: with concurrency 1, an export queued behind others for more than 2 hours is failed by the sweep while
+still `pending` (`export.go`, `runningLimit`), and the user asks again. A build also needs its `MarkReady` to find the row
+`running`; if the sweep failed it first, the archive is deleted and the failure stands. On shutdown the export server waits
+only `ExportShutdownTimeout` (5 s by default) in parallel with the publish server, so a build in flight is marked
+`interrupted`; the upload itself is bounded by the build budget (90 minutes), not the 30 minutes of an ordinary upload.
+
 ## D-020: The product is renamed Steerpost; stored and host identifiers keep the `socialos` name (2026-10-09)
 
 **Decision.** The product, the MCP server, the generated client configs, the images, the npm packages and the Go module are

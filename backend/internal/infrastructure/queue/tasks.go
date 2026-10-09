@@ -10,6 +10,7 @@ import (
 	"github.com/hibiken/asynq"
 
 	"github.com/socialos/backend/internal/application/port"
+	"github.com/socialos/backend/internal/domain/dataexport"
 )
 
 // Task types. TypeAccountPurge is reserved for the account-deletion work.
@@ -125,7 +126,7 @@ func ForgotHandler(process func(ctx context.Context, email string) error) func(c
 
 // Export task options. The payload is only an id. MaxRetry is 0: a failed build is recorded on the export and the
 // user asks again, a blind retry would redo hours of work (D-018). Retention is 0 so a finished id can be queued again.
-const exportTimeout = 90 * time.Minute
+const exportTimeout = dataexport.BuildTimeout
 
 type exportPayload struct {
 	ExportID uuid.UUID `json:"export_id"`

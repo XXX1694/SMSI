@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/dataexport"
@@ -77,7 +78,7 @@ func (s *ExportService) stream(ctx context.Context, e *dataexport.Export, key st
 		_ = pw.CloseWithError(err) // nil closes with EOF
 		werr <- err
 	}()
-	putErr := s.d.Store.Put(ctx, key, pr, -1, "application/zip")
+	putErr := s.d.Store.Put(port.WithPutTimeout(ctx, dataexport.BuildTimeout), key, pr, -1, "application/zip")
 	_ = pr.CloseWithError(putErr) // unblocks the writer when the store gave up early
 	if err := <-werr; err != nil {
 		return 0, err

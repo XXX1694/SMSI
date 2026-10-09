@@ -59,7 +59,7 @@ func (r *Exports) Claim(ctx context.Context, id uuid.UUID) (*dataexport.Export, 
 // MarkReady records the finished archive (system).
 func (r *Exports) MarkReady(ctx context.Context, id uuid.UUID, key string, size int64, expiresAt time.Time) error {
 	tag, err := r.db.q(ctx).Exec(ctx,
-		`UPDATE data_exports SET status = 'ready', storage_key = $2, size_bytes = $3, expires_at = $4, error_code = '' WHERE id = $1`,
+		`UPDATE data_exports SET status = 'ready', storage_key = $2, size_bytes = $3, expires_at = $4, error_code = '' WHERE id = $1 AND status = 'running'`,
 		id, key, size, expiresAt)
 	return mustAffect(tag, err, "export")
 }
