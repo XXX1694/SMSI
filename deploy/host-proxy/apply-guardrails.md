@@ -97,7 +97,7 @@ cat /sys/fs/cgroup/socialos.slice/{memory.max,memory.high,memory.swap.max,pids.m
 systemctl status socialos.slice --no-pager | head -8
 ```
 
-Verify: every container shows `socialos.slice`, Memory equal to MemorySwap, PidsLimit 128; the slice files show
+Verify: every container shows `socialos.slice`, Memory equal to MemorySwap, PidsLimit 128; the Memory values are postgres 134217728, redis 33554432, **minio 201326592 (192m; 83886080 = the old 80m default thrashed, incident 2026-10-09)**, backend/worker/frontend 167772160, mcp 67108864 (sum 896m, more than the 664M slice: see the trade-off in README section 16); the slice files show
 `696254464`, `645922816`, `0`, `512`, `100000 100000` and `8:0 rbps=60000000 wbps=max riops=max wiops=max`; `deploy.sh` ended with
 `DEPLOYED`; `systemctl show socialos.slice -p MemoryCurrent` is about 300-400 MB (with page cache; `grep ^anon /sys/fs/cgroup/socialos.slice/memory.stat` is
 the figure the guard uses, expect about 120-250 MB, well under its 300 MB threshold); `ls /sys/fs/cgroup/system.slice | grep
@@ -169,7 +169,7 @@ Rollback: `systemctl disable socialos-caddy-precheck.service && rm /etc/systemd/
 ```bash
 cd /opt/socialos
 printf '\nGUARD_HEALTH_URLS="http://127.0.0.1:3001/ https://irbisa.com/"\n' >>.env
-./host-proxy/socialos-guard.sh --dry-run               # expect: "level 0 (... contributor: false); dry run, nothing changed"
+./host-proxy/socialos-guard.sh --dry-run               # expect: "level 0 (... contributor: false); dry run, nothing changed" (no "thrashing:")
 install -m 644 systemd/socialos-guard.service systemd/socialos-guard.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now socialos-guard.timer
@@ -246,7 +246,7 @@ containers already run outside the slice by then, so nothing needs recreating.
 
 | Risk | Likelihood | Impact on Irbisa | Mitigation after these steps | Gap |
 |---|---|---|---|---|
-| SocialOS memory leak / runaway | medium | swap thrash, OOM of Irbisa | per-container caps, no swap, slice 664M hard, oom_score_adj 500, guard (only if SocialOS contributes) | caps overcommit the slice (784m vs 664M): a SocialOS OOM, never Irbisa's |
+| SocialOS memory leak / runaway | medium | swap thrash, OOM of Irbisa | per-container caps, no swap, slice 664M hard, oom_score_adj 500, guard (only if SocialOS contributes) | caps overcommit the slice (896m vs 664M, about 35%; the slice hard cap still protects the host): a SocialOS OOM, never Irbisa's |
 | CPU spin in a container | medium | slower responses | slice quota 1 CPU, weight 50; guard on Irbisa CPU stall | - |
 | Fork bomb | low | no new threads host-wide (threads-max 15098, was 2264 per container) | pids_limit 128, slice TasksMax 512 | - |
 | Log flood | low | dockerd CPU and disk IO | json-file 5x10 MB per container, dockerd CPUQuota 25% | - |
@@ -263,3 +263,19 @@ containers already run outside the slice by then, so nothing needs recreating.
 | Failed deploy | medium | none | deploy.sh rolls back, inside the slice | - |
 | Pressure caused by Irbisa, apt or journald | medium | none from SocialOS | the guard alerts but stops nothing unless SocialOS contributes | - |
 | Caddy crash | low | Irbisa down | - | `caddy.service` has `Restart=no` (owner) |
+
+## Note: a thrashing container (incident 2026-10-09)
+
+With MinIO at 80m, `memory.current` sat at `memory.max`, `memory.events` showed `max` in the millions and
+`workingset_refault_file` grew by tens of MB/s: 327 GB read from disk in about 3 hours, IO pressure of the whole host at
+80-87%. Shedding the worker, mcp and frontend could not help, MinIO itself was the cause. Check a container by hand:
+
+```bash
+id=$(docker compose ps -q minio)   # the full container id
+cd /sys/fs/cgroup/socialos.slice/docker-"$id".scope && cat memory.current memory.max && grep workingset_refault_file memory.stat && cat memory.events
+```
+
+Run it twice a few seconds apart: a `workingset_refault_file` that grows by more than 5000 pages per second (20 MB/s)
+while `memory.current` is at `memory.max` means the cap is too small. The guard (`thrash-<service>` alert) restarts the
+container once an hour; the fix is a larger `<SERVICE>_MEM_LIMIT` (and a matching `GOMEMLIMIT`) in `.env` and
+`docker compose up -d <service>`.
