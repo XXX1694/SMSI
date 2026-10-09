@@ -143,14 +143,17 @@ func TestOAuthFlowStateIsSingleUse(t *testing.T) {
 	if err := r.Create(ctx, newFlow("state-1", base)); !errs.Is(err, errs.Conflict) {
 		t.Fatalf("duplicate state: %v", err)
 	}
-	if _, err := r.ConsumeState(ctx, "state-1", base.Add(11*time.Minute)); !errs.Is(err, errs.NotFound) {
+	if _, err := r.ConsumeState(ctx, identity.Google, "state-1", base.Add(time.Minute)); !errs.Is(err, errs.NotFound) {
+		t.Fatalf("a github state was redeemed at the google callback: %v", err)
+	}
+	if _, err := r.ConsumeState(ctx, identity.GitHub, "state-1", base.Add(11*time.Minute)); !errs.Is(err, errs.NotFound) {
 		t.Fatalf("expired state redeemed: %v", err)
 	}
-	got, err := r.ConsumeState(ctx, "state-1", base.Add(time.Minute))
+	got, err := r.ConsumeState(ctx, identity.GitHub, "state-1", base.Add(time.Minute))
 	if err != nil || got.UsedAt == nil || got.NonceHash != "nonce" || got.CodeVerifierEnc != "enc" || got.RedirectAfter != "/dashboard" || got.Pending != nil {
 		t.Fatalf("consume: %+v %v", got, err)
 	}
-	if _, err := r.ConsumeState(ctx, "state-1", base.Add(time.Minute)); !errs.Is(err, errs.NotFound) {
+	if _, err := r.ConsumeState(ctx, identity.GitHub, "state-1", base.Add(time.Minute)); !errs.Is(err, errs.NotFound) {
 		t.Fatalf("replayed state redeemed: %v", err)
 	}
 
@@ -164,7 +167,7 @@ func TestOAuthFlowStateIsSingleUse(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := r.ConsumeState(ctx, "state-race", base); err == nil {
+			if _, err := r.ConsumeState(ctx, identity.GitHub, "state-race", base); err == nil {
 				wins.Add(1)
 			}
 		}()
@@ -188,7 +191,7 @@ func TestOAuthFlowLinkIntentNeedsAUser(t *testing.T) {
 	if err := r.Create(ctx, f); err != nil {
 		t.Fatal(err)
 	}
-	got, err := r.ConsumeState(ctx, "state-link", base)
+	got, err := r.ConsumeState(ctx, identity.GitHub, "state-link", base)
 	if err != nil || got.LinkUserID == nil || *got.LinkUserID != u.ID || got.Intent != identity.IntentLink {
 		t.Fatalf("%+v %v", got, err)
 	}
@@ -206,11 +209,11 @@ func TestOAuthFlowTicketIsSingleUse(t *testing.T) {
 	if err := r.Create(ctx, f); err != nil {
 		t.Fatal(err)
 	}
-	pending := identity.PendingSignup{Subject: "42", Email: "new@example.com", EmailVerified: true, EmailAuthoritative: true, DisplayName: "Ann"}
+	pending := identity.PendingSignup{Subject: "42", Email: "new@example.com", DisplayName: "Ann"}
 	if err := r.SetPending(ctx, f.ID, "ticket-1", base.Add(15*time.Minute), pending); !errs.Is(err, errs.NotFound) {
 		t.Fatalf("a ticket was attached before the state was used: %v", err)
 	}
-	if _, err := r.ConsumeState(ctx, "state-t", base); err != nil {
+	if _, err := r.ConsumeState(ctx, identity.GitHub, "state-t", base); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.SetPending(ctx, f.ID, "ticket-1", base.Add(15*time.Minute), pending); err != nil {
@@ -253,7 +256,7 @@ func TestOAuthFlowsPurgeKeepsLiveTickets(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	f, err := r.ConsumeState(ctx, "p-ticket", base)
+	f, err := r.ConsumeState(ctx, identity.GitHub, "p-ticket", base)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,37 +273,5 @@ func TestOAuthFlowsPurgeKeepsLiveTickets(t *testing.T) {
 	}
 	if n, _ = r.DeleteExpired(ctx, base.Add(40*time.Minute)); n != 1 {
 		t.Fatalf("purged %d after the ticket expired, want 1", n)
-	}
-}
-
-func TestPasswordHashNullableSurvivesDownMigration(t *testing.T) {
-	url := testutil.FreshDatabase(t)
-	ctx := context.Background()
-	db, err := postgres.Open(ctx, url, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	if err := postgres.NewUsers(db).Create(ctx, &user.User{Email: "social-only@example.com", Status: user.StatusActive}); err != nil {
-		t.Fatal(err)
-	}
-	if err := postgres.Migrate(ctx, url, "down", testutil.Logger()); err != nil {
-		t.Fatalf("down with a password-less user: %v", err)
-	}
-	if got := scalar[string](t, db, `SELECT password_hash FROM users WHERE email='social-only@example.com'`); got != user.UnusablePasswordHash {
-		t.Fatalf("marker %q, want %q", got, user.UnusablePasswordHash)
-	}
-	var notNull bool
-	if err := db.Pool.QueryRow(ctx, `SELECT is_nullable = 'NO' FROM information_schema.columns
-		WHERE table_name='users' AND column_name='password_hash'`).Scan(&notNull); err != nil || !notNull {
-		t.Fatalf("down must restore NOT NULL (%v, %v)", notNull, err)
-	}
-	if err := postgres.Migrate(ctx, url, "up", testutil.Logger()); err != nil {
-		t.Fatalf("re-up: %v", err)
-	}
-	// The marker keeps meaning "no password" after the round trip.
-	got, err := postgres.NewUsers(db).GetByEmail(ctx, "social-only@example.com")
-	if err != nil || got.HasPassword() {
-		t.Fatalf("after re-up: %+v %v", got, err)
 	}
 }

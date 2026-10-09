@@ -1,4 +1,5 @@
 -- +goose Up
+SET LOCAL lock_timeout = '5s';
 -- Social sign-in (D-023): which external accounts (Google, GitHub) may sign in as which user, and the short-lived
 -- state of a sign-in round trip. Provider access tokens are never stored: they are used once and dropped.
 
@@ -44,6 +45,8 @@ CREATE TABLE auth_oauth_flows (
 );
 -- Serves the purge of expired flows.
 CREATE INDEX auth_oauth_flows_exp_idx ON auth_oauth_flows(expires_at);
+-- Serves the foreign key: deleting a user looks up the flows that link to them.
+CREATE INDEX auth_oauth_flows_link_user_idx ON auth_oauth_flows(link_user_id) WHERE link_user_id IS NOT NULL;
 
 CREATE TRIGGER user_identities_updated_at BEFORE UPDATE ON user_identities
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -52,8 +55,11 @@ CREATE TRIGGER auth_oauth_flows_updated_at BEFORE UPDATE ON auth_oauth_flows
 
 -- A user who signed up through a provider has no password until they set one.
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+-- Users that an earlier Down marked with "!" (see below) have no password again.
+UPDATE users SET password_hash = NULL WHERE password_hash = '!';
 
 -- +goose Down
+SET LOCAL lock_timeout = '5s';
 DROP TABLE IF EXISTS auth_oauth_flows;
 DROP TABLE IF EXISTS user_identities;
 -- NOT NULL needs a value for the password-less users. "!" is not a valid argon2 encoding, so it can never verify:

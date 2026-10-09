@@ -35,14 +35,13 @@ type Owner struct {
 	EmailVerified bool
 }
 
-// Decision is the outcome of Decide.
+// Decision is the outcome of Decide. Both LinkAndSignIn and SignUp imply an authoritative email: the account's
+// address is stored as verified.
 type Decision struct {
 	Action Action
 	// UserID is the user to sign in (SignIn, LinkAndSignIn).
 	UserID uuid.UUID
 	Reason Reason
-	// VerifyEmail tells the caller to store the account's email as verified (LinkAndSignIn, SignUp).
-	VerifyEmail bool
 }
 
 // Decide applies the linking rules for a sign-in with no session. It is pure: the caller looks up
@@ -54,7 +53,10 @@ type Decision struct {
 //     local address is already verified. Anything else is refused: linking an unverified local account would let
 //     someone who registered with a victim's email first ("pre-hijacking") take over the victim's later Google sign-in,
 //     and an address the provider does not vouch for proves nothing about the person.
-//  3. No match starts a sign-up, but only with a verified email.
+//  3. No match starts a sign-up, but only when the provider is authoritative for the address, and the new account's
+//     email is then stored as verified. A merely "verified" address on a custom domain can change hands, and an
+//     account created with it would let its next owner pre-empt the real person; such sign-ups end with
+//     email_unverified.
 func Decide(claims Claims, byIdentity, byEmail *Owner) Decision {
 	if byIdentity != nil {
 		if !byIdentity.Active {
@@ -74,11 +76,14 @@ func Decide(claims Claims, byIdentity, byEmail *Owner) Decision {
 			return refuse(ReasonAccountUnavailable)
 		}
 		if claims.AuthoritativeEmail() && byEmail.EmailVerified {
-			return Decision{Action: LinkAndSignIn, UserID: byEmail.UserID, VerifyEmail: true}
+			return Decision{Action: LinkAndSignIn, UserID: byEmail.UserID}
 		}
 		return refuse(ReasonAccountExists)
 	}
-	return Decision{Action: SignUp, VerifyEmail: claims.AuthoritativeEmail()}
+	if !claims.AuthoritativeEmail() {
+		return refuse(ReasonEmailUnverified)
+	}
+	return Decision{Action: SignUp}
 }
 
 func refuse(r Reason) Decision { return Decision{Action: Refuse, Reason: r} }

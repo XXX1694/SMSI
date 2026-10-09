@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/errs"
-	"github.com/socialos/backend/internal/domain/user"
 )
 
 // verifyLog records which stored hash every Verify call was made against.
@@ -26,7 +26,7 @@ func (r *rig) socialOnly(hash string) {
 }
 
 func TestLoginOfPasswordlessUserCostsTheSameAsAnyOtherFailure(t *testing.T) {
-	for _, hash := range []string{"", user.UnusablePasswordHash} {
+	for _, hash := range []string{""} {
 		r := newRig(t, false)
 		h := &verifyLog{}
 		r.svc.hasher = h
@@ -68,8 +68,8 @@ func TestPasswordlessUserCannotChangePasswordButCanResetIt(t *testing.T) {
 	a := actor.Actor{UserID: r.u.ID, Type: actor.TypeUser, SessionID: r.addSession()}
 	err := r.svc.ChangePassword(ctx, a, "", "brand new password", false)
 	wantCode(t, err, errs.Conflict)
-	if e, _ := errs.As(err); e.Fields["current_password"] == "" {
-		t.Fatalf("the error must point at the current_password field: %+v", e)
+	if e, _ := errs.As(err); !strings.Contains(e.Message, "Forgot password?") {
+		t.Fatalf("the error must point to Forgot password: %+v", e)
 	}
 	if r.u.HasPassword() || len(r.mail.got) != 0 {
 		t.Fatal("a rejected change must not set a password or send a notice")

@@ -501,13 +501,17 @@ sessions. Hand-rolled OIDC: verifying ID tokens ourselves (algorithm confusion, 
    already verified. Otherwise the flow ends with `account_exists` ("sign in with your password, then connect the provider in
    Settings"). Unverified emails are never auto-linked: that blocks pre-hijacking, where someone registers a victim's address
    first. Production does not verify emails yet (`MAIL_PROVIDER=log`), so this refusal will be common for existing users.
-3. No match starts a pending sign-up, completed after the user accepts the Terms (D-016); no user row exists before that. A
-   provider without a verified email ends with `email_unverified`. The new account's email is stored as verified only when the
-   provider is authoritative for it.
+3. No match starts a pending sign-up, completed after the user accepts the Terms (D-016); no user row exists before that. It
+   starts only when the provider is authoritative for the address; anything weaker (no email, unverified, or verified on a
+   custom domain without `hd`) ends with `email_unverified`, because an account created with an address that can change hands
+   would let its next owner pre-empt the real person. The new account's email is stored as verified.
+
+Any future generic OIDC issuer (Keycloak, Authentik) gets its own provider id and is never authoritative: the gmail.com and
+`hd` rules apply only to tokens issued by `https://accounts.google.com`.
 
 Users may have no password (`users.password_hash` is nullable): login spends the cost of a real check for them, so timing does
 not reveal them, and password change points them to set-password. Provider email changes are not synced to `users.email`.
 
 **Consequences.** Google needs a domain the owner can verify (sslip.io hosts cannot be), so GitHub ships first. We now own
 account-linking security. Flow state lives in `auth_oauth_flows` (migration 00008) as hashes; user links in `user_identities`.
-The Down migration marks password-less users with an unusable hash, so they sign in again only through a password reset.
+The Down migration marks password-less users with `!`, which never verifies, so they sign in again only through a password reset; the next Up turns the marker back into NULL. Migration versions must be contiguous (goose rejects a number below an applied one), so migration PRs merge in number order.
