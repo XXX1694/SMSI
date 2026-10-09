@@ -81,7 +81,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 		CORSOrigins: []string{"http://web.test"}, SessionTTL: time.Hour, MockProviders: true,
 		RateLimitRPS: 1000, RateLimitBurst: 1000, AuthRateRPS: 1000, AuthRateBurst: 1000, StorageDriver: "memory",
 		ApprovalConfig: config.ApprovalConfig{AgentMinScheduleLead: 5 * time.Minute, ApprovalTTL: 10 * time.Minute, ApprovalMaxPending: 10},
-		QuotaConfig:    config.QuotaConfig{QuotaAccounts: -1, QuotaPostsPerMonth: -1, QuotaMediaMB: -1}, // tests opt in to limits
+		QuotaConfig:    config.QuotaConfig{QuotaAccounts: -1, QuotaPostsPerMonth: -1, QuotaMediaMB: -1, QuotaAgentRPM: -1}, // tests opt in to limits
 		TelegramToken:  "", LinkedInVersion: "202606", MetricsToken: o.metricsToken,
 	}
 	if o.rateBurst > 0 {

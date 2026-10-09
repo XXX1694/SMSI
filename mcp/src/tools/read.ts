@@ -81,4 +81,15 @@ export const readTools = [
     annotations: { title: "Get analytics", ...readOnly },
     handler: (c, a) => c.request("GET", "/analytics", { query: a }),
   }),
+  defineTool({
+    name: "get_usage",
+    title: "Get plan usage",
+    scope: "analytics:read",
+    risk: "safe",
+    description:
+      "Get the plan and what has been used against its limits this month: connected accounts, scheduled or published posts, media storage in bytes, and the agent request rate. A limit of -1 means unlimited. Check it before scheduling many posts or uploading media.",
+    inputSchema: {},
+    annotations: { title: "Get plan usage", ...readOnly },
+    handler: (c) => c.request("GET", "/account/usage"),
+  }),
 ];

@@ -262,7 +262,7 @@ confirmation under the "Dangerous" heading. Changing the policy of an existing k
 
 ## D-014: Plan limits are counted in the application layer under a per-user row lock (2026-10-09)
 
-**Context.** A public instance needs caps (accounts, posts per month, media storage) so one user cannot
+**Context.** A public instance needs caps (accounts, posts per month, media storage, agent request rate) so one user cannot
 exhaust the shared host (D-012), and self-hosters need to switch them off. Migration `00003` already carries
 `users.plan` and `posts.quota_counted_at`.
 
@@ -272,9 +272,10 @@ the application services (`accounts.connectAccount`, `posts.scheduleLocked` and 
 then counts, then lets the caller write. `FOR NO KEY UPDATE` conflicts only with itself, so inserts of child rows (which
 take key-share locks on the user) are not held up, while two requests of one user queue and cannot both pass the check. A
 post counts once, when it is first scheduled or published (`quota_counted_at`, set-once), so unschedule/schedule and
-retries are free and deleting does not refund. Posts are counted per UTC month. A refusal is the typed error
-`QUOTA_EXCEEDED` (403), mapped once in `httpx`. Usage is shown by `GET /account/usage`. The per-user cap on agent requests follows
-in the next PR.
+retries are free and deleting does not refund. Posts are counted per UTC month. The request rate is a token bucket in
+memory per API instance, keyed by user (not by key) and applied to API-key actors only. A refusal is the typed error
+`QUOTA_EXCEEDED` (403), mapped once in `httpx`; the rate cap stays `RATE_LIMITED` (429). Usage is shown by
+`GET /account/usage`, the MCP tool `get_usage` and a card in Settings.
 
 **Alternatives.** A `plans` table: no second plan exists yet, and env is enough for self-hosters (the column stays for it).
 A database trigger or constraint: hides the rule from the code and the tests and cannot say what to do about it.
@@ -283,6 +284,7 @@ lock: not tied to the row and invisible in `pg_locks` joins with users. A counte
 paths that forget it. Counting scheduled posts instead of first-scheduled ones: lets a user cycle posts forever.
 
 **Consequences.** Every counted change takes one row lock per user for the length of its transaction (short, and only
-for users who have limits switched on). Media: concurrent uploads cannot overshoot, but a refused upload that passed the early check has
+for users who have limits switched on). The agent cap is per instance, so with N API replicas the effective cap is up to
+N times the setting. Media: concurrent uploads cannot overshoot, but a refused upload that passed the early check has
 stored and then deleted its object. Existing users are counted from the first day of use; nothing is retro-fitted, so a
 user already above a limit keeps what they have and cannot add more. Raising a limit needs only an env change.

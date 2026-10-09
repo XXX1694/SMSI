@@ -138,3 +138,26 @@ func bucketAddr(ip string) string {
 	}
 	return a.String()
 }
+
+// AgentRateLimit caps the requests of all API keys and MCP connections of one user together (QUOTA_AGENT_RPM), so
+// minting more keys does not raise the cap. Browser sessions are not counted; a nil limiter switches it off.
+func AgentRateLimit(l *Limiter, m *observability.Metrics) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if l == nil {
+			return next
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if a, ok := actor.From(r.Context()); ok && a.Type == actor.TypeAPIKey {
+				if ok, wait := l.Allow("agent:user:" + a.UserID.String()); !ok {
+					if m != nil {
+						m.RateLimited.Inc()
+					}
+					w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(wait.Seconds()))))
+					httpx.ErrorCode(w, r, errs.RateLimited, "agent request limit reached for your plan; retry after the pause in Retry-After")
+					return
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

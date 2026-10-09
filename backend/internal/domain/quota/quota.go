@@ -14,6 +14,7 @@ const (
 	ConnectedAccounts   Metric = "connected_accounts"
 	ScheduledPostsMonth Metric = "scheduled_posts_month"
 	MediaBytes          Metric = "media_bytes"
+	AgentRPM            Metric = "agent_requests_per_minute"
 )
 
 // Unlimited is the limit value that switches a limit off.
@@ -24,6 +25,7 @@ type Limits struct {
 	Accounts      int
 	PostsPerMonth int
 	MediaBytes    int64
+	AgentRPM      int
 }
 
 // For returns the cap of a metric.
@@ -35,6 +37,8 @@ func (l Limits) For(m Metric) int64 {
 		return int64(l.PostsPerMonth)
 	case MediaBytes:
 		return l.MediaBytes
+	case AgentRPM:
+		return int64(l.AgentRPM)
 	}
 	return Unlimited
 }

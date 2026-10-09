@@ -56,7 +56,7 @@
 
 **For AI agents**
 
-- An MCP server with 13 tools, over Streamable HTTP or stdio.
+- An MCP server with 14 tools, over Streamable HTTP or stdio.
 - Keys carry only the scopes you tick. Tools outside a key's scope are not even listed, and the API checks every call again.
 - `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in SocialOS before it runs.
 - Every agent action is in the audit log, with an "Agent actions" filter.
@@ -115,7 +115,7 @@ config. The MCP endpoint is `https://mcp.<your-domain>/mcp` on a server and `htt
 |---|---|---|
 | `list_social_accounts`, `get_social_account` | `social:read` | safe |
 | `list_posts`, `get_post`, `get_post_status` | `posts:read` | safe |
-| `get_analytics` | `analytics:read` | safe |
+| `get_analytics`, `get_usage` | `analytics:read` | safe |
 | `create_draft`, `update_post` | `posts:write` | safe / low |
 | `cancel_scheduled_post` | `posts:write` | medium |
 | `schedule_post` | `posts:schedule` | medium |

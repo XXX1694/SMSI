@@ -53,6 +53,8 @@ type Options struct {
 	Ready         []ReadyCheck
 	APILimiter    *middleware.Limiter
 	AuthLimiter   *middleware.Limiter
+	// AgentLimiter caps all API-key requests of one user together; nil = no cap.
+	AgentLimiter *middleware.Limiter
 	// MailLimiter throttles endpoints that send or redeem mail (default 1 per minute, burst 3, per client).
 	MailLimiter *middleware.Limiter
 	// MailDelivery is the configured mail provider ("log" or "smtp"); /me and the mail endpoints report it.
@@ -106,7 +108,7 @@ func NewRouter(svc Services, opt Options) http.Handler {
 		}
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Gateway(opt.GatewaySecret), middleware.Authenticate(svc.Auth, a.trusted), middleware.ApprovalID, middleware.APIKeyAudit(svc.Audit, opt.Logger),
-				middleware.RateLimit(opt.APILimiter, a.trusted, opt.Metrics, "api:"), middleware.CSRF)
+				middleware.RateLimit(opt.APILimiter, a.trusted, opt.Metrics, "api:"), middleware.AgentRateLimit(opt.AgentLimiter, opt.Metrics), middleware.CSRF)
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RateLimit(opt.AuthLimiter, a.trusted, opt.Metrics, "auth:"))
 				r.Post("/auth/register", a.register)

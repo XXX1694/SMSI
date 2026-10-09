@@ -1,6 +1,6 @@
 # SocialOS MCP server
 
-TypeScript MCP server (official `@modelcontextprotocol/sdk`) that exposes the SocialOS REST API as 13 tools.
+TypeScript MCP server (official `@modelcontextprotocol/sdk`) that exposes the SocialOS REST API as 14 tools.
 It holds no state and no social-network credentials: every call is forwarded to the REST API with the caller's API key.
 Tools are listed per key scope (`GET /me`), and the REST API enforces scopes again on every call.
 

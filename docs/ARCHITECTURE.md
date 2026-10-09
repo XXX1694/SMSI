@@ -218,8 +218,9 @@ One `free` plan; the limits come from env and `-1` switches one off. The applica
 | `connected_accounts` | `QUOTA_ACCOUNTS=5` | non-revoked social accounts; reconnecting one you have is free | `accounts.connectAccount` (OAuth, token and chat connects) |
 | `scheduled_posts_month` | `QUOTA_POSTS_PER_MONTH=60` | posts whose `quota_counted_at` is in the current UTC month; set once, when a post is first scheduled or published. Drafts are free, unschedule then schedule does not count twice, deleting does not give it back | `posts.scheduleLocked`, `posts.startPublishing` |
 | `media_bytes` | `QUOTA_MEDIA_MB=500` | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (early refusal before the object is stored, authoritative check with the insert) |
+| `agent_requests_per_minute` | `QUOTA_AGENT_RPM=120` | requests of all API keys and MCP connections of one user together (in memory, per API instance); browser sessions are not limited | `middleware.AgentRateLimit`; over the cap it is `429 RATE_LIMITED` with `Retry-After` |
 
-`GET /account/usage` (scope `analytics:read`) → `{plan, period_start, period_end, quotas:{connected_accounts:{used,limit}, scheduled_posts_month:{used,limit}, media_bytes:{used,limit}}}`; `limit` -1 = unlimited.
+`GET /account/usage` (scope `analytics:read`) → `{plan, period_start, period_end, quotas:{connected_accounts:{used,limit}, scheduled_posts_month:{used,limit}, media_bytes:{used,limit}, agent_requests_per_minute:{limit}}}`; `limit` -1 = unlimited. The MCP tool `get_usage` returns it.
 
 ### Approvals
 Dangerous actions made with an **API key** (not a browser session) need the owner's approval first (D-013): `POST /posts/{id}/publish`, `POST /posts/{id}/retry` without `scheduled_at`, `DELETE /posts/{id}`, `DELETE /social/accounts/{id}`, `POST /social/accounts/token`, and any schedule (`POST /posts` with `schedule`, `POST /posts/{id}/schedule`, `PATCH /posts/{id}` or `POST /posts/{id}/retry` with a time) less than `AGENT_MIN_SCHEDULE_LEAD` (default 5m) ahead. The scope check comes first (403); then, for a key whose `dangerous_policy` is `approve` (the default), the call answers `428` and does nothing:
@@ -262,6 +263,7 @@ Transport: Streamable HTTP at `POST /mcp` with `Authorization: Bearer sk_live_�
 | get_post | posts:read | safe | GET /posts/{id} |
 | get_post_status | posts:read | safe | GET /posts/{id}/status |
 | get_analytics | analytics:read | safe | GET /analytics |
+| get_usage | analytics:read | safe | GET /account/usage |
 | create_draft `{content, social_account_ids[], media_ids?, title?, per_platform_content?}` | posts:write | safe | POST /posts |
 | update_post | posts:write | low | PATCH /posts/{id} |
 | schedule_post `{post_id, scheduled_at, approval_id?}` | posts:schedule | medium | POST /posts/{id}/schedule |
