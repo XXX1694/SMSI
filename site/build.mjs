@@ -2,7 +2,8 @@
 /**
  * Builds the SocialOS website into site/dist:
  *   /                landing page
- *   /docs/...        documentation rendered from the repo's markdown (README.md, docs/ARCHITECTURE.md, mcp/README.md)
+ *   /docs/...        documentation rendered from the repo's markdown (README.md, docs/GETTING-STARTED.md,
+ *                    docs/integrations/README.md, docs/API.md, docs/ARCHITECTURE.md, mcp/README.md)
  *   /demo/           the browser-only demo (the static export from frontend/, `npm run build:demo`)
  *   /assets/...      css, js, font, screenshots
  *
@@ -44,6 +45,9 @@ const fail = (msg) => {
 /** Where each markdown file now lives on the site, for rewriting relative links. */
 const PAGE_OF = {
   'README.md': 'docs/',
+  'docs/GETTING-STARTED.md': 'docs/getting-started/',
+  'docs/integrations/README.md': 'docs/providers/',
+  'docs/API.md': 'docs/api/',
   'docs/ARCHITECTURE.md': 'docs/architecture/',
   'mcp/README.md': 'docs/mcp/',
 };
@@ -159,27 +163,27 @@ function renderBlocks(blocks) {
 // ------------------------------------------------------------------ docs pages
 
 const readme = sectionsOf('README.md');
-const arch = sectionsOf('docs/ARCHITECTURE.md');
-const mcpReadme = sectionsOf('mcp/README.md');
 const R = (...t) => take(readme, ...t).map((s) => ({ tokens: s.tokens, dir: '' }));
 
-/** The README intro (text before the first H2) without its H1. */
-const readmeIntro = readme[0].tokens.filter((t) => !(t.type === 'heading' && t.depth === 1));
-readmeIntro.links = readme[0].tokens.links;
+/** A whole markdown file without its H1 (the page title comes from the config), rendered relative to its folder. */
+function wholeFile(file) {
+  const sections = sectionsOf(file);
+  const tokens = sections.flatMap((s) => s.tokens).filter((t) => !(t.type === 'heading' && t.depth === 1));
+  return { tokens: Object.assign(tokens, { links: sections[0].tokens.links }), dir: posix.dirname(file) === '.' ? '' : posix.dirname(file) };
+}
 
-const mcpServerTokens = mcpReadme.flatMap((s) => s.tokens);
-mcpServerTokens.links = mcpReadme[0].tokens.links;
-const archTokens = arch.flatMap((s) => s.tokens);
-archTokens.links = arch[0].tokens.links;
+const mcpServer = wholeFile('mcp/README.md');
+const serverReference = { type: 'heading', depth: 1, raw: '# Server reference\n', text: 'Server reference', tokens: [{ type: 'text', raw: 'Server reference', text: 'Server reference' }] };
 
+// The README's intro (wordmark, badges, hero image) is made for GitHub, so the overview starts at its first section.
 const DOCS = [
   {
     slug: '',
     nav: 'Overview',
     title: 'Overview',
-    description: 'What SocialOS is, how its parts fit together and how its security model works.',
+    description: 'What SocialOS is, what it does today, which networks it supports and how its parts fit together.',
     lead: 'Run SocialOS yourself, connect your accounts and let AI agents work with them through a scoped MCP server.',
-    blocks: () => [{ tokens: readmeIntro, dir: '' }, ...R('Architecture')],
+    blocks: () => R('Why SocialOS', 'Features', 'Supported networks', 'Architecture'),
   },
   {
     slug: 'getting-started',
@@ -187,7 +191,7 @@ const DOCS = [
     title: 'Getting started',
     description: 'Run SocialOS locally with Docker, configure it, apply migrations and run the test suites.',
     lead: 'From a clean checkout to a running stack, with or without production credentials.',
-    blocks: () => R('Local setup', 'Environment variables', 'Database migrations', 'Running the components individually', 'Tests', 'Acceptance criterion', 'Production notes'),
+    blocks: () => [wholeFile('docs/GETTING-STARTED.md')],
   },
   {
     slug: 'providers',
@@ -195,7 +199,7 @@ const DOCS = [
     title: 'Social providers and OAuth setup',
     description: 'What LinkedIn and Telegram support, how to add a provider and how to set up OAuth and the Telegram bot.',
     lead: 'Capabilities are reported per provider, honestly. Only LinkedIn and Telegram publish today.',
-    blocks: () => R('Social providers', 'OAuth setup'),
+    blocks: () => [wholeFile('docs/integrations/README.md')],
   },
   {
     slug: 'api',
@@ -203,15 +207,15 @@ const DOCS = [
     title: 'REST API',
     description: 'Endpoints, error format, post lifecycle and publishing idempotency of the SocialOS REST API.',
     lead: 'Everything the app and the MCP server do goes through this API. The full contract, including the database and scheduler, is in the architecture reference.',
-    blocks: () => R('API documentation'),
+    blocks: () => [wholeFile('docs/API.md')],
   },
   {
     slug: 'mcp',
     nav: 'MCP server',
     title: 'MCP server',
-    description: 'The SocialOS MCP tools, their scopes and risk levels, and how to configure Claude Desktop, Claude Code and other clients.',
+    description: 'The SocialOS MCP tools, their scopes and risk levels, and how to configure Claude Code, Cursor, Claude Desktop and other clients.',
     lead: 'Agents connect with a scoped, revocable API key. Tools a key has no scope for are not listed, and every call is checked again by the REST API.',
-    blocks: () => [...R('MCP documentation'), { tokens: Object.assign([{ type: 'heading', depth: 1, raw: '# Server reference\n', text: 'Server reference', tokens: [{ type: 'text', raw: 'Server reference', text: 'Server reference' }] }, ...mcpServerTokens.filter((t) => !(t.type === 'heading' && t.depth === 1))], { links: mcpServerTokens.links }), dir: 'mcp', shift: 1 }],
+    blocks: () => [...R('Use with your AI agent'), { ...mcpServer, tokens: Object.assign([serverReference, ...mcpServer.tokens], { links: mcpServer.tokens.links }), shift: 1 }],
   },
   {
     slug: 'architecture',
@@ -219,8 +223,7 @@ const DOCS = [
     title: 'Architecture and contract',
     description: 'The single source of truth: services, domain rules, database schema, REST contract, MCP tools, scheduler and OAuth flow.',
     lead: 'The reference for how the pieces fit: services, the database, the REST contract, MCP tools and the publishing flow.',
-    blocks: () => [{ tokens: archTokens.filter((t, i) => !(i < 3 && t.type === 'heading' && t.depth === 1)), dir: 'docs' }],
-    stripIntro: true,
+    blocks: () => [wholeFile('docs/ARCHITECTURE.md')],
   },
 ];
 
@@ -269,9 +272,9 @@ function pngSize(file) {
 // ------------------------------------------------------------------ MCP tools table (from the README)
 
 function mcpToolsTable() {
-  const section = take(readme, 'MCP documentation')[0];
+  const section = take(readme, 'Use with your AI agent')[0];
   const table = section.tokens.find((t) => t.type === 'table');
-  if (!table) fail('README.md "MCP documentation" has no tool table');
+  if (!table) fail('README.md "Use with your AI agent" has no tool table');
   const { md } = makeRenderer();
   const renderCell = (c) => md.parseInline(c.text);
   let count = 0;
