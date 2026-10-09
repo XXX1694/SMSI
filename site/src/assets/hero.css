@@ -54,7 +54,7 @@
 .stage-cap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 1rem; margin: 0.5rem 0 0; font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
 
 /* Pause motion: a quiet text button with its state exposed as a toggle (aria-pressed). */
-.pause { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; margin-right: -0.6rem; padding: 0 0.6rem; border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; transition: color 0.3s, background-color 0.3s; }
+.pause { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; margin-inline-end: -0.6rem; padding: 0 0.6rem; border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; transition: color 0.3s, background-color 0.3s; }
 .pause[hidden] { display: none; }
 .pause:hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
 .pause .ic-play, .pause[aria-pressed='true'] .ic-pause { display: none; }
