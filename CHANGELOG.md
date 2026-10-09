@@ -6,11 +6,17 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-09
+
 ### Added
 
 - Agent request limit `QUOTA_AGENT_RPM`: requests per minute for all API keys and MCP connections of a user together, answered with `429 RATE_LIMITED`. Off by default (`-1`), like the other plan limits (D-014).
 - MCP tool `get_usage` (the 14th, scope `analytics:read`) shows the plan, the period and what is used against each limit.
 - Settings shows a "Plan & usage" card: the plan, the period and what is used against each limit (from `GET /account/usage`), with plain-English copy for `QUOTA_EXCEEDED`.
+
+### Fixed
+
+- Host-proxy mode: MinIO's 80m memory cap made it thrash its page cache (327 GB read from disk in 3 hours, host IO stall, API 503). The default is now 192m with `GOMEMLIMIT=144MiB`, and `socialos-guard.sh` detects a thrashing container (memory at its cap plus fast `workingset_refault_file` growth), alerts naming it and restarts it once per cooldown instead of shedding services that cannot help (D-012). The README notes that scheduled GitHub workflows are best-effort and recommends an external uptime monitor.
 
 ## [0.2.0] - 2026-10-09
 
@@ -55,7 +61,6 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
-- Host-proxy mode: MinIO's 80m memory cap made it thrash its page cache (327 GB read from disk in 3 hours, host IO stall, API 503). The default is now 192m with `GOMEMLIMIT=144MiB`, and `socialos-guard.sh` detects a thrashing container (memory at its cap plus fast `workingset_refault_file` growth), alerts naming it and restarts it once per cooldown instead of shedding services that cannot help (D-012). The README notes that scheduled GitHub workflows are best-effort and recommends an external uptime monitor.
 - Large uploads no longer exhaust memory on a small host: media is streamed to object storage in 5 MiB parts (no temp files, no whole-file buffering), the size and type limits are enforced while streaming and the partial object is removed on failure, and at most `MEDIA_UPLOAD_CONCURRENCY` (2) uploads run at once, the rest waiting 5 s and then getting `429 RATE_LIMITED` with `Retry-After`. The web UI uploads directly to the API host, so videos are no longer cut at the Next.js proxy's 10 MB (D-015).
 - Cancelling, unscheduling or publishing a post while the worker publishes it can no longer deadlock and fail with a 500: the API and the worker now lock rows in the same order (post, then target). A database deadlock or serialization failure that still happens is reported as a retryable `CONFLICT` (#38).
 - Deploying or restarting the worker during a publish no longer sends that post to review: on SIGTERM the worker stops taking tasks, lets in-flight publishes finish (up to `WORKER_SHUTDOWN_TIMEOUT`, default 30s, at most 35s; the worker's `stop_grace_period` is now 45s instead of Docker's 10s), stops its background jobs and only then closes the database. The worker's health address is configurable as `WORKER_HTTP_ADDR` (#39).
@@ -100,6 +105,7 @@ First release: the MVP, ready to self-host on one server.
 - A Telegram channel can only be connected by proving ownership with a one-time link code.
 - CI scans every change: govulncheck, npm audit, gitleaks over the history, Trivy on the images and CodeQL; the runtime images no longer ship npm.
 
-[Unreleased]: https://github.com/XXX1694/SMSI/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/XXX1694/SMSI/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/XXX1694/SMSI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/XXX1694/SMSI/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/XXX1694/SMSI/releases/tag/v0.1.0
