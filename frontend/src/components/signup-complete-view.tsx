@@ -1,4 +1,5 @@
 'use client';
+import { centerOf, heroFill } from '@/lib/hero';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
@@ -45,7 +46,7 @@ function SignupForm({ pending }: { pending: PendingSignup }) {
     setBusy(true);
     try {
       await completeSignup(name.trim(), true);
-      router.replace(safeNext(pending.next) ?? '/dashboard');
+      heroFill(centerOf(document.activeElement), () => router.replace(safeNext(pending.next) ?? '/dashboard'));
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) router.replace(EXPIRED);
       else if (err instanceof ApiError && err.fields.display_name) {

@@ -265,8 +265,10 @@ and never blocking input:
 2. Publishing now: a diagonal accent wipe crosses the screen; the success state lands after it.
 3. Scheduling from the composer: the post card moves into its slot in the calendar (a shared-element transition).
 
-They use the View Transitions API, fall back to a plain overlay animation where it is missing, and become a 120 ms
-cross-fade under reduced motion or Pause motion.
+The fill and the wipe are one accent overlay animated with the Web Animations API (`frontend/src/lib/hero.ts`): it needs
+no page snapshot, works in every current browser and never takes the pointer. The composer-to-calendar move needs a
+shared element, so it uses the View Transitions API with a plain fade where that is missing. Under reduced motion or Pause
+motion there is no hero transition at all: the action simply happens.
 
 **The steering motif.** A line eases in, bends, and settles on its target. Used in two places only: the logo (the path draws
 and the tip follows, once, on first paint) and the hero (lanes of drafts bend toward one gate, wait there, then fan out).

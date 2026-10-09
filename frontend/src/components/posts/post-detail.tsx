@@ -1,4 +1,5 @@
 'use client';
+import { heroWipe } from '@/lib/hero';
 import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -228,7 +229,7 @@ export function PostDetail({ id }: { id: string }) {
           <Attempts attempts={post.attempts ?? []} post={post} />
         </Section>
       </div>
-      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title={t('composer.publishConfirmTitle')} description={t('composer.publishConfirmBody', { accounts: joinList([...new Set(post.targets.map((x) => providerName(x.platform)))], t) })} confirmLabel={t('composer.publishNow')} onConfirm={act(() => api.posts.publish(id), t('composer.publishStarted'))} />
+      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title={t('composer.publishConfirmTitle')} description={t('composer.publishConfirmBody', { accounts: joinList([...new Set(post.targets.map((x) => providerName(x.platform)))], t) })} confirmLabel={t('composer.publishNow')} onConfirm={act(() => Promise.all([api.posts.publish(id), heroWipe()]), t('composer.publishStarted'))} />
       <RetryPostDialog postId={id} open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} onRetried={() => { toast.success(t('posts.retryStarted')); reload(); }} />
       <ConfirmDialog open={dlg === 'cancel'} onOpenChange={(o) => !o && setDlg(null)} title={t('posts.cancelTitle')} description={t('posts.cancelBody')} confirmLabel={t('posts.cancelPost')} dismissLabel={t('posts.keepPost')} destructive onConfirm={act(() => api.posts.cancel(id), t('posts.canceled'))} />
       <ConfirmDialog
