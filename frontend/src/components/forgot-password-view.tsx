@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { AuthShell } from '@/components/auth-shell';
-import { Notice } from '@/components/states';
+import { InlineError, Notice } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { errorMessage } from '@/hooks';
@@ -46,9 +46,7 @@ export function ForgotPasswordView() {
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         {error ? (
-          <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
+          <InlineError>{error}</InlineError>
         ) : null}
         <Button type="submit" className="w-full" disabled={busy || !email.trim()}>
           {busy ? 'Please wait…' : 'Send reset link'}

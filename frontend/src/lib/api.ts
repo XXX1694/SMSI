@@ -33,7 +33,6 @@ import type {
 
 export const API_BASE = '/api/v1';
 const MCP_URL = process.env.NEXT_PUBLIC_MCP_URL ?? 'http://localhost:3333/mcp';
-const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 export { ApiError, parseErrorBody };
 
@@ -285,7 +284,7 @@ export const api = {
     },
     async createMcpConnection(input: { name: string; scopes: string[] }): Promise<CreatedMcpConnection> {
       const raw = await request('/developer/mcp-connections', { method: 'POST', body: input });
-      return normalizeCreatedMcp(raw, MCP_URL, PUBLIC_API_URL);
+      return normalizeCreatedMcp(raw, MCP_URL);
     },
     async revokeMcpConnection(id: string): Promise<void> {
       await request(`/developer/mcp-connections/${enc(id)}`, { method: 'DELETE' });

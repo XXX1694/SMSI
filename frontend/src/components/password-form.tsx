@@ -4,6 +4,7 @@ import { RevokeKeysOption } from '@/components/revoke-keys-option';
 import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { InlineError } from '@/components/states';
 import { errorMessage } from '@/hooks';
 import { api } from '@/lib/api';
 
@@ -60,9 +61,7 @@ export function PasswordForm() {
       </Field>
       <RevokeKeysOption id="pw-revoke-keys" checked={revokeKeys} onChange={setRevokeKeys} />
       {error ? (
-        <p role="alert" className="text-sm text-danger">
-          {error}
-        </p>
+        <InlineError>{error}</InlineError>
       ) : null}
       <Button type="submit" disabled={busy || !current || !next || !confirm}>
         {busy ? 'Saving…' : 'Change password'}

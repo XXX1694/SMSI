@@ -2,7 +2,9 @@ package developer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -238,9 +240,11 @@ func TestMCPConfigIsReadyToPaste(t *testing.T) {
 	}
 	stdio := got.Config["stdio"].(map[string]any)["mcpServers"].(map[string]any)["socialos"].(map[string]any)
 	env := stdio["env"].(map[string]string)
-	if stdio["command"] != "npx" || env["SOCIALOS_API_KEY"] != raw || env["SOCIALOS_API_URL"] != "https://api.example.com/api/v1" {
+	args := stdio["args"].([]string)
+	if stdio["command"] != "npx" || env["SOCIALOS_AUTH_HEADER"] != "Bearer "+raw || args[1] != MCPRemotePackage || args[2] != "https://mcp.example.com/mcp" {
 		t.Fatalf("stdio: %v", stdio)
 	}
+	assertNoUnpinnedNpx(t, got.Config)
 	if _, ok := got.Config["mcpServers"].(map[string]any)["socialos"]; !ok {
 		t.Fatal("top-level mcpServers must be pasteable as-is")
 	}
@@ -287,4 +291,41 @@ func TestUnverifiedOwnerCannotCreateKeysOrConnections(t *testing.T) {
 	if len(keys.keys) != 0 || len(conns.conns) != 0 {
 		t.Fatal("something was created")
 	}
+}
+
+var pinnedNpx = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*@\d+\.\d+\.\d+$`)
+
+// assertNoUnpinnedNpx fails when a generated config mentions the unpublished socialos-mcp package or runs an npx
+// package without an exact version (a squattable name would receive the API key).
+func assertNoUnpinnedNpx(t *testing.T, cfg map[string]any) {
+	t.Helper()
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "socialos-mcp") {
+		t.Fatalf("config references the unpublished socialos-mcp package: %s", b)
+	}
+	var walk func(v any)
+	walk = func(v any) {
+		switch x := v.(type) {
+		case map[string]any:
+			if x["command"] == "npx" {
+				var pkg string
+				for _, a := range x["args"].([]string) {
+					if !strings.HasPrefix(a, "-") {
+						pkg = a
+						break
+					}
+				}
+				if !pinnedNpx.MatchString(pkg) {
+					t.Fatalf("npx package %q is not pinned to an exact version", pkg)
+				}
+			}
+			for _, c := range x {
+				walk(c)
+			}
+		}
+	}
+	walk(cfg)
 }

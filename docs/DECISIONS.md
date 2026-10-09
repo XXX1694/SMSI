@@ -163,6 +163,33 @@ request. Adapters with a fixed host set `AllowedHosts` instead. Every adapter ta
 **Consequences.** A self-hosted instance on a private network cannot be connected. Accepted: SocialOS runs on a shared
 host next to other services (D-001).
 
+## D-011: Bound password hashing in memory (2026-10-09)
+
+**Context.** Every argon2id hash used 64 MiB and nothing limited how many ran at once. The production API container has a
+160 MB cap and the auth limiter allows bursts of 10 per IP, so a few parallel logins or registrations could get the API
+OOM-killed.
+
+**Decision.**
+- The `crypto` hasher runs at most `PASSWORD_HASH_CONCURRENCY` (default 2) operations at once **and** keeps their combined
+  argon2 memory within `PASSWORD_HASH_MEMORY_MIB` (default 48). Memory is read from the PHC string, so an old 64 MiB hash
+  is heavier than the whole budget and verifies alone; two new 19 MiB hashes run together. Worst case is therefore one
+  64 MiB verification, or about 38 MiB for two new hashes, never 128 MiB.
+- A caller waits for capacity until its context ends or 5 s pass, then gets `429 RATE_LIMITED` ("server is busy, retry
+  shortly") with `Retry-After: 5`. No new error code. An unknown email gets the same answer as a known one while the
+  hasher is saturated, so load does not reveal which addresses exist; a busy hasher is never reported as a wrong password.
+- New hashes use the OWASP minimum argon2id configuration, m=19 MiB, t=2, p=1
+  ([Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)).
+  Stored hashes keep verifying because their parameters are read from the hash.
+- A successful login with a hash made under other parameters rehashes the password, best effort: a failure is logged and
+  never fails the login. The write is conditional on the hash that was verified, so a password reset or change that lands
+  meanwhile is not overwritten.
+
+Rejected: raising the container limit (hides the burst), and a new 503 code (needs contract, MCP and docs changes for no
+client benefit).
+
+**Consequences.** Under a burst, excess logins wait up to 5 s and are then told to retry. Until old hashes are upgraded,
+each old-hash login occupies the whole budget for its duration. The first login after deploy costs one extra hash.
+
 ## D-012: SocialOS gets at most half of the shared host, enforced by a systemd slice and a load-shedding guard (2026-10-09)
 
 **Context.** Production shares a 2 vCPU / 2 GB VPS with another production service (D-001). Containers could swap, the

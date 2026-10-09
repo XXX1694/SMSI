@@ -60,6 +60,13 @@ func (r *Users) SetPassword(ctx context.Context, id uuid.UUID, hash string) erro
 	return mustAffect(tag, err, "user")
 }
 
+// RehashPassword replaces the hash only if it is still oldHash, so an upgrade of the encoding never overwrites a
+// password changed in the meantime. No matching row is not an error.
+func (r *Users) RehashPassword(ctx context.Context, id uuid.UUID, oldHash, newHash string) error {
+	_, err := r.db.q(ctx).Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1 AND password_hash = $3`, id, newHash, oldHash)
+	return err
+}
+
 // MarkEmailVerified records the verification time once; later calls keep the first time.
 func (r *Users) MarkEmailVerified(ctx context.Context, id uuid.UUID, at time.Time) error {
 	tag, err := r.db.q(ctx).Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, $2) WHERE id = $1`, id, at)

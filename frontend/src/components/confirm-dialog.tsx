@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { InlineError } from '@/components/states';
 import { errorMessage } from '@/hooks';
 
 interface Props {
@@ -45,9 +46,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
       <DialogContent title={title} description={description}>
         {children}
         {error ? (
-          <p role="alert" className="mt-3 text-sm text-danger">
-            {error}
-          </p>
+          <InlineError className="mt-3">{error}</InlineError>
         ) : null}
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>

@@ -2,7 +2,7 @@
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { usePrefs } from '@/components/prefs-provider';
-import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { EmptyState, ErrorState, InlineError, LoadingRows } from '@/components/states';
 import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -103,7 +103,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
             </div>
           ) : null}
           {dangerous ? <TrustedPolicyField trusted={trusted} confirmed={trustAck} onTrusted={(v) => { setTrusted(v); if (!v) setTrustAck(false); }} onConfirmed={setTrustAck} /> : null}
-          {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+          {error ? <InlineError>{error}</InlineError> : null}
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>

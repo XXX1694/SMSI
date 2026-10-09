@@ -28,6 +28,8 @@ type Users interface {
 	GetByEmail(ctx context.Context, email string) (*user.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*user.User, error)
 	SetPassword(ctx context.Context, id uuid.UUID, hash string) error
+	// RehashPassword stores newHash only while the stored hash still equals oldHash; otherwise it is a no-op.
+	RehashPassword(ctx context.Context, id uuid.UUID, oldHash, newHash string) error
 	// MarkEmailVerified sets email_verified_at once; calling it again is a no-op.
 	MarkEmailVerified(ctx context.Context, id uuid.UUID, at time.Time) error
 }
@@ -78,8 +80,10 @@ type ForgotQueue interface {
 
 // PasswordHasher hashes and verifies passwords.
 type PasswordHasher interface {
-	Hash(password string) (string, error)
-	Verify(password, encoded string) (bool, error)
+	Hash(ctx context.Context, password string) (string, error)
+	Verify(ctx context.Context, password, encoded string) (bool, error)
+	// NeedsRehash reports whether a valid stored hash uses outdated parameters.
+	NeedsRehash(encoded string) bool
 }
 
 // ClientInfo describes the caller for session metadata and audit.

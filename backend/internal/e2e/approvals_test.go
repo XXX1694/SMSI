@@ -236,3 +236,43 @@ func TestApprovalSummaryShowsFullTextOverridesAndMedia(t *testing.T) {
 		t.Fatalf("media summary missing: %v", sum["media"])
 	}
 }
+
+// Every gated route answers 428 APPROVAL_REQUIRED for a key with policy approve, never a 500 or a silent success.
+func TestEveryGatedRouteAsksTheOwner(t *testing.T) {
+	r := newAgentRig(t, "all-routes@example.com")
+	post := func(content string) string { return r.draft(content) }
+	soon := fmtTime(time.Now().Add(time.Minute))
+	scheduledIn := func(d time.Duration) string {
+		id := post("scheduled " + d.String())
+		r.owner.must("POST", "/api/v1/posts/"+id+"/schedule", map[string]any{"scheduled_at": fmtTime(time.Now().Add(d))}, 200)
+		return id
+	}
+	failing := post("will fail #mock-fail")
+	r.owner.must("POST", "/api/v1/posts/"+failing+"/publish", nil, 202)
+	r.owner.waitStatus(failing, "failed", 20*time.Second)
+	farScheduled, nearScheduled := scheduledIn(time.Hour), scheduledIn(90*time.Second)
+
+	for _, tc := range []struct {
+		name, method, path string
+		body               any
+		action             string
+	}{
+		{"publish now", "POST", "/api/v1/posts/" + post("p") + "/publish", nil, "post.publish"},
+		{"retry now", "POST", "/api/v1/posts/" + failing + "/retry", nil, "post.retry_now"},
+		{"retry under the lead", "POST", "/api/v1/posts/" + failing + "/retry", map[string]any{"scheduled_at": soon}, "post.schedule_soon"},
+		{"delete", "DELETE", "/api/v1/posts/" + post("d"), nil, "post.delete"},
+		{"disconnect", "DELETE", "/api/v1/social/accounts/" + r.acc, nil, "social_account.disconnect"},
+		{"token connect", "POST", tokenPath, tokenBody(goodKey), "social_account.connect_token"},
+		{"create under the lead", "POST", "/api/v1/posts", map[string]any{"content": "c", "social_account_ids": []string{r.acc}, "schedule": true, "scheduled_at": soon}, "post.schedule_soon"},
+		{"schedule under the lead", "POST", "/api/v1/posts/" + post("s") + "/schedule", map[string]any{"scheduled_at": soon}, "post.schedule_soon"},
+		{"move a schedule under the lead", "PATCH", "/api/v1/posts/" + farScheduled, map[string]any{"scheduled_at": soon}, "post.schedule_soon"},
+		{"edit a post running within the lead", "PATCH", "/api/v1/posts/" + nearScheduled, map[string]any{"content": "edited"}, "post.schedule_soon"},
+	} {
+		res := r.agent.do(tc.method, tc.path, tc.body)
+		if res.status >= 500 {
+			t.Errorf("%s: server error %d %s", tc.name, res.status, res.body)
+			continue
+		}
+		needApproval(t, res, tc.action)
+	}
+}
