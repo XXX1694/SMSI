@@ -35,7 +35,10 @@ type Error struct {
 	Message string
 	// Fields carries per-field validation messages (optional).
 	Fields map[string]string
-	cause  error
+	// Transient marks a conflict that nothing in the request caused (a database deadlock): the same request can be
+	// repeated at once. The HTTP layer adds Retry-After.
+	Transient bool
+	cause     error
 }
 
 func (e *Error) Error() string {
@@ -58,6 +61,12 @@ func Newf(code Code, format string, args ...any) *Error {
 // Wrap attaches a cause (never shown to clients) to a coded error.
 func Wrap(code Code, msg string, cause error) *Error {
 	return &Error{Code: code, Message: msg, cause: cause}
+}
+
+// AsTransient marks the error as safe to repeat immediately.
+func (e *Error) AsTransient() *Error {
+	e.Transient = true
+	return e
 }
 
 // WithField adds a field-level validation message.

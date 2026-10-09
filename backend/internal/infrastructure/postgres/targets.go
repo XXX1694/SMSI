@@ -128,11 +128,23 @@ func (r *Posts) ListTargets(ctx context.Context, userID, postID uuid.UUID) ([]po
 // follow-up read and write (posts, accounts). The id is never user input: no HTTP route accepts a target id, and it
 // comes from scheduled_jobs.post_target_id or from a queue payload that only this backend enqueues (the queue lives
 // on the internal network, behind a password in production). Do not call it from a request handler; use ListTargets.
+//
+// Lock order (issue #38, docs/ARCHITECTURE.md "Lock order"): the post row is locked before the target row, as the API
+// does. The post id is read without a lock, the post is locked, then the target is taken with SKIP LOCKED; a target
+// that is busy elsewhere is still skipped, but never while holding a lock the API may be waiting on.
 func (r *Posts) LockTarget(ctx context.Context, id uuid.UUID) (*post.Target, bool, error) {
-	t, err := scanTarget(r.db.q(ctx).QueryRow(ctx, `SELECT `+targetCols+` FROM post_targets t WHERE t.id = $1 FOR UPDATE SKIP LOCKED`, id))
+	q := r.db.q(ctx)
+	var postID uuid.UUID
+	if err := q.QueryRow(ctx, `SELECT post_id FROM post_targets WHERE id = $1`, id).Scan(&postID); err != nil {
+		return nil, false, mapErr(err, "post target")
+	}
+	if _, err := q.Exec(ctx, `SELECT 1 FROM posts WHERE id = $1 FOR UPDATE`, postID); err != nil {
+		return nil, false, mapErr(err, "post")
+	}
+	t, err := scanTarget(q.QueryRow(ctx, `SELECT `+targetCols+` FROM post_targets t WHERE t.id = $1 FOR UPDATE SKIP LOCKED`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		var exists bool
-		if err := r.db.q(ctx).QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM post_targets WHERE id = $1)`, id).Scan(&exists); err != nil {
+		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM post_targets WHERE id = $1)`, id).Scan(&exists); err != nil {
 			return nil, false, err
 		}
 		if !exists {

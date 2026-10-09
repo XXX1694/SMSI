@@ -180,6 +180,7 @@ services:
     image: *backend-image
     command: ["/app/worker"]
     environment: *backend-env
+    stop_grace_period: 45s # WORKER_SHUTDOWN_TIMEOUT (max 35s) + 5s for background jobs must fit in it, so in-flight publishes finish before Docker kills the worker
     mem_limit: ${WORKER_MEM_LIMIT:-384m}
     healthcheck:
       test: ["CMD", "/app/api", "healthcheck", "http://127.0.0.1:8081/health"]

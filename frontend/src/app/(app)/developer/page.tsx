@@ -1,7 +1,7 @@
 import { ApiKeysView } from '@/components/developer/api-keys-view';
 import { AuditView } from '@/components/developer/audit-view';
 import { UsageView } from '@/components/developer/usage-view';
-import { Section } from '@/components/states';
+import { Section } from '@/components/ui/card';
 
 export default function Page() {
   return (

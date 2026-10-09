@@ -28,6 +28,7 @@ async function openCreate() {
 }
 
 const tick = (id: string) => userEvent.click(document.getElementById(id) as HTMLElement);
+const tickAck = () => userEvent.click(screen.getByLabelText(/I understand this key can publish/));
 
 describe('key policy in the key list', () => {
   it('shows which keys act without asking and which ask first; a revoked key shows neither', async () => {
@@ -53,7 +54,7 @@ describe('creating a trusted key', () => {
   it('sends policy approve by default, even with dangerous scopes', async () => {
     await openCreate();
     await tick('scope-posts:publish');
-    await tick('key-ack');
+    await tickAck();
     await userEvent.click(screen.getByRole('button', { name: 'Create key' }));
     await waitFor(() => expect(apiMock.developer.createApiKey).toHaveBeenCalled());
     expect(apiMock.developer.createApiKey.mock.calls[0]![0]).toMatchObject({ dangerous_policy: 'approve' });
@@ -62,7 +63,7 @@ describe('creating a trusted key', () => {
   it('needs a separate confirmation before a trusted key can be created', async () => {
     await openCreate();
     await tick('scope-posts:publish');
-    await tick('key-ack');
+    await tickAck();
     await tick('key-trusted');
     expect(screen.getByText(/A trusted key acts without asking/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Create key' }));
@@ -78,7 +79,7 @@ describe('creating a trusted key', () => {
   it('turning trusted off again clears the confirmation, and removing the dangerous scopes drops the option', async () => {
     await openCreate();
     await tick('scope-posts:publish');
-    await tick('key-ack');
+    await tickAck();
     await tick('key-trusted');
     await tick('key-trusted-ack');
     await tick('key-trusted');
