@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui/card';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import type { Media } from '@/lib/types';
 import { useTranslations } from '@/i18n/use-translations';
 
@@ -62,10 +62,11 @@ export function TelegramPreview({ author, text, media }: PreviewProps) {
 }
 
 export function GenericPreview({ provider, author, text, media }: PreviewProps & { provider: string }) {
+  const providerName = useProviderName();
   return (
     <Card className="text-sm">
       <p className="mb-2 text-xs text-muted-foreground">
-        {providerLabel(provider)} · {author}
+        {providerName(provider)} · {author}
       </p>
       <p className="whitespace-pre-wrap break-words">{text.trim() ? text : <Empty />}</p>
       <MediaStrip media={media} />

@@ -61,7 +61,7 @@ const PROVIDERS = [
 
 const users = new Map();
 const sessions = new Map();
-const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [], links: [], approvals: [] };
+const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [], links: [], approvals: [], exports: [] };
 
 function addUser(email, password, display_name) {
   const u = { id: randomUUID(), email, password, display_name, verified: VERIFICATION !== 'enforced' };
@@ -131,13 +131,14 @@ const send = (res, status, body, headers = {}) => {
   res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
   res.end(data);
 };
-const fail = (res, status, code, message) => send(res, status, { error: { code, message, request_id: randomUUID().slice(0, 8) } });
+const fail = (res, status, code, message, fields) => send(res, status, { error: { code, message, request_id: randomUUID().slice(0, 8), ...(fields ? { fields } : {}) } });
 const cookies = (req) => Object.fromEntries((req.headers.cookie ?? '').split(';').map((c) => c.trim().split('=')).filter((p) => p[0]).map(([k, ...v]) => [k, decodeURIComponent(v.join('='))]));
 const readBody = (req) => new Promise((resolve) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => resolve(Buffer.concat(c))); });
 const sessionCookies = (s) => [`socialos_session=${s.token}; Path=/; HttpOnly; SameSite=Lax`, `socialos_csrf=${s.csrf}; Path=/; SameSite=Lax`];
 const meBody = (u, s) => ({
   id: u.id, email: u.email, display_name: u.display_name, csrf_token: s.csrf, scopes: ALL_SCOPES,
-  user: { id: u.id, email: u.email, display_name: u.display_name, email_verified: u.verified !== false, plan: 'free' },
+  user: { id: u.id, email: u.email, display_name: u.display_name, email_verified: u.verified !== false, plan: 'free', deletion_scheduled_at: u.deletion_scheduled_at ?? null },
+  deletion_grace_days: 7,
   verification_enforced: VERIFICATION === 'enforced', mail_delivery: VERIFICATION === 'enforced' ? 'smtp' : 'log',
 });
 const badLink = (res) => fail(res, 400, 'VALIDATION_ERROR', 'link is invalid or has expired');
@@ -234,6 +235,19 @@ async function handle(req, res) {
   if (path === '/me') return send(res, 200, meBody(user, sess ?? { csrf: '' }));
   if (path === '/auth/verify-email/resend' && m === 'POST') {
     return user.verified === false ? send(res, 202, { status: 'accepted', delivery: 'smtp' }) : fail(res, 409, 'CONFLICT', 'email is already verified');
+  }
+  if (path === '/account/delete' && m === 'POST') {
+    if (user.deletion_scheduled_at) return fail(res, 409, 'CONFLICT', 'deletion of this account is already scheduled');
+    if (body.password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'the password is incorrect', { password: 'incorrect' });
+    if (String(body.confirm ?? '').trim().toLowerCase() !== user.email.toLowerCase()) return fail(res, 400, 'VALIDATION_ERROR', 'type your email address exactly to confirm', { confirm: 'does not match your email' });
+    user.deletion_scheduled_at = new Date(Date.now() + 7 * 864e5).toISOString();
+    sessions.delete(sess?.token);
+    return send(res, 202, { status: 'scheduled', scheduled_for: user.deletion_scheduled_at }, { 'Set-Cookie': ['socialos_session=; Path=/; Max-Age=0'] });
+  }
+  if (path === '/account/delete/cancel' && m === 'POST') {
+    if (!user.deletion_scheduled_at) return fail(res, 409, 'CONFLICT', 'no deletion is scheduled for this account');
+    user.deletion_scheduled_at = null;
+    return send(res, 204);
   }
   if (path === '/auth/password/change' && m === 'POST') {
     if (body.current_password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'current password is incorrect');
@@ -401,6 +415,23 @@ async function handle(req, res) {
         agent_requests_per_minute: { limit: 120 },
       },
     });
+  }
+
+  // ---- data export (same states and rules as /account/exports; the archive is a small JSON "ready" after 4 s)
+  if ((r = path.match(/^\/account\/exports(?:\/([^/]+))?$/))) {
+    const list = mine(db.exports).map((e) => (e.status === 'pending' && Date.now() - Date.parse(e.created_at) > 4000 ? { ...e, status: 'ready', size_bytes: 2048, expires_at: new Date(Date.parse(e.created_at) + 7 * 864e5).toISOString() } : e)).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    if (!r[1] && m === 'GET') return send(res, 200, { items: list });
+    if (!r[1] && m === 'POST') {
+      if (list[0]?.status === 'pending') return fail(res, 409, 'CONFLICT', 'an export is already being prepared');
+      if (list[0]?.status === 'ready') return fail(res, 429, 'RATE_LIMITED', 'you exported your data less than 24 hours ago; download that export or try again later');
+      const e = { id: randomUUID(), user_id: user.id, status: 'pending', size_bytes: 0, error_code: null, created_at: now(), expires_at: null };
+      db.exports.push(e); audit(user.display_name, 'account.export_requested', 'data_export', e.id);
+      return send(res, 202, { ...e, user_id: undefined });
+    }
+    const e = list.find((x) => x.id === r[1]);
+    if (!e) return fail(res, 404, 'NOT_FOUND', 'export not found');
+    if (e.status !== 'ready') return fail(res, 409, 'CONFLICT', 'this export is not available for download');
+    return send(res, 200, { ...e, user_id: undefined, url: 'data:application/json,%7B%22note%22%3A%22mock%20export%22%7D', url_expires_at: new Date(Date.now() + 3e5).toISOString() });
   }
 
   // ---- dashboard / analytics / audit

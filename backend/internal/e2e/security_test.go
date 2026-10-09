@@ -574,3 +574,88 @@ func TestQuotaIsPerUser(t *testing.T) {
 		t.Fatalf("key usage: %v", q)
 	}
 }
+
+// User B can neither see nor download user A's export, and A's archive holds only A's rows.
+func TestExportIsTenantScoped(t *testing.T) {
+	e := newEnv(t, envOpts{startWorker: true})
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice@export.test")
+	bob.register("bob@export.test")
+	alice.connectMock()
+	bob.connectMock()
+	alice.must("POST", "/api/v1/posts", map[string]any{"content": "alice secret plan", "social_account_ids": []string{alice.accounts()[0]["id"].(string)}}, 201)
+	bob.must("POST", "/api/v1/posts", map[string]any{"content": "bob secret plan", "social_account_ids": []string{bob.accounts()[0]["id"].(string)}}, 201)
+
+	id := alice.must("POST", "/api/v1/account/exports", nil, 202)["id"].(string)
+	alice.waitExport(id, "ready")
+
+	if r := bob.do("GET", "/api/v1/account/exports/"+id, nil); r.status != http.StatusNotFound {
+		t.Fatalf("bob fetched alice's export: %d %s", r.status, r.body)
+	}
+	if items := bob.must("GET", "/api/v1/account/exports", nil, 200)["items"].([]any); len(items) != 0 {
+		t.Fatalf("bob lists alice's exports: %v", items)
+	}
+	// Bob's own export is a separate row and archive, and holds none of Alice's data.
+	bid := bob.must("POST", "/api/v1/account/exports", nil, 202)["id"].(string)
+	bob.waitExport(bid, "ready")
+	if r := alice.do("GET", "/api/v1/account/exports/"+bid, nil); r.status != http.StatusNotFound {
+		t.Fatalf("alice fetched bob's export: %d", r.status)
+	}
+	var aliceID, bobID string
+	row := e.app.DB.Pool.QueryRow(context.Background(), `SELECT id::text FROM users WHERE email = 'alice@export.test'`)
+	_ = row.Scan(&aliceID)
+	row = e.app.DB.Pool.QueryRow(context.Background(), `SELECT id::text FROM users WHERE email = 'bob@export.test'`)
+	_ = row.Scan(&bobID)
+	a, b := e.zipOf(aliceID, id), e.zipOf(bobID, bid)
+	if bytes.Contains(a["posts.json"], []byte("bob secret plan")) || !bytes.Contains(a["posts.json"], []byte("alice secret plan")) {
+		t.Fatalf("alice's posts.json: %s", a["posts.json"])
+	}
+	for _, name := range []string{"posts.json", "audit_logs.json", "profile.json", "social_accounts.json"} {
+		if bytes.Contains(b[name], []byte("alice")) {
+			t.Fatalf("bob's %s mentions alice: %s", name, b[name])
+		}
+	}
+}
+
+// User B can only ever delete B: the request has no user id, the password and typed email must be B's own, and a
+// purge of B leaves A's data alone.
+func TestAccountDeletionIsTenantScoped(t *testing.T) {
+	e, clk := deletionEnv(t, &captureMailer{})
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice@del-scope.test")
+	bobMe := bob.register("bob@del-scope.test")
+	bobID := bobMe["user"].(map[string]any)["id"].(string)
+	alice.connectMock()
+	bob.connectMock()
+
+	// Bob cannot name Alice: her email as confirmation is refused, and nothing is scheduled for either of them.
+	if r := bob.deleteAccount("correct horse battery", "alice@del-scope.test"); r.status != 400 {
+		t.Fatalf("bob confirmed with alice's email: %d %s", r.status, r.body)
+	}
+	if n := e.count(`SELECT count(*) FROM users WHERE deletion_scheduled_at IS NOT NULL`); n != 0 {
+		t.Fatalf("%d accounts scheduled after refused requests", n)
+	}
+	// Bob cannot cancel Alice's deletion: cancel acts on the session user only.
+	if r := alice.deleteAccount("correct horse battery", "alice@del-scope.test"); r.status != 202 {
+		t.Fatalf("alice's request: %d %s", r.status, r.body)
+	}
+	if r := bob.do("POST", "/api/v1/account/delete/cancel", nil); r.status != http.StatusConflict {
+		t.Fatalf("bob cancelling: %d %s", r.status, r.body)
+	}
+	if n := e.count(`SELECT count(*) FROM users WHERE deletion_scheduled_at IS NOT NULL`); n != 1 {
+		t.Fatalf("bob's cancel changed the schedule: %d scheduled", n)
+	}
+	// Purging Alice leaves Bob's account, sessions and data.
+	clk.set(clk.Now().Add(8 * 24 * time.Hour))
+	if n, _ := e.app.Services.Deletion.Sweep(context.Background()); n != 1 {
+		t.Fatalf("sweep queued %d", n)
+	}
+	deadline := time.Now().Add(20 * time.Second)
+	for e.count(`SELECT count(*) FROM users`) != 1 && time.Now().Before(deadline) {
+		time.Sleep(100 * time.Millisecond)
+	}
+	bob.must("GET", "/api/v1/me", nil, 200)
+	if n := e.count(`SELECT count(*) FROM social_accounts WHERE user_id = $1`, bobID); n != 1 {
+		t.Fatalf("bob has %d accounts", n)
+	}
+}

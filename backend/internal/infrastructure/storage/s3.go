@@ -14,6 +14,8 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+
+	"github.com/socialos/backend/internal/application/port"
 )
 
 // S3Config configures the S3 client.
@@ -139,7 +141,7 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, conte
 	if err := s.ensure(ctx); err != nil {
 		return err
 	}
-	ctx, cancel := putContext(ctx)
+	ctx, cancel := putContext(ctx, port.PutTimeout(ctx, putTimeout))
 	defer cancel()
 	_, err := s.client.PutObject(ctx, s.bucket, key, r, size,
 		minio.PutObjectOptions{ContentType: contentType, PartSize: putPartSize, NumThreads: 1})
@@ -149,10 +151,10 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, conte
 // putTimeout bounds one upload. The request context is deliberately not used: minio-go aborts a failed multipart upload
 // with the context it was given, and a cancelled one (client disconnect) would leave the parts behind. A disconnect
 // still stops the upload because reading the request body fails.
-const putTimeout = 30 * time.Minute
+const putTimeout = 30 * time.Minute // default; port.WithPutTimeout raises it for a longer job
 
-func putContext(ctx context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.WithoutCancel(ctx), putTimeout)
+func putContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), timeout)
 }
 
 // Get streams an object.
@@ -171,6 +173,41 @@ func (s *S3) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 // Delete removes an object.
 func (s *S3) Delete(ctx context.Context, key string) error {
 	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
+}
+
+// DeletePrefix removes every object under prefix (listing is paged by the client, so memory stays bounded).
+func (s *S3) DeletePrefix(ctx context.Context, prefix string) error {
+	if err := s.ensure(ctx); err != nil {
+		return err
+	}
+	lctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	objects := make(chan minio.ObjectInfo)
+	var listErr error
+	go func() {
+		defer close(objects)
+		for o := range s.client.ListObjects(lctx, s.bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
+			if o.Err != nil {
+				listErr = o.Err
+				return
+			}
+			select {
+			case objects <- o:
+			case <-lctx.Done():
+				return
+			}
+		}
+	}()
+	var firstErr error
+	for e := range s.client.RemoveObjects(ctx, s.bucket, objects, minio.RemoveObjectsOptions{}) {
+		if firstErr == nil {
+			firstErr = e.Err
+		}
+	}
+	if firstErr != nil {
+		return firstErr
+	}
+	return listErr
 }
 
 // PresignGet returns a short-lived download URL.

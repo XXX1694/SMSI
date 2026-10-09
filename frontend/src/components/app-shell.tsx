@@ -19,6 +19,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
+import { DeletionBanner } from '@/components/deletion-banner';
 import { Logo } from '@/components/brand/logo';
 import { EmailBanner } from '@/components/email-banner';
 import { PageTransition } from '@/components/page-transition';
@@ -71,8 +72,8 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       {t(item.labelKey)}
       {badge ? (
         <span className="ml-auto rounded-full bg-warning-soft px-1.5 text-xs font-medium text-warning">
-          {badge > 99 ? '99+' : badge}
-          <span className="sr-only"> {ts('waiting')}</span>
+          <span aria-hidden>{ts('navBadge', { count: badge, over: String(badge > 99) })}</span>
+          <span className="sr-only">{ts('navWaiting', { count: badge })}</span>
         </span>
       ) : null}
     </TransitionLink>
@@ -185,7 +186,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Logo animate />
         {pending ? (
           <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-warning-soft px-3 text-xs font-medium text-warning">
-            <span aria-hidden className="sm:hidden">
+            <span aria-hidden className="inline-flex items-center gap-1 sm:hidden">
+              <ShieldCheck className="h-3.5 w-3.5" />
               {pending}
             </span>
             <span className="sr-only sm:not-sr-only">{t('requestsWaiting', { count: pending })}</span>
@@ -228,6 +230,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SidebarFooter email={user?.email} name={user?.display_name} onSignOut={signOut} />
       </aside>
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
+        <DeletionBanner />
         <EmailBanner />
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">
           <PageTransition>{children}</PageTransition>

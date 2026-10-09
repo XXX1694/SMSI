@@ -42,6 +42,8 @@ export function normalizeMe(raw: unknown): Me {
     email_verified: user.email_verified !== false,
     verification_enforced: r.verification_enforced === true,
     mail_delivery: r.mail_delivery === 'log' ? 'log' : 'smtp',
+    deletion_grace_days: typeof r.deletion_grace_days === 'number' && r.deletion_grace_days > 0 ? r.deletion_grace_days : 7,
+    deletion_scheduled_at: typeof user.deletion_scheduled_at === 'string' ? user.deletion_scheduled_at : null,
   };
 }
 
