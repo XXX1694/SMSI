@@ -10,7 +10,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 - Rename shims for Steerpost (D-020). The MCP server reads `STEERPOST_API_URL`, `STEERPOST_API_KEY` and `STEERPOST_TIMEOUT_MS` first and falls back to the `SOCIALOS_*` names; both compose files set both URL variables. Releases publish the images under `steerpost-{backend,mcp,frontend}` as well as `socialos-*` (same digest and tags). `deploy/README.md` lists the legacy identifiers that keep the `socialos` name and the steps to make the new GHCR packages public.
 - `autoupdate.sh` follows redirects when it asks GitHub for the latest release (a renamed repository answers 301), reads `GITHUB_REPO` from the environment as well as `.env`, and logs a warning for any answer other than 200 instead of an info line.
-- Renamed to Steerpost (formerly SocialOS). Product copy, the MCP server name and the generated client config key (`steerpost`) changed. Stored and host identifiers keep the `socialos` name (cookies, headers, Redis keys, `/opt/socialos`, systemd units); see "Legacy identifiers" in `deploy/README.md`.
+- Renamed to Steerpost (formerly SocialOS). Product copy, the MCP server name and the generated client config key (`steerpost`) changed. Stored and host identifiers keep the `socialos` name (cookies, headers, Redis keys, `/opt/socialos`, systemd units); see "Legacy identifiers" in `deploy/README.md`. Generated stdio configs keep the `SOCIALOS_AUTH_HEADER` variable so configs users already pasted keep working.
 
 ### Added
 
