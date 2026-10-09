@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/dataexport"
@@ -367,5 +368,30 @@ func TestSweepFailsAPendingExportWhoseTaskNeverRan(t *testing.T) {
 	}
 	if _, err := r.svc.Request(ctx, r.session()); err != nil {
 		t.Fatalf("user still blocked: %v", err)
+	}
+}
+
+// The archive upload must be allowed as long as the build task itself, not the store's default upload bound.
+type timeoutProbe struct {
+	*storage.Memory
+	got time.Duration
+}
+
+func (p *timeoutProbe) Put(ctx context.Context, key string, r io.Reader, size int64, ct string) error {
+	p.got = port.PutTimeout(ctx, 0)
+	return p.Memory.Put(ctx, key, r, size, ct)
+}
+
+func TestBuildUploadsWithTheBuildTimeout(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	probe := &timeoutProbe{Memory: r.store}
+	r.svc.d.Store = probe
+	e, _ := r.svc.Request(ctx, r.session())
+	if err := r.svc.Build(ctx, e.ID); err != nil {
+		t.Fatal(err)
+	}
+	if probe.got != dataexport.BuildTimeout {
+		t.Fatalf("Put timeout = %v, want %v", probe.got, dataexport.BuildTimeout)
 	}
 }

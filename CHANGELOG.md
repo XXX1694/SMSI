@@ -22,6 +22,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- Worker shutdown: the publish and export servers stop taking tasks together and drain in parallel (the export server waits 5 s), so a stop fits the 45 s `stop_grace_period`. An export archive upload may now run as long as the build (90 minutes) instead of 30; a finished build can no longer overwrite an export the sweep already failed.
 - The completed setup checklist collapses to a "Set up" line with a "Show steps" button; the Approvals tab is kept in the URL (`?tab=history`); stacked table rows (Developer on phones) are more compact.
 - Calendar month view no longer scrolls sideways at 768 to 1280 px; event chips are at least 24 px tall with a gap between them.
 - Approval cards no longer break labels on phones and show network and status names (LinkedIn, Telegram, Draft) instead of codes.

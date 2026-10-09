@@ -18,6 +18,9 @@ const (
 	StatusExpired Status = "expired"
 )
 
+// BuildTimeout is the budget of one export build: the queue task deadline and the bound of its archive upload.
+const BuildTimeout = 90 * time.Minute
+
 // Error codes stored with a failed export. They are short and carry no internals.
 const (
 	ErrBuildFailed  = "build_failed"

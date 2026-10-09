@@ -14,6 +14,8 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
+
+	"github.com/socialos/backend/internal/application/port"
 )
 
 // S3Config configures the S3 client.
@@ -139,7 +141,7 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, conte
 	if err := s.ensure(ctx); err != nil {
 		return err
 	}
-	ctx, cancel := putContext(ctx)
+	ctx, cancel := putContext(ctx, port.PutTimeout(ctx, putTimeout))
 	defer cancel()
 	_, err := s.client.PutObject(ctx, s.bucket, key, r, size,
 		minio.PutObjectOptions{ContentType: contentType, PartSize: putPartSize, NumThreads: 1})
@@ -149,10 +151,10 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, conte
 // putTimeout bounds one upload. The request context is deliberately not used: minio-go aborts a failed multipart upload
 // with the context it was given, and a cancelled one (client disconnect) would leave the parts behind. A disconnect
 // still stops the upload because reading the request body fails.
-const putTimeout = 30 * time.Minute
+const putTimeout = 30 * time.Minute // default; port.WithPutTimeout raises it for a longer job
 
-func putContext(ctx context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.WithoutCancel(ctx), putTimeout)
+func putContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), timeout)
 }
 
 // Get streams an object.
