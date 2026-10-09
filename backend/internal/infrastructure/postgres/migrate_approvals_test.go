@@ -24,9 +24,9 @@ func TestMigration00004ApprovesExistingKeysAndRollsBack(t *testing.T) {
 		t.Fatalf("up: table=%v column=%v", tbl, col)
 	}
 
-	// 00006 and 00005 sit on top of 00004 (they have their own tests); roll them back first, then 00004 itself.
+	// 00007, 00006 and 00005 sit on top of 00004 (they have their own tests); roll them back first, then 00004 itself.
 	// A key that exists before the migration must come out with the safe policy.
-	rollBack(t, url, 3)
+	rollBack(t, url, 4)
 	if tbl, col := has(); tbl || col {
 		t.Fatalf("down: table=%v column=%v", tbl, col)
 	}

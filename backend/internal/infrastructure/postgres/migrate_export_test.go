@@ -23,7 +23,7 @@ func TestMigration00005AddsExportIndexesAndRollsBack(t *testing.T) {
 	if got := indexes(); got != 5 {
 		t.Fatalf("up: %d of 5 indexes", got)
 	}
-	rollBack(t, url, 2) // 00006 first
+	rollBack(t, url, 3) // 00007 and 00006 first
 	if got := indexes(); got != 0 {
 		t.Fatalf("down left %d indexes", got)
 	}

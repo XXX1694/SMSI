@@ -31,6 +31,11 @@ func TestMigration00006AddsTheDeletionScheduleAndRollsBack(t *testing.T) {
 	if _, err := db.Pool.Exec(ctx, `INSERT INTO account_deletions (user_id, requested_at) VALUES ('22222222-2222-2222-2222-222222222222', now())`); err == nil {
 		t.Fatal("a second deletion record for one user must be refused")
 	}
+	// 00007 owns the two foreign-key indexes (built concurrently); 00006 owns the column and the other two.
+	rollBack(t, url, 1)
+	if col, idx := has(); !col || idx != 2 {
+		t.Fatalf("down 00007: column=%v indexes=%d, want the column and 2 indexes left", col, idx)
+	}
 	rollBack(t, url, 1)
 	if col, idx := has(); col || idx != 0 {
 		t.Fatalf("down: column=%v indexes=%d", col, idx)

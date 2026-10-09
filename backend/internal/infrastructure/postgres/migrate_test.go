@@ -71,8 +71,8 @@ func TestMigration00003UpAndDown(t *testing.T) {
 		t.Fatalf("plan default %q", got)
 	}
 
-	// 00006, 00005 and 00004 sit on top of 00003; roll them back first so the "down" below undoes 00003 (they have their own tests).
-	rollBack(t, url, 3)
+	// 00007, 00006, 00005 and 00004 sit on top of 00003; roll them back first so the "down" below undoes 00003 (they have their own tests).
+	rollBack(t, url, 4)
 	// A deleted user must not block the rollback.
 	if _, err := db.Pool.Exec(ctx, `INSERT INTO users (email, password_hash, status) VALUES ('gone@example.com','x','deleted')`); err != nil {
 		t.Fatal(err)
