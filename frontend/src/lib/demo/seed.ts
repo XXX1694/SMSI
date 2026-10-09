@@ -8,6 +8,7 @@ import type {
   SocialAccount,
 } from '../types';
 import { svgThumb } from './art';
+import { seedApprovals } from './approvals';
 import { SEED_ID, seedId, seedPostId } from './ids';
 import type { DemoPost, DemoState } from './model';
 
@@ -544,6 +545,7 @@ export function buildSeed(now: Date = new Date()): DemoState {
     api_keys,
     mcp_connections,
     audit,
+    approvals: seedApprovals(t),
     links: [],
     usage: {
       [SEED_ID.apiKey[0]]: 412,

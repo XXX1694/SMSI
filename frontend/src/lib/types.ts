@@ -241,3 +241,28 @@ export interface AuditLog {
   /** Allow-listed details; for `mcp.tool_call`: tool, route, status, error_code, client. */
   metadata?: Record<string, unknown>;
 }
+
+/** What a dangerous action an agent attempted would do; `post.schedule_soon` is a schedule under the minimum lead. */
+export type ApprovalAction =
+  | 'post.publish'
+  | 'post.retry_now'
+  | 'post.delete'
+  | 'post.schedule_soon'
+  | 'social_account.disconnect'
+  | 'social_account.connect_token';
+
+export type ApprovalStatus = 'pending' | 'approved' | 'denied' | 'consumed' | 'expired';
+
+/** An API key's request that waits for (or got) the owner's decision. `summary` never holds secrets. */
+export interface Approval {
+  id: string;
+  action: ApprovalAction;
+  resource_type: string;
+  resource_id: string;
+  actor_label: string;
+  summary: Record<string, unknown>;
+  status: ApprovalStatus;
+  expires_at: string;
+  decided_at: string | null;
+  created_at: string;
+}

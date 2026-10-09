@@ -17,6 +17,7 @@ import type {
   PostTarget,
   SocialAccount,
 } from '../types';
+import { decide, findApproval, visibleApprovals } from './approvals';
 import { svgThumb } from './art';
 import type { DemoLink, DemoPost, DemoRequest, DemoResponse, DemoState, WireProvider } from './model';
 import { PROVIDERS } from './providers';
@@ -348,6 +349,16 @@ export class DemoEngine {
     if (path === '/analytics' && m === 'GET') return ok(200, { items: this.analytics(query) });
     if (path === '/audit-logs' && m === 'GET') return ok(200, paginate(query?.action ? s.audit.filter((a) => a.action === query.action) : s.audit, query));
 
+    // ---- approvals
+    if (path === '/approvals' && m === 'GET') {
+      return ok(200, paginate(visibleApprovals(s.approvals, query?.status === 'all' ? 'all' : 'pending', this.now()), query));
+    }
+    if ((r = path.match(/^\/approvals\/([^/]+)\/(approve|deny)$/)) && m === 'POST') return this.decideApproval(r[1] ?? '', r[2] === 'approve');
+    if ((r = path.match(/^\/approvals\/([^/]+)$/)) && m === 'GET') {
+      const a = findApproval(s.approvals, r[1] ?? '');
+      return a ? ok(200, a) : fail(404, 'NOT_FOUND', 'approval not found');
+    }
+
     // ---- developer
     if (path === '/developer/api-keys' && m === 'GET') return ok(200, { items: s.api_keys });
     if (path === '/developer/api-keys' && m === 'POST') return this.createApiKey(body);
@@ -370,6 +381,13 @@ export class DemoEngine {
     if (path === '/developer/usage' && m === 'GET') return ok(200, this.usage());
 
     return fail(404, 'NOT_FOUND', 'Not found');
+  }
+
+  private decideApproval(id: string, approve: boolean): DemoResponse {
+    const d = decide(this.state.approvals, id, approve ? 'approved' : 'denied', this.now());
+    if (!d.ok) return fail(d.status, d.code, d.message);
+    this.audit(this.user, approve ? 'approval.approved' : 'approval.denied', 'approval', id);
+    return ok(200, d.approval);
   }
 
   // ---------------------------------------------------------------- auth

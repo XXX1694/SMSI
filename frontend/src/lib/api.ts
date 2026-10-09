@@ -1,3 +1,4 @@
+import { ApiError, parseErrorBody } from './api-error';
 import {
   buildMcpConfig,
   normalizeCreatedApiKey,
@@ -12,6 +13,7 @@ import {
 import type {
   AnalyticsResult,
   ApiKey,
+  Approval,
   AuditLog,
   CreatePostInput,
   CreatedApiKey,
@@ -33,43 +35,7 @@ export const API_BASE = '/api/v1';
 const MCP_URL = process.env.NEXT_PUBLIC_MCP_URL ?? 'http://localhost:3333/mcp';
 const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
-export class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-  readonly requestId: string | null;
-
-  constructor(status: number, code: string, message: string, requestId: string | null = null) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.code = code;
-    this.requestId = requestId;
-  }
-}
-
-/** Parse the uniform `{"error":{code,message,request_id}}` format; tolerate anything else. */
-export function parseErrorBody(status: number, body: unknown): ApiError {
-  if (typeof body === 'object' && body !== null && 'error' in body) {
-    const e = (body as { error: unknown }).error;
-    if (typeof e === 'object' && e !== null) {
-      const r = e as Record<string, unknown>;
-      return new ApiError(
-        status,
-        typeof r.code === 'string' ? r.code : 'UNKNOWN',
-        typeof r.message === 'string' ? r.message : `Request failed (${status})`,
-        typeof r.request_id === 'string' ? r.request_id : null,
-      );
-    }
-  }
-  const fallback: Record<number, [string, string]> = {
-    401: ['UNAUTHENTICATED', 'Please sign in.'],
-    403: ['FORBIDDEN', 'You are not allowed to do that.'],
-    404: ['NOT_FOUND', 'Not found.'],
-    429: ['RATE_LIMITED', 'Too many requests. Try again shortly.'],
-  };
-  const [code, message] = fallback[status] ?? [status >= 500 ? 'INTERNAL' : 'UNKNOWN', `Request failed (${status}).`];
-  return new ApiError(status, code, message);
-}
+export { ApiError, parseErrorBody };
 
 let csrfToken: string | null = null;
 export function setCsrfToken(token: string | null): void {
@@ -289,6 +255,19 @@ export const api = {
     /** `action` keeps only entries of that action, e.g. `mcp.tool_call` for agent actions. */
     async list(limit = 50, cursor?: string, action?: string): Promise<Page<AuditLog>> {
       return normalizePage<AuditLog>(await request('/audit-logs', { query: { limit, cursor, action } }));
+    },
+  },
+  approvals: {
+    /** `all` includes decided and expired ones; the default is only those waiting for a decision. */
+    async list(status: 'pending' | 'all' = 'pending', limit = 25, cursor?: string): Promise<Page<Approval>> {
+      return normalizePage<Approval>(await request('/approvals', { query: { status, limit, cursor } }));
+    },
+    /** The agent may then repeat its call once. A decided or expired approval is a 409. */
+    async approve(id: string): Promise<Approval> {
+      return (await request(`/approvals/${enc(id)}/approve`, { method: 'POST' })) as Approval;
+    },
+    async deny(id: string): Promise<Approval> {
+      return (await request(`/approvals/${enc(id)}/deny`, { method: 'POST' })) as Approval;
     },
   },
   developer: {

@@ -1,5 +1,6 @@
 import { STORAGE_KEY } from './config';
 import type { DemoState } from './model';
+import { seedApprovals } from './approvals';
 import { buildSeed } from './seed';
 
 export { STORAGE_KEY };
@@ -40,7 +41,11 @@ export function loadState(storage: StorageLike | null, now: Date = new Date()): 
     const raw = storage?.getItem(STORAGE_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
-      if (isState(parsed) && now.getTime() - Date.parse(parsed.seeded_at) < MAX_AGE_MS) return parsed;
+      if (isState(parsed) && now.getTime() - Date.parse(parsed.seeded_at) < MAX_AGE_MS) {
+        // A copy saved before approvals existed has none: start it with the sample requests.
+        if (!Array.isArray(parsed.approvals)) parsed.approvals = seedApprovals(now.getTime());
+        return parsed;
+      }
     }
   } catch {
     /* corrupted or blocked: fall through to a fresh seed */

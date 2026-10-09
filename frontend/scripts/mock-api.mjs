@@ -45,7 +45,7 @@ const PROVIDERS = [
 
 const users = new Map();
 const sessions = new Map();
-const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [], links: [] };
+const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [], links: [], approvals: [] };
 
 function addUser(email, password, display_name) {
   const u = { id: randomUUID(), email, password, display_name, verified: VERIFICATION !== 'enforced' };
@@ -97,6 +97,13 @@ function seed() {
   m('launch-banner.png', 'image', 230); m('team.png', 'image', 20); m('demo.mp4', 'video', 0);
   db.keys.push({ id: randomUUID(), user_id: u.id, name: 'CI reader', prefix: 'sk_live_a1b2', scopes: ['posts:read', 'social:read'], expires_at: inFuture(24 * 60), revoked_at: null, last_used_at: inPast(2), created_at: inPast(100) });
   db.mcp.push({ id: randomUUID(), user_id: u.id, name: 'Claude Desktop', client_name: 'claude-desktop 1.2', scopes: ['social:read', 'posts:read', 'posts:write'], last_seen_at: inPast(1), revoked_at: null, created_at: inPast(50) });
+  const ask = (action, actor_label, minutesAgo, summary, status = 'pending') => db.approvals.push({
+    id: randomUUID(), user_id: u.id, action, resource_type: action.startsWith('social_account') ? 'social_account' : 'post', resource_id: randomUUID(),
+    actor_label, summary, status, created_at: inPast(minutesAgo / 60), expires_at: new Date(Date.now() - minutesAgo * 60_000 + 10 * 60_000).toISOString(), decided_at: status === 'pending' ? null : inPast(minutesAgo / 60 - 0.05),
+  });
+  ask('post.publish', 'MCP: Claude Desktop', 2, { title: 'Draft: case study', content: 'Case study draft - how a 3-person team halved their publishing time.', platforms: ['linkedin'], status: 'draft' });
+  ask('post.schedule_soon', 'MCP: Cursor', 4, { title: 'Weekly tip', content: 'Tip: schedule posts in your audience timezone.', platforms: ['telegram'], scheduled_at: inFuture(0.05) });
+  ask('social_account.disconnect', 'CI publisher', 95, { provider: 'mock', username: 'mock-1' }, 'denied');
   audit('Demo User', 'post.create', 'post', pub.id);
   audit('CI reader', 'post.list', 'post', null, 'api_key');
 }
@@ -338,6 +345,26 @@ async function handle(req, res) {
   if (path === '/audit-logs') {
     const action = url.searchParams.get('action');
     return send(res, 200, paginate(action ? db.audit.filter((a) => a.action === action) : db.audit, url));
+  }
+
+  // ---- approvals (session only, tenant scoped, like the real API)
+  if (path === '/approvals' && m === 'GET') {
+    const all = url.searchParams.get('status') === 'all';
+    const open = (a) => a.status === 'pending' && Date.parse(a.expires_at) > Date.now();
+    const list = mine(db.approvals).filter((a) => all || open(a)).map(({ user_id, ...a }) => (a.status === 'pending' && !open(a) ? { ...a, status: 'expired' } : a));
+    return send(res, 200, paginate(list.sort((a, b) => b.created_at.localeCompare(a.created_at)), url));
+  }
+  if ((r = path.match(/^\/approvals\/([^/]+)(?:\/(approve|deny))?$/))) {
+    const a = mine(db.approvals).find((x) => x.id === r[1]);
+    if (!a) return fail(res, 404, 'NOT_FOUND', 'approval not found');
+    if (!r[2] && m === 'GET') { const { user_id, ...rest } = a; return send(res, 200, rest); }
+    if (r[2] && m === 'POST') {
+      if (a.status !== 'pending' || Date.parse(a.expires_at) <= Date.now()) return fail(res, 409, 'CONFLICT', 'this approval is no longer pending');
+      Object.assign(a, { status: r[2] === 'approve' ? 'approved' : 'denied', decided_at: now() });
+      audit(user.display_name, `approval.${r[2] === 'approve' ? 'approved' : 'denied'}`, 'approval', a.id);
+      const { user_id, ...rest } = a;
+      return send(res, 200, rest);
+    }
   }
 
   // ---- developer
