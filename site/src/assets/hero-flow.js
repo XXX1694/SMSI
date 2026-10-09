@@ -1,4 +1,5 @@
-// The hero background: posts leave an agent on the left, stop at an approval gate, then fan out to networks on the right.
+// The hero background: drafts leave an agent on the left, steer toward one approval gate, then fan out to networks on the right.
+// The lanes are the Steerpost mark in motion (a path that bends and lands), and the gate is where the human decides.
 // It is decoration (aria-hidden) and it explains the product in one glance. Canvas 2D, paused off screen and when the tab
 // is hidden, one static frame under prefers-reduced-motion.
 const LANES = 6;
@@ -11,7 +12,7 @@ export function startFlow(canvas, { reduced }) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return { setPaused() {}, stop() {} };
   const root = getComputedStyle(document.documentElement);
-  let w = 0, h = 0, dpr = 1, colors, lanes = [], packets = [], rings = [];
+  let w = 0, h = 0, dpr = 1, colors, lanes = [], packets = [], rings = [], gate = [0, 0];
   let raf = 0, last = 0, visible = true, paused = reduced;
   let accentChannel = '';
 
@@ -20,7 +21,7 @@ export function startFlow(canvas, { reduced }) {
   const hsl = (name, a) => `hsl(${channel(name)} / ${a})`;
   const readColors = () => {
     accentChannel = channel('--accent');
-    colors = { line: hsl('--foreground', 0.08), gate: hsl('--foreground', 0.18), accent: hsl('--accent', 0.9), accentSoft: hsl('--accent', 0.3), idle: hsl('--foreground', 0.22), dot: hsl('--foreground', 0.14), bg: hsl('--background', 1) };
+    colors = { line: hsl('--accent', 0.24), gate: hsl('--accent', 0.7), accent: hsl('--accent', 0.9), accentSoft: hsl('--accent', 0.3), idle: hsl('--foreground', 0.22), dot: hsl('--foreground', 0.2), bg: hsl('--background', 1) };
   };
 
   const resize = () => {
@@ -30,35 +31,57 @@ export function startFlow(canvas, { reduced }) {
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const n = w < 700 ? 3 : LANES;
-    lanes = Array.from({ length: n }, (_, i) => {
-      const k = i / (n - 1);
-      const y0 = h * (0.2 + k * 0.62), y1 = h * (0.12 + ((i * 0.37) % 1) * 0.74);
-      return { p0: [-30, y0], p1: [w * 0.3, y0 + (k - 0.5) * 60], p2: [w * 0.64, y1 - (k - 0.5) * 90], p3: [w + 30, y1] };
-    });
+    gate = [w * (w < 700 ? 0.5 : 0.375), h * (w < 700 ? 0.56 : 0.6)];
+    const pick = (list) => (n === 3 ? [list[0], list[2], list[5]] : list);
+    const from = pick([0.12, 0.26, 0.42, 0.6, 0.76, 0.9]), to = pick([0.08, 0.28, 0.5, 0.62, 0.8, 0.94]);
+    lanes = from.map((f, i) => ({ y0: h * f, y1: h * to[i] }));
+    for (const l of lanes) { l.a = seg(l, true); l.b = seg(l, false); } // computed once per resize, not per frame
     packets = Array.from({ length: n * 2 }, (_, i) => ({ lane: i % n, t: (i / (n * 2)) + Math.random() * 0.05, speed: 0.045 + Math.random() * 0.03, crossed: false }));
   };
 
-  const at = (l, t) => {
+  // Each lane is two cubics with flat tangents at the ends: an S that converges on the gate, then one that fans out.
+  const X0 = -30;
+  const seg = (l, first) => {
+    const [gx, gy] = gate;
+    const x1 = w + 30;
+    return first
+      ? [[X0, l.y0], [X0 + (gx - X0) * 0.55, l.y0], [gx - (gx - X0) * 0.45, gy], [gx, gy]]
+      : [[gx, gy], [gx + (x1 - gx) * 0.45, gy], [x1 - (x1 - gx) * 0.55, l.y1], [x1, l.y1]];
+  };
+  const cubic = (p, t) => {
     const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
-    return [a * l.p0[0] + b * l.p1[0] + c * l.p2[0] + d * l.p3[0], a * l.p0[1] + b * l.p1[1] + c * l.p2[1] + d * l.p3[1]];
+    return [a * p[0][0] + b * p[1][0] + c * p[2][0] + d * p[3][0], a * p[0][1] + b * p[1][1] + c * p[2][1] + d * p[3][1]];
+  };
+  const at = (l, t) => (t < GATE_T ? cubic(l.a, t / GATE_T) : cubic(l.b, (t - GATE_T) / (1 - GATE_T)));
+  const tip = (ctx, l) => {
+    const [x, y] = at(l, 0.985), [px, py] = at(l, 0.965);
+    const a = Math.atan2(y - py, x - px), s = 5.5;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.beginPath(); ctx.moveTo(s, 0); ctx.lineTo(-s * 0.7, -s * 0.9); ctx.lineTo(-s * 0.25, 0); ctx.lineTo(-s * 0.7, s * 0.9); ctx.closePath(); ctx.fill();
+    ctx.restore();
   };
 
   const frame = (dt) => {
     ctx.clearRect(0, 0, w, h);
     ctx.lineWidth = 1;
     for (const l of lanes) {
+      const { a, b } = l;
       ctx.strokeStyle = colors.line;
       ctx.beginPath();
-      ctx.moveTo(...l.p0);
-      ctx.bezierCurveTo(...l.p1, ...l.p2, ...l.p3);
+      ctx.moveTo(...a[0]);
+      ctx.bezierCurveTo(...a[1], ...a[2], ...a[3]);
+      ctx.bezierCurveTo(...b[1], ...b[2], ...b[3]);
       ctx.stroke();
-      const [gx, gy] = at(l, GATE_T);
-      ctx.strokeStyle = colors.gate;
-      ctx.beginPath(); ctx.arc(gx, gy, 6, 0, 6.2832); ctx.stroke();
-      const [ex, ey] = at(l, 0.985);
       ctx.fillStyle = colors.dot;
-      ctx.beginPath(); ctx.arc(ex, ey, 3.5, 0, 6.2832); ctx.fill();
+      tip(ctx, l);
     }
+    // One gate for every lane: the place where a person approves.
+    ctx.strokeStyle = colors.gate;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(gate[0], gate[1], 9, 0, 6.2832); ctx.stroke();
+    ctx.fillStyle = colors.gate;
+    ctx.beginPath(); ctx.arc(gate[0], gate[1], 2.5, 0, 6.2832); ctx.fill();
+    ctx.lineWidth = 1;
     for (const p of packets) {
       p.t += p.speed * dt;
       // Packets slow down at the gate, the way a request waits for an approval.

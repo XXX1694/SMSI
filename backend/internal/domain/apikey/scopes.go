@@ -20,7 +20,7 @@ const (
 	PostsPublish     Scope = "posts:publish"
 	PostsDelete      Scope = "posts:delete"
 	SocialDisconnect Scope = "social:disconnect"
-	// SocialConnect lets a key hand a provider credential to SocialOS. It is
+	// SocialConnect lets a key hand a provider credential to Steerpost. It is
 	// critical and never part of DefaultScopes (see D-009).
 	SocialConnect Scope = "social:connect"
 	MediaWrite    Scope = "media:write"

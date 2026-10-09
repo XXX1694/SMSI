@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # The alert checks of socialos-guard.sh (sourced by it after its helpers alert, clear_alert and dk; not run on its own).
 # They only report: a protected unit that is not active, a failing health URL, containers outside socialos.slice, a disk
-# above GUARD_DISK_WARN, SocialOS data above GUARD_DATA_BUDGET_GB. None of them stops or starts anything.
+# above GUARD_DISK_WARN, Steerpost data above GUARD_DATA_BUDGET_GB. None of them stops or starts anything.
 
 check_health() {
   local unit url status name
   for unit in $PROTECTED_UNITS; do
     if systemctl is-active --quiet "$unit"; then clear_alert "$unit-inactive"; else
-      alert "$unit-inactive" "$unit is not active (SocialOS does not manage it: systemctl status $unit)"
+      alert "$unit-inactive" "$unit is not active (Steerpost does not manage it: systemctl status $unit)"
     fi
   done
   for url in $HEALTH_URLS; do
@@ -29,13 +29,13 @@ check_slice() {
     if [ "$parent" != socialos.slice ]; then outside+=("$id"); fi
   done
   if [ "${#outside[@]}" -gt 0 ]; then
-    alert slice "${#outside[@]} SocialOS container(s) run outside socialos.slice (${outside[*]}): docker compose up -d"
+    alert slice "${#outside[@]} Steerpost container(s) run outside socialos.slice (${outside[*]}): docker compose up -d"
   else
     clear_alert slice
   fi
 }
 
-# check_budgets: the disk alert every run, the SocialOS data total (a du) at most once an hour. Alerts only: stopping
+# check_budgets: the disk alert every run, the Steerpost data total (a du) at most once an hour. Alerts only: stopping
 # containers frees no disk space.
 check_budgets() {
   local used
@@ -44,7 +44,7 @@ check_budgets() {
   touch "$STATE_DIR/data.checked"
   used=$(data_used_gb)
   if ((used >= DATA_BUDGET_GB)); then
-    alert data-budget "SocialOS data ${used} GB >= ${DATA_BUDGET_GB} GB (docker system df -v; MinIO, Postgres, backups)"
+    alert data-budget "Steerpost data ${used} GB >= ${DATA_BUDGET_GB} GB (docker system df -v; MinIO, Postgres, backups)"
   else
     clear_alert data-budget
   fi

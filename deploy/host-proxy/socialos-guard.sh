@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Keep SocialOS from slowing down the other services on a shared host. Started every 2 minutes by
+# Keep Steerpost from slowing down the other services on a shared host. Started every 2 minutes by
 # systemd/socialos-guard.timer; also fine to run by hand (as root).
 #
-#   ./host-proxy/socialos-guard.sh             measure, alert, and shed SocialOS load if SocialOS adds to host pressure
+#   ./host-proxy/socialos-guard.sh             measure, alert, and shed Steerpost load if Steerpost adds to host pressure
 #   ./host-proxy/socialos-guard.sh --dry-run   measure and say what it would do; changes nothing
 #   ./host-proxy/socialos-guard.sh --status    the current shed state and alerts
 #   ./host-proxy/socialos-guard.sh --resume    undo the shedding now (start what the guard stopped)
 #
 # Pressure: little RAM left, swap almost full, tasks waiting for memory, or a protected service (GUARD_PROTECTED_UNITS,
-# default irbisa.service caddy.service) waiting for CPU, IO or memory. The guard acts only when SocialOS is also a real
+# default irbisa.service caddy.service) waiting for CPU, IO or memory. The guard acts only when Steerpost is also a real
 # contributor (socialos.slice anonymous memory, page cache excluded, above GUARD_SLICE_MEM_MB, GUARD_SLICE_CPU_PCT or GUARD_SLICE_IO_MBPS); otherwise it alerts.
-#   level 1 (pressure)  stop the SocialOS worker gracefully (its stop grace period); no publishing, no jobs;
+#   level 1 (pressure)  stop the Steerpost worker gracefully (its stop grace period); no publishing, no jobs;
 #   level 2 (critical, 2 runs in a row)  also stop GUARD_SHED_SERVICES (default worker mcp frontend).
 # It starts again only what it stopped, after GUARD_RESUME_AFTER calm runs (level 1) or GUARD_RESUME_AFTER_CRIT calm runs
 # doubled for each level 2 within a day (level 2). Alerts (never an action): a protected unit is not active or a
-# GUARD_HEALTH_URLS URL answers >= 500; the disk is above GUARD_DISK_WARN; SocialOS data above GUARD_DATA_BUDGET_GB;
+# GUARD_HEALTH_URLS URL answers >= 500; the disk is above GUARD_DISK_WARN; Steerpost data above GUARD_DATA_BUDGET_GB;
 # containers outside socialos.slice. Each alert is a file in .deploy/guard/alerts/ and a journal line:
 #   journalctl -u socialos-guard -p warning
 # A container that thrashes its own page cache (memory at GUARD_THRASH_MEM_PCT of its cap and refaults above
@@ -62,7 +62,7 @@ dk() { timeout "$DOCKER_TIMEOUT" docker "$@"; }
 # shellcheck source=guard-checks.sh
 source "$script_dir/guard-checks.sh"
 
-# stop_service SERVICE: stops the running SocialOS containers of SERVICE (with their own stop grace period) and records
+# stop_service SERVICE: stops the running Steerpost containers of SERVICE (with their own stop grace period) and records
 # their ids in $STATE_DIR/stopped, so that a resume starts exactly those and nothing a human stopped.
 stop_service() {
   local found id
@@ -241,7 +241,7 @@ act() {
     alert pressure "level $level: ${REASONS[*]}; $SOCIALOS_USAGE$(pressure_note)"
     shed "$level"
     escalate "$level"
-    alert shed "SocialOS load shed at level $(state_get shed) (1: worker stopped, 2: $SHED_SERVICES stopped); resumes by itself once calm, or now: socialos-guard.sh --resume"
+    alert shed "Steerpost load shed at level $(state_get shed) (1: worker stopped, 2: $SHED_SERVICES stopped); resumes by itself once calm, or now: socialos-guard.sh --resume"
     return 0
   fi
   clear_alert pressure

@@ -1,4 +1,4 @@
-# SocialOS backend. `make help` lists the targets.
+# Steerpost backend. `make help` lists the targets.
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 

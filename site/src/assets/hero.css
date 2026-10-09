@@ -20,13 +20,24 @@
 
 .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
 .hero-copy { display: contents; }
-.hero-tag { margin: 0; justify-self: start; padding: 0.3rem 0.85rem; border: 1px solid hsl(var(--border)); border-radius: 999px; background: color-mix(in srgb, hsl(var(--background)) 70%, transparent); font-size: 0.8125rem; font-weight: 520; color: hsl(var(--muted-foreground)); }
+.hero-tag { display: inline-flex; align-items: center; gap: 0.5rem; margin: 0; justify-self: start; padding: 0.3rem 0.85rem; border: 1px solid hsl(var(--border)); border-radius: 999px; background: color-mix(in srgb, hsl(var(--background)) 70%, transparent); font-size: 0.8125rem; font-weight: 520; color: hsl(var(--muted-foreground)); }
 .hero-title { margin: 0; max-width: none; font-size: clamp(2.55rem, 10vw, 4.4rem); line-height: 1.02; font-weight: 660; letter-spacing: -0.052em; }
 .hero-title .ln { display: block; padding-bottom: 0.1em; margin-bottom: -0.1em; overflow: hidden; }
 .hero-title .w { display: inline-block; }
 .hero-title .soft { color: hsl(var(--muted-foreground)); }
 .hero-side { align-self: start; }
 .hero .lead { margin: 0; max-width: 28rem; font-size: 1.125rem; text-wrap: pretty; }
+
+/* the brand in the hero: the mark inside the tag, drawn once on load (path eases in, the tip settles) */
+.hero-tag .mark { width: 1.125rem; height: 1.125rem; color: hsl(var(--accent)); flex: none; }
+.hero-tag b { font-weight: 640; color: hsl(var(--foreground)); letter-spacing: -0.01em; }
+.hero-tag .sep { opacity: 0.45; }
+@media (prefers-reduced-motion: no-preference) {
+  .hero-tag .mark-path, .brand .mark-path { stroke-dasharray: 1; animation: mark-draw var(--duration-path) var(--ease-steer) 0.2s both; }
+  .hero-tag .mark-tip, .brand .mark-tip { animation: mark-tip var(--duration-slow) var(--ease-enter) 0.8s both; }
+}
+@keyframes mark-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes mark-tip { from { opacity: 0; transform: translateX(-4px); } }
 
 /* the stage: a double-bezel frame around the poster and the video */
 .stage { position: relative; perspective: 1800px; min-width: 0; }

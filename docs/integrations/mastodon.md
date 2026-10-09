@@ -1,19 +1,19 @@
 # Mastodon setup guide
 
-For users of a SocialOS instance. Nothing to configure on the SocialOS server: each user connects their own account on their
+For users of a Steerpost instance. Nothing to configure on the Steerpost server: each user connects their own account on their
 own Mastodon server with a token. Works with Mastodon and servers that implement the same API (GoToSocial, Pixelfed and
 similar; only Mastodon itself is tested).
 
 ## Connect
 
-1. On your server open **Preferences > Development > New application**. Name it "SocialOS".
+1. On your server open **Preferences > Development > New application**. Name it "Steerpost".
 2. Tick exactly these scopes: `write:statuses`, `write:media`, `read:accounts`. Untick the rest.
 3. Save, open the application and copy **Your access token**.
-4. In SocialOS open **Accounts > Mastodon**, enter the instance URL (for example `https://mastodon.social`) and the token.
+4. In Steerpost open **Accounts > Mastodon**, enter the instance URL (for example `https://mastodon.social`) and the token.
    Using the API: `POST /api/v1/social/accounts/token` with `{"provider":"mastodon","fields":{"instance_url":"...","access_token":"..."}}`.
    An API key needs the critical `social:connect` scope.
 
-SocialOS checks the token with `GET /api/v1/accounts/verify_credentials`, reads the limits from `GET /api/v2/instance`
+Steerpost checks the token with `GET /api/v1/accounts/verify_credentials`, reads the limits from `GET /api/v2/instance`
 (`/api/v1/instance` on older servers) and stores them next to the account. The token is encrypted at rest and never shown again.
 The account id is `host:id`, so the same person on two servers is two accounts.
 
@@ -22,13 +22,13 @@ The account id is `host:id`, so the same person on two servers is two accounts.
 | | |
 |---|---|
 | Text | up to the instance limit (`max_characters`, 500 by default) |
-| Images | up to the instance limit (4 by default), each up to `image_size_limit` (16 MiB by default). Large images are processed asynchronously by the server; SocialOS waits up to 60 s |
+| Images | up to the instance limit (4 by default), each up to `image_size_limit` (16 MiB by default). Large images are processed asynchronously by the server; Steerpost waits up to 60 s |
 | Video | not supported |
 | Visibility | public |
 | Delete | supported (`DELETE /api/v1/statuses/:id`); an already deleted post counts as deleted |
 | Link to the post | the `url` the server returns |
 
-Limits can only be stricter than the defaults: an instance that allows more than 500 characters is still capped at 500 by SocialOS.
+Limits can only be stricter than the defaults: an instance that allows more than 500 characters is still capped at 500 by Steerpost.
 
 ## Safety
 
@@ -42,7 +42,7 @@ Limits can only be stricter than the defaults: an instance that allows more than
 
 ## Errors
 
-| Server answer | SocialOS | What to do |
+| Server answer | Steerpost | What to do |
 |---|---|---|
 | 401, or 403 (missing scope) | account becomes `expired` | create a new token with the three scopes and reconnect |
 | 422 | post fails, message from the server | fix the post (length, media type) |

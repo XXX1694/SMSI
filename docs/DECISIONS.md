@@ -446,3 +446,20 @@ link: mail may be off (`MAIL_PROVIDER=log`) and the link would sit in a mailbox 
 window, which is why it is short and why `GET` is audited. The 5 MiB part size caps an archive at about 50 GB on S3, far
 above the per-user media quota. The partial unique index means a crash that leaves a row `running` blocks the user until
 the sweep fails it (at most 2 hours plus the sweep interval).
+
+## D-020: The product is renamed Steerpost; stored and host identifiers keep the `socialos` name (2026-10-09)
+
+**Decision.** The product, the MCP server, the generated client configs, the images, the npm packages and the Go module are
+now called Steerpost / `steerpost` ("the human steers, the agent posts"). The GitHub repository moves from SMSI to steerpost. Names that name
+stored state or a host resource stay `socialos`: session/CSRF cookies, `X-SocialOS-*` headers, Redis keys, the Bluesky rkey
+salt and the Mastodon idempotency prefix, the S3 rule and default bucket, metrics, localStorage keys, the compose project, DB names,
+`/opt/socialos`, systemd units, `socialos.slice`, Caddy snippets and backup paths. The MCP server reads `STEERPOST_*` and falls back to
+`SOCIALOS_*`. Images are published under both names until every server pulls `steerpost-*`. `autoupdate.sh` follows redirects.
+
+**Alternatives.** Rename everything at once: a prod migration on a shared host, a forced logout, duplicate posts on retry,
+new empty volumes. Rename the copy only: users would still see `socialos` in images, configs and the MCP server name.
+
+**Consequences.** Two names coexist, and `deploy/README.md` (section 15.2) lists the legacy identifiers. The old Pages URL `/SMSI/` returns 404 (no
+redirect). Never create a repo named SMSI again. Dual-publish and the env fallback are removed once every known server pulls `steerpost-*`.
+The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*` GHCR packages start private; the owner makes them public
+(deploy/README.md, section 15.1). The shims (env fallback, dual publish, `curl -L` in `autoupdate.sh`) land and are deployed before the repository is renamed.

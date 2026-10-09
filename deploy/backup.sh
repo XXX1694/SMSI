@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dump the SocialOS database (and optionally the uploaded media), delete old backups, optionally copy off-site.
+# Dump the Steerpost database (and optionally the uploaded media), delete old backups, optionally copy off-site.
 #
 #   ./backup.sh                          # database only
 #   BACKUP_MEDIA=1 ./backup.sh           # also archive the bundled MinIO volume (skip when you use external S3)

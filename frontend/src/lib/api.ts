@@ -31,6 +31,7 @@ import type {
   TelegramLink,
   TelegramLinkState,
   UsageReport,
+  UpdatePostInput,
   UsageSummary,
 } from './types';
 
@@ -220,6 +221,10 @@ export const api = {
     },
     async create(input: CreatePostInput): Promise<Post> {
       return (await request('/posts', { method: 'POST', body: input })) as Post;
+    },
+    /** Edits a draft or scheduled post; any other status is a 409. Only the fields present are changed. */
+    async update(id: string, input: UpdatePostInput): Promise<Post> {
+      return (await request(`/posts/${enc(id)}`, { method: 'PATCH', body: input })) as Post;
     },
     async publish(id: string): Promise<Post> {
       return (await request(`/posts/${enc(id)}/publish`, { method: 'POST' })) as Post;

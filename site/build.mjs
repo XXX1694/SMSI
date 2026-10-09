@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds the SocialOS website into site/dist:
+ * Builds the Steerpost website into site/dist:
  *   /                landing page
  *   /docs/...        documentation rendered from the repo's markdown (README.md, docs/GETTING-STARTED.md,
  *                    docs/integrations/README.md, docs/API.md, docs/ARCHITECTURE.md, mcp/README.md)
@@ -181,15 +181,15 @@ const DOCS = [
     slug: '',
     nav: 'Overview',
     title: 'Overview',
-    description: 'What SocialOS is, what it does today, which networks it supports and how its parts fit together.',
-    lead: 'Run SocialOS yourself, connect your accounts and let AI agents work with them through a scoped MCP server.',
-    blocks: () => R('Why SocialOS', 'Features', 'Supported networks', 'Architecture'),
+    description: 'What Steerpost is, what it does today, which networks it supports and how its parts fit together.',
+    lead: 'Run Steerpost yourself, connect your accounts and let AI agents work with them through a scoped MCP server.',
+    blocks: () => R('Why Steerpost', 'Features', 'Supported networks', 'Architecture'),
   },
   {
     slug: 'getting-started',
     nav: 'Getting started',
     title: 'Getting started',
-    description: 'Run SocialOS locally with Docker, configure it, apply migrations and run the test suites.',
+    description: 'Run Steerpost locally with Docker, configure it, apply migrations and run the test suites.',
     lead: 'From a clean checkout to a running stack, with or without production credentials.',
     blocks: () => [wholeFile('docs/GETTING-STARTED.md')],
   },
@@ -205,7 +205,7 @@ const DOCS = [
     slug: 'api',
     nav: 'REST API',
     title: 'REST API',
-    description: 'Endpoints, error format, post lifecycle and publishing idempotency of the SocialOS REST API.',
+    description: 'Endpoints, error format, post lifecycle and publishing idempotency of the Steerpost REST API.',
     lead: 'Everything the app and the MCP server do goes through this API. The full contract, including the database and scheduler, is in the architecture reference.',
     blocks: () => [wholeFile('docs/API.md')],
   },
@@ -213,7 +213,7 @@ const DOCS = [
     slug: 'mcp',
     nav: 'MCP server',
     title: 'MCP server',
-    description: 'The SocialOS MCP tools, their scopes and risk levels, and how to configure Claude Code, Cursor, Claude Desktop and other clients.',
+    description: 'The Steerpost MCP tools, their scopes and risk levels, and how to configure Claude Code, Cursor, Claude Desktop and other clients.',
     lead: 'Agents connect with a scoped, revocable API key. Tools a key has no scope for are not listed, and every call is checked again by the REST API.',
     blocks: () => [...R('Use with your AI agent'), { ...mcpServer, tokens: Object.assign([serverReference, ...mcpServer.tokens], { links: mcpServer.tokens.links }), shift: 1 }],
   },
@@ -351,7 +351,7 @@ cpSync(join(here, 'node_modules/mermaid/dist/mermaid.min.js'), join(dist, 'asset
     'index.html',
     page({
       path: '',
-      title: 'SocialOS: publish to social networks, for you and your AI agents',
+      title: 'Steerpost: publish to social networks, for you and your AI agents',
       description: 'Connect your social accounts, compose once, schedule per platform, and let AI agents help through a scoped MCP server. Try the demo in your browser.',
       content,
       landing: true,
@@ -398,11 +398,11 @@ pages.forEach((p, i) => {
       </article>
       ${toc}
     </div>`;
-  write(`${p.url}index.html`, page({ path: p.url, title: `${p.title} · SocialOS docs`, description: p.description, content, docs: true }));
+  write(`${p.url}index.html`, page({ path: p.url, title: `${p.title} · Steerpost docs`, description: p.description, content, docs: true }));
 });
 
 // 404, robots, sitemap
-write('404.html', page({ path: '404.html', title: 'Page not found · SocialOS', description: 'This page does not exist.', content: read(join(src, 'pages/404.html')).replaceAll('{{base}}', BASE) }));
+write('404.html', page({ path: '404.html', title: 'Page not found · Steerpost', description: 'This page does not exist.', content: read(join(src, 'pages/404.html')).replaceAll('{{base}}', BASE) }));
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}${BASE}sitemap.xml\n`);
 write(
   'sitemap.xml',

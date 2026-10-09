@@ -92,6 +92,6 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 		RequiresApproval: true,
 		ConnectMethod:    provider.ConnectOAuth,
 		Notes: "Personal profile posting via 'Share on LinkedIn' (w_member_social). Video not supported in this release. " +
-			"Company pages require Marketing Developer Platform approval. No native scheduling; SocialOS schedules.",
+			"Company pages require Marketing Developer Platform approval. No native scheduling; Steerpost schedules.",
 	}
 }

@@ -1,13 +1,14 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/wordmark-dark.svg">
-    <img alt="SocialOS" src="docs/assets/wordmark-light.svg" height="56">
+    <img alt="Steerpost" src="docs/assets/wordmark-light.svg" height="56">
   </picture>
 </p>
 
 <p align="center">
   <strong>One place to publish, for you and your AI agents.</strong><br>
-  A self-hosted social media scheduler with a built-in MCP server. Agents draft and schedule; you decide what they may do.
+  A self-hosted social media scheduler with a built-in MCP server. Agents draft and schedule; you decide what they may do.<br>
+  Steerpost was called SocialOS until October 2026.
 </p>
 
 <p align="center">
@@ -27,13 +28,13 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/src/assets/screens/dashboard-dark.png">
-  <img alt="The SocialOS dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures." src="site/src/assets/screens/dashboard-light.png">
+  <img alt="The Steerpost dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures." src="site/src/assets/screens/dashboard-light.png">
 </picture>
 
 > **Status: early (v0.1.0).** LinkedIn, Telegram, Discord, Mastodon and Bluesky publish today. More networks are planned, and the table below says
 > honestly what each one needs. The demo runs entirely in your browser: no sign-up, nothing is sent anywhere.
 
-## Why SocialOS
+## Why Steerpost
 
 - **Built for agents, with a leash.** Claude, Cursor and other MCP clients can draft and schedule posts. Each agent gets a
   scoped, revocable key, risky actions need an explicit confirmation, and every call lands in the audit log.
@@ -58,7 +59,7 @@
 
 - An MCP server with 14 tools, over Streamable HTTP or stdio.
 - Keys carry only the scopes you tick. Tools outside a key's scope are not even listed, and the API checks every call again.
-- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in SocialOS before it runs.
+- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in Steerpost before it runs.
 - Every agent action is in the audit log, with an "Agent actions" filter.
 
 **Self-hosting**
@@ -104,7 +105,7 @@ official way to post. Setup for the live networks: [LinkedIn](docs/integrations/
 
 ## Use with your AI agent
 
-Agents connect to the MCP server with an API key. In SocialOS, open **Developer → MCP connections**, name the
+Agents connect to the MCP server with an API key. In Steerpost, open **Developer → MCP connections**, name the
 connection, tick the scopes you are comfortable with and copy the key: it is shown once, together with a ready-to-paste
 config. The MCP endpoint is `https://mcp.<your-domain>/mcp` on a server and `http://localhost:3333/mcp` locally.
 
@@ -130,7 +131,7 @@ Revoking a connection invalidates its key at once. Keys can never create keys or
 <summary><strong>Claude Code</strong></summary>
 
 ```bash
-claude mcp add --transport http socialos https://mcp.example.com/mcp \
+claude mcp add --transport http steerpost https://mcp.example.com/mcp \
   --header "Authorization: Bearer sk_live_..."
 ```
 
@@ -142,7 +143,7 @@ claude mcp add --transport http socialos https://mcp.example.com/mcp \
 ```json
 {
   "mcpServers": {
-    "socialos": {
+    "steerpost": {
       "url": "https://mcp.example.com/mcp",
       "headers": { "Authorization": "Bearer ${env:SOCIALOS_API_KEY}" }
     }
@@ -162,7 +163,7 @@ Claude Desktop starts a local process. Bridge it to your server with [`mcp-remot
 ```json
 {
   "mcpServers": {
-    "socialos": {
+    "steerpost": {
       "command": "npx",
       "args": [
         "-y", "mcp-remote@0.14.3", "https://mcp.example.com/mcp",
@@ -174,12 +175,12 @@ Claude Desktop starts a local process. Bridge it to your server with [`mcp-remot
 }
 ```
 
-Or run the SocialOS MCP server itself in stdio mode from a checkout (`cd mcp && npm ci && npm run build`):
+Or run the Steerpost MCP server itself in stdio mode from a checkout (`cd mcp && npm ci && npm run build`):
 
 ```json
 {
   "mcpServers": {
-    "socialos": {
+    "steerpost": {
       "command": "node",
       "args": ["/path/to/SMSI/mcp/dist/index.js", "--stdio"],
       "env": {
@@ -211,7 +212,7 @@ credentials. Configuration, migrations, tests and running each part on its own: 
 
 ## Self-hosting
 
-SocialOS runs on one small server with Docker. The production kit is in [`deploy/`](deploy/):
+Steerpost runs on one small server with Docker. The production kit is in [`deploy/`](deploy/):
 
 | You want to | Read |
 |---|---|
@@ -221,7 +222,7 @@ SocialOS runs on one small server with Docker. The production kit is in [`deploy
 | Cut a release | [Section 15: releasing](deploy/README.md#15-releasing) |
 | Connect real networks | [Providers and OAuth setup](docs/integrations/README.md) |
 
-You bring your own LinkedIn app and Telegram bot; nothing goes through a SocialOS-run service.
+You bring your own LinkedIn app and Telegram bot; nothing goes through a Steerpost-run service.
 
 ## Architecture
 

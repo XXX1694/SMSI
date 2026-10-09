@@ -17,16 +17,28 @@ export function normalizeApiUrl(raw: string): string {
   return /\/api\/v1$/.test(trimmed) ? trimmed : `${trimmed}/api/v1`;
 }
 
+/**
+ * Reads STEERPOST_<name>, falling back to the legacy SOCIALOS_<name> (D-020). An empty value counts as unset, so a
+ * compose file that sets both can blank the new one without hiding the old one.
+ */
+export function readEnv(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  for (const prefix of ["STEERPOST_", "SOCIALOS_"]) {
+    const v = env[prefix + name];
+    if (v !== undefined && v.trim() !== "") return v;
+  }
+  return undefined;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const timeoutMs = Number(env.SOCIALOS_TIMEOUT_MS ?? 15000);
+  const timeoutMs = Number(readEnv(env, "TIMEOUT_MS") ?? 15000);
   const port = Number(env.PORT ?? 3333);
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error("SOCIALOS_TIMEOUT_MS must be a positive number");
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error("STEERPOST_TIMEOUT_MS (or SOCIALOS_TIMEOUT_MS) must be a positive number");
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("PORT must be a valid port");
   const gatewaySecret = env.MCP_GATEWAY_SECRET?.trim() || undefined;
   if (gatewaySecret !== undefined && gatewaySecret.length < 32) throw new Error("MCP_GATEWAY_SECRET must be at least 32 characters");
   const trust = ["1", "true", "yes", "on"].includes((env.TRUST_PROXY ?? "").trim().toLowerCase());
   return {
-    apiUrl: normalizeApiUrl(env.SOCIALOS_API_URL ?? "http://localhost:8080"),
+    apiUrl: normalizeApiUrl(readEnv(env, "API_URL") ?? "http://localhost:8080"),
     port,
     host: env.HOST ?? "0.0.0.0",
     timeoutMs,

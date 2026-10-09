@@ -25,7 +25,7 @@ func TestAcceptanceFlow(t *testing.T) {
 	accountID := c.connectMock()
 
 	draft := c.must("POST", "/api/v1/posts", map[string]any{
-		"title": "Launch", "content": "Hello from SocialOS", "social_account_ids": []string{accountID},
+		"title": "Launch", "content": "Hello from Steerpost", "social_account_ids": []string{accountID},
 	}, 201)
 	postID := draft["id"].(string)
 	if draft["status"] != "draft" || len(draft["targets"].([]any)) != 1 {

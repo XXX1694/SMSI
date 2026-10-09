@@ -1,7 +1,7 @@
 {
   "name": "socialos-mcp",
   "version": "0.1.0",
-  "description": "SocialOS MCP server (Streamable HTTP + stdio) that proxies the SocialOS REST API",
+  "description": "Steerpost MCP server (Streamable HTTP + stdio) that proxies the Steerpost REST API",
   "type": "module",
   "license": "UNLICENSED",
   "private": true,

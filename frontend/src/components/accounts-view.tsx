@@ -1,5 +1,6 @@
 'use client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { CapabilityBadges } from '@/components/capability-badges';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -205,6 +206,11 @@ export function AccountsView() {
   return (
     <div className="space-y-4">
       {result ? <Notice tone={result.tone}>{result.text}</Notice> : null}
+      {data.accounts.length === 0 ? (
+        <Notice tone="info">
+          No account connected yet. Connect one below, then <Link href="/compose" className="underline underline-offset-4">write your first post</Link>.
+        </Notice>
+      ) : null}
       <ul className="stagger divide-y border-y">
         {providers.map((p) => (
           <ProviderRow

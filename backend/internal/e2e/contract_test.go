@@ -532,8 +532,8 @@ func TestEndpointContract(t *testing.T) {
 		hasKeys(t, "mcp connection", conn, "id", "name", "client_name", "api_key_id", "key_prefix", "scopes", "last_seen_at", "revoked_at", "created_at")
 		cfg := m["config"].(map[string]any)
 		hasKeys(t, "mcp config", cfg, "http", "stdio", "mcpServers", "claude_code")
-		httpCfg := cfg["http"].(map[string]any)["mcpServers"].(map[string]any)["socialos"].(map[string]any)
-		stdioCfg := cfg["stdio"].(map[string]any)["mcpServers"].(map[string]any)["socialos"].(map[string]any)
+		httpCfg := cfg["http"].(map[string]any)["mcpServers"].(map[string]any)["steerpost"].(map[string]any)
+		stdioCfg := cfg["stdio"].(map[string]any)["mcpServers"].(map[string]any)["steerpost"].(map[string]any)
 		if httpCfg["type"] != "http" || httpCfg["url"] != "http://mcp.test/mcp" || httpCfg["headers"].(map[string]any)["Authorization"] != "Bearer "+rawMCP {
 			t.Errorf("http config not ready to paste: %v", httpCfg)
 		}

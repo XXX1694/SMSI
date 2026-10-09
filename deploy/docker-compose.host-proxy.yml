@@ -1,4 +1,4 @@
-# Host-proxy mode: SocialOS runs behind a reverse proxy that already owns ports 80/443 on the host (for example the
+# Host-proxy mode: Steerpost runs behind a reverse proxy that already owns ports 80/443 on the host (for example the
 # host's own Caddy or nginx). Use it as an override on top of docker-compose.prod.yml by setting, in .env:
 #
 #   COMPOSE_FILE=docker-compose.prod.yml:docker-compose.host-proxy.yml
@@ -9,9 +9,9 @@
 #     The host proxy forwards app./api./mcp./s3.<domain> to them: see host-proxy/render-caddy.sh;
 #   * memory limits and Postgres settings are sized for a small shared host (caps: postgres 128m, redis 32m, minio 192m,
 #     backend 160m, worker 160m, mcp 64m, frontend 160m, migrate 64m during a deploy);
-#   * every SocialOS container has oom_score_adj 500: if the HOST runs out of memory, the kernel picks these containers
+#   * every Steerpost container has oom_score_adj 500: if the HOST runs out of memory, the kernel picks these containers
 #     before the host's Caddy or the other service (their score is around 0);
-#   * every SocialOS container runs in the systemd slice socialos.slice, which caps the whole stack (systemd/socialos.slice:
+#   * every Steerpost container runs in the systemd slice socialos.slice, which caps the whole stack (systemd/socialos.slice:
 #     1 CPU, 664 MB of RAM, no swap, 512 tasks); each container may not swap (memswap_limit = mem_limit) and runs at most
 #     SOCIALOS_PIDS_LIMIT processes. The caps above add up to 896m (960m during a deploy), more than the slice (664M): about 0.3 GB
 #     is in use, so the slice only binds when several containers peak at once, and then the OOM kill stays inside it.
@@ -23,7 +23,7 @@
 # limit is OOM-killed and restarted, which is better than starving the other services on the host.
 # The standalone mode (docker-compose.prod.yml alone) is unchanged and remains the default.
 
-# Shared by every SocialOS service in this mode. Docker's systemd cgroup driver accepts only a slice name here.
+# Shared by every Steerpost service in this mode. Docker's systemd cgroup driver accepts only a slice name here.
 x-host-guard: &host-guard
   oom_score_adj: 500
   cgroup_parent: ${SOCIALOS_CGROUP_PARENT-socialos.slice}

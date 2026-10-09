@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Browser end-to-end run against a REAL SocialOS stack (API + worker with
+ * Browser end-to-end run against a REAL Steerpost stack (API + worker with
  * SOCIAL_MOCK_PROVIDERS=true, frontend on WEB_URL). Fails on any 5xx, any
  * unexpected 4xx from /api, or any console error. Screenshots → ./screenshots/real-*.png
  *   WEB_URL=http://localhost:3000 node scripts/e2e-real.mjs
@@ -59,7 +59,7 @@ try {
 
   await page.goto(`${BASE}/compose`);
   await page.waitForLoadState('networkidle');
-  await page.locator('textarea').first().fill('Hello from the SocialOS browser e2e run');
+  await page.locator('textarea').first().fill('Hello from the Steerpost browser e2e run');
   const chips = page.getByRole('checkbox').or(page.locator('[aria-pressed]'));
   const n = await chips.count();
   for (let i = 0; i < n; i++) await chips.nth(i).click();

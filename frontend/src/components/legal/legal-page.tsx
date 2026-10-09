@@ -8,7 +8,7 @@ export function LegalPage({ title, other, operator, children }: { title: string;
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
       <nav aria-label="Legal" className="mb-8 flex flex-wrap items-center justify-between gap-2 text-sm">
         <Link href="/login" className="text-muted-foreground hover:text-foreground">
-          SocialOS
+          Steerpost
         </Link>
         <Link href={`/${other}`} className="text-accent hover:underline">
           {other === 'terms' ? 'Terms of Service' : 'Privacy Policy'}
@@ -19,7 +19,7 @@ export function LegalPage({ title, other, operator, children }: { title: string;
         Version {LEGAL_VERSION}. Effective {LEGAL_EFFECTIVE_DATE}.
       </p>
       <p role="note" className="mt-4 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
-        This text is a template that ships with SocialOS. It is not legal advice. The operator of this instance is responsible for it and must
+        This text is a template that ships with Steerpost (formerly SocialOS). It is not legal advice. The operator of this instance is responsible for it and must
         review it before real users sign up.
         {operator.configured ? null : ' The operator has not set their name and contact address yet.'}
       </p>

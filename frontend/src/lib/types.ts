@@ -180,6 +180,17 @@ export interface CreatePostInput {
   schedule?: boolean;
 }
 
+/** Body of `PATCH /posts/{id}`: every field is optional and only the ones present are changed. */
+export interface UpdatePostInput {
+  title?: string;
+  content?: string;
+  social_account_ids?: string[];
+  media_ids?: string[];
+  targets?: { social_account_id: string; content: string }[];
+  /** Scheduled posts only; a draft is scheduled through `POST /posts/{id}/schedule`. */
+  scheduled_at?: string;
+}
+
 /** One line of `GET /account/usage`. `used` is absent for limits that are not counted (the agent request rate). `limit` -1 = unlimited. */
 export interface QuotaLine {
   used?: number;

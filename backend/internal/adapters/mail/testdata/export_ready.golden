@@ -1,19 +1,19 @@
-Subject: Your SocialOS data export is ready
+Subject: Your Steerpost data export is ready
 
 --- text ---
-Your SocialOS data export is ready. Download it from your settings:
+Your Steerpost data export is ready. Download it from your settings:
 
 https://app.example.com/verify-email#token=abc123
 
 The export is available for 48 hours.
 
-SocialOS
+Steerpost
 
 --- html ---
 <!doctype html>
 <html><body style="font-family:sans-serif;line-height:1.5;color:#111">
-<p>Your SocialOS data export is ready.</p>
+<p>Your Steerpost data export is ready.</p>
 <p><a href="https://app.example.com/verify-email#token=abc123">Open settings to download it</a></p>
 <p>The export is available for 48 hours.</p>
-<p style="color:#666;font-size:13px">SocialOS</p>
+<p style="color:#666;font-size:13px">Steerpost</p>
 </body></html>

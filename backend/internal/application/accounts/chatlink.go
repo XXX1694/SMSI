@@ -14,7 +14,7 @@ import (
 	"github.com/socialos/backend/internal/domain/socialaccount"
 )
 
-// Connecting a chat (Telegram channel or group) needs proof that the SocialOS
+// Connecting a chat (Telegram channel or group) needs proof that the Steerpost
 // user controls it, otherwise anyone who knows a channel's @username could
 // attach it to their own account through the shared bot. The proof is a
 // one-time code:

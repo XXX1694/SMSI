@@ -1,11 +1,14 @@
 import { STORAGE_KEY } from './config';
 import type { DemoState } from './model';
 import { seedApprovals } from './approvals';
-import { buildSeed } from './seed';
+import { DEMO_USER_EMAIL, buildSeed } from './seed';
 
 export { STORAGE_KEY };
 /** Seeded dates are relative to the first visit, so an old copy is replaced by a fresh one. */
 export const MAX_AGE_MS = 14 * 86_400_000;
+
+/** Demo login email before the rename to Steerpost. */
+const LEGACY_DEMO_EMAIL = 'demo@socialos.dev';
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -44,6 +47,8 @@ export function loadState(storage: StorageLike | null, now: Date = new Date()): 
       if (isState(parsed) && now.getTime() - Date.parse(parsed.seeded_at) < MAX_AGE_MS) {
         // A copy saved before approvals existed has none: start it with the sample requests.
         if (!Array.isArray(parsed.approvals)) parsed.approvals = seedApprovals(now.getTime());
+        // The demo login email changed with the rename: keep the saved data, update the address.
+        if (parsed.user.email === LEGACY_DEMO_EMAIL) parsed.user.email = DEMO_USER_EMAIL;
         return parsed;
       }
     }

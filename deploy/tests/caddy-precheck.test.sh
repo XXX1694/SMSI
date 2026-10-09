@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# host-proxy/caddy-precheck.sh against a stubbed caddy: a broken SocialOS snippet is moved aside so that Caddy can start,
+# host-proxy/caddy-precheck.sh against a stubbed caddy: a broken Steerpost snippet is moved aside so that Caddy can start,
 # a problem that is not ours is left alone, and the script always exits 0.
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -43,7 +43,7 @@ precheck
 assert_eq "broken snippet: exit 0" 0 "$rc"
 assert_eq "broken snippet: nothing imported any more" "" "$(live)"
 assert_eq "broken snippet: quarantined" 1 "$(quarantined)"
-assert_has "broken snippet: explained" "$out" "Caddy starts without the SocialOS sites"
+assert_has "broken snippet: explained" "$out" "Caddy starts without the Steerpost sites"
 assert_file "broken snippet: alert" "$SB/opt/.deploy/guard/alerts/caddy-quarantine"
 assert_eq "broken snippet: validated twice" 2 "$(grep -c '^caddy validate' "$SB/calls")"
 

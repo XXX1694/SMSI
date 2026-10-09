@@ -64,7 +64,7 @@ try {
   check(true, 'auth guard redirects to /login');
   await shot('00-login');
 
-  await page.getByLabel('Email').fill('demo@socialos.dev');
+  await page.getByLabel('Email').fill('demo@example.com');
   await page.getByLabel('Password').fill('demo12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL(/\/dashboard/);
@@ -79,8 +79,8 @@ try {
 
   await page.goto(`${BASE}/compose`);
   await page.getByRole('button', { name: /Alex Morgan/ }).click();
-  await page.getByRole('button', { name: /SocialOS Demo Channel/ }).click();
-  await page.getByLabel('Post content').fill('Shipping SocialOS today. Write once, publish everywhere.');
+  await page.getByRole('button', { name: /Steerpost Demo Channel/ }).click();
+  await page.getByLabel('Post content').fill('Shipping Steerpost today. Write once, publish everywhere.');
   await page.getByRole('tab', { name: /LinkedIn/ }).click();
   await page.getByRole('tab', { name: 'All platforms' }).click();
   await shot('03-composer');
@@ -153,7 +153,7 @@ try {
   const mctx = await browser.newContext({ viewport: { width: 390, height: 800 } });
   const m = await mctx.newPage();
   await m.goto(`${BASE}/login`);
-  await m.getByLabel('Email').fill('demo@socialos.dev');
+  await m.getByLabel('Email').fill('demo@example.com');
   await m.getByLabel('Password').fill('demo12345');
   await m.getByRole('button', { name: 'Sign in' }).click();
   await m.getByText('Connected accounts').waitFor();
