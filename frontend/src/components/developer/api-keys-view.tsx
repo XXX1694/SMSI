@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { usePrefs } from '@/components/prefs-provider';
@@ -166,7 +167,7 @@ export function ApiKeysView() {
       ) : error || !data ? (
         <ErrorState error={error} onRetry={reload} />
       ) : data.length === 0 ? (
-        <EmptyState title="No API keys">Create a key to call the REST API from your own tools.</EmptyState>
+        <EmptyState title="No API keys">Create a key to call the REST API from your own tools. To connect an AI agent, <Link href="/developer/mcp" className="underline underline-offset-4">use an MCP connection</Link>.</EmptyState>
       ) : (
         <Table label="API keys">
           <Thead>

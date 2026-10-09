@@ -10,6 +10,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 - Edit drafts and scheduled posts in the web UI. "Edit" on the Posts list and on the post page opens the composer (`/compose?post=<id>`) prefilled with the title, text, per-network overrides, media and schedule (shown in the Settings timezone); saving calls `PATCH /posts/{id}`. A scheduled post keeps its time unless you change it; a draft can be saved and scheduled in one step. Other statuses show why they cannot be edited. Unsaved edits are guarded (browser prompt on reload or close, a dialog on in-app links). The API has no ETag or `If-Match`, so before saving the UI re-reads the post and, if its `updated_at` or status moved, shows a conflict message with "Load the latest version" and "Save mine anyway" (best effort: the check and the write are not atomic).
 - The demo engine and `mock-api` answer `PATCH /posts/{id}` (text, per-network text, accounts, media, time), so the Pages demo supports editing.
+- Dashboard "Get started" checklist for new users: connect a network, write a first post, connect an AI agent (an MCP connection or an API key) and, optionally, review an approval. Each step ticks off from existing data (accounts, posts, keys, connections, approvals), has a one-line explanation and a direct link, and the list can be dismissed (remembered in this browser). The empty Accounts, Posts and Developer screens link back to the setup steps. The demo reflects its own state.
 
 ## [0.2.1] - 2026-10-09
 

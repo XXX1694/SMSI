@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
 import { useCallback } from 'react';
+import { OnboardingChecklist } from '@/components/onboarding-checklist';
 import { PostList } from '@/components/post-row';
-import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { ErrorState, LoadingRows } from '@/components/states';
 import { Section } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import type { DashboardSummary, Post } from '@/lib/types';
 import { useAsync } from '@/hooks';
@@ -49,7 +49,6 @@ export function DashboardView() {
   if (loading && !data) return <LoadingRows rows={4} />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
   const { summary, drafts, failed } = data;
-  const nothingYet = summary.connected_accounts === 0;
 
   return (
     <div className="stagger space-y-10">
@@ -59,18 +58,7 @@ export function DashboardView() {
         <Stat label="Published this month" value={summary.published_this_month} />
         <Stat label="Failed" value={summary.failed} tone="danger" />
       </dl>
-      {nothingYet ? (
-        <EmptyState
-          title="Connect your first account"
-          action={
-            <Button asChild>
-              <Link href="/accounts">Go to accounts</Link>
-            </Button>
-          }
-        >
-          Connect LinkedIn, Telegram or the mock provider to start publishing.
-        </EmptyState>
-      ) : null}
+      <OnboardingChecklist connectedAccounts={summary.connected_accounts} />
       <div className="stagger grid gap-10 lg:grid-cols-2">
         <PostSection title="Upcoming" posts={summary.upcoming} empty="Nothing scheduled." href="/posts?status=scheduled" />
         <PostSection title="Drafts" posts={drafts} empty="No drafts." href="/posts?status=draft" />
