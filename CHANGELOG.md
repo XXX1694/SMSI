@@ -6,6 +6,15 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- Data export (D-018): Settings, "Your data", builds a ZIP with your profile, posts with targets and attempts, connected accounts (no credentials), API key names, approvals, the audit log and your media files. The worker streams it to storage within its memory cap; the download link works for 5 minutes, the file is deleted after `EXPORT_RETENTION_DAYS` (default 7). One export at a time, one per 24 hours. New endpoints `POST/GET /account/exports` and `GET /account/exports/{id}` (browser session only), migration 00005 (indexes).
+- `429 RATE_LIMITED` answers can carry a specific `Retry-After`.
+
+### Changed
+
+- The Privacy Policy now says that self-service export exists (deletion still does not).
+
 ## [0.2.1] - 2026-10-09
 
 ### Added

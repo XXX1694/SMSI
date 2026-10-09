@@ -86,6 +86,7 @@ type Config struct {
 	ApprovalConfig // approvals and the agent schedule lead (config_approvals.go)
 	QuotaConfig    // plan limits (config_quota.go)
 	WorkerConfig   // worker shutdown and health address (config_worker.go)
+	ExportConfig   // data export retention (config_export.go)
 }
 
 // Mail providers and SMTP TLS modes.
@@ -165,6 +166,7 @@ func Load() (*Config, error) {
 	proxies, warnings, perr := resolveTrustedProxies(c.TrustProxy, env("TRUSTED_PROXIES", ""))
 	c.ApprovalConfig = loadApprovalConfig()
 	c.QuotaConfig = loadQuotaConfig()
+	c.ExportConfig = loadExportConfig()
 	c.WorkerConfig = loadWorkerConfig()
 	c.TrustedProxies, c.Warnings = proxies, warnings
 	if c.Production() && c.MailProvider == MailProviderLog {
@@ -238,6 +240,7 @@ func (c *Config) validate(extra ...error) error {
 	problems = append(problems, c.validateApprovals()...)
 	problems = append(problems, c.validateQuota()...)
 	problems = append(problems, c.validateWorker()...)
+	problems = append(problems, c.validateExport()...)
 	problems = append(problems, c.validateMail()...)
 	if c.Production() {
 		if !c.CookieSecure {

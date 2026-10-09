@@ -19,6 +19,7 @@ import type {
 } from '../types';
 import { decide, findApproval, visibleApprovals } from './approvals';
 import { svgThumb } from './art';
+import { handleExports } from './exports';
 import type { DemoLink, DemoPost, DemoRequest, DemoResponse, DemoState, WireProvider } from './model';
 import { PROVIDERS } from './providers';
 import { demoQuotaError, demoUsage } from './quota';
@@ -354,6 +355,8 @@ export class DemoEngine {
 
     // ---- dashboard, analytics, audit
     if (path === '/account/usage' && m === 'GET') return ok(200, demoUsage(s, this.now()));
+    const exported = handleExports(s, m, path, this.now(), () => this.touch());
+    if (exported) return exported;
     if (path === '/dashboard/summary' && m === 'GET') return ok(200, this.summary());
     if (path === '/analytics' && m === 'GET') return ok(200, { items: this.analytics(query) });
     if (path === '/audit-logs' && m === 'GET') return ok(200, paginate(query?.action ? s.audit.filter((a) => a.action === query.action) : s.audit, query));

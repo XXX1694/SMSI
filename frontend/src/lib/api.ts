@@ -19,6 +19,8 @@ import type {
   CreatedApiKey,
   CreatedMcpConnection,
   DashboardSummary,
+  DataExport,
+  DataExportLink,
   Me,
   McpConnection,
   Media,
@@ -254,6 +256,19 @@ export const api = {
   account: {
     async usage(): Promise<UsageReport> {
       return (await request('/account/usage')) as UsageReport;
+    },
+    /** Account data export (session only). 409 while one is being prepared, 429 inside the 24 h cooldown. */
+    exports: {
+      async list(): Promise<DataExport[]> {
+        return unwrapList<DataExport>(await request('/account/exports'));
+      },
+      async request(): Promise<DataExport> {
+        return (await request('/account/exports', { method: 'POST' })) as DataExport;
+      },
+      /** A short-lived download URL for a ready export. */
+      async link(id: string): Promise<DataExportLink> {
+        return (await request(`/account/exports/${enc(id)}`)) as DataExportLink;
+      },
     },
   },
   dashboard: {

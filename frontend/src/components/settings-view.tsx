@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
+import { DataExportCard } from '@/components/data-export';
 import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
 import { UsageCard } from '@/components/usage-card';
@@ -70,6 +71,9 @@ export function SettingsView() {
       </Section>
       <Section title="Password">
         <PasswordForm />
+      </Section>
+      <Section title="Your data">
+        <DataExportCard />
       </Section>
       <Section title="Legal">
         <p className="text-sm text-muted-foreground">

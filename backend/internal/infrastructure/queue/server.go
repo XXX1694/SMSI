@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 
 	"github.com/socialos/backend/internal/application/port"
@@ -27,6 +28,13 @@ type ServerConfig struct {
 	Mailer port.Mailer
 	// Auth, when set, makes this worker run the password-reset lookup and retire the links of undelivered mail.
 	Auth AuthTasks
+	// Exports, when set, makes this worker build data exports.
+	Exports ExportTasks
+}
+
+// ExportTasks is what the worker needs from the export service.
+type ExportTasks interface {
+	Build(ctx context.Context, exportID uuid.UUID) error
 }
 
 // AuthTasks is what the worker needs from the auth service.
@@ -79,6 +87,9 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	}
 	if cfg.Auth != nil {
 		mux.HandleFunc(TypeAuthForgot, ForgotHandler(cfg.Auth.ProcessForgot))
+	}
+	if cfg.Exports != nil {
+		mux.HandleFunc(TypeAccountExport, ExportHandler(cfg.Exports.Build))
 	}
 	return &Server{srv: srv, mux: mux}
 }

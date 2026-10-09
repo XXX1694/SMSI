@@ -574,3 +574,45 @@ func TestQuotaIsPerUser(t *testing.T) {
 		t.Fatalf("key usage: %v", q)
 	}
 }
+
+// User B can neither see nor download user A's export, and A's archive holds only A's rows.
+func TestExportIsTenantScoped(t *testing.T) {
+	e := newEnv(t, envOpts{startWorker: true})
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice@export.test")
+	bob.register("bob@export.test")
+	alice.connectMock()
+	bob.connectMock()
+	alice.must("POST", "/api/v1/posts", map[string]any{"content": "alice secret plan", "social_account_ids": []string{alice.accounts()[0]["id"].(string)}}, 201)
+	bob.must("POST", "/api/v1/posts", map[string]any{"content": "bob secret plan", "social_account_ids": []string{bob.accounts()[0]["id"].(string)}}, 201)
+
+	id := alice.must("POST", "/api/v1/account/exports", nil, 202)["id"].(string)
+	alice.waitExport(id, "ready")
+
+	if r := bob.do("GET", "/api/v1/account/exports/"+id, nil); r.status != http.StatusNotFound {
+		t.Fatalf("bob fetched alice's export: %d %s", r.status, r.body)
+	}
+	if items := bob.must("GET", "/api/v1/account/exports", nil, 200)["items"].([]any); len(items) != 0 {
+		t.Fatalf("bob lists alice's exports: %v", items)
+	}
+	// Bob's own export is a separate row and archive, and holds none of Alice's data.
+	bid := bob.must("POST", "/api/v1/account/exports", nil, 202)["id"].(string)
+	bob.waitExport(bid, "ready")
+	if r := alice.do("GET", "/api/v1/account/exports/"+bid, nil); r.status != http.StatusNotFound {
+		t.Fatalf("alice fetched bob's export: %d", r.status)
+	}
+	var aliceID, bobID string
+	row := e.app.DB.Pool.QueryRow(context.Background(), `SELECT id::text FROM users WHERE email = 'alice@export.test'`)
+	_ = row.Scan(&aliceID)
+	row = e.app.DB.Pool.QueryRow(context.Background(), `SELECT id::text FROM users WHERE email = 'bob@export.test'`)
+	_ = row.Scan(&bobID)
+	a, b := e.zipOf(aliceID, id), e.zipOf(bobID, bid)
+	if bytes.Contains(a["posts.json"], []byte("bob secret plan")) || !bytes.Contains(a["posts.json"], []byte("alice secret plan")) {
+		t.Fatalf("alice's posts.json: %s", a["posts.json"])
+	}
+	for _, name := range []string{"posts.json", "audit_logs.json", "profile.json", "social_accounts.json"} {
+		if bytes.Contains(b[name], []byte("alice")) {
+			t.Fatalf("bob's %s mentions alice: %s", name, b[name])
+		}
+	}
+}

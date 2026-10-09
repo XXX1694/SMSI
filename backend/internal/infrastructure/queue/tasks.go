@@ -3,16 +3,17 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 
 	"github.com/socialos/backend/internal/application/port"
 )
 
-// Task types. TypeAccountPurge and TypeAccountExport are reserved for the
-// account-deletion and data-export work; only TypeMailSend has a handler yet.
+// Task types. TypeAccountPurge is reserved for the account-deletion work.
 const (
 	TypeMailSend      = "mail:send"
 	TypeAuthForgot    = "auth:forgot"
@@ -120,5 +121,48 @@ func ForgotHandler(process func(ctx context.Context, email string) error) func(c
 			return fmt.Errorf("bad payload: %w", asynq.SkipRetry)
 		}
 		return process(ctx, pl.Email)
+	}
+}
+
+// Export task options. The payload is only an id. MaxRetry is 0: a failed build is recorded on the export and the
+// user asks again, a blind retry would redo hours of work (D-018). Retention is 0 so a finished id can be queued again.
+const exportTimeout = 90 * time.Minute
+
+type exportPayload struct {
+	ExportID uuid.UUID `json:"export_id"`
+}
+
+// ExportQueue implements account.ExportQueue on top of the Asynq client.
+type ExportQueue struct{ c *Client }
+
+// ExportQueue returns the account.ExportQueue backed by this client.
+func (c *Client) ExportQueue() *ExportQueue { return &ExportQueue{c: c} }
+
+// EnqueueExport schedules the build. The task id is the export id, so the sweep re-enqueueing a pending export while
+// its task is still queued collapses into one task.
+func (q *ExportQueue) EnqueueExport(ctx context.Context, exportID uuid.UUID) error {
+	payload, err := json.Marshal(exportPayload{ExportID: exportID})
+	if err != nil {
+		return err
+	}
+	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountExport, payload), asynq.Queue(q.c.queue),
+		asynq.TaskID("export:"+exportID.String()), asynq.MaxRetry(0), asynq.Retention(0), asynq.Timeout(exportTimeout))
+	if errors.Is(err, asynq.ErrTaskIDConflict) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("queue: enqueue export: %w", err)
+	}
+	return nil
+}
+
+// ExportHandler adapts the worker side of an export to an Asynq handler.
+func ExportHandler(build func(ctx context.Context, exportID uuid.UUID) error) func(context.Context, *asynq.Task) error {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var pl exportPayload
+		if err := json.Unmarshal(t.Payload(), &pl); err != nil || pl.ExportID == uuid.Nil {
+			return fmt.Errorf("bad payload: %w", asynq.SkipRetry)
+		}
+		return build(ctx, pl.ExportID)
 	}
 }
