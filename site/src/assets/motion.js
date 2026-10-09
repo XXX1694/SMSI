@@ -30,6 +30,7 @@ try {
     el.addEventListener('pointerenter', (e) => { if (mouse(e) && allowed()) box = el.getBoundingClientRect(); }, { passive: true });
     el.addEventListener('pointermove', (e) => {
       if (!box || !mouse(e)) return;
+      if (!allowed()) { box = null; schedule(el, () => { el.style.removeProperty('--mx'); el.style.removeProperty('--my'); }); return; }
       const x = clamp((e.clientX - (box.left + box.width / 2)) * 0.2, 7);
       const y = clamp((e.clientY - (box.top + box.height / 2)) * 0.3, 5);
       schedule(el, () => { el.style.setProperty('--mx', `${x.toFixed(1)}px`); el.style.setProperty('--my', `${y.toFixed(1)}px`); });

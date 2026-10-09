@@ -75,6 +75,13 @@
   .hero { align-items: flex-start; }
   /* phones get the poster and a lighter flow, not a 400 KB video; the flow is a slim band above the footage */
   .stage video { display: none; }
+  /* the Pause switch sits right under the moving band, in the first screen */
+  .stage { display: flex; flex-direction: column; }
+  .stage-cap { display: contents; }
+  .stage-cap > span { order: 3; margin-top: 0.5rem; }
+  .stage-cap .pause { order: 1; align-self: flex-end; }
+  .stage-fx { order: 0; }
+  .stage .frame { order: 2; }
   .stage-fx { position: relative; z-index: auto; inset: auto; height: 5.5rem; margin: 0 calc(-1 * var(--gut, 1.25rem)) 0.25rem; }
 }
 @media (max-width: 22rem) { .hero .lead { font-size: 1.0625rem; } }

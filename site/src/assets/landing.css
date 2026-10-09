@@ -31,14 +31,17 @@
 }
 
 /* ---------- buttons ---------- */
-.btn-pill { translate: var(--mx, 0px) var(--my, 0px); display: inline-flex; align-items: center; gap: 0.9rem; height: 3.1rem; border-radius: 999px; font-size: 0.95rem; font-weight: 560; text-decoration: none; white-space: nowrap; cursor: pointer;
+.btn-pill { translate: none; display: inline-flex; align-items: center; gap: 0.9rem; height: 3.1rem; border-radius: 999px; font-size: 0.95rem; font-weight: 560; text-decoration: none; white-space: nowrap; cursor: pointer;
   transition: transform 0.5s var(--lp-ease), translate 0.6s var(--lp-ease), background-color 0.3s, border-color 0.3s; }
 .btn-pill:hover { text-decoration: none; }
 .btn-pill:active { transform: scale(0.97); }
 .btn-pill-primary { padding: 0 0.45rem 0 1.5rem; background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
 .btn-pill-primary:hover { background: color-mix(in srgb, hsl(var(--accent)) 88%, hsl(var(--foreground))); }
 .btn-ico { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: color-mix(in srgb, currentColor 18%, transparent); transition: transform 0.5s var(--lp-ease); }
-.btn-ico { translate: calc(var(--mx, 0px) * 0.35) calc(var(--my, 0px) * 0.35); }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.motion-off) .btn-pill { translate: var(--mx, 0px) var(--my, 0px); }
+  html:not(.motion-off) .btn-ico { translate: calc(var(--mx, 0px) * 0.35) calc(var(--my, 0px) * 0.35); }
+}
 .btn-pill:hover .btn-ico { transform: translate(2px, -1px) scale(1.06); }
 .btn-pill-ghost { padding: 0 1.5rem; color: hsl(var(--foreground)); border: 1px solid hsl(var(--input)); background: color-mix(in srgb, hsl(var(--background)) 60%, transparent); }
 .btn-pill-ghost:hover { background: hsl(var(--muted)); }

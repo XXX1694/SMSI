@@ -13,8 +13,8 @@
   /* Headlines: words rise out of their own masks, line by line (motion.js splits the text). */
   .sw { display: inline-block; overflow: clip; vertical-align: top; padding: 0 0.04em 0.16em; margin: 0 -0.04em -0.16em; }
   .sw-i { display: inline-block; transform-origin: 0 100%; }
-  html:not(.motion-off) .split.is-split .sw-i { transition: transform 1.05s var(--lp-ease) calc(var(--i) * 55ms); }
-  html:not(.motion-off) .split.is-split:not(.in) .sw-i { transform: translateY(112%) rotate(5deg); }
+  html.js:not(.motion-off) .split.is-split .sw-i { transition: transform 1.05s var(--lp-ease) calc(var(--i) * 55ms); }
+  html.js:not(.motion-off) .split.is-split:not(.in) .sw-i { transform: translateY(112%) rotate(5deg); }
 
   /* Without scroll timelines the clip reveals run on the same class as the other reveals. */
   html.js:not(.motion-off) .clip picture { transition: clip-path 1.3s var(--ease-steer), transform 1.6s var(--lp-ease); }

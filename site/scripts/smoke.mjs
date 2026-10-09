@@ -154,6 +154,23 @@ await step('a failing enhancement never hides the page', async () => {
   await ctx2.close();
 });
 
+await step('headings stay visible when the reveal script fails', async () => {
+  const ctx3 = await browser.newContext({ viewport: { width: 1280, height: 800 }, javaScriptEnabled: false });
+  const p = await ctx3.newPage();
+  await p.goto(`${SITE}/`);
+  const hidden = await p.evaluate(() => [...document.querySelectorAll('h1, h2')].filter((e) => getComputedStyle(e).opacity === '0' || e.getBoundingClientRect().width === 0).length);
+  expect(hidden === 0, `${hidden} heading(s) hidden without JS`);
+  await ctx3.close();
+  const ctx4 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const q = await ctx4.newPage();
+  await q.addInitScript(() => { window.IntersectionObserver = class { constructor() { throw new Error('no IO'); } }; });
+  await q.goto(`${SITE}/`);
+  await q.waitForTimeout(800);
+  const clipped = await q.evaluate(() => [...document.querySelectorAll('.lp-h2')].filter((h) => [...h.querySelectorAll('.sw-i')].some((w) => getComputedStyle(w).transform !== 'none')).length);
+  expect(clipped === 0, `${clipped} split heading(s) hidden after the reveal setup failed`);
+  await ctx4.close();
+});
+
 await step('landing respects reduced motion and phones', async () => {
   const calm = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   const p = await calm.newPage();
