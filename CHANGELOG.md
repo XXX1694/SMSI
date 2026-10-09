@@ -10,6 +10,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 - Agent request limit `QUOTA_AGENT_RPM`: requests per minute for all API keys and MCP connections of a user together, answered with `429 RATE_LIMITED`. Off by default (`-1`), like the other plan limits (D-014).
 - MCP tool `get_usage` (the 14th, scope `analytics:read`) shows the plan, the period and what is used against each limit.
+- Settings shows a "Plan & usage" card: the plan, the period and what is used against each limit (from `GET /account/usage`), with plain-English copy for `QUOTA_EXCEEDED`.
 
 ## [0.2.0] - 2026-10-09
 
@@ -19,9 +20,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Added
 
-- Plan limits (D-014): opt-in limits for one `free` plan: connected accounts, scheduled or published posts per UTC month, media storage and agent requests per minute (all API keys and MCP connections of a user together, `429 RATE_LIMITED`), all unlimited by default so updates never cap an existing install. A public instance sets them with `QUOTA_ACCOUNTS`, `QUOTA_POSTS_PER_MONTH`, `QUOTA_MEDIA_MB` and `QUOTA_AGENT_RPM`; `-1` switches a limit off. Over a limit the action is refused with `403 QUOTA_EXCEEDED` and nothing changes. Drafts are free, a post counts once per month, reconnecting an account you already have is free. Counting is race-free, so parallel requests cannot overshoot.
-- `GET /account/usage` (scope `analytics:read`) and the MCP tool `get_usage` (the 14th) show the plan, the period and what you have used against each limit.
-- A "Plan & usage" card in Settings shows the same numbers with a bar per limit and says plainly when a limit is reached; a refused action shows the server's message (what is full and what to do). The in-browser demo and the mock API answer `/account/usage`, and the demo refuses over-limit actions the same way.
+- Plan limits (D-014): opt-in limits for one `free` plan: connected accounts, scheduled or published posts per UTC month and media storage, all unlimited by default so updates never cap an existing install. A public instance sets them with `QUOTA_ACCOUNTS`, `QUOTA_POSTS_PER_MONTH` and `QUOTA_MEDIA_MB`; `-1` switches a limit off. Over a limit the action is refused with `403 QUOTA_EXCEEDED` and nothing changes. Drafts are free, a post counts once per month, reconnecting an account you already have is free. Counting is race-free, so parallel requests cannot overshoot.
+- `GET /account/usage` (scope `analytics:read`) shows the plan, the period and what you have used against each limit.
 - Dashboard motion: route transitions through the View Transitions API (with a CSS fade-and-rise fallback), a sidebar highlight that slides between items, dialog and toast enter/exit, staggered lists on first load, skeleton shimmer, button press feedback and card hover lift. All motion uses transform and opacity with tokens from `tokens.css` and is disabled under `prefers-reduced-motion`. Empty states gained an icon and page headers a clearer hierarchy.
 - Public pages `/privacy` and `/terms` (no sign-in, linked from the sign-in and register forms and from the app sidebar and Settings), written for a self-hosted, single-operator instance and usable as the LinkedIn app's Privacy Policy URL. They are a template, not legal advice. The operator's name and contact come from the frontend container's `OPERATOR_NAME` and `OPERATOR_CONTACT`; without them the pages say so.
 - Breaking: `POST /auth/register` requires `accept_terms: true` (otherwise `400 VALIDATION_ERROR` with `fields.accept_terms`). The register form has the matching checkbox. The accepted version and time are stored. Existing accounts are not blocked (D-016).
