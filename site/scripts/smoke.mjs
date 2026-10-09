@@ -79,7 +79,7 @@ console.log(`site smoke: ${dist} at ${SITE}/`);
 
 await step('landing page', async () => {
   await page.goto(`${SITE}/`);
-  await visible(page.getByRole('heading', { level: 1, name: /AI agents draft and schedule your posts/ }));
+  await visible(page.getByRole('heading', { level: 1, name: /AI agents draft posts\.\s*You stay in control\./ }));
   const demo = page.getByRole('link', { name: 'Try the demo' }).first();
   expect((await demo.getAttribute('href')) === `${BASE}demo/`, `Try the demo should link to ${BASE}demo/`);
   const docs = page.getByRole('link', { name: /docs/i }).first();
@@ -111,24 +111,32 @@ await step('landing scroll motion and story', async () => {
   expect(revealed === 0, `${revealed} reveal element(s) in view are still hidden`);
 });
 
-await step('motion switch stops every loop and is remembered', async () => {
+await step('motion switch stops all motion, exposes its state and is remembered', async () => {
   await page.goto(`${SITE}/`);
   await page.waitForSelector('.stage.is-playing', { timeout: 10_000 });
   const btn = page.getByRole('button', { name: 'Pause motion' });
+  expect((await btn.getAttribute('aria-pressed')) === 'false', 'Pause motion should start unpressed');
   await btn.focus();
   await page.keyboard.press('Enter');
-  await visible(page.getByRole('button', { name: 'Play motion' }));
+  await page.waitForSelector('[data-motion][aria-pressed="true"]');
+  await page.locator('.facts-band').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
   const s = await page.evaluate(() => ({
     off: document.documentElement.classList.contains('motion-off'),
     video: document.querySelector('.stage video').paused,
     loops: ['.blob', '.marquee-track'].map((q) => getComputedStyle(document.querySelector(q)).animationPlayState),
+    // scroll-driven animations (parallax, hero exit, clip reveals, the route) must not run either, and nothing may stay hidden
+    running: document.getAnimations().filter((a) => a.playState === 'running' && !(a.timeline instanceof DocumentTimeline)).length,
+    hiddenReveals: [...document.querySelectorAll('.reveal')].filter((e) => getComputedStyle(e).opacity === '0' && e.getBoundingClientRect().top < innerHeight).length,
     saved: localStorage.getItem('socialos_landing_motion'),
   }));
   expect(s.off && s.video && s.loops.every((x) => x === 'paused') && s.saved === 'off', `motion switch left something running: ${JSON.stringify(s)}`);
+  expect(s.running === 0 && s.hiddenReveals === 0, `paused motion should stop scroll animations and show everything: ${JSON.stringify(s)}`);
   await page.reload();
-  await visible(page.getByRole('button', { name: 'Play motion' }));
+  await page.waitForSelector('[data-motion][aria-pressed="true"]');
   expect(await page.evaluate(() => document.querySelector('.stage video').paused), 'the choice should survive a reload');
-  await page.getByRole('button', { name: 'Play motion' }).click();
+  await page.getByRole('button', { name: 'Pause motion' }).click();
+  await page.waitForSelector('[data-motion][aria-pressed="false"]');
   await page.waitForSelector('.stage.is-playing', { timeout: 10_000 });
 });
 

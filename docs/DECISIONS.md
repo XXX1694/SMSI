@@ -396,6 +396,8 @@ numbers the build derives from the README.
 generated video: not real UI, and the page would claim things the product does not do. A WebGL background: weight and battery
 for decoration.
 
+**Amendment (landing v2).** Scroll-driven animations (`animation-timeline`) now also drive the hero exit, the clip-path screen reveals and the "how it works" route, with the active-step state (IntersectionObserver) as the fallback. First-party JS grew to `landing.js`, `hero-flow.js` and `motion.js` (pointer effects, mouse only); still no library. The route line animates `stroke-dashoffset` and the reveals animate `clip-path`; both are paint-only on small areas. Pause motion (`html.motion-off`) disables every one of them.
+
 **Consequences.** Safari and Firefox without scroll-driven animations show the parallax and hero exit still, which is fine.
 The hero video must be re-recorded (`npm run record`) when the compose or approvals screens change.
 

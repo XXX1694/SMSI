@@ -1,14 +1,14 @@
-/* Hero: full-viewport, animated flow canvas behind a left-aligned headline and the real product video. */
+/* Hero: copy on the left, the real product footage on the right, the flow canvas behind the footage only (never under the text).
+   Colour comes from the shared tokens. Everything that moves animates transform and opacity. */
 :root {
   --hero-glow: hsl(var(--accent) / 0.2);
   --hero-glow-soft: hsl(var(--accent) / 0.1);
 }
 @media (prefers-color-scheme: dark) { :root { --hero-glow: hsl(var(--accent) / 0.28); --hero-glow-soft: hsl(var(--accent) / 0.14); } }
 
-.hero { position: relative; min-height: 100svh; display: flex; align-items: center; padding-block: 5.75rem 3rem; overflow: clip; }
+.hero { position: relative; min-height: 100svh; display: flex; align-items: center; padding-block: calc(5.5rem + env(safe-area-inset-top, 0px)) 3rem; overflow: clip; }
 .hero-bg { position: absolute; inset: 0; pointer-events: none; }
-.hero-bg::after { content: ''; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(transparent, hsl(var(--background))); }
-.hero-flow { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-bg::after { content: ''; position: absolute; inset: auto 0 0; height: 24%; background: linear-gradient(transparent, hsl(var(--background))); }
 .blob { position: absolute; border-radius: 50%; will-change: transform; }
 .blob-a { width: 60vmax; height: 60vmax; left: -22vmax; top: -26vmax; background: radial-gradient(closest-side, var(--hero-glow), transparent); animation: drift-a 26s ease-in-out infinite alternate; }
 .blob-b { width: 54vmax; height: 54vmax; right: -20vmax; top: 4vmax; background: radial-gradient(closest-side, var(--hero-glow-soft), transparent); animation: drift-b 32s ease-in-out infinite alternate; }
@@ -18,72 +18,83 @@
 @keyframes drift-a { to { transform: translate3d(8vmax, 5vmax, 0) scale(1.12); } }
 @keyframes drift-b { to { transform: translate3d(-7vmax, 6vmax, 0) scale(0.92); } }
 
-.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
-.hero-copy { display: contents; }
-.hero-tag { display: inline-flex; align-items: center; gap: 0.5rem; margin: 0; justify-self: start; padding: 0.3rem 0.85rem; border: 1px solid hsl(var(--border)); border-radius: 999px; background: color-mix(in srgb, hsl(var(--background)) 70%, transparent); font-size: 0.8125rem; font-weight: 520; color: hsl(var(--muted-foreground)); }
-.hero-title { margin: 0; max-width: none; font-size: clamp(2.55rem, 10vw, 4.4rem); line-height: 1.02; font-weight: 660; letter-spacing: -0.052em; }
-.hero-title .ln { display: block; padding-bottom: 0.1em; margin-bottom: -0.1em; overflow: hidden; }
-.hero-title .w { display: inline-block; }
+/* A soft light that follows the pointer (desktop with a mouse only; motion.js moves it). */
+.hero-light { display: none; position: absolute; left: 0; top: 0; width: 40rem; height: 40rem; margin: -20rem 0 0 -20rem; border-radius: 50%; opacity: 0;
+  background: radial-gradient(closest-side, hsl(var(--accent) / 0.16), transparent); transform: translate3d(var(--lx, 60vw), var(--ly, 30vh), 0); transition: opacity 0.8s var(--lp-ease); will-change: transform; }
+@media (hover: hover) and (pointer: fine) { .hero-light { display: block; } .hero-light.is-on { opacity: 1; } }
+
+.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; width: 100%; }
+.hero-copy { position: relative; z-index: 1; min-width: 0; }
+
+/* Headline: every word sits in its own mask, so it rises into place from below its own baseline. */
+.hero-title { margin: 0; font-size: clamp(2.45rem, 11.6vw, 3.75rem); line-height: 1.03; font-weight: 660; letter-spacing: -0.052em; }
+.hero-title .ln { display: block; text-wrap: balance; }
 .hero-title .soft { color: hsl(var(--muted-foreground)); }
-.hero-side { align-self: start; }
-.hero .lead { margin: 0; max-width: 28rem; font-size: 1.125rem; text-wrap: pretty; }
+.wm { display: inline-block; overflow: clip; vertical-align: top; padding: 0 0.04em 0.16em; margin: 0 -0.04em -0.16em; }
+.w { display: inline-block; transform-origin: 0 100%; }
+.hero-side { margin-top: 1.5rem; }
+.hero .lead { margin: 0; max-width: 25rem; font-size: 1.125rem; text-wrap: pretty; }
+.hero .cta { margin-top: 1.75rem; }
 
-/* the brand in the hero: the mark inside the tag, drawn once on load (path eases in, the tip settles) */
-.hero-tag .mark { width: 1.125rem; height: 1.125rem; color: hsl(var(--accent)); flex: none; }
-.hero-tag b { font-weight: 640; color: hsl(var(--foreground)); letter-spacing: -0.01em; }
-.hero-tag .sep { opacity: 0.45; }
-@media (prefers-reduced-motion: no-preference) {
-  .hero-tag .mark-path, .brand .mark-path { stroke-dasharray: 1; animation: mark-draw var(--duration-path) var(--ease-steer) 0.2s both; }
-  .hero-tag .mark-tip, .brand .mark-tip { animation: mark-tip var(--duration-slow) var(--ease-enter) 0.8s both; }
-}
-@keyframes mark-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes mark-tip { from { opacity: 0; transform: translateX(-4px); } }
-
-/* the stage: a double-bezel frame around the poster and the video */
-.stage { position: relative; perspective: 1800px; min-width: 0; }
-.stage .frame { padding: 6px; border-radius: 22px; border: 1px solid hsl(var(--border)); background: hsl(var(--foreground) / 0.05);
+/* The stage: a double-bezel frame around the poster and the video, with the flow canvas behind it. */
+.stage { position: relative; isolation: isolate; perspective: 1800px; min-width: 0; }
+.stage-fx { position: absolute; z-index: -1; inset: -10% -6% -14% -6%; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 6%, #000 24%, #000 92%, transparent), linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent 0, transparent 6%, #000 24%, #000 92%, transparent), linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent);
+  mask-composite: intersect; }
+.hero-flow { display: block; width: 100%; height: 100%; }
+.stage .frame { position: relative; padding: 6px; border-radius: 22px; border: 1px solid hsl(var(--border)); background: hsl(var(--foreground) / 0.05);
   box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.25), 0 50px 90px -40px hsl(var(--accent) / 0.55), 0 2px 8px hsl(var(--foreground) / 0.1); transform-origin: 50% 100%; }
-.frame-in, .stage .poster, .stage .poster img, .stage video { border-radius: 16px; }
+.stage .poster, .stage .poster img, .stage video { border-radius: 16px; }
 .stage .poster { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: hsl(var(--surface)); }
 .stage .poster img { width: 100%; height: 100%; object-fit: cover; }
 .stage video { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); object-fit: cover; opacity: 0; transition: opacity 0.8s var(--lp-ease); background: hsl(var(--surface)); }
 .stage.is-playing video { opacity: 1; }
-.stage .frame { position: relative; }
-.stage-cap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin: 1rem 0 0; font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
-.hero-side .pause { margin-top: 1.25rem; }
-.pause { padding: 0.3rem 0.85rem; border: 1px solid hsl(var(--input)); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.stage-cap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 1rem; margin: 0.5rem 0 0; font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
+
+/* Pause motion: a quiet text button with its state exposed as a toggle (aria-pressed). */
+.pause { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; margin-right: -0.6rem; padding: 0 0.6rem; border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; transition: color 0.3s, background-color 0.3s; }
+.pause[hidden] { display: none; }
 .pause:hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+.pause .ic-play, .pause[aria-pressed='true'] .ic-pause { display: none; }
+.pause[aria-pressed='true'] .ic-play { display: block; }
+.pause[aria-pressed='true'] { color: hsl(var(--accent)); background: hsl(var(--accent-soft)); }
 
 @media (min-width: 62rem) {
-  .hero-title { font-size: clamp(3rem, 4.7vw, 5.2rem); }
-  .hero-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 2rem clamp(1.5rem, 3vw, 3rem); align-items: start; }
-  .hero-tag, .hero-title { grid-column: 1 / -1; }
-  .hero-side { grid-column: 1; grid-row: 3; padding-top: 1rem; }
-  .stage { grid-column: 2; grid-row: 3; margin: -1.25rem calc(-1 * clamp(1.25rem, 5vw, 6rem)) 0 0; }
-  .stage .frame { transform: rotateY(-7deg) rotateX(3deg); }
+  .hero { padding-block: 6.25rem 4rem; }
+  .hero-title { font-size: clamp(2.9rem, 4.4vw, 4.6rem); }
+  .hero-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: center; }
+  .hero-side { margin-top: 2rem; }
+  .hero .lead { max-width: 24rem; font-size: 1.1875rem; }
+  .stage-fx { inset: -14% -8% -20% -24%; }
+  .stage .frame { transform: rotateY(calc(-7deg + var(--ry, 0deg))) rotateX(calc(3deg + var(--rx, 0deg))); }
+  .stage .frame { transition: transform 0.7s var(--lp-ease); }
 }
 @media (max-width: 61.99rem) {
-  .hero { align-items: flex-start; padding-top: 6rem; }
-  .stage { margin-top: 1.5rem; }
-  /* phones get the poster and the animated flow, not a 400 KB video */
+  .hero { align-items: flex-start; }
+  /* phones get the poster and a lighter flow, not a 400 KB video; the flow is a slim band above the footage */
   .stage video { display: none; }
-  /* a feathered scrim keeps the moving background from running under the text */
-  .hero-title, .hero-side { position: relative; box-shadow: 0 0 1.25rem 1.1rem hsl(var(--background) / 0.78); background: hsl(var(--background) / 0.78); }
-  .hero-flow { opacity: 0.55; }
+  .stage-fx { position: relative; z-index: auto; inset: auto; height: 5.5rem; margin: 0 calc(-1 * var(--gut, 1.25rem)) 0.25rem; }
 }
+@media (max-width: 22rem) { .hero .lead { font-size: 1.0625rem; } }
 
 @media (prefers-reduced-motion: no-preference) {
-  .hero-tag { animation: fade-up 0.8s var(--lp-ease) both; }
-  .hero-title .w { animation: word-up 1s var(--lp-ease) both; animation-delay: calc(var(--i) * 55ms + 120ms); }
-  .hero-side { animation: fade-up 0.9s var(--lp-ease) 0.75s both; }
-  .stage { animation: stage-in 1.3s var(--lp-ease) 0.45s both; }
+  .w { animation: word-up 1.05s var(--lp-ease) both; animation-delay: calc(var(--i) * 70ms + 120ms); }
+  .hero-side .lead { animation: fade-up 0.9s var(--lp-ease) 0.7s both; }
+  .hero-side .cta .btn-pill { animation: fade-up 0.9s var(--lp-ease) both; }
+  .hero-side .cta .btn-pill:nth-child(1) { animation-delay: 0.85s; }
+  .hero-side .cta .btn-pill:nth-child(2) { animation-delay: 0.95s; }
+  .stage { animation: stage-in 1.4s var(--lp-ease) 0.4s both; }
+  .stage-cap { animation: fade-up 0.9s var(--lp-ease) 1.1s both; }
 }
 @media (prefers-reduced-motion: reduce) {
   .blob { animation: none; }
 }
 /* The motion switch (landing.js): every looping animation stops, nothing disappears. */
-html.motion-off .blob, html.motion-off .marquee-track, html.motion-off .story-flow i::after { animation-play-state: paused; }
-@keyframes word-up { from { transform: translateY(105%); } }
-@keyframes fade-up { from { opacity: 0; transform: translateY(22px); } }
+html.motion-off .blob, html.motion-off .marquee-track { animation-play-state: paused; }
+html.motion-off .hero-light { display: none; }
+@keyframes word-up { from { transform: translateY(112%) rotate(5deg); } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(18px); } }
 /* No opacity here: the poster is the largest element above the fold and should be painted at once (LCP). */
-@keyframes stage-in { from { transform: translateY(70px) scale(0.96); } }
+@keyframes stage-in { from { transform: translateY(60px) scale(0.965); } }

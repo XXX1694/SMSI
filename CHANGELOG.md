@@ -8,6 +8,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Changed
 
+- Landing page v2: about half the words (hero: "AI agents draft posts. You stay in control."), a scroll-driven "how it works" route (the line draws as you scroll, the approval gate locks, posts fan out to the networks), word-by-word headline reveals, clip-path screen reveals, magnetic buttons, tilting screens and a cursor light (mouse only), and a slimmer mobile hero and story with 44 px tap targets and safe-area insets. Pause motion now stops scroll animations and reveals too and exposes `aria-pressed`. Fixes: the nav logo no longer shrinks at 320 px, the hero flow no longer runs under the text, smooth anchor scrolling.
 - Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).
 
 ## [0.3.0] - 2026-10-09

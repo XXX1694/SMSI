@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{{title}}</title>
   <meta name="description" content="{{description}}">
   <meta name="color-scheme" content="light dark">
@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="{{base}}assets/style.css">
   <link rel="stylesheet" href="{{base}}assets/landing.css">
   <link rel="stylesheet" href="{{base}}assets/hero.css">
+  <link rel="stylesheet" href="{{base}}assets/route.css">
   <link rel="stylesheet" href="{{base}}assets/scroll.css">
 </head>
 <body class="landing">
@@ -43,7 +44,7 @@
       <nav class="nav" aria-label="Main">
         <a href="#how" class="hide-sm">How it works</a>
         <a href="#networks" class="hide-sm">Networks</a>
-        <a href="{{base}}docs/">Docs</a>
+        <a href="{{base}}docs/" class="hide-xs">Docs</a>
         <a href="{{repoUrl}}" class="hide-sm" rel="noopener">GitHub</a>
         <a class="btn btn-primary btn-sm" href="{{base}}demo/">Try the demo</a>
       </nav>
@@ -69,5 +70,6 @@
   </footer>
   <script type="module" src="{{base}}assets/site.js"></script>
   <script type="module" src="{{base}}assets/landing.js"></script>
+  <script type="module" src="{{base}}assets/motion.js"></script>
 </body>
 </html>
