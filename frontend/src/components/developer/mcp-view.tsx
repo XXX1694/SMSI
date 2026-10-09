@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { EmptyState, ErrorState, InlineError, LoadingRows, Notice, Section } from '@/components/states';
+import { EmptyState, ErrorState, InlineError, LoadingRows, Notice } from '@/components/states';
+import { Section } from '@/components/ui/card';
 import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

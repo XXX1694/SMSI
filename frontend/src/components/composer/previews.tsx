@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { providerLabel } from '@/lib/normalize';
 import type { Media } from '@/lib/types';
 
@@ -26,7 +27,7 @@ function Empty() {
 
 export function LinkedInPreview({ author, text, media }: PreviewProps) {
   return (
-    <div className="rounded-lg border bg-background p-4 text-sm">
+    <Card className="text-sm">
       <div className="mb-3 flex items-center gap-2">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-semibold" aria-hidden>
           {author.slice(0, 1).toUpperCase()}
@@ -38,7 +39,7 @@ export function LinkedInPreview({ author, text, media }: PreviewProps) {
       </div>
       <p className="whitespace-pre-wrap break-words">{text.trim() ? text : <Empty />}</p>
       <MediaStrip media={media} />
-    </div>
+    </Card>
   );
 }
 
@@ -49,7 +50,7 @@ export function TelegramPreview({ author, text, media }: PreviewProps) {
         <p className="mb-1 text-xs font-semibold text-accent">{author}</p>
         <MediaStrip media={media} />
         <p className="mt-1 whitespace-pre-wrap break-words">{text.trim() ? text : <Empty />}</p>
-        <p className="mt-1 text-right text-[11px] text-muted-foreground">now</p>
+        <p className="mt-1 text-right text-2xs text-muted-foreground">now</p>
       </div>
     </div>
   );
@@ -57,13 +58,13 @@ export function TelegramPreview({ author, text, media }: PreviewProps) {
 
 export function GenericPreview({ provider, author, text, media }: PreviewProps & { provider: string }) {
   return (
-    <div className="rounded-lg border bg-background p-4 text-sm">
+    <Card className="text-sm">
       <p className="mb-2 text-xs text-muted-foreground">
         {providerLabel(provider)} · {author}
       </p>
       <p className="whitespace-pre-wrap break-words">{text.trim() ? text : <Empty />}</p>
       <MediaStrip media={media} />
-    </div>
+    </Card>
   );
 }
 

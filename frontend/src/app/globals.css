@@ -1,47 +1,10 @@
 @import '@fontsource-variable/inter';
+@import '../styles/tokens.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --surface: 220 14% 98%;
-    --foreground: 224 20% 12%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 40%;
-    --border: 220 13% 91%;
-    --input: 220 13% 86%;
-    --ring: 233 72% 56%;
-    --accent: 233 72% 56%;
-    --accent-foreground: 0 0% 100%;
-    --accent-soft: 233 80% 96%;
-    --success: 152 60% 28%;
-    --success-soft: 152 50% 94%;
-    --warning: 32 90% 30%;
-    --warning-soft: 40 90% 93%;
-    --danger: 0 68% 42%;
-    --danger-soft: 0 80% 96%;
-  }
-  .dark {
-    --background: 224 20% 8%;
-    --surface: 224 18% 10%;
-    --foreground: 220 14% 94%;
-    --muted: 224 16% 14%;
-    --muted-foreground: 220 9% 66%;
-    --border: 224 14% 18%;
-    --input: 224 14% 24%;
-    --ring: 233 90% 72%;
-    --accent: 233 85% 72%;
-    --accent-foreground: 224 20% 8%;
-    --accent-soft: 233 40% 16%;
-    --success: 152 55% 55%;
-    --success-soft: 152 40% 12%;
-    --warning: 38 90% 62%;
-    --warning-soft: 38 50% 12%;
-    --danger: 0 85% 70%;
-    --danger-soft: 0 40% 14%;
-  }
   * { @apply border-border; }
   html { color-scheme: light; }
   html.dark { color-scheme: dark; }

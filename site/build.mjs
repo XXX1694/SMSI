@@ -299,6 +299,15 @@ rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 cpSync(join(src, 'assets'), join(dist, 'assets'), { recursive: true });
 
+// Design tokens: the app's file is the single source. The app switches theme with a `.dark` class, the site follows the
+// OS, so the `.dark` block becomes a prefers-color-scheme rule on :root.
+{
+  const css = read(join(repoRoot, 'frontend/src/styles/tokens.css'));
+  const dark = css.match(/^\.dark \{([\s\S]*?)^\}/m);
+  if (!dark || !/^:root \{/m.test(css)) fail('frontend/src/styles/tokens.css must have a :root block and a .dark block');
+  write('assets/tokens.css', `${css.slice(0, dark.index)}@media (prefers-color-scheme: dark) {\n  :root {${dark[1].replace(/\n(?=.)/g, '\n  ')}  }\n}\n`);
+}
+
 // Landing page
 {
   const tools = mcpToolsTable();

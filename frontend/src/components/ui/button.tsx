@@ -14,7 +14,7 @@ const buttonVariants = cva(
         danger: 'bg-danger text-background hover:bg-danger/90',
         link: 'text-accent underline-offset-4 hover:underline',
       },
-      size: { default: 'h-9 px-4', sm: 'h-8 px-3 text-[13px]', icon: 'h-9 w-9' },
+      size: { default: 'h-9 px-4', sm: 'h-8 px-3 text-compact', icon: 'h-9 w-9' },
     },
     defaultVariants: { variant: 'primary', size: 'default' },
   },
@@ -24,16 +24,20 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  /** Disables the button and tells assistive tech it is working. The caller still changes the label. */
+  loading?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading = false, disabled, type, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
     return (
       <Comp
         ref={ref}
         type={asChild ? undefined : (type ?? 'button')}
         className={cn(buttonVariants({ variant, size }), className)}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
       />
     );
