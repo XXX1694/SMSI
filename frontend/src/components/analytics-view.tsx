@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { EmptyState, ErrorState, LoadingRows, Notice } from '@/components/states';
 import { Sparkline } from '@/components/sparkline';
 import { Select } from '@/components/ui/input';
+import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { metricLabel, summarizeMetrics } from '@/lib/analytics';
 import { providerLabel } from '@/lib/normalize';
@@ -45,28 +46,26 @@ export function AnalyticsView() {
       {data.metrics.length === 0 ? (
         <EmptyState title="No analytics data in this period">Metrics will appear here once a connected platform reports them.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Metric</th>
-                <th className="px-3 py-2 text-right font-medium">Latest</th>
-                <th className="px-3 py-2 text-right font-medium">Total</th>
-                <th className="px-3 py-2 font-medium">Trend</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {data.metrics.map((m) => (
-                <tr key={m.metric}>
-                  <td className="px-3 py-2">{metricLabel(m.metric)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{m.latest.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{m.total.toLocaleString()}</td>
-                  <td className="px-3 py-2"><Sparkline values={m.series} label={`${metricLabel(m.metric)} trend`} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table label="Metrics">
+          <Thead>
+            <Tr>
+              <Th>Metric</Th>
+              <Th align="right">Latest</Th>
+              <Th align="right">Total</Th>
+              <Th>Trend</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {data.metrics.map((m) => (
+              <Tr key={m.metric}>
+                <Td label="Metric">{metricLabel(m.metric)}</Td>
+                <Td label="Latest" align="right" className="tabular-nums">{m.latest.toLocaleString()}</Td>
+                <Td label="Total" align="right" className="tabular-nums">{m.total.toLocaleString()}</Td>
+                <Td label="Trend"><Sparkline values={m.series} label={`${metricLabel(m.metric)} trend`} /></Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
       )}
     </div>
   );

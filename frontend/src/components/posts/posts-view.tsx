@@ -2,12 +2,14 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { usePrefs } from '@/components/prefs-provider';
 import { PostList } from '@/components/post-row';
 import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { POST_STATUSES, postStatusView } from '@/lib/status';
+import { zonedDayRangeIso } from '@/lib/time';
 import type { Post } from '@/lib/types';
 import { errorMessage } from '@/hooks';
 
@@ -17,6 +19,7 @@ export function PostsView() {
   const status = params.get('status') ?? '';
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
+  const { timezone } = usePrefs();
 
   const [items, setItems] = useState<Post[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -26,11 +29,10 @@ export function PostsView() {
 
   const fetchPage = useCallback(
     async (after?: string) => {
-      const toIso = to ? new Date(`${to}T23:59:59`).toISOString() : undefined;
-      const fromIso = from ? new Date(`${from}T00:00:00`).toISOString() : undefined;
-      return api.posts.list({ status: status || undefined, from: fromIso, to: toIso, limit: 20, cursor: after });
+      const range = zonedDayRangeIso(from, to, timezone);
+      return api.posts.list({ status: status || undefined, from: range.from, to: range.to, limit: 20, cursor: after });
     },
-    [status, from, to],
+    [status, from, to, timezone],
   );
 
   const reload = useCallback(() => {

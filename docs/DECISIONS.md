@@ -163,6 +163,39 @@ request. Adapters with a fixed host set `AllowedHosts` instead. Every adapter ta
 **Consequences.** A self-hosted instance on a private network cannot be connected. Accepted: SocialOS runs on a shared
 host next to other services (D-001).
 
+## D-012: SocialOS gets at most half of the shared host, enforced by a systemd slice and a load-shedding guard (2026-10-09)
+
+**Context.** Production shares a 2 vCPU / 2 GB VPS with another production service (D-001). Containers could swap, the
+default per-container task limit (2264) times seven exceeds the host's thread limit (about 15000), and dockerd/containerd
+are unbounded (containerd peaked at 963 MB during the first image pull). The other service's units, Caddy and the host
+configuration are not ours to change.
+
+**Decision.** All SocialOS containers run in `socialos.slice` (compose `cgroup_parent` in host-proxy mode; Docker already
+uses the systemd cgroup driver on cgroup v2, so no daemon change or restart): `CPUQuota=100%`, `CPUWeight=50`,
+`MemoryHigh=616M`, `MemoryMax=664M`, `MemorySwapMax=0`, `TasksMax=512`, a 60 MB/s read cap and no write cap. Each container
+gets `memswap_limit = mem_limit` and `pids_limit`; backend and worker keep 160m with `GOMEMLIMIT=100MiB` for upload buffers.
+Drop-ins give dockerd and containerd `CPUQuota=25%`, `CPUWeight=50` and a soft `MemoryHigh` (192M / 128M), with no boot
+ordering. Slice plus daemons: 984M, half of the RAM. A guard timer reads host and per-service pressure (PSI) and SocialOS's
+share; only when the host is under pressure and SocialOS contributes (slice anon ≥ 300 MB, ≥ 40% of a CPU or ≥ 10 MB/s IO) it
+stops the worker, then the non-essential containers, and starts what it stopped after calm runs (level 2 with a doubling
+backoff). It alerts but never acts on the other service. A Caddy pre-check quarantines a SocialOS snippet that would stop
+Caddy from starting.
+
+**Alternatives.** `daemon.json` `cgroup-parent`: catches `docker run` too, but needs a Docker restart. Per-container caps
+that add up to the slice: leaves the backend too little room for uploads. A slice of 848M (no overcommit): about 56% of the
+RAM. `MemoryMax` on containerd: could kill the shims and orphan running containers. `IOWeight` alone: no effect with the
+`none` IO scheduler. A write cap: throttled writeback can stall ext4 journal commits and the other service's fsync.
+`After=caddy irbisa` on Docker: nice at boot, but a cycle if either is ever ordered after Docker. Pausing the worker: it
+would freeze holding database locks. A guard that sheds on any pressure: it would stop SocialOS for pressure it does not
+cause. A loop-mounted filesystem as a hard disk quota: needs a data migration; deferred. A drop-in on `caddy.service`:
+edits a unit that belongs to the other service.
+
+**Consequences.** The per-container caps (784m, 848m during a deploy) overcommit the 664M slice: under a simultaneous
+peak, the OOM kill hits SocialOS inside its slice, never the other service. Under real contention the slice gets a third
+of the CPU. A shed stops publishing (posts go out late) and, at level 2, the UI and MCP until the host has been calm for
+10 minutes or more; autoupdate pauses meanwhile. The read cap is a placeholder until the disk is measured. Standalone mode
+is unchanged. Not solved here (the other service's owner): `caddy.service` has `Restart=no`, and journald has no size cap.
+
 ## D-013: Dangerous actions by API keys need the owner's approval, enforced in the API (2026-10-09)
 
 **Context.** Until now an agent was asked to pass `confirm: true` for publish, delete and disconnect. The flag is an

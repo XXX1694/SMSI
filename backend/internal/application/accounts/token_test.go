@@ -352,3 +352,26 @@ func TestConnectWithTokenIsGatedForUnverifiedOwners(t *testing.T) {
 		t.Fatalf("a verified owner: %v", err)
 	}
 }
+
+// urlSecretToken declares its whole URL as the credential (a webhook), the case
+// Kind alone cannot express.
+type urlSecretToken struct{ *fakeToken }
+
+func (urlSecretToken) Capabilities() provider.Capabilities {
+	return provider.Capabilities{ConnectMethod: provider.ConnectToken, ConnectFields: []provider.ConnectField{
+		{Name: "webhook_url", Label: "Webhook URL", Kind: provider.FieldURL, Secret: true, Required: true},
+	}}
+}
+
+func TestConnectWithTokenTreatsEverySecretFieldAsSecretWhateverItsKind(t *testing.T) {
+	const hook = "https://hooks.example.com/api/webhooks/1/abcdefghijklmnop" // gitleaks:allow (fake test value)
+	r := newTokenRig(t)
+	r.prov.secret = "other-credential-0123456789" // gitleaks:allow (fake test value)
+	r.prov.profile.Metadata = map[string]any{"link": hook}
+	r.svc.registry = provider.NewRegistry(urlSecretToken{r.prov})
+	_, err := r.svc.ConnectWithToken(context.Background(), session(uuid.New()), "tokennet", map[string]string{"webhook_url": hook})
+	_ = wantCode(t, err, errs.Internal)
+	if len(r.repo.accs) != 0 || len(r.repo.creds) != 0 {
+		t.Fatal("nothing may be stored")
+	}
+}

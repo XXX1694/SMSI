@@ -18,6 +18,7 @@
 # (delete that file to retry; a manual `./deploy.sh <tag>` that succeeds makes it irrelevant). Output goes to the journal:
 #   journalctl -u socialos-autoupdate
 # It updates the three SocialOS images only. The files in this directory (compose files, scripts) are not touched.
+# While .deploy/guard/shed exists (the host guard shed load because the host is under pressure) it deploys nothing.
 set -Eeuo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -27,7 +28,7 @@ RETRY_DELAY=${AUTOUPDATE_RETRY_DELAY:-900} # seconds to wait after "nothing was 
 
 log() { printf 'autoupdate: %s\n' "$*"; }
 warn() { printf 'autoupdate: %s\n' "$*" >&2; }
-usage() { sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # image_state NAME VERSION: is ghcr.io/<owner>/socialos-NAME:VERSION there? Anonymously, as `docker pull` of a public package
 # does it. Prints ready, missing (no such tag), denied (private or unknown package: not visible without a login) or error.
@@ -126,6 +127,13 @@ case "$(printf '%s' "$enabled" | tr '[:upper:]' '[:lower:]')" in
     exit 0
     ;;
 esac
+
+# A deploy pulls and unpacks images: the heaviest thing SocialOS does to a host. Not while the guard is shedding load
+# because the host is under pressure (host-proxy/socialos-guard.sh); it resumes by itself or with --resume.
+if [ -e "$STATE_DIR/guard/shed" ]; then
+  log "skipping: the host guard has shed SocialOS load (level $(cat "$STATE_DIR/guard/shed" 2>/dev/null || true)); see host-proxy/socialos-guard.sh --status"
+  exit 0
+fi
 
 repo=$(env_get GITHUB_REPO)
 repo=${repo:-XXX1694/SMSI}

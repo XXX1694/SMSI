@@ -10,6 +10,7 @@ import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/input';
+import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { postLabel } from '@/lib/format';
 import { providerLabel } from '@/lib/normalize';
@@ -60,32 +61,30 @@ function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Po
   const platformOf = (id: string) => providerLabel(post.targets.find((t) => t.id === id)?.platform ?? '');
   if (attempts.length === 0) return <p className="text-sm text-muted-foreground">No publication attempts yet.</p>;
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2 font-medium">Target</th>
-            <th className="px-3 py-2 font-medium">#</th>
-            <th className="px-3 py-2 font-medium">Started</th>
-            <th className="px-3 py-2 font-medium">Result</th>
-            <th className="px-3 py-2 font-medium">Error</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {attempts.map((a) => (
-            <tr key={a.id}>
-              <td className="px-3 py-2">{platformOf(a.post_target_id)}</td>
-              <td className="px-3 py-2 tabular-nums">{a.attempt_no}</td>
-              <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(a.started_at, timezone)}</td>
-              <td className="px-3 py-2">
-                <AttemptStatusBadge status={a.status} />
-              </td>
-              <td className="px-3 py-2 text-muted-foreground">{a.error_message ?? '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table label="Publication attempts">
+      <Thead>
+        <Tr>
+          <Th>Target</Th>
+          <Th>#</Th>
+          <Th>Started</Th>
+          <Th>Result</Th>
+          <Th>Error</Th>
+        </Tr>
+      </Thead>
+      <Tbody>
+        {attempts.map((a) => (
+          <Tr key={a.id}>
+            <Td label="Target">{platformOf(a.post_target_id)}</Td>
+            <Td label="Attempt" className="tabular-nums">{a.attempt_no}</Td>
+            <Td label="Started" className="whitespace-nowrap">{formatDateTime(a.started_at, timezone)}</Td>
+            <Td label="Result">
+              <AttemptStatusBadge status={a.status} />
+            </Td>
+            <Td label="Error" className="text-muted-foreground max-md:text-foreground">{a.error_message ?? '—'}</Td>
+          </Tr>
+        ))}
+      </Tbody>
+    </Table>
   );
 }
 
