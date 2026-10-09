@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -127,4 +128,11 @@ func mustAffect(tag pgconn.CommandTag, err error, resource string) error {
 		return errs.NotFoundf(resource)
 	}
 	return nil
+}
+
+// lockUser takes the row lock of a user, which serialises per-user changes that must not interleave (token issue, link
+// codes, sign-in methods). It belongs inside a transaction.
+func lockUser(ctx context.Context, q querier, id uuid.UUID) error {
+	var locked uuid.UUID
+	return mapErr(q.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 FOR UPDATE`, id).Scan(&locked), "user")
 }

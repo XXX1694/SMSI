@@ -8,7 +8,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Added
 
-- Manage sign-in methods, API side (D-023; the Settings screen comes next). `GET /auth/identities`, `POST /auth/identities/{provider}/link` (returns `authorize_url`; the provider calls the ordinary sign-in callback, which finishes the link and returns to `/settings`), `DELETE /auth/identities/{provider}` (refused with `409` when it is the last way to sign in) and `POST /auth/password/set` for accounts without a password (session younger than 10 minutes, else `403 REAUTH_REQUIRED`). `/me` gains `user.has_password` and `user.login_methods`. Linking and unlinking are audited and mailed to the owner.
+- Manage sign-in methods, API side (D-023; the Settings screen comes next). `GET /auth/identities`, `POST /auth/identities/{provider}/link` (returns `authorize_url`; the provider calls the ordinary sign-in callback, which finishes the link and returns to `/settings`), `DELETE /auth/identities/{provider}` (refused with `409` when it is the last way to sign in) and `POST /auth/password/set` for accounts without a password (session younger than 10 minutes, else `403 REAUTH_REQUIRED`). `/me` gains `user.has_password` and `user.login_methods`. Linking and unlinking re-authenticate (`current_password`, or a session under 10 minutes old for users without a password), are audited and are mailed to the owner. Failed sign-in and link redirects carry `provider=<id>` (and, for sign-in, the sanitised `next`).
 
 ### Changed
 

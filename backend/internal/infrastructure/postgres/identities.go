@@ -66,10 +66,9 @@ func (r *Identities) ListByUser(ctx context.Context, userID uuid.UUID) ([]identi
 	return out, mapErr(rows.Err(), "identity")
 }
 
-// LockUser takes the user's row lock, the same lock the e-mail token and link-code repositories use.
+// LockUser takes the user's row lock (see lockUser).
 func (r *Identities) LockUser(ctx context.Context, userID uuid.UUID) error {
-	var locked uuid.UUID
-	return mapErr(r.db.q(ctx).QueryRow(ctx, `SELECT id FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&locked), "user")
+	return lockUser(ctx, r.db.q(ctx), userID)
 }
 
 // Delete unlinks the user's identity for a provider; another user's identity is NOT_FOUND.

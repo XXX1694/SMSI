@@ -1,13 +1,18 @@
 package e2e
 
 import (
+	"context"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/application/port"
+
 	"github.com/socialos/backend/internal/config"
+	"github.com/socialos/backend/internal/domain/identity"
+	"github.com/socialos/backend/internal/infrastructure/postgres"
 )
 
 const (
@@ -18,7 +23,13 @@ const (
 // startLink asks to connect a provider as the signed-in client c and returns what the provider was told.
 func (r *socialRig) startLink(t *testing.T, c *client, provider string) flow {
 	t.Helper()
-	m := c.must("POST", identitiesPath+"/"+provider+"/link", nil, 200)
+	return r.startLinkWith(t, c, provider, nil)
+}
+
+// startLinkWith is startLink for a user with a password, who confirms it in the body.
+func (r *socialRig) startLinkWith(t *testing.T, c *client, provider string, body map[string]any) flow {
+	t.Helper()
+	m := c.must("POST", identitiesPath+"/"+provider+"/link", body, 200)
 	raw, _ := m["authorize_url"].(string)
 	return parseAuthorize(t, provider, raw)
 }
@@ -106,7 +117,7 @@ func TestSignInMethodsListLinkAndUnlink(t *testing.T) {
 
 	// A password is another way in, so the last provider can then be removed.
 	c.must("POST", passwordSet, map[string]any{"new_password": "a brand new password"}, 204)
-	c.must("DELETE", identitiesPath+"/google", nil, 204)
+	c.must("DELETE", identitiesPath+"/google", map[string]any{"current_password": "a brand new password"}, 204)
 	list = c.must("GET", identitiesPath, nil, 200)
 	if list["has_password"] != true || len(providersOf(list)) != 0 {
 		t.Fatalf("password only: %v", list)
@@ -131,7 +142,7 @@ func TestSignInLinkIsBoundToTheStartingUser(t *testing.T) {
 		t.Fatalf("login: %d %s", res.status, res.body)
 	}
 	loc := r.callback(t, c, "google", code, f.state)
-	if loc.Path != "/settings" || loc.Query().Get("error") != "oauth_state_invalid" {
+	if loc.Path != "/settings" || loc.Query().Get("error") != "oauth_state_invalid" || loc.Query().Get("provider") != "google" {
 		t.Fatalf("hijacked link: %s", loc)
 	}
 	// Signed out, the same flow cannot be completed either (and it was already spent).
@@ -140,7 +151,7 @@ func TestSignInLinkIsBoundToTheStartingUser(t *testing.T) {
 	}
 
 	// An anonymous browser holding a link state gets the same refusal.
-	f = r.startLink(t, c, "google")
+	f = r.startLinkWith(t, c, "google", map[string]any{"current_password": "correct horse battery"})
 	code = r.google.Code(googleGrant(f, "g-2301", "jo@gmail.example"))
 	c.must("POST", "/api/v1/auth/logout", nil, 204)
 	if loc := r.callback(t, c, "google", code, f.state); loc.Query().Get("error") != "oauth_state_invalid" {
@@ -149,6 +160,47 @@ func TestSignInLinkIsBoundToTheStartingUser(t *testing.T) {
 	if n := r.countRows(`SELECT count(*) FROM user_identities WHERE provider = 'google'`); n != 0 {
 		t.Fatalf("identities: %d", n)
 	}
+}
+
+// Changing how the account can be entered needs proof it is the owner: a password, or a fresh session when there is none.
+func TestSignInMethodChangesNeedReauthentication(t *testing.T) {
+	clk := &steppingClock{}
+	clk.set(time.Now().UTC())
+	r := newSocialRig(t, withClock(clk))
+	c := r.githubSignUp(t, 2901, "oli", "oli@example.com")
+	r.connectGoogle(t, c, "g-2901")
+
+	// Password-less: an old session is refused for link and unlink, and nothing changes.
+	clk.set(clk.Now().Add(10*time.Minute + time.Second))
+	for _, tc := range []struct{ method, path string }{{"POST", identitiesPath + "/github/link"}, {"DELETE", identitiesPath + "/github"}} {
+		if res := c.do(tc.method, tc.path, nil); res.status != 403 || res.errCode(t) != "REAUTH_REQUIRED" {
+			t.Fatalf("stale %s %s: %d %s", tc.method, tc.path, res.status, res.body)
+		}
+	}
+	if got := strings.Join(providersOf(c.must("GET", identitiesPath, nil, 200)), ","); got != "github,google" {
+		t.Fatalf("a refused request changed identities: %s", got)
+	}
+	fresh := r.e.browser()
+	if loc := r.githubSignIn(t, fresh, 2901, "oli", "oli@example.com", ""); errorOf(loc) != "" {
+		t.Fatalf("sign in again: %s", loc)
+	}
+	fresh.csrf, _ = fresh.must("GET", "/api/v1/me", nil, 200)["csrf_token"].(string)
+	fresh.must("DELETE", identitiesPath+"/google", nil, 204)
+
+	// With a password, any session age needs the current password.
+	pw := r.e.browser()
+	pw.register("pw-oli@example.com")
+	clk.set(clk.Now().Add(time.Hour))
+	for _, body := range []map[string]any{nil, {"current_password": "wrong password!!"}} {
+		for _, tc := range []struct{ method, path string }{{"POST", identitiesPath + "/github/link"}, {"DELETE", identitiesPath + "/github"}} {
+			res := pw.do(tc.method, tc.path, body)
+			if res.status != 400 || res.errBody(t)["fields"].(map[string]any)["current_password"] == nil {
+				t.Fatalf("%s %s with %v: %d %s", tc.method, tc.path, body, res.status, res.body)
+			}
+		}
+	}
+	pw.must("POST", identitiesPath+"/github/link", map[string]any{"current_password": "correct horse battery"}, 200)
+	pw.must("DELETE", identitiesPath+"/github", map[string]any{"current_password": "correct horse battery"}, 404)
 }
 
 func TestSignInMethodEndpointsNeedASessionAndCSRF(t *testing.T) {
@@ -194,6 +246,9 @@ func TestSignInMethodLimitersCoverLinkAndUnlink(t *testing.T) {
 	for name, hit := range map[string]func(c *client) int{
 		"link":   func(c *client) int { return c.do("POST", identitiesPath+"/google/link", nil).status },
 		"unlink": func(c *client) int { return c.do("DELETE", identitiesPath+"/github", nil).status },
+		"set": func(c *client) int {
+			return c.do("POST", passwordSet, map[string]any{"new_password": "a brand new password"}).status
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := newSocialRig(t, envOpts{mutate: limited})
@@ -277,7 +332,7 @@ func TestMeReportsLoginMethodsOnEveryAuthBody(t *testing.T) {
 	}
 	// Auto-link is not possible for an unverified account, so link from Settings instead.
 	pw.csrf, _ = pw.must("GET", "/api/v1/me", nil, 200)["csrf_token"].(string)
-	f := r.startLink(t, pw, "github")
+	f := r.startLinkWith(t, pw, "github", map[string]any{"current_password": "correct horse battery"})
 	if loc := r.callback(t, pw, "github", r.githubCode(f, 2601, "both", "elsewhere@example.com"), f.state); loc.Path != "/settings" || loc.RawQuery != "" {
 		t.Fatalf("link from settings: %s", loc)
 	}
@@ -345,4 +400,59 @@ func TestAccountWaitingForDeletionCannotLinkANewProvider(t *testing.T) {
 	if res := c.do("POST", identitiesPath+"/google/link", nil); res.status != 409 {
 		t.Fatalf("link while deleting: %d %s", res.status, res.body)
 	}
+}
+
+// A failed provider sign-in tells the page which provider it was and keeps the (sanitised) destination.
+func TestFailedSignInRedirectNamesTheProviderAndKeepsNext(t *testing.T) {
+	r := newSocialRig(t, envOpts{})
+	r.e.browser().register("exists@example.com") // unverified: the email match is refused
+	loc := r.githubSignIn(t, r.e.browser(), 3001, "ex", "exists@example.com", "/posts?draft=1")
+	if q := loc.Query(); loc.Path != "/login" || q.Get("error") != "account_exists" || q.Get("provider") != "github" || q.Get("next") != "/posts?draft=1" {
+		t.Fatalf("redirect: %s", loc)
+	}
+	loc = r.githubSignIn(t, r.e.browser(), 3001, "ex", "exists@example.com", "https://evil.test/")
+	if q := loc.Query(); q.Get("next") != "/dashboard" || q.Get("provider") != "github" {
+		t.Fatalf("unsafe next must be replaced: %s", loc)
+	}
+	// A cancelled consent screen too.
+	c := r.e.browser()
+	f := r.start(t, c, "github", "/posts")
+	loc = r.callbackRaw(t, c, "github", "error=access_denied&state="+url.QueryEscape(f.state), nil)
+	if q := loc.Query(); q.Get("error") != "oauth_cancelled" || q.Get("provider") != "github" || q.Get("next") != "/posts" {
+		t.Fatalf("cancelled: %s", loc)
+	}
+}
+
+// Two unlinks racing for the last two providers of a password-less user: exactly one wins.
+func TestRacingUnlinksKeepOneWayToSignIn(t *testing.T) {
+	r := newSocialRig(t, envOpts{})
+	c := r.githubSignUp(t, 3101, "ray", "ray@example.com")
+	r.connectGoogle(t, c, "g-3101")
+	statuses := make(chan int, 2)
+	for _, p := range []string{"github", "google"} {
+		go func() { statuses <- c.do("DELETE", identitiesPath+"/"+p, nil).status }()
+	}
+	got := []int{<-statuses, <-statuses}
+	if got[0]+got[1] != 204+409 || got[0] == got[1] {
+		t.Fatalf("statuses %v, want one 204 and one 409", got)
+	}
+	if n := r.countRows(`SELECT count(*) FROM user_identities`); n != 1 {
+		t.Fatalf("identities left: %d", n)
+	}
+}
+
+// Switching a provider off does not hide or trap the identities already linked to it.
+func TestLinkedIdentitiesSurviveADisabledProvider(t *testing.T) {
+	e := newEnv(t, envOpts{}) // no sign-in provider configured
+	c := e.browser()
+	uid := uuid.MustParse(c.register("off@example.com")["user"].(map[string]any)["id"].(string))
+	err := postgres.NewIdentities(e.app.DB).Create(context.Background(), &identity.Identity{UserID: uid, Provider: identity.GitHub, Subject: "3201", LinkedAt: time.Now().UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := providersOf(c.must("GET", identitiesPath, nil, 200)); len(got) != 1 || got[0] != "github" {
+		t.Fatalf("list: %v", got)
+	}
+	c.must("DELETE", identitiesPath+"/github", map[string]any{"current_password": "correct horse battery"}, 204)
+	c.must("POST", identitiesPath+"/github/link", map[string]any{"current_password": "correct horse battery"}, 404)
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/identity"
-	"github.com/socialos/backend/internal/domain/redirect"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 )
 
@@ -65,8 +64,8 @@ type socialState struct {
 }
 
 func newSocialState(d SocialDeps) (*socialState, error) {
-	if d.Identities == nil || d.Flows == nil || d.Cipher == nil || d.APIPublicURL == "" {
-		return nil, errs.New(errs.Internal, "auth: social sign-in needs Identities, Flows, Cipher and APIPublicURL")
+	if d.Identities == nil || d.Flows == nil || d.Cipher == nil || (len(d.Providers) > 0 && d.APIPublicURL == "") {
+		return nil, errs.New(errs.Internal, "auth: social sign-in needs Identities, Flows, Cipher and, with providers, APIPublicURL")
 	}
 	st := &socialState{identities: d.Identities, flows: d.Flows, cipher: d.Cipher, apiURL: strings.TrimRight(d.APIPublicURL, "/"),
 		providers: map[identity.Provider]IdentityProvider{}}
@@ -116,49 +115,6 @@ func (s *socialState) redirectURI(id identity.Provider) string {
 	return s.apiURL + "/api/v1/auth/oauth/" + string(id) + "/callback"
 }
 
-// StartResult is where to send the browser, and the raw state the transport must keep in a cookie.
-type StartResult struct {
-	URL   string
-	State string
-}
-
-// StartSocial begins a sign-in: it stores the hashed state and nonce and the encrypted PKCE verifier, and returns the
-// provider's consent URL. A provider that is unknown or not configured is NOT_FOUND.
-func (s *Service) StartSocial(ctx context.Context, id identity.Provider, next string) (StartResult, error) {
-	return s.startFlow(ctx, id, identity.IntentLogin, nil, redirect.SafePath(next, DefaultLoginRedirect))
-}
-
-// startFlow stores a flow of either intent and builds the provider's consent URL. A link flow is bound to linkUser.
-func (s *Service) startFlow(ctx context.Context, id identity.Provider, intent identity.Intent, linkUser *uuid.UUID, after string) (StartResult, error) {
-	p, err := s.socialProvider(id)
-	if err != nil {
-		return StartResult{}, err
-	}
-	state, err := crypto.RandomToken(32)
-	if err != nil {
-		return StartResult{}, err
-	}
-	nonce, err := crypto.RandomToken(32)
-	if err != nil {
-		return StartResult{}, err
-	}
-	verifier, err := crypto.RandomToken(48)
-	if err != nil {
-		return StartResult{}, err
-	}
-	verifierEnc, err := s.social.cipher.Encrypt(verifier)
-	if err != nil {
-		return StartResult{}, err
-	}
-	f := &identity.Flow{Provider: id, Intent: intent, LinkUserID: linkUser, StateHash: crypto.SHA256Hex(state), NonceHash: crypto.SHA256Hex(nonce),
-		CodeVerifierEnc: verifierEnc, RedirectAfter: after, ExpiresAt: s.clock.Now().Add(FlowTTL)}
-	if err := s.social.flows.Create(ctx, f); err != nil {
-		return StartResult{}, err
-	}
-	u := p.AuthorizeURL(AuthorizeRequest{State: state, Nonce: nonce, CodeVerifier: verifier, RedirectURI: s.social.redirectURI(id)})
-	return StartResult{URL: u, State: state}, nil
-}
-
 // CallbackInput is what the provider's redirect carried, plus the browser's state cookie.
 type CallbackInput struct {
 	Code, State, CookieState string
@@ -184,8 +140,14 @@ type CallbackResult struct {
 	StateSpent bool
 }
 
-func failed(code string) CallbackResult {
-	return CallbackResult{Redirect: "/login?error=" + url.QueryEscape(code)}
+// failed sends the browser to /login with the error code, the provider it concerned (so the page can name it) and, when
+// known, the sanitised destination the user was heading for.
+func failed(id identity.Provider, code, next string) CallbackResult {
+	q := url.Values{"error": {code}, "provider": {string(id)}}
+	if next != "" {
+		q.Set("next", next)
+	}
+	return CallbackResult{Redirect: "/login?" + q.Encode()}
 }
 
 // SocialCallback finishes a sign-in. The state must match three things at once: the query, the browser's cookie, and
@@ -193,23 +155,23 @@ func failed(code string) CallbackResult {
 func (s *Service) SocialCallback(ctx context.Context, id identity.Provider, in CallbackInput, ci ClientInfo) CallbackResult {
 	p, err := s.socialProvider(id)
 	if err != nil {
-		return failed(ErrProviderError)
+		return failed(id, ErrProviderError, "")
 	}
 	if in.State == "" || len(in.State) > 256 || len(in.Code) > maxCallbackParamLen ||
 		subtle.ConstantTimeCompare([]byte(in.State), []byte(in.CookieState)) != 1 {
-		return failed(ErrStateInvalid)
+		return failed(id, ErrStateInvalid, "")
 	}
 	fl, err := s.social.flows.ConsumeState(ctx, id, crypto.SHA256Hex(in.State), s.clock.Now())
 	if errs.Is(err, errs.NotFound) {
-		return failed(ErrStateInvalid)
+		return failed(id, ErrStateInvalid, "")
 	}
 	if err != nil {
 		s.logSocial(ctx, id, "state lookup failed", err)
-		return failed(ErrProviderError)
+		return failed(id, ErrProviderError, "")
 	}
 	var res CallbackResult
 	if fl.Intent == identity.IntentLink && (fl.LinkUserID == nil || *fl.LinkUserID != in.SessionUserID) {
-		res = linkFailed(ErrStateInvalid) // another user signed in on this browser since the link was started
+		res = linkFailed(id, ErrStateInvalid) // another user signed in on this browser since the link was started
 	} else {
 		res = s.finishFlow(ctx, p, fl, in, ci)
 	}
@@ -223,9 +185,9 @@ func (s *Service) finishFlow(ctx context.Context, p IdentityProvider, fl *identi
 	id := fl.Provider
 	fail := func(code string) CallbackResult {
 		if fl.Intent == identity.IntentLink {
-			return linkFailed(code)
+			return linkFailed(id, code)
 		}
-		return failed(code)
+		return failed(id, code, fl.RedirectAfter)
 	}
 	if in.ProviderError != "" {
 		// The user declined (or the provider refused).

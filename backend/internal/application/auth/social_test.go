@@ -163,7 +163,7 @@ func TestSocialCallbackChecksTheStateBeforeAnyProviderCall(t *testing.T) {
 		"cancel w/o state": {ProviderError: "access_denied", State: "nope", CookieState: "nope"},
 	} {
 		got := r.svc.SocialCallback(context.Background(), identity.GitHub, in, ClientInfo{})
-		if got.Redirect != "/login?error=oauth_state_invalid" || got.Session != nil || got.StateSpent {
+		if got.Redirect != "/login?error=oauth_state_invalid&provider=github" || got.Session != nil || got.StateSpent {
 			t.Fatalf("%s: %+v", name, got)
 		}
 	}
@@ -182,17 +182,17 @@ func TestSocialCallbackOutcomesAreRedirectsNeverErrors(t *testing.T) {
 		return res
 	}
 	s := start()
-	if got := r.svc.SocialCallback(context.Background(), identity.GitHub, CallbackInput{State: s.State, CookieState: s.State, ProviderError: "access_denied"}, ClientInfo{}); got.Redirect != "/login?error=oauth_cancelled" || !got.StateSpent {
+	if got := r.svc.SocialCallback(context.Background(), identity.GitHub, CallbackInput{State: s.State, CookieState: s.State, ProviderError: "access_denied"}, ClientInfo{}); got.Redirect != "/login?error=oauth_cancelled&next=%2Fdashboard&provider=github" || !got.StateSpent {
 		t.Fatalf("cancel: %+v", got)
 	}
 	s = start()
-	if got := r.svc.SocialCallback(context.Background(), identity.GitHub, CallbackInput{State: s.State, CookieState: s.State, ProviderError: "server_error"}, ClientInfo{}); got.Redirect != "/login?error=oauth_provider_error" {
+	if got := r.svc.SocialCallback(context.Background(), identity.GitHub, CallbackInput{State: s.State, CookieState: s.State, ProviderError: "server_error"}, ClientInfo{}); got.Redirect != "/login?error=oauth_provider_error&next=%2Fdashboard&provider=github" {
 		t.Fatalf("provider error: %+v", got)
 	}
 	s = start()
 	gh.err = errs.Wrap(errs.ProviderError, "no", errors.New("secret detail"))
 	got := r.svc.SocialCallback(context.Background(), identity.GitHub, CallbackInput{Code: "c", State: s.State, CookieState: s.State}, ClientInfo{})
-	if got.Redirect != "/login?error=oauth_provider_error" || strings.Contains(got.Redirect, "secret") {
+	if got.Redirect != "/login?error=oauth_provider_error&next=%2Fdashboard&provider=github" || strings.Contains(got.Redirect, "secret") {
 		t.Fatalf("exchange failure: %+v", got)
 	}
 	if len(gh.exchanged) != 1 || gh.exchanged[0].CodeVerifier != gh.authorize.CodeVerifier || gh.exchanged[0].NonceHash != crypto.SHA256Hex(gh.authorize.Nonce) ||

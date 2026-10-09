@@ -327,11 +327,12 @@ func TestSignInMethodsAreTenantScoped(t *testing.T) {
 	if len(list["identities"].([]any)) != 0 || list["has_password"] != true {
 		t.Fatalf("bob sees %v", list)
 	}
-	bob.must("DELETE", identitiesPath+"/github", nil, 404)
+	pw := map[string]any{"current_password": "correct horse battery"}
+	bob.must("DELETE", identitiesPath+"/github", pw, 404)
 
-	f := r.startLink(t, bob, "github")
+	f := r.startLinkWith(t, bob, "github", pw)
 	loc := r.callback(t, bob, "github", r.githubCode(f, 9001, "alice", "alice@signin.test"), f.state)
-	if loc.Path != "/settings" || loc.Query().Get("error") != "identity_in_use" {
+	if loc.Path != "/settings" || loc.Query().Get("error") != "identity_in_use" || loc.Query().Get("provider") != "github" {
 		t.Fatalf("bob linking alice's account: %s", loc)
 	}
 	if got := providersOf(bob.must("GET", identitiesPath, nil, 200)); len(got) != 0 {

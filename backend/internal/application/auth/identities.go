@@ -23,8 +23,8 @@ type SignInMethods struct {
 	Identities  []identity.Identity
 }
 
-func linkFailed(code string) CallbackResult {
-	return CallbackResult{Redirect: SettingsPath + "?error=" + url.QueryEscape(code)}
+func linkFailed(id identity.Provider, code string) CallbackResult {
+	return CallbackResult{Redirect: SettingsPath + "?" + url.Values{"error": {code}, "provider": {string(id)}}.Encode()}
 }
 
 func (s *Service) identitiesOf(ctx context.Context, userID uuid.UUID) ([]identity.Identity, error) {
@@ -60,9 +60,34 @@ func (s *Service) LoginMethods(ctx context.Context, u *user.User) ([]string, err
 	return out, err
 }
 
-// StartLink begins connecting a provider to the session user. The flow is bound to that user; the callback is the one
-// sign-in uses (SocialCallback) and finishes in completeLink.
-func (s *Service) StartLink(ctx context.Context, a actor.Actor, id identity.Provider) (StartResult, error) {
+// reauthenticate proves the person at the keyboard is the owner before a change to how the account can be entered: a
+// stolen old session must not be able to add its own provider and remove the owner's. A user with a password types it;
+// one without needs a session signed in within actor.FreshSessionWindow (REAUTH_REQUIRED otherwise).
+func (s *Service) reauthenticate(ctx context.Context, a actor.Actor, u *user.User, currentPassword string) error {
+	if !u.HasPassword() {
+		if !a.SessionIsFresh(s.clock.Now()) {
+			return errs.New(errs.ReauthRequired, "sign in again to change your sign-in methods")
+		}
+		return nil
+	}
+	return s.checkPassword(ctx, u, currentPassword)
+}
+
+// checkPassword verifies a typed password. A rate-limited hasher passes through unchanged.
+func (s *Service) checkPassword(ctx context.Context, u *user.User, password string) error {
+	ok, err := s.hasher.Verify(ctx, password, u.PasswordHash)
+	if errs.CodeOf(err) == errs.RateLimited {
+		return err
+	}
+	if err != nil || !ok {
+		return errs.Validationf("current password is incorrect").WithField("current_password", "incorrect")
+	}
+	return nil
+}
+
+// StartLink begins connecting a provider to the session user, after re-authentication. The flow is bound to that
+// user; the callback is the one sign-in uses (SocialCallback) and finishes in completeLink.
+func (s *Service) StartLink(ctx context.Context, a actor.Actor, id identity.Provider, currentPassword string) (StartResult, error) {
 	if err := a.RequireSession(); err != nil {
 		return StartResult{}, err
 	}
@@ -70,6 +95,13 @@ func (s *Service) StartLink(ctx context.Context, a actor.Actor, id identity.Prov
 		return StartResult{}, err
 	}
 	if _, err := s.socialProvider(id); err != nil {
+		return StartResult{}, err
+	}
+	u, err := s.users.GetByID(ctx, a.UserID)
+	if err != nil {
+		return StartResult{}, err
+	}
+	if err := s.reauthenticate(ctx, a, u, currentPassword); err != nil {
 		return StartResult{}, err
 	}
 	list, err := s.identitiesOf(ctx, a.UserID)
@@ -93,14 +125,14 @@ func (s *Service) completeLink(ctx context.Context, fl *identity.Flow, c identit
 		return CallbackResult{}, err
 	}
 	if !usable(u) {
-		return linkFailed(ErrAccountGone), nil
+		return linkFailed(c.Provider, ErrAccountGone), nil
 	}
 	owner, err := s.social.identities.GetBySubject(ctx, c.Provider, c.Subject)
 	if err == nil {
 		if owner.UserID == u.ID {
 			return CallbackResult{Redirect: fl.RedirectAfter}, nil // already connected: nothing to do
 		}
-		return linkFailed(ErrIdentityInUse), nil
+		return linkFailed(c.Provider, ErrIdentityInUse), nil
 	}
 	if !errs.Is(err, errs.NotFound) {
 		return CallbackResult{}, err
@@ -113,7 +145,7 @@ func (s *Service) completeLink(ctx context.Context, fl *identity.Flow, c identit
 		return s.audit.Record(ctx, userActor(u, ci), audit.ActionIdentityLinked, "user", u.ID.String(), map[string]any{"provider": string(c.Provider), "via": "settings"})
 	})
 	if errs.Is(err, errs.Conflict) { // lost a race: the account was taken, or the user connected the provider meanwhile
-		return linkFailed(ErrIdentityInUse), nil
+		return linkFailed(c.Provider, ErrIdentityInUse), nil
 	}
 	if err != nil {
 		return CallbackResult{}, err
@@ -122,17 +154,23 @@ func (s *Service) completeLink(ctx context.Context, fl *identity.Flow, c identit
 	return CallbackResult{Redirect: fl.RedirectAfter}, nil
 }
 
-// Unlink disconnects a provider from the session user. The last way to sign in cannot be removed: without a password
-// and another provider the account would be locked out.
-func (s *Service) Unlink(ctx context.Context, a actor.Actor, id identity.Provider) error {
+// Unlink disconnects a provider from the session user, after re-authentication. The last way to sign in cannot be
+// removed: without a password and another provider the account would be locked out.
+func (s *Service) Unlink(ctx context.Context, a actor.Actor, id identity.Provider, currentPassword string) error {
 	if err := a.RequireSession(); err != nil {
 		return err
 	}
 	if s.social == nil || !id.Valid() {
 		return errs.NotFoundf("sign-in method")
 	}
-	var u *user.User
-	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+	u, err := s.users.GetByID(ctx, a.UserID)
+	if err != nil {
+		return err
+	}
+	if err := s.reauthenticate(ctx, a, u, currentPassword); err != nil {
+		return err
+	}
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		// Two unlinks racing for the last two providers must not both pass the check below.
 		if err := s.social.identities.LockUser(ctx, a.UserID); err != nil {
 			return err

@@ -32,7 +32,7 @@ func (s *Service) decide(ctx context.Context, fl *identity.Flow, c identity.Clai
 	case identity.SignUp:
 		return s.startSignup(ctx, fl, c)
 	default:
-		return failed(string(d.Reason)), nil
+		return failed(fl.Provider, string(d.Reason), fl.RedirectAfter), nil
 	}
 }
 

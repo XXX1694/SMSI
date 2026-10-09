@@ -171,15 +171,24 @@ func (a *API) listIdentities(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"identities": out, "has_password": m.HasPassword})
 }
 
+// reauthReq is the body of link and unlink: users with a password confirm it, the others send nothing.
+type reauthReq struct {
+	CurrentPassword string `json:"current_password"`
+}
+
 // linkIdentity serves POST /auth/identities/{provider}/link: it sets the state cookie and returns the provider's consent
 // URL, which the web app navigates to. The provider then calls the ordinary OAuth callback.
 func (a *API) linkIdentity(w http.ResponseWriter, r *http.Request) {
 	id, err := providerParam(r)
+	var req reauthReq
+	if err == nil {
+		err = decode(r, &req)
+	}
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	res, err := a.svc.Auth.StartLink(r.Context(), actorOf(r), id)
+	res, err := a.svc.Auth.StartLink(r.Context(), actorOf(r), id, req.CurrentPassword)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
@@ -192,11 +201,15 @@ func (a *API) linkIdentity(w http.ResponseWriter, r *http.Request) {
 // unlinkIdentity serves DELETE /auth/identities/{provider}.
 func (a *API) unlinkIdentity(w http.ResponseWriter, r *http.Request) {
 	id, err := providerParam(r)
+	var req reauthReq
+	if err == nil {
+		err = decode(r, &req)
+	}
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	if err := a.svc.Auth.Unlink(r.Context(), actorOf(r), id); err != nil {
+	if err := a.svc.Auth.Unlink(r.Context(), actorOf(r), id, req.CurrentPassword); err != nil {
 		httpx.Error(w, r, err)
 		return
 	}

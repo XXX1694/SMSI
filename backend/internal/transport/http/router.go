@@ -152,11 +152,10 @@ func (a *API) mountAuthenticated(r chi.Router) {
 	r.Post("/auth/logout", a.logout)
 	r.With(middleware.RateLimit(a.opt.MailLimiter, a.trusted, a.opt.Metrics, "mail:")).
 		Post("/auth/verify-email/resend", a.resendVerification)
-	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "reauth:")).
-		Post("/auth/password/change", a.changePassword)
-	r.Post("/auth/password/set", a.setPassword)
-	r.Get("/auth/identities", a.listIdentities)
 	reauth := middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "reauth:")
+	r.With(reauth).Post("/auth/password/change", a.changePassword)
+	r.With(reauth).Post("/auth/password/set", a.setPassword)
+	r.Get("/auth/identities", a.listIdentities)
 	r.With(reauth).Post("/auth/identities/{provider}/link", a.linkIdentity)
 	r.With(reauth).Delete("/auth/identities/{provider}", a.unlinkIdentity)
 	r.Get("/me", a.me)

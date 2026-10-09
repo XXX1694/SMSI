@@ -12,8 +12,9 @@ import (
 )
 
 // buildSignIn wires the social sign-in providers that the configuration turns on (D-023). The override replaces them
-// in tests, which point the adapters at fake providers. With no provider the feature is off and GET /auth/providers
-// answers an empty list.
+// in tests, which point the adapters at fake providers. With no provider sign-in is off and GET /auth/providers
+// answers an empty list, but the repositories stay wired, so identities linked earlier remain listed and removable
+// after a provider is switched off.
 func buildSignIn(cfg *config.Config, db *postgres.DB, enc *crypto.Cipher, override []auth.IdentityProvider) (*auth.SocialDeps, error) {
 	providers := override
 	if providers == nil {
@@ -31,9 +32,6 @@ func buildSignIn(cfg *config.Config, db *postgres.DB, enc *crypto.Cipher, overri
 			}
 			providers = append(providers, p)
 		}
-	}
-	if len(providers) == 0 {
-		return nil, nil
 	}
 	return &auth.SocialDeps{Identities: postgres.NewIdentities(db), Flows: postgres.NewOAuthFlows(db), Providers: providers,
 		Cipher: enc, APIPublicURL: cfg.APIPublicURL}, nil
