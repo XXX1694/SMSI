@@ -292,3 +292,47 @@ func TestUploadNeedsScope(t *testing.T) {
 	_, err := svc.Upload(context.Background(), actor.Actor{}, UploadInput{File: bytes.NewReader(mp4Header)})
 	_ = wantCode(t, err, errs.Unauthenticated)
 }
+
+// One user cannot hold the global slots: a second concurrent upload by the same user is refused at once, another
+// user still gets in, and the slot comes back when the first finishes.
+func TestUploadOneSlotPerUser(t *testing.T) {
+	st := newSink()
+	st.hold, st.inPut = make(chan struct{}), make(chan struct{}, 4)
+	svc, _ := newSvc(st, WithUploadLimit(2, 30*time.Millisecond))
+	alice, bob := owner(), owner()
+	first := make(chan error, 2)
+	go func() {
+		_, err := svc.Upload(context.Background(), alice, UploadInput{File: &stream{head: mp4Header, pad: 100}})
+		first <- err
+	}()
+	<-st.inPut
+
+	started := time.Now()
+	src := &stream{head: mp4Header, pad: 100}
+	_, err := svc.Upload(context.Background(), alice, UploadInput{File: src})
+	_ = wantCode(t, err, errs.RateLimited)
+	if time.Since(started) > 20*time.Millisecond || src.read.Load() != 0 {
+		t.Fatal("the same user's second upload must be refused immediately, without reading")
+	}
+	go func() {
+		_, err := svc.Upload(context.Background(), bob, UploadInput{File: &stream{head: mp4Header, pad: 100}})
+		first <- err
+	}()
+	<-st.inPut // bob got the second global slot
+
+	close(st.hold)
+	for range 2 {
+		if err := <-first; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := svc.Upload(context.Background(), alice, UploadInput{File: &stream{head: mp4Header, pad: 100}}); err != nil {
+		t.Fatalf("slot not released: %v", err)
+	}
+	// A failed upload frees the user's slot too.
+	_, err = svc.Upload(context.Background(), alice, UploadInput{File: bytes.NewReader([]byte("%PDF-1.7"))})
+	_ = wantCode(t, err, errs.Validation)
+	if _, err := svc.Upload(context.Background(), alice, UploadInput{File: &stream{head: mp4Header, pad: 100}}); err != nil {
+		t.Fatalf("slot leaked after a rejected upload: %v", err)
+	}
+}

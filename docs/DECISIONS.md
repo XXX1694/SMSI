@@ -275,11 +275,19 @@ arrive.
   not on the allow-list before anything is stored. A guard around the stream counts and hashes the bytes and fails as soon
   as the kind's limit (10 MB image, 100 MB video) is exceeded, so the size is enforced while streaming, not after.
   Videos go to `PutObject` with unknown size (`-1`), `PartSize` 5 MiB and `NumThreads` 1: the API holds one 5 MiB buffer per
-  upload however large the file is. Images (at most 10 MB) are read into memory because their dimensions are needed.
+  upload however large the file is. Images (at most 10 MB) are read into one buffer allocated at the limit (no regrowing)
+  because their dimensions are needed, so an image upload holds about 10 MB plus the client's 5 MiB part buffer.
+- `PutObject` runs on a context detached from the request (30 min bound), because minio-go aborts a failed multipart
+  upload with the context it got and a cancelled one would leave the parts behind; a client disconnect still ends the
+  upload because reading the body fails. A bucket lifecycle rule (abort incomplete multipart uploads after 1 day, prefix
+  `users/`) is added best effort; MinIO refuses that rule type but cleans stale uploads itself.
 - On any failure (limit, wrong type, client gone, store error) minio-go aborts the multipart upload, and the service also
   deletes the key, so no object and no media row remain.
 - At most `MEDIA_UPLOAD_CONCURRENCY` (default 2) uploads run at once, the same pattern as D-011: a caller waits up to 5 s for
-  a slot, then gets `429 RATE_LIMITED` with `Retry-After: 5`. The slot is taken before the body is read.
+  a slot, then gets `429 RATE_LIMITED` with `Retry-After: 5`. The slot is taken before the body is read. A user holds at
+  most one slot: a second concurrent upload by the same user is refused at once, so one account cannot starve the rest.
+  A connection read deadline moves forward on every read (30 s idle, 20 min in total), so a client sending 1 byte/s is cut
+  and frees its slot.
 - MinIO is unchanged: with 5 MiB parts and at most two in flight its working set stayed at 44 of 80 MiB, and
   `MINIO_API_REQUESTS_MAX` made no difference in the same test, so no new setting was added. The caps (784m, within the
   664 MB slice as before) are unchanged.
@@ -300,5 +308,5 @@ container. All three uploads answered 201 (the third waited for a slot, 4.8 s in
 
 **Consequences.** A third simultaneous upload waits up to 5 s and is then refused; a browser that is still sending its body
 may report a network error instead of the 429, because the connection is closed after an early answer. The web UI now needs
-`API_PUBLIC_URL` set when the frontend image is built (the release workflow already does this). Image uploads still take up
-to 10 MB of heap each, at most two at once.
+`API_PUBLIC_URL` set when the frontend image is built (the release workflow already does this). Image uploads still take about
+10 MB of heap each (plus the 5 MiB part buffer), at most two at once.

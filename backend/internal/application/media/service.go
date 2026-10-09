@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -50,13 +51,16 @@ type Service struct {
 	audit   port.AuditRecorder
 	clock   port.Clock
 	slots   chan struct{} // bounds concurrent uploads (D-015)
+	mu      sync.Mutex
+	active  map[uuid.UUID]struct{} // users with an upload in flight: one each, so one user cannot hold every slot
 	wait    time.Duration
 }
 
 // NewService creates the media service.
 func NewService(repo Repo, storage Storage, audit port.AuditRecorder, clock port.Clock, opts ...Option) *Service {
 	s := &Service{repo: repo, storage: storage, audit: audit, clock: clock,
-		slots: make(chan struct{}, DefaultUploadConcurrency), wait: DefaultUploadWait}
+		slots: make(chan struct{}, DefaultUploadConcurrency), wait: DefaultUploadWait,
+		active: map[uuid.UUID]struct{}{}}
 	for _, o := range opts {
 		o(s)
 	}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 )
 
 // S3Config configures the S3 client.
@@ -83,8 +84,35 @@ func (s *S3) ensure(ctx context.Context) error {
 	} else if _, err := s.client.BucketExists(ctx, s.bucket); err != nil {
 		return fmt.Errorf("storage: bucket check: %w", err)
 	}
+	s.ensureLifecycle(ctx)
 	s.ready = true
 	return nil
+}
+
+const abortRuleID = "socialos-abort-incomplete-multipart"
+
+// ensureLifecycle adds a rule that deletes the parts of multipart uploads left unfinished for a day (a crash between
+// parts). Best effort: a store that refuses lifecycle rules only gets a log line. Existing rules are kept.
+func (s *S3) ensureLifecycle(ctx context.Context) {
+	cfg, err := s.client.GetBucketLifecycle(ctx, s.bucket)
+	if err != nil {
+		if minio.ToErrorResponse(err).Code != "NoSuchLifecycleConfiguration" {
+			slog.Warn("cannot read bucket lifecycle; incomplete uploads are not auto-cleaned", slog.Any("error", err))
+			return
+		}
+		cfg = lifecycle.NewConfiguration()
+	}
+	for _, r := range cfg.Rules {
+		if r.ID == abortRuleID {
+			return
+		}
+	}
+	cfg.Rules = append(cfg.Rules, lifecycle.Rule{ID: abortRuleID, Status: "Enabled", RuleFilter: lifecycle.Filter{Prefix: "users/"},
+		AbortIncompleteMultipartUpload: lifecycle.AbortIncompleteMultipartUpload{DaysAfterInitiation: 1}})
+	if err := s.client.SetBucketLifecycle(ctx, s.bucket, cfg); err != nil {
+		// MinIO has no such rule type but removes stale multipart uploads itself (24 h); S3 and R2 take the rule.
+		slog.Info("bucket lifecycle rule for incomplete multipart uploads not applied", slog.Any("error", err))
+	}
 }
 
 func (s *S3) ensureBucket(ctx context.Context, region string) error {
@@ -111,9 +139,20 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, conte
 	if err := s.ensure(ctx); err != nil {
 		return err
 	}
+	ctx, cancel := putContext(ctx)
+	defer cancel()
 	_, err := s.client.PutObject(ctx, s.bucket, key, r, size,
 		minio.PutObjectOptions{ContentType: contentType, PartSize: putPartSize, NumThreads: 1})
 	return err
+}
+
+// putTimeout bounds one upload. The request context is deliberately not used: minio-go aborts a failed multipart upload
+// with the context it was given, and a cancelled one (client disconnect) would leave the parts behind. A disconnect
+// still stops the upload because reading the request body fails.
+const putTimeout = 30 * time.Minute
+
+func putContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), putTimeout)
 }
 
 // Get streams an object.

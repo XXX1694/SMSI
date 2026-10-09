@@ -58,7 +58,7 @@ func (s *Service) Upload(ctx context.Context, a actor.Actor, in UploadInput) (*W
 	if err := a.Require(apikey.MediaWrite); err != nil {
 		return nil, err
 	}
-	release, err := s.acquire(ctx)
+	release, err := s.acquire(ctx, a.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,20 +113,31 @@ func (s *Service) Upload(ctx context.Context, a actor.Actor, in UploadInput) (*W
 	return &out, nil
 }
 
-// acquire takes an upload slot, waiting briefly. It is taken before the body is read, so a refused upload costs nothing.
-func (s *Service) acquire(ctx context.Context) (release func(), err error) {
+// acquire takes the user's single upload slot (a second concurrent upload by the same user is refused at once) and
+// then a global slot, waiting briefly for it. Taken before the body is read, so a refused upload costs nothing.
+func (s *Service) acquire(ctx context.Context, user uuid.UUID) (release func(), err error) {
+	s.mu.Lock()
+	if _, busy := s.active[user]; busy {
+		s.mu.Unlock()
+		return nil, errs.New(errs.RateLimited, "another upload of yours is still running, retry when it finishes")
+	}
+	s.active[user] = struct{}{}
+	s.mu.Unlock()
+	freeUser := func() { s.mu.Lock(); delete(s.active, user); s.mu.Unlock() }
+
 	ctx, cancel := context.WithTimeout(ctx, s.wait)
 	defer cancel()
 	select {
 	case s.slots <- struct{}{}:
-		return func() { <-s.slots }, nil
+		return func() { <-s.slots; freeUser() }, nil
 	case <-ctx.Done():
+		freeUser()
 		return nil, errs.Wrap(errs.RateLimited, "server is busy, retry shortly", ctx.Err())
 	}
 }
 
 func (s *Service) storeImage(ctx context.Context, m *domain.Media, g *guard) error {
-	buf, err := io.ReadAll(g)
+	buf, err := readBounded(g, int(g.limit))
 	if err != nil {
 		return err
 	}
@@ -188,4 +199,21 @@ func (g *guard) failure() error {
 
 func readFailure(err error) error {
 	return errs.Wrap(errs.Validation, "upload was interrupted or malformed", err).WithField("file", "unreadable")
+}
+
+// readBounded reads the whole stream into one buffer allocated up front at the limit, so it never regrows (a growing
+// io.ReadAll would peak at about twice the size). The guard fails the read if the stream is longer than the limit.
+func readBounded(g *guard, limit int) ([]byte, error) {
+	buf := make([]byte, limit)
+	n, err := io.ReadFull(g, buf)
+	if err == nil {
+		var one [1]byte
+		if _, err = g.Read(one[:]); err == nil {
+			err = errTooLarge // unreachable: the guard fails first; kept so a longer stream can never pass
+		}
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return buf[:n], nil
+	}
+	return nil, err
 }

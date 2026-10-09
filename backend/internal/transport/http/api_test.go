@@ -5,12 +5,14 @@ package http_test
 // otherwise; the worker is not started, nothing here publishes.
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	httptransport "github.com/socialos/backend/internal/transport/http"
 	"image"
 	"image/color"
 	"image/gif"
@@ -18,6 +20,7 @@ import (
 	"image/png"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -936,6 +939,34 @@ func TestMediaUploadConcurrencyLimit(t *testing.T) {
 	}
 	if got := a.upload("c.png", pngBytes(t, 2, 2)); got.status != 201 {
 		t.Fatalf("after release: %d %s", got.status, got.body)
+	}
+}
+
+// A client that sends the start of a body and then stalls is cut after the idle timeout and its upload slot is freed.
+func TestMediaStalledUploadIsCutAndFreesTheSlot(t *testing.T) {
+	old := httptransport.UploadIdleTimeout
+	httptransport.UploadIdleTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { httptransport.UploadIdleTimeout = old })
+	h := newHarness(t, opts{tune: func(c *config.Config) { c.MediaUploadConcurrency = 1 }})
+	a := h.anon()
+	a.register("media-stall@example.com")
+	key := a.req("POST", "/api/v1/developer/api-keys", map[string]any{"name": "k", "scopes": []string{"media:write"}}).obj(t)["key"].(string)
+
+	conn, err := net.Dial("tcp", h.srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	body := "--zz\r\nContent-Disposition: form-data; name=\"file\"; filename=\"v.mp4\"\r\n\r\n" + string(mp4Header)
+	_, _ = fmt.Fprintf(conn, "POST /api/v1/media HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer %s\r\nContent-Type: multipart/form-data; boundary=zz\r\nContent-Length: 100000\r\n\r\n%s", key, body)
+	// Stalled now. Within a few idle periods the server answers and frees the slot.
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	line, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil || !strings.Contains(line, " 400 ") {
+		t.Fatalf("stalled upload: %q %v", line, err)
+	}
+	if r := h.bearer(key).upload("a.png", pngBytes(t, 2, 2)); r.status != 201 {
+		t.Fatalf("slot still held after the stall: %d %s", r.status, r.body)
 	}
 }
 

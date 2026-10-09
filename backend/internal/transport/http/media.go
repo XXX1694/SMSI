@@ -5,12 +5,42 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"time"
 
 	appmedia "github.com/socialos/backend/internal/application/media"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/media"
 	"github.com/socialos/backend/internal/transport/httpx"
 )
+
+// UploadIdleTimeout cuts an upload whose client sends nothing for this long; UploadMaxDuration bounds the whole upload.
+// Together they stop a 1 byte/s client from holding an upload slot (the server-wide ReadTimeout would allow minutes).
+var (
+	UploadIdleTimeout = 30 * time.Second
+	UploadMaxDuration = 20 * time.Minute
+)
+
+// deadlineBody moves the connection read deadline forward before every read: idle after the last progress, never past end.
+type deadlineBody struct {
+	rc   *http.ResponseController
+	r    io.ReadCloser
+	idle time.Duration
+	end  time.Time
+}
+
+func (d *deadlineBody) Read(p []byte) (int, error) {
+	_ = d.rc.SetReadDeadline(minTime(time.Now().Add(d.idle), d.end)) // unsupported writers just keep the server default
+	return d.r.Read(p)
+}
+
+func (d *deadlineBody) Close() error { return d.r.Close() }
+
+func minTime(a, b time.Time) time.Time {
+	if b.Before(a) {
+		return b
+	}
+	return a
+}
 
 const maxUploadBody = media.MaxVideoBytes + 1<<20 // largest file + multipart overhead
 
@@ -21,7 +51,8 @@ func (a *API) uploadMedia(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, tooLarge())
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBody)
+	r.Body = http.MaxBytesReader(w, &deadlineBody{rc: http.NewResponseController(w), r: r.Body, idle: UploadIdleTimeout,
+		end: time.Now().Add(UploadMaxDuration)}, maxUploadBody)
 	part, err := filePart(r)
 	if err != nil {
 		httpx.Error(w, r, err)
