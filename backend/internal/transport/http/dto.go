@@ -43,11 +43,13 @@ type userDTO struct {
 	// EmailVerified is false until the owner opens the mailed link.
 	EmailVerified bool   `json:"email_verified"`
 	Plan          string `json:"plan"`
+	// DeletionScheduledAt is when the account will be deleted (null unless the owner asked and has not cancelled).
+	DeletionScheduledAt *time.Time `json:"deletion_scheduled_at"`
 }
 
 func toUser(u *user.User) userDTO {
 	return userDTO{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, CreatedAt: utc(u.CreatedAt),
-		EmailVerified: u.EmailVerified(), Plan: u.Plan}
+		EmailVerified: u.EmailVerified(), Plan: u.Plan, DeletionScheduledAt: utcp(u.DeletionScheduledAt)}
 }
 
 type accountDTO struct {

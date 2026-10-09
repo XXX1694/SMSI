@@ -2,9 +2,12 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/socialos/backend/internal/application/port"
+	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/media"
 )
 
@@ -25,11 +28,19 @@ func scanMedia(row interface{ Scan(...any) error }) (*media.Media, error) {
 	return &m, nil
 }
 
-// Create inserts media metadata.
+// Create inserts media metadata, but only while the owner is active. An upload that was authorised just before the
+// account purge started would otherwise land its row after the purge swept the storage prefix, orphaning the object;
+// zero rows means the owner is gone or being deleted and the caller removes the object it already stored.
 func (r *Media) Create(ctx context.Context, m *media.Media) error {
-	return mapErr(r.db.q(ctx).QueryRow(ctx, `INSERT INTO media (id, user_id, kind, mime_type, size_bytes, storage_key, original_name, width, height, status, sha256)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING created_at`,
-		m.ID, m.UserID, m.Kind, m.MimeType, m.SizeBytes, m.StorageKey, m.OriginalName, m.Width, m.Height, m.Status, m.SHA256).Scan(&m.CreatedAt), "media")
+	err := r.db.q(ctx).QueryRow(ctx, `INSERT INTO media (id, user_id, kind, mime_type, size_bytes, storage_key, original_name, width, height, status, sha256)
+		SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
+		WHERE EXISTS (SELECT 1 FROM users WHERE id = $2 AND status = 'active')
+		RETURNING created_at`,
+		m.ID, m.UserID, m.Kind, m.MimeType, m.SizeBytes, m.StorageKey, m.OriginalName, m.Width, m.Height, m.Status, m.SHA256).Scan(&m.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errs.New(errs.Forbidden, "account is not active")
+	}
+	return mapErr(err, "media")
 }
 
 // Get returns one media of the user.

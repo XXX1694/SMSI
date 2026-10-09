@@ -8,13 +8,14 @@ import { useTranslations } from '@/i18n/use-translations';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useTranslations('common');
-  const { user, loading, error, retry } = useAuth();
+  const { user, loading, error, retry, endedBy } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user && !error) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [loading, user, error, router, pathname]);
+    // After account deletion the login page explains what happened instead of remembering where the user was.
+    if (!loading && !user && !error) router.replace(endedBy === 'deleted' ? '/login?deleted=1' : `/login?next=${encodeURIComponent(pathname)}`);
+  }, [loading, user, error, router, pathname, endedBy]);
 
   if (error && !user) {
     return (

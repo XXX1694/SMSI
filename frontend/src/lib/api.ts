@@ -172,6 +172,19 @@ export const api = {
     async usage(): Promise<UsageReport> {
       return (await request('/account/usage')) as UsageReport;
     },
+    /**
+     * Schedules deletion of the whole account after the grace period and ends this session (the server clears the
+     * cookies). Needs the current password and the account's email typed as confirmation; a wrong one is a 400 with
+     * the field named. API keys cannot do this.
+     */
+    async requestDeletion(password: string, confirm: string): Promise<{ scheduled_for: string }> {
+      const r = (await request('/account/delete', { method: 'POST', body: { password, confirm } })) as { scheduled_for?: string } | null;
+      return { scheduled_for: r?.scheduled_for ?? '' };
+    },
+    /** Cancels a scheduled deletion (409 when none is scheduled). */
+    async cancelDeletion(): Promise<void> {
+      await request('/account/delete/cancel', { method: 'POST' });
+    },
     /** Account data export (session only). 409 while one is being prepared, 429 inside the 24 h cooldown. */
     exports: {
       async list(): Promise<DataExport[]> {
