@@ -6,6 +6,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-09
+
 ### Added
 
 - Sign in with Google or GitHub, API side (D-023; the web screens come next). `GET /auth/providers`, `GET /auth/oauth/{provider}/start?next=`, `GET /auth/oauth/{provider}/callback`, `GET /auth/oauth/pending` and `POST /auth/oauth/complete {display_name, accept_terms}`. The callback binds the browser to the flow with a state cookie (HttpOnly, SameSite=Lax, path `/api/v1/auth/oauth`, 10 min) and requires query state = cookie = an unused row of that provider; the PKCE verifier is stored encrypted with the `ENCRYPTION_KEY` cipher; the redirect URI comes from `API_PUBLIC_URL`, never from `Host`; `next` goes through one shared allow-list (`domain/redirect`, also used by the account-connect flow). Every callback outcome is a `302` to the web app (`/login?error=<code>` on failure). A new user gets no account until they accept the Terms at `/signup/complete` (D-016); the ticket is redeemed in the same transaction as the user, so a refused form does not burn it. Disabled accounts are refused; an account waiting for deletion can sign in with its provider to cancel the deletion, but never gains a new link by email match, and an automatic link sends the owner an `identity_linked` notice mail. Start, callback and complete sit behind the auth rate limiter, the worker deletes expired flows hourly, and the audit log records `user.registered` / `user.login` with `{method}` and `user.identity_linked`. No tokens or addresses reach logs or audit metadata. Setup steps for the GitHub OAuth App (and Google, once a domain exists) are in `docs/OWNER-SETUP.md` section 2.0.
@@ -34,6 +36,27 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Account deletion (D-019): Settings, "Your data", "Delete account". It asks for your password and your email typed out, signs out every session and revokes every API key and MCP connection at once, sets scheduled posts back to drafts, and deletes everything after `ACCOUNT_DELETION_GRACE_DAYS` (default 7). Until then you can sign in, see a banner and cancel. The worker removes posts, media (S3 objects too), connected accounts and their stored credentials, keys, approvals and the audit log in batches; only a record of counts without personal data stays. New endpoints `POST /account/delete` and `POST /account/delete/cancel` (browser session only), `user.deletion_scheduled_at` and `deletion_grace_days` in `/me`, an email when deletion is scheduled, migrations 00006 and 00007.
 - `429 RATE_LIMITED` answers can carry a specific `Retry-After`.
 
+### Changed
+
+- The dashboard and the demo are now offered in Russian, Spanish, Brazilian Portuguese, German, French, Indonesian, Japanese and Simplified Chinese (D-021): the eight locales are enabled in `frontend/src/i18n/locales.ts` and listed by their own names in the language switcher, all labelled "Beta translation" until a native review. Kazakh stays hidden until it is reviewed and Arabic until the right-to-left work lands. The account deletion and data export strings are translated in every catalog (`kk` included).
+- Narrow-screen layout in translated UI: stacked table cards (API keys, audit log) give the column title room and wrap long values instead of overlapping; the calendar shows only the post count in a day cell below 480 px (the full text stays for screen readers); the post row's Edit and Retry buttons stay right-aligned when the row wraps; Japanese and Chinese use strict line breaking (phrase-aware in Japanese) and the dates in rows do not wrap mid-token (2026年10月10日 09:00); the day-cell count is its own full-width line.
+- Chinese landing and app copy use 审批, 批准, 拒绝 and 开发者 (glossary updated), the Japanese landing uses 承認画面 and 「開発者」ページ, and a few ja and zh-CN app strings were reworded (final 。, 「在几分钟内定时发布」, 「未能设为定时发布」).
+- The Privacy Policy describes self-service export and account deletion, and how long data stays.
+- Landing page v2: about half the words (hero: "AI agents draft posts. You stay in control."), a scroll-driven "how it works" route (the line draws as you scroll, the approval gate locks, posts fan out to the networks), word-by-word headline reveals, clip-path screen reveals, magnetic buttons, tilting screens and a cursor light (mouse only), and a slimmer mobile hero and story with 44 px tap targets and safe-area insets. Pause motion now stops scroll animations and reveals too and exposes `aria-pressed`. Fixes: the nav logo no longer shrinks at 320 px, the hero flow no longer runs under the text, smooth anchor scrolling.
+- Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).
+- App copy follows the copy review (`docs/copy`): shorter and plainer text, one term per concept, no idioms, translator notes next to the 14 ambiguous strings. No API values changed.
+- Honesty fixes: the MCP panel and the "I understand" checkbox on API keys describe approvals (D-013), not a confirm flag; Publish now and Retry now count as irreversible in Approvals (danger-style Approve); each unavailable network shows its own reason from the capabilities (X, Medium and Hashnode no longer say "Requires platform approval"); the token form promises HTTPS only when the page is served over HTTPS; the media delete warning matches the backend (a file used in a post cannot be deleted); the Terms say API-key dangerous actions need approval unless the key is trusted, and name the AGPL-3.0.
+- Status names: the target status "Needs review" and the attempt status "Unknown outcome" are now "Unconfirmed" in the UI (API values `needs_review` and `unknown` are unchanged). "Cancelled" is "Canceled", "Expired" on an account is "Needs reconnecting" (with a Reconnect button), the test network is no longer called "Mock", and the post page says "Accounts" instead of "Targets".
+- Backend messages that reach the UI or agents are plain sentences with a next step (no raw ids, statuses or byte counts). Provider notes drop internal words; unavailable networks say "Not available yet: <reason>".
+- Mail templates: one verb ("Verify"), "server admin" instead of "operator", and the export mail no longer points to a settings page that has no export.
+- MCP tool descriptions and error hints: no duplicate SENSITIVE/CRITICAL prefix, correct reconnect and scope guidance, `needs_review` explained, agents are told to show the final text, accounts and time before `schedule_post`.
+- Docs: D-021 (locale set and rollout order, `uk` waits, `zh-CN` joins), `docs/copy/languages.md` and `translation-process.md` updated, a release is no longer blocked by a locale's review status (machine-drafted locales ship as "Beta translation"), and the copy glossary has `zh-CN`, `ar`, `fr` and `id` columns.
+- All user-visible app strings now come from the message catalog, so the JavaScript that ships with the app grows: the English catalog (about 10.5 kB gzipped) lands in a shared chunk, so first-load JS on `/login` goes from 131 to 147 kB, `/verify-email` 125 to 140, `/compose` 155 to 168 and `/accounts` 149 to 162 (the shared baseline stays 103 kB). Splitting the catalog by namespace is a follow-up (D-021).
+- File sizes above 999 KB group thousands in English ("1,024 MB" instead of "1024 MB"), as the number follows the locale.
+- Migrations `00005` to `00008` run automatically (`deploy.sh`, and so autoupdate, applies them before the app containers are replaced); no manual step. `00005` and `00007` build indexes `CONCURRENTLY`, so they do not block writes, but they can take a while on a large database. `00008` is additive.
+- New optional settings `GOOGLE_CLIENT_ID/SECRET` and `GITHUB_CLIENT_ID/SECRET`. Nothing uses them until the sign-in endpoints ship; leave them empty (set only one half of a pair and the start is refused).
+- Privacy Policy text and legal version `2026-10-10`: the version is recorded for accounts created from now on. Existing users are not asked to accept again (re-acceptance is a later decision, D-016), so nothing changes for them on sign-in.
+
 ### Fixed
 
 - Worker shutdown: the publish and export servers stop taking tasks together and drain in parallel (the export server waits 5 s), so a stop fits the 45 s `stop_grace_period`. An export archive upload may now run as long as the build (90 minutes) instead of 30; a finished build can no longer overwrite an export the sweep already failed.
@@ -52,21 +75,6 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Demo banner is a labelled landmark, and Reset asks before wiping demo data. Loading states carry visible-to-screen-reader text, the email notice close button and the dashboard "View all" links have specific names, and the dashboard stats row has a heading.
 - "Canceled" is spelled the American way in the message about a post that cannot be edited (it said "cancelled"), matching the status name.
 - The "requests waiting" pill in the mobile header no longer wraps: on phones it shows only the count (screen readers still hear "N requests wait for you"), and the full text appears from 640 px.
-
-### Changed
-
-- The Privacy Policy describes self-service export and account deletion, and how long data stays.
-- Landing page v2: about half the words (hero: "AI agents draft posts. You stay in control."), a scroll-driven "how it works" route (the line draws as you scroll, the approval gate locks, posts fan out to the networks), word-by-word headline reveals, clip-path screen reveals, magnetic buttons, tilting screens and a cursor light (mouse only), and a slimmer mobile hero and story with 44 px tap targets and safe-area insets. Pause motion now stops scroll animations and reveals too and exposes `aria-pressed`. Fixes: the nav logo no longer shrinks at 320 px, the hero flow no longer runs under the text, smooth anchor scrolling.
-- Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).
-- App copy follows the copy review (`docs/copy`): shorter and plainer text, one term per concept, no idioms, translator notes next to the 14 ambiguous strings. No API values changed.
-- Honesty fixes: the MCP panel and the "I understand" checkbox on API keys describe approvals (D-013), not a confirm flag; Publish now and Retry now count as irreversible in Approvals (danger-style Approve); each unavailable network shows its own reason from the capabilities (X, Medium and Hashnode no longer say "Requires platform approval"); the token form promises HTTPS only when the page is served over HTTPS; the media delete warning matches the backend (a file used in a post cannot be deleted); the Terms say API-key dangerous actions need approval unless the key is trusted, and name the AGPL-3.0.
-- Status names: the target status "Needs review" and the attempt status "Unknown outcome" are now "Unconfirmed" in the UI (API values `needs_review` and `unknown` are unchanged). "Cancelled" is "Canceled", "Expired" on an account is "Needs reconnecting" (with a Reconnect button), the test network is no longer called "Mock", and the post page says "Accounts" instead of "Targets".
-- Backend messages that reach the UI or agents are plain sentences with a next step (no raw ids, statuses or byte counts). Provider notes drop internal words; unavailable networks say "Not available yet: <reason>".
-- Mail templates: one verb ("Verify"), "server admin" instead of "operator", and the export mail no longer points to a settings page that has no export.
-- MCP tool descriptions and error hints: no duplicate SENSITIVE/CRITICAL prefix, correct reconnect and scope guidance, `needs_review` explained, agents are told to show the final text, accounts and time before `schedule_post`.
-- Docs: D-021 (locale set and rollout order, `uk` waits, `zh-CN` joins), `docs/copy/languages.md` and `translation-process.md` updated, a release is no longer blocked by a locale's review status (machine-drafted locales ship as "Beta translation"), and the copy glossary has `zh-CN`, `ar`, `fr` and `id` columns.
-- All user-visible app strings now come from the message catalog, so the JavaScript that ships with the app grows: the English catalog (about 10.5 kB gzipped) lands in a shared chunk, so first-load JS on `/login` goes from 131 to 147 kB, `/verify-email` 125 to 140, `/compose` 155 to 168 and `/accounts` 149 to 162 (the shared baseline stays 103 kB). Splitting the catalog by namespace is a follow-up (D-021).
-- File sizes above 999 KB group thousands in English ("1,024 MB" instead of "1024 MB"), as the number follows the locale.
 
 ## [0.3.0] - 2026-10-09
 
@@ -182,7 +190,8 @@ First release: the MVP, ready to self-host on one server.
 - A Telegram channel can only be connected by proving ownership with a one-time link code.
 - CI scans every change: govulncheck, npm audit, gitleaks over the history, Trivy on the images and CodeQL; the runtime images no longer ship npm.
 
-[Unreleased]: https://github.com/XXX1694/steerpost/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/XXX1694/steerpost/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/XXX1694/steerpost/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/XXX1694/steerpost/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/XXX1694/SMSI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/XXX1694/SMSI/compare/v0.1.0...v0.2.0
