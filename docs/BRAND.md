@@ -74,20 +74,31 @@ Also: `site/src/assets/favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` (1
 ## 4. Colour
 
 One accent, deep **harbour teal**. It is not purple or blue, so it does not look like every other AI product, and it is dark
-enough in light mode to carry white text (6.1:1). Neutrals are cool slate with a hint of the same hue. Roles are fixed:
+enough in light mode to carry white text (6.1:1). Neutrals are cool slate with a hint of the same hue. A second, quieter
+teal (**lagoon**) structures the screen so the accent can stay rare (D-024). Roles are fixed:
 
-- **accent**: primary actions, links, focus ring, the logo, the active nav bar, the "sent" lane in the hero. One per view.
-- **foreground / muted-foreground**: text. **background / surface / muted**: the page, raised areas, quiet fills.
+- **accent**: primary actions, links, focus ring, the logo, the active nav bar, chart series 1, the "sent" lane in the hero,
+  the fill of the few hero transitions (section 7). One primary action per view.
+- **secondary** (lagoon): the tint of the sidebar and header glass, the active nav row, selected and hovered rows, secondary
+  buttons, eyebrow labels, chart series 2 and 3, the hero lanes and the landing mesh. `secondary-foreground` is the text on it.
+- **foreground / muted-foreground**: text. **canvas / background / surface / muted**: the page behind the glass, solid
+  reading surfaces (tables, inputs, long text), raised areas, quiet fills.
 - **border / input**: dividers and control outlines. **accent-soft**: tinted fill behind accent text.
-- **success / warning / danger**: status only, always paired with a word or an icon, never colour alone.
+- **success / warning / danger / info**: status only, always paired with a word and a glyph shape, never colour alone.
+  `info` (blue) is for neutral notices and "in progress"; it is never used where the accent would do.
 
-Hex is derived from the HSL tokens (`frontend/src/lib/brand.ts` mirrors the four values that need hex, and a test keeps them
-in sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text pair; AA (4.5:1) is a hard floor.
+### Proportions
+
+Colour is spent by area. **App: 70 / 20 / 10** (dominant neutrals / lagoon / accent): a dense dashboard needs the neutrals to
+carry the screen, and in practice the accent lands nearer 5 %. **Landing: 60 / 30 / 10**, the classic split, because the mesh
+and the tinted glass bands count as secondary and the brand should read above the fold. If a screen looks teal, something
+that should be neutral took the accent.
 
 ### Light
 
 | Token | Hex | HSL |
 |---|---|---|
+| canvas | `#edf3f5` | `197 26% 94.5%` |
 | background | `#ffffff` | `0 0% 100%` |
 | surface | `#f7f9fa` | `196 20% 97.5%` |
 | foreground | `#131e25` | `205 32% 11%` |
@@ -98,14 +109,19 @@ in sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text
 | **accent / ring** | `#086b81` | `191 88% 27%` |
 | accent-foreground | `#ffffff` | `0 0% 100%` |
 | accent-soft | `#e7f5f8` | `190 55% 94%` |
+| secondary / foreground | `#d4ecef` / `#1d5560` | `187 45% 88.5%` / `190 54% 24.5%` |
+| secondary-strong | `#3a8e9c` | `189 46% 42%` |
 | success / soft | `#1c6938` / `#e9f7ee` | `142 58% 26%` / `142 45% 94%` |
 | warning / soft | `#915108` / `#fdf3dd` | `32 90% 30%` / `40 90% 93%` |
 | danger / soft | `#b42222` / `#fdeded` | `0 68% 42%` / `0 80% 96%` |
+| info / soft | `#1f5abf` / `#e8effc` | `218 72% 43.5%` / `219 77% 95%` |
+| chart-1 … 4 | `#086b81` `#3a8e9c` `#8fb9c1` `#94a3ab` | accent, secondary-strong, `190 29% 66%`, `201 12% 62.5%` |
 
 ### Dark
 
 | Token | Hex | HSL |
 |---|---|---|
+| canvas | `#0a1015` | `207 35% 6%` |
 | background | `#0d1317` | `205 28% 7%` |
 | surface | `#12191e` | `205 24% 9.5%` |
 | foreground | `#eef1f2` | `195 14% 94%` |
@@ -116,11 +132,19 @@ in sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text
 | **accent / ring** | `#3ecde0` | `187 72% 56%` |
 | accent-foreground | `#0e151b` | `205 30% 8%` |
 | accent-soft | `#142e34` | `190 45% 14%` |
+| secondary / foreground | `#14333b` / `#9fd8e0` | `192 50% 15.5%` / `187 51% 75%` |
+| secondary-strong | `#5cb4c1` | `188 45% 56%` |
 | success / soft | `#51c882` / `#132a1d` | `145 52% 55%` / `145 38% 12%` |
 | warning / soft | `#f5b547` / `#2e230f` | `38 90% 62%` / `38 50% 12%` |
 | danger / soft | `#f47171` / `#321515` | `0 85% 70%` / `0 40% 14%` |
+| info / soft | `#85adfc` / `#16233e` | `220 95% 75.5%` / `220 47% 16.5%` |
+| chart-1 … 4 | `#3ecde0` `#5cb4c1` `#2f707c` `#5e6d78` | accent, secondary-strong, `189 45% 33.5%`, input |
 
 ### Verified text pairs (WCAG contrast ratio)
+
+Hex is derived from the HSL tokens (`frontend/src/lib/brand.ts` mirrors the values that need hex, and a test keeps them in
+sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text pair; AA (4.5:1) is a hard floor. Text on glass is
+checked against the **worst case**: the glass tint composited over the strongest point of the mesh.
 
 | Pair | Light | Dark |
 |---|---|---|
@@ -128,13 +152,46 @@ in sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text
 | muted-foreground on background / muted | 6.7 / 6.0 | 8.0 / 6.9 |
 | accent-foreground on accent | 6.1 | 9.6 |
 | accent on background / accent-soft | 6.1 / 5.5 | 9.8 / 7.4 |
+| secondary-foreground on secondary | 6.8 | 8.4 |
 | success on background / soft | 6.7 / 6.1 | 8.9 / 7.2 |
 | warning on background / soft | 6.2 / 5.6 | 10.4 / 8.6 |
 | danger on background / soft | 6.6 / 5.8 | 6.7 / 5.9 |
+| info on background / soft | 6.4 / 5.5 | 8.4 / 7.1 |
+| foreground on chrome / card / strong glass (worst case) | 14.3 / 15.9 / 16.5 | 14.2 / 14.4 / 15.0 |
+| muted-foreground on chrome / card glass (worst case) | 5.6 / 6.3 | 6.9 / 7.0 |
+| accent on chrome / card glass (worst case) | 5.2 / 5.8 | 8.4 / 8.6 |
 
-Control outlines (`input`) are held at 3:1 or better against both `background` and `surface` (WCAG 1.4.11); a test enforces it.
+Control outlines (`input`) are held at 3:1 or better against `background`, `surface` and `canvas` (WCAG 1.4.11); a test
+enforces it. Inputs never sit on glass.
 
-## 5. Iconography and imagery
+### Glass and the mesh
+
+The product's surfaces are frosted glass over a soft teal mesh (D-024). The glass is a material for **chrome and floating
+layers**, not for reading.
+
+| Layer | Token | Light | Dark | Blur |
+|---|---|---|---|---|
+| Sidebar, app header, landing nav | `--glass-chrome` | `hsl(188 43% 93% / 0.70)` | `hsl(201 36% 9% / 0.66)` | 20 px, saturate 160 % |
+| Cards, stat tiles, panels | `--glass-card` | `hsl(0 0% 100% / 0.78)` | `hsl(204 29% 10% / 0.74)` | none |
+| Popovers, menus, toasts | `--glass-strong` | `hsl(0 0% 100% / 0.90)` | `hsl(204 29% 10% / 0.90)` | 24 px, saturate 160 % |
+| Dialogs | `background` (solid) with the glass edge and shadow | `#ffffff` | `#0d1317` | none (over the `--scrim`) |
+| Landing hero frame | `--glass-card` | as card | as card | 16 px |
+
+- Edge: a 1 px `--glass-border` (`hsl(205 32% 11% / 0.08)` / `hsl(0 0% 100% / 0.08)`) plus a 1 px inner top highlight
+  (`--glass-highlight`). Elevation: `--shadow-glass` (a teal-tinted soft shadow in light, a deep one in dark).
+- **The mesh** is one fixed layer behind the page: three large radial gradients (teal `--mesh-1`, mint `--mesh-2`, sky
+  `--mesh-3`, 18 to 30 % alpha) on `canvas`, plus a 3 to 5 % grain. It never scrolls, so glass over it stays cheap; cards use
+  no backdrop blur because the mesh is already soft.
+- **Never glass**: tables, inputs, the editor and composer, long text (Terms, Privacy, docs), dense lists. These are solid
+  `background`. Text never sits on glass with less than 0.66 alpha.
+- **Budget**: at most two blurred layers on screen (chrome plus one popover or dialog). No blur on anything that scrolls.
+  Dialogs are a solid panel over a plain dim scrim (`--scrim`), no blur: without a blur behind it, translucency would let
+  the page's text show through.
+- **Fallbacks**: without `backdrop-filter` the chrome and floating layers are the solid `surface`;
+  `prefers-reduced-transparency` makes every glass layer solid and the mesh flat; `forced-colors` drops fills, shadows and
+  the mesh and draws `CanvasText` borders.
+
+## 5. Iconography, imagery and status tags
 
 - **UI icons**: keep lucide (already in the app), 16 px in the sidebar and 20 px elsewhere, 1.5 to 2 px stroke, `currentColor`,
   `aria-hidden` unless the icon is the only label. Network marks are Simple Icons (CC0), single colour.
@@ -142,37 +199,79 @@ Control outlines (`input`) are held at 3:1 or better against both `background` a
   with a dot) and fan out again, one lane in the accent colour ending in the plane tip. Hairline strokes (1.5 px), no fills,
   low contrast except the accent lane. It appears in the hero, the banner and the social preview.
 - **Screens, not stock**: product shots are real captures of the demo (`site/scripts/screenshots.mjs`, `record-hero.mjs`).
-  No stock photos, no people, no 3D renders, no gradients as decoration beyond the soft accent glow in the hero.
+  No stock photos, no people, no 3D renders. The only decorative gradients are the mesh behind the glass (section 4) and the
+  soft accent glow in the hero.
+- **Status tags** are tags, not candy pills: 22 px tall, 5 px radius, a 1 px `border` hairline, no pastel fill, the label at
+  12 px / 500 with tabular figures, in the text colour (`muted-foreground` for the quiet statuses: draft, pending,
+  cancelled, revoked, expired). Only a 12 px **glyph** carries the status colour, and each status has
+  its own glyph shape, so colour is never the only cue: draft = dashed ring, awaiting approval = half-filled ring,
+  scheduled = clock, publishing = open arc, published = filled check, failed = triangle with a bang (and a tinted border),
+  cancelled or expired = slashed ring. Capability and metadata tags are the same shape without a glyph; an unsupported one
+  is dashed and struck through, with a screen-reader word. Counts (nav, tabs) are a small neutral square with tabular
+  figures, not a coloured dot.
 
 ## 6. Typography
 
-Keep the vendored **Inter** (variable, OFL, `site/src/assets/fonts/Inter-OFL.txt`; `@fontsource-variable/inter` in the app).
-Reasons: it is already shipped and licensed, one variable file covers every weight we use, it has tabular figures for counts
-and times, and it stays legible at the 11 to 13 px sizes a dense dashboard needs. A second family would add a file, a licence
-to audit and a flash of unstyled text for little gain; the identity comes from the mark, the colour and the motion, not from a
-display face.
+**Onest** (variable, weights 100 to 900, OFL) for Latin and Cyrillic, with a matched Noto family per script that only its
+locale loads (D-024). Onest was chosen over Inter, Geologica, Golos Text, Rubik, IBM Plex Sans, Manrope and Unbounded: it
+covers every Kazakh letter (Әә Ғғ Ққ Ңң Өө Ұұ Үү Һһ Іі, checked in the font's cmap; Manrope and Unbounded miss them), it has
+tabular figures, it reads well at 11 to 13 px, and its open, slightly warm forms (the single-storey `y`, the round `a`) give
+the product a voice of its own without a display face. Its Latin subset is 32 KB, lighter than Inter's 47 KB.
 
-- Wordmark: Inter at weight 620, tracking -0.022em, converted to outlines. UI copy uses live text at 600 for the name.
-- Headings: weight 600 to 660, tracking -0.04em to -0.05em at display sizes; body at 400 and 1.5 line height.
-- Numbers in tables and counters: `font-variant-numeric: tabular-nums`.
+| Script | Locales | Family | Loaded |
+|---|---|---|---|
+| Latin, Cyrillic | en, es, pt-BR, de, fr, id, ru, kk | Onest Variable | always; each subset only when a page uses it (`unicode-range`) |
+| Arabic | ar | Noto Sans Arabic Variable | only when `<html lang="ar">` |
+| Japanese | ja | Noto Sans JP Variable | only when `<html lang="ja">`, and only the slices the page needs |
+| Simplified Chinese | zh-CN | Noto Sans SC Variable | only when `<html lang="zh-CN">`, and only the slices the page needs |
+
+- All fonts are **self-hosted**: `@fontsource-variable/*` packages bundled by the app, copied by `site/build.mjs` for the
+  landing. No request ever goes to a font CDN. Onest comes first in every stack, so Latin words inside Arabic, Japanese or
+  Chinese text stay in the brand face. Script faces load with `font-display: optional` (no layout shift if they arrive
+  late); Onest swaps. The OFL licences ship next to the font files. The language switcher's endonyms on other pages use system fonts, so listing
+  `日本語` never downloads a Japanese font.
+- Wordmark: unchanged for now, Inter at weight 620 converted to outlines (a drawn logo, not live text). Redrawing it in
+  Onest is a separate change. UI copy uses live text at 600 for the name.
+- Headings: weight 600 to 660, tracking -0.035em to -0.045em at display sizes (no negative tracking in Arabic, Japanese and
+  Chinese); body at 400 and 1.5 line height (1.75 for Japanese and Chinese, 1.8 for Arabic).
+- Numbers in tables, tags and counters: `font-variant-numeric: tabular-nums`.
 - Code: the system monospace stack. Do not load a webfont for it.
 
 ## 7. Motion
 
-Motion explains; it never decorates the controls. Everything honours `prefers-reduced-motion` (no loops, nothing hidden until
-revealed), animates `transform` and `opacity` only, and the landing keeps its Pause control (D-017).
+Motion explains; it never decorates the controls. Everything honours `prefers-reduced-motion` and the **Pause motion**
+setting (the landing since D-017, the app from D-024): no loops, nothing hidden until revealed, only `transform`, `opacity`
+and `clip-path` animate.
 
 | Token | Value | Use |
 |---|---|---|
 | `--duration-fast` / `-base` / `-slow` | 150 / 200 / 320 ms | hover, menus, enters |
+| `--duration-hero` | 520 ms | the three hero transitions below, nothing else |
 | `--duration-path` | 900 ms | a drawn line: the logo path, the hero lanes |
 | `--ease-standard` | `cubic-bezier(0.4, 0, 0.2, 1)` | moves within the screen |
 | `--ease-enter` / `--ease-exit` | `(0.16, 1, 0.3, 1)` / `(0.4, 0, 1, 1)` | things arriving / leaving (exit is faster) |
+| `--ease-fill` | `cubic-bezier(0.65, 0, 0.35, 1)` | a colour fill or wipe crossing the screen |
 | `--ease-steer` | `cubic-bezier(0.45, 0, 0.15, 1)` | the steering curve: slow start, committed middle, soft landing |
 
+**How often decides how much.** Frequent navigation (sidebar, tabs, filters, back, anything from the keyboard) is instant or a
+150 ms fade at most. A first entry to a section may rise in once (320 ms). Lists do not stagger, except the dashboard's first
+load in a session.
+
+**Hero transitions** are kept for three rare moments that change what the person is doing, each at most `--duration-hero`
+and never blocking input:
+
+1. Signing in, and finishing onboarding: an accent circle fills from the button that was pressed, then the new screen is
+   revealed behind it.
+2. Publishing now: a diagonal accent wipe crosses the screen; the success state lands after it.
+3. Scheduling from the composer: the post card moves into its slot in the calendar (a shared-element transition).
+
+They use the View Transitions API, fall back to a plain overlay animation where it is missing, and become a 120 ms
+cross-fade under reduced motion or Pause motion.
+
 **The steering motif.** A line eases in, bends, and settles on its target. Used in two places only: the logo (the path draws
-and the tip follows, once, on first paint) and the hero (lanes of drafts bend toward one gate, wait there, then fan out). Packets slow at the gate because a request waits for a person. Do not reuse the
-motif for hover states, toggles or page transitions.
+and the tip follows, once, on first paint) and the hero (lanes of drafts bend toward one gate, wait there, then fan out).
+Packets slow at the gate because a request waits for a person. Do not reuse the motif for hover states, toggles or page
+transitions.
 
 ## 8. Where each asset is used
 

@@ -33,9 +33,8 @@ const staleAfter = 24 * time.Hour
 func (r *LinkCodes) Create(ctx context.Context, c *linkcode.Code, maxActive int, now time.Time) error {
 	return r.db.InTx(ctx, func(ctx context.Context) error {
 		q := r.db.q(ctx)
-		var locked uuid.UUID
-		if err := q.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 FOR UPDATE`, c.UserID).Scan(&locked); err != nil {
-			return mapErr(err, "user")
+		if err := lockUser(ctx, q, c.UserID); err != nil {
+			return err
 		}
 		if _, err := q.Exec(ctx, `DELETE FROM telegram_link_codes WHERE user_id = $1 AND expires_at < $2`, c.UserID, now.Add(-staleAfter)); err != nil {
 			return mapErr(err, "link code")

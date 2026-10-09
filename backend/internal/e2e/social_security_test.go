@@ -234,7 +234,8 @@ func TestSocialRefusesDisabledAndDeletingUsers(t *testing.T) {
 		}
 	}
 
-	// A scheduled deletion does not lock a password-less owner out: they sign in and can cancel (nothing else works).
+	// A scheduled deletion does not lock a password-less owner out: they sign in and can cancel. Their session cannot
+	// schedule or publish, same as a password sign-in.
 	exec(`UPDATE users SET status = 'active', deletion_scheduled_at = now() WHERE email = 'dora@example.com'`)
 	loc, c := signIn()
 	if errorOf(loc) != "" || !hasSessionCookie(c, r.e) {

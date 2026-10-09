@@ -44,7 +44,7 @@ if (diagrams.length > 0) {
       startOnLoad: false,
       securityLevel: 'strict',
       theme: 'base',
-      fontFamily: 'Inter Variable, Inter, ui-sans-serif, system-ui, sans-serif',
+      fontFamily: 'Onest Variable, ui-sans-serif, system-ui, sans-serif',
       themeVariables: {
         darkMode: dark.matches,
         background: 'transparent',

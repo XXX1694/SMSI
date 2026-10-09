@@ -1,0 +1,16 @@
+Subject: A sign-in method was removed from your Steerpost account
+
+--- text ---
+GitHub can no longer be used to sign in to your Steerpost account.
+
+If this was not you, someone may have access to your account: sign in, change your password and check Settings → Sign-in methods. Review your account here: https://app.example.com/verify-email#token=abc123
+
+Steerpost
+
+--- html ---
+<!doctype html>
+<html><body style="font-family:sans-serif;line-height:1.5;color:#111">
+<p>GitHub can no longer be used to sign in to your Steerpost account.</p>
+<p>If this was not you, someone may have access to your account: sign in, change your password and check Settings → Sign-in methods. <a href="https://app.example.com/verify-email#token=abc123">Review your account</a>.</p>
+<p style="color:#666;font-size:13px">Steerpost</p>
+</body></html>

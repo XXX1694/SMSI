@@ -228,12 +228,8 @@ func (s *Service) ChangePassword(ctx context.Context, a actor.Actor, current, ne
 	if !u.HasPassword() {
 		return errs.New(errs.Conflict, `this account has no password yet; use "Forgot password?" on the sign-in page to set one`)
 	}
-	ok, err := s.hasher.Verify(ctx, current, u.PasswordHash)
-	if errs.CodeOf(err) == errs.RateLimited {
+	if err := s.checkPassword(ctx, u, current); err != nil {
 		return err
-	}
-	if err != nil || !ok {
-		return errs.Validationf("current password is incorrect").WithField("current_password", "incorrect")
 	}
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		revoked, keys, err := s.replacePassword(ctx, u.ID, next, a.SessionID, revokeKeys)
@@ -276,11 +272,5 @@ func (s *Service) replacePassword(ctx context.Context, uid uuid.UUID, password s
 }
 
 func (s *Service) notifyPasswordChanged(ctx context.Context, u *user.User, keysRevoked bool) {
-	msg, err := mail.Render(mail.PasswordChanged, u.Email, mail.Data{Link: s.webURL + "/developer", KeysRevoked: keysRevoked})
-	if err == nil {
-		err = s.mail.Enqueue(ctx, msg)
-	}
-	if err != nil {
-		s.log.WarnContext(ctx, "password-changed mail not queued", slog.String("user_id", u.ID.String()), slog.Any("error", err))
-	}
+	s.notify(ctx, u, mail.PasswordChanged, mail.Data{Link: s.webURL + "/developer", KeysRevoked: keysRevoked})
 }

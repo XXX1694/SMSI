@@ -66,6 +66,11 @@ func (r *Identities) ListByUser(ctx context.Context, userID uuid.UUID) ([]identi
 	return out, mapErr(rows.Err(), "identity")
 }
 
+// LockUser takes the user's row lock (see lockUser).
+func (r *Identities) LockUser(ctx context.Context, userID uuid.UUID) error {
+	return lockUser(ctx, r.db.q(ctx), userID)
+}
+
 // Delete unlinks the user's identity for a provider; another user's identity is NOT_FOUND.
 func (r *Identities) Delete(ctx context.Context, userID uuid.UUID, p identity.Provider) error {
 	tag, err := r.db.q(ctx).Exec(ctx, `DELETE FROM user_identities WHERE user_id = $1 AND provider = $2`, userID, p)

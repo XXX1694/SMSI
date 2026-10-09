@@ -5,6 +5,7 @@ import { availableLocales, dirOf, ENABLED_LOCALES, type AppLocale, type Locale }
 import { loadMessages } from '@/i18n/messages';
 import type { Catalog } from '@/i18n/pseudo';
 import { LOCALE_STORAGE_KEY, resolveLocale } from '@/i18n/resolve';
+import { loadScriptFont } from '@/i18n/script-fonts';
 import { readStorage, writeStorage } from '@/lib/storage';
 import en from '../../messages/en.json';
 
@@ -67,7 +68,8 @@ export function LocaleProvider({
     const mine = ++seq.current;
     let messages: Catalog = en;
     try {
-      messages = await loadMessages(next, en);
+      // The script face (ar, ja, zh-CN) loads alongside the catalog, so the first frame in that locale has its font rules.
+      [messages] = await Promise.all([loadMessages(next, en), loadScriptFont(next)]);
     } catch {
       next = 'en'; // chunk failed to load (offline): stay readable
     }

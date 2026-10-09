@@ -319,6 +319,12 @@ export class DemoEngine {
     if (path === '/me' && m === 'GET') return ok(200, this.me());
     if (path === '/auth/verify-email/resend' && m === 'POST') return fail(409, 'CONFLICT', 'email is already verified');
     if (path === '/auth/password/change' && m === 'POST') return this.changePassword(body);
+    // The demo has no sign-in provider: the user has a password and nothing to link, so nothing pretends to connect.
+    if (path === '/auth/identities' && m === 'GET') return ok(200, { identities: [], has_password: true });
+    if (/^\/auth\/identities\/[^/]+(\/link)?$/.test(path) && (m === 'POST' || m === 'DELETE')) {
+      return fail(404, 'NOT_FOUND', 'Sign-in with other providers is not available in the demo');
+    }
+    if (path === '/auth/password/set' && m === 'POST') return fail(409, 'CONFLICT', 'You already have a password. Change it instead.');
 
     // ---- social
     if (path === '/social/providers' && m === 'GET') return ok(200, { items: PROVIDERS });
@@ -436,7 +442,10 @@ export class DemoEngine {
     // The demo user is always verified and nothing is restricted.
     return {
       id, email, display_name, csrf_token: 'demo', scopes: ALL_SCOPES,
-      user: { id, email, display_name, email_verified: true, plan: 'free', deletion_scheduled_at: this.state.user.deletion_scheduled_at ?? null },
+      user: {
+        id, email, display_name, email_verified: true, has_password: true, login_methods: ['password'], plan: 'free',
+        deletion_scheduled_at: this.state.user.deletion_scheduled_at ?? null,
+      },
       verification_enforced: false, mail_delivery: 'log', deletion_grace_days: DEMO_GRACE_DAYS,
     };
   }

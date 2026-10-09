@@ -32,7 +32,7 @@ func (s *Service) decide(ctx context.Context, fl *identity.Flow, c identity.Clai
 	case identity.SignUp:
 		return s.startSignup(ctx, fl, c)
 	default:
-		return failed(string(d.Reason)), nil
+		return failed(fl.Provider, string(d.Reason), fl.RedirectAfter), nil
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *Service) ownerByIdentity(ctx context.Context, c identity.Claims) (*iden
 		return nil, nil, err
 	}
 	// Only the status counts here: a known identity may sign in while its account waits for deletion, so the owner can
-	// reach the cancel banner (the session of such an account can do nothing else, see Actor.RequireNotDeleting).
+	// reach the cancel banner (its session cannot schedule or publish, same as a password sign-in, see Actor.RequireNotDeleting).
 	return &identity.Owner{UserID: u.ID, Active: u.Status == user.StatusActive, EmailVerified: u.EmailVerified()}, u, nil
 }
 
@@ -110,16 +110,10 @@ func (s *Service) linkAndSignIn(ctx context.Context, fl *identity.Flow, c identi
 	return CallbackResult{Redirect: fl.RedirectAfter, Session: &issued}, nil
 }
 
-// notifyIdentityLinked tells the owner, after the commit, that a provider was linked by email match: the mail is the
-// alarm if someone else did it. A failure is logged and never fails the sign-in.
+// notifyIdentityLinked tells the owner, after the commit, that a provider was linked: the mail is the alarm if someone
+// else did it. A failure is logged and never fails the sign-in.
 func (s *Service) notifyIdentityLinked(ctx context.Context, u *user.User, p identity.Provider) {
-	msg, err := mail.Render(mail.IdentityLinked, u.Email, mail.Data{Provider: providerNames[p], Link: s.webURL + "/settings"})
-	if err == nil {
-		err = s.mail.Enqueue(ctx, msg)
-	}
-	if err != nil {
-		s.log.WarnContext(ctx, "identity-linked mail not queued", slog.String("user_id", u.ID.String()), slog.Any("error", err))
-	}
+	s.notify(ctx, u, mail.IdentityLinked, mail.Data{Provider: providerNames[p], Link: s.webURL + SettingsPath})
 }
 
 // startSignup keeps what the provider vouched for behind a one-time ticket. No user exists yet: the account is created
@@ -129,7 +123,7 @@ func (s *Service) startSignup(ctx context.Context, fl *identity.Flow, c identity
 	if err != nil {
 		return CallbackResult{}, err
 	}
-	name := strings.TrimSpace(truncate(c.DisplayName, 100))
+	name := truncate(strings.TrimSpace(c.DisplayName), 100)
 	pending := identity.PendingSignup{Subject: c.Subject, Email: c.Email, DisplayName: name}
 	if err := s.social.flows.SetPending(ctx, fl.ID, crypto.SHA256Hex(ticket), s.clock.Now().Add(TicketTTL), pending); err != nil {
 		return CallbackResult{}, err

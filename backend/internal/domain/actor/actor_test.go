@@ -3,6 +3,7 @@ package actor
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/apikey"
@@ -60,6 +61,24 @@ func TestRequireNotDeleting(t *testing.T) {
 		a.DeletionScheduled = a.Type == TypeScheduler || a.Type == TypeSystem
 		if err := a.RequireNotDeleting(); err != nil {
 			t.Fatalf("%s must pass: %v", a.Type, err)
+		}
+	}
+}
+
+func TestSessionIsFresh(t *testing.T) {
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		created time.Time
+		want    bool
+	}{
+		"just now":      {now, true},
+		"at the window": {now.Add(-FreshSessionWindow), true},
+		"past it":       {now.Add(-FreshSessionWindow - time.Second), false},
+		"no session":    {time.Time{}, false},
+		"clock skew":    {now.Add(time.Minute), true},
+	} {
+		if got := (Actor{SessionCreatedAt: tc.created}).SessionIsFresh(now); got != tc.want {
+			t.Errorf("%s: got %v, want %v", name, got, tc.want)
 		}
 	}
 }

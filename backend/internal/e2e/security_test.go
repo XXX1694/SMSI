@@ -315,6 +315,38 @@ func TestIdentityIsolation(t *testing.T) {
 	}
 }
 
+// Through the HTTP API: Bob sees none of Alice's sign-in methods, cannot unlink them, and cannot connect the external
+// account Alice already owns (identity_in_use), whichever way he asks.
+func TestSignInMethodsAreTenantScoped(t *testing.T) {
+	r := newSocialRig(t, envOpts{})
+	alice := r.githubSignUp(t, 9001, "alice", "alice@signin.test")
+	bob := r.e.browser()
+	bob.register("bob@signin.test")
+
+	list := bob.must("GET", identitiesPath, nil, 200)
+	if len(list["identities"].([]any)) != 0 || list["has_password"] != true {
+		t.Fatalf("bob sees %v", list)
+	}
+	pw := map[string]any{"current_password": "correct horse battery"}
+	bob.must("DELETE", identitiesPath+"/github", pw, 404)
+
+	f := r.startLinkWith(t, bob, "github", pw)
+	loc := r.callback(t, bob, "github", r.githubCode(f, 9001, "alice", "alice@signin.test"), f.state)
+	if loc.Path != "/settings" || loc.Query().Get("error") != "identity_in_use" || loc.Query().Get("provider") != "github" {
+		t.Fatalf("bob linking alice's account: %s", loc)
+	}
+	if got := providersOf(bob.must("GET", identitiesPath, nil, 200)); len(got) != 0 {
+		t.Fatalf("bob now has %v", got)
+	}
+	if got := providersOf(alice.must("GET", identitiesPath, nil, 200)); len(got) != 1 || got[0] != "github" {
+		t.Fatalf("alice's identity changed: %v", got)
+	}
+	// Alice's password-less account is untouched by Bob's session too.
+	if n := r.countRows(`SELECT count(*) FROM users WHERE email = 'alice@signin.test' AND password_hash IS NULL`); n != 1 {
+		t.Fatal("alice's account changed")
+	}
+}
+
 func pngBytes(t *testing.T) []byte {
 	img := image.NewRGBA(image.Rect(0, 0, 4, 3))
 	img.Set(1, 1, color.RGBA{255, 0, 0, 255})

@@ -18,7 +18,7 @@ Legend: **[S]** comes from secondary sources (listed at the end). **[U]** has no
 |---|---|---|
 | **T1** | `en` (source), `ru` | The owner reviews `ru` natively, so the pipeline is checked once with a real reviewer. |
 | **T2** | `es`, `pt-BR`, `de`, `fr`, `id` | Latin script, no new engineering. `de` and `fr` stress the length budget. |
-| **T3** | `ja`, `zh-CN` | CJK: system fonts, line-break CSS, IME guard. |
+| **T3** | `ja`, `zh-CN` | CJK: Noto Sans JP / SC loaded only for that locale (D-024), line-break CSS, IME guard. |
 | **T4** | `kk` | Hidden from the switcher until a native reviewer signs it off. |
 | **T5** | `ar` | Last: RTL needs every LTR screen stable first. |
 | Next in line | `uk`, `tr`, `ko` | `uk` browsers get `en`, never `ru`. |
@@ -91,7 +91,7 @@ agents. Do not promise "works with Claude" on pages localized for those markets.
 - Show user content with `dir="auto"`. Posts can be Arabic inside an English UI, and the other way round.
 - Pin `ar-u-nu-latn-ca-gregory`. Some engines default `ar-SA` to the Islamic calendar, and Arabic-Indic digits break IDs,
   counts and code.
-- Inter has no Arabic glyphs. Add a fallback (Noto Sans Arabic or IBM Plex Sans Arabic) and more line height.
+- Onest has no Arabic glyphs: Noto Sans Arabic follows it in the stack, loaded only for `ar` (D-024), with more line height.
 - Effort: about one sprint. Screenshots at 390 px in both directions are required.
 
 **CJK (`ja` now, `ko`/`zh` later).**

@@ -22,8 +22,8 @@ export const viewport: Viewport = {
   // Lets env(safe-area-inset-*) report the notch and home-bar insets (toasts use the bottom one).
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: BRAND_HEX.light.background },
-    { media: '(prefers-color-scheme: dark)', color: BRAND_HEX.dark.background },
+    { media: '(prefers-color-scheme: light)', color: BRAND_HEX.light.canvas },
+    { media: '(prefers-color-scheme: dark)', color: BRAND_HEX.dark.canvas },
   ],
 };
 

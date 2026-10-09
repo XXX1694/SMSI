@@ -530,6 +530,8 @@ The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*
 
 ## D-021: The UI is localized with next-intl on the client; locales ship when complete, beta until a native review (2026-10-09)
 
+*Amended by D-024: the "CJK and Arabic use system fonts" rule no longer holds, in the app or on the landing.*
+
 **Decision.** The dashboard and the demo use a client-side provider (`frontend/src/i18n/`) with ICU catalogs in
 `frontend/messages/{locale}.json` (typed from `en.json`) and a `useTranslations(ns)` hook with the same shape as next-intl's.
 The runtime is a small in-house ICU subset (`src/i18n/icu.ts`: arguments, number/date/time, plural, selectordinal, select,
@@ -542,7 +544,9 @@ There are no `/[locale]/` routes in the app; the landing page gets `/{locale}/` 
 then `ru`; `es`, `pt-BR`, `de`, `fr`, `id`; `ja`, `zh-CN`; `kk` (hidden until a native review); `ar` last, after logical CSS.
 This supersedes the wave table in docs/copy/languages.md: `uk` waits, `zh-CN` is in. `uk` and `zh-Hant` fall back to `en`.
 Dates and numbers come from `lib/time`/`lib/calendar` with an explicit locale and the user's timezone. CJK and Arabic use
-system fonts. API error codes, API messages, emails, MCP text and docs stay English; the UI maps error codes to text.
+system fonts (superseded by D-024: both the app and the landing now load self-hosted Noto faces for `ar`, `ja` and
+`zh-CN`, only on those locales). API error codes, API messages, emails, MCP text and docs stay English; the UI maps error
+codes to text.
 Translations are machine-drafted with the glossary, back-translated on a sample and labelled "Beta translation" until a
 native speaker signs `docs/copy/review/{locale}.md`. CI blocks missing keys in every enabled locale.
 
@@ -560,7 +564,8 @@ round trip. Static routes avoid both. Runtime formatting supports named number/d
 **Alternatives.** `[locale]` prefix routes with `generateStaticParams`: the app renders in the browser behind login, so no
 SEO gain, 11× the exported pages and every link rewritten. Server negotiation by cookie: impossible in the static export
 and makes every prod route dynamic. next-intl and react-intl: the same FormatJS engine, about 14 kB gzipped on every route. i18next, Lingui, Paraglide: a second
-message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for glyphs every OS ships.
+message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for glyphs every OS ships (revisited in
+D-024, which loads only the slices a page uses).
 
 **Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
 hint outside `en` until field codes exist. A release is blocked by missing keys or failed checks, not by draft status.
@@ -614,8 +619,56 @@ Any future generic OIDC issuer (Keycloak, Authentik) gets its own provider id an
 `hd` rules apply only to tokens issued by `https://accounts.google.com`.
 
 Users may have no password (`users.password_hash` is nullable): login spends the cost of a real check for them, so timing does
-not reveal them, and password change points them to "Forgot password?" until set-password ships. Provider email changes are not synced to `users.email`. A user without a password deletes the account (D-019) with a session created in the last 10 minutes instead of a password, and an older session gets `403 REAUTH_REQUIRED` (sign in again, then retry), so deletion never needs a password that does not exist.
+not reveal them, and they set a first password with `POST /auth/password/set` (a session younger than 10 minutes, else `REAUTH_REQUIRED`). Connecting and disconnecting providers is session + CSRF and re-authenticates (the current password, or a session under 10 minutes old without one); the last way to sign in cannot be removed. Provider email changes are not synced to `users.email`. A user without a password deletes the account (D-019) with a session created in the last 10 minutes instead of a password, and an older session gets `403 REAUTH_REQUIRED` (sign in again, then retry), so deletion never needs a password that does not exist.
 
 **Consequences.** Google needs a domain the owner can verify (sslip.io hosts cannot be), so GitHub ships first. We now own
 account-linking security. Flow state lives in `auth_oauth_flows` (migration 00008) as hashes; user links in `user_identities`.
 The Down migration marks password-less users with `!`, which never verifies, so they sign in again only through a password reset; the next Up turns the marker back into NULL. Migration versions must be contiguous (goose rejects a number below an applied one), so migration PRs merge in number order.
+
+## D-024: Glass surfaces over a teal mesh, a lagoon secondary colour, Onest with per-script Noto, and rare hero transitions (2026-10-09)
+
+D-023 is reserved for social sign-in.
+
+**Context.** The owner asked for a glassmorphism style, deliberately chosen brand colours applied by a 60-30-10 rule,
+status chips that do not read as generic AI UI, a typeface with more character than Inter that covers all eleven locales
+(D-021, including Kazakh Cyrillic, Arabic, Japanese and Chinese), and expressive transitions for the moments that matter.
+BRAND.md had ruled out decorative gradients beyond the hero glow, set Inter as the only face, and the landing used system
+fonts for Japanese, Chinese and Arabic. The design proposal (palette with computed contrast, glass tokens, a motion audit
+and a preview) was approved.
+
+**Decision.**
+- **Colour.** Harbour teal stays the only accent. A quieter teal, **lagoon** (`secondary`), takes the structural 20 to 30 %:
+  the chrome tint, the active nav row, selected rows, secondary buttons, chart series 2 and 3. `info` (blue) and `canvas`
+  are added. The app spends colour 70 / 20 / 10 by area (a dense dashboard needs neutrals to dominate); the landing uses the
+  classic 60 / 30 / 10.
+- **Glass.** Real backdrop blur only on chrome (sidebar, header, landing nav) and floating layers (popovers, menus,
+  toasts); cards are translucent without blur over one fixed mesh layer; dialogs are a solid panel over a plain dim scrim; tables, inputs, the composer and long text stay
+  solid. At most two blurred layers on screen. Fallbacks for missing `backdrop-filter`, `prefers-reduced-transparency`
+  and `forced-colors`. Text contrast is checked against the glass composited over the mesh's strongest point.
+- **Status tags.** Square-ish 5 px tags with a hairline border, the label in the text colour and a status glyph that alone
+  carries the colour (each status a different shape), replacing the rounded pastel pills.
+- **Type.** Onest Variable for Latin and Cyrillic; Noto Sans Arabic, Noto Sans JP and Noto Sans SC (variable) only for their
+  own locale, scoped with `html:lang()`, in the app (a lazy CSS chunk on locale switch) and on the landing (a stylesheet linked
+  only from that locale's page). Everything is self-hosted from `@fontsource-variable` packages, with their OFL licences
+  shipped next to the files. This supersedes D-021's "CJK and Arabic use system fonts" for both the app and the landing:
+  the system faces differed by platform and Windows' Arabic and Chinese fallbacks did not match the product. The script
+  faces use `font-display: optional`, so a late font never shifts the layout; the system face stays in that case.
+- **Motion.** Frequent navigation becomes instant or a 150 ms fade; lists stop staggering except the dashboard's first load;
+  the app gets the Pause motion setting the landing has. Three rare moments get a hero transition of at most 520 ms through
+  the View Transitions API (accent circle fill on sign-in and onboarding complete, accent wipe on publish now, a
+  shared-element move from the composer to the calendar), with a plain fallback and a cross-fade under reduced motion.
+
+**Alternatives.** Keep Inter (cheapest, but generic, and the owner asked for character). Geologica (distinctive but wide,
+costly in dense tables and 35 % longer translations), Golos Text (close to Inter, no weights under 400), Rubik (rounded,
+reads playful), IBM Plex Sans (good and has script siblings, but 126 KB for Latin and Cyrillic and closely tied to IBM's
+Carbon look), Manrope and Unbounded (both miss Kazakh letters). For Japanese and Chinese, keeping system fonts (no download)
+was weighed against a consistent face; the slices loaded per page keep the cost to the characters actually shown. For
+glass, blurring every card was rejected: it repaints on scroll and costs low-end phones frames for no visible gain over a
+soft mesh. A single 60-30-10 rule for both surfaces was rejected because a dashboard at 30 % secondary looks tinted.
+
+**Consequences.** BRAND.md sections 4 to 7 describe the system; tokens live in `frontend/src/styles/tokens.css`, and the
+landing derives them as before. The change lands in steps: tokens and fonts first, then the glass utilities, then the app
+shell and status tags, then cards, motion and the landing. Product screenshots and the hero video are re-recorded after the
+app screens change. Japanese and Chinese pages now download a few hundred kilobytes of font slices on first visit (measured
+in the font PR); English and Cyrillic pages get lighter. The wordmark keeps its Inter outlines until it is redrawn
+separately.
