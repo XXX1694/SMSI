@@ -686,6 +686,7 @@
     "draftSaved": "草稿已保存",
     "postScheduled": "帖子已定时",
     "publishStarted": "已开始发布",
+    "publishFailedAfterSave": "帖子已保存，但发布失败：{reason} 问题解决后，请在此处重新发布。",
     "conflictTitle": "自你打开后，这篇帖子已被修改。",
     "conflictEditable": "另一个标签页或某个智能体保存了更新的版本。现在保存会覆盖它。",
     "conflictLocked": "{status, select, publishing {它正在发布，无法编辑。} published {它现已发布，无法编辑。} partially_published {它现已部分发布，无法编辑。} failed {它现已失败，无法编辑。} cancelled {它现已取消，无法编辑。} other {它现在处于无法编辑的状态。}}",

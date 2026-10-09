@@ -686,6 +686,7 @@
     "draftSaved": "Draft saved",
     "postScheduled": "Post scheduled",
     "publishStarted": "Publishing started",
+    "publishFailedAfterSave": "The post was saved, but publishing failed: {reason} Publish it again here once that is fixed.",
     "conflictTitle": "This post changed since you opened it.",
     "conflictEditable": "A newer version was saved in another tab or by an agent. Saving now overwrites it.",
     "conflictLocked": "{status, select, publishing {It is being published right now and cannot be edited.} published {It is now published and cannot be edited.} partially_published {It is now partially published and cannot be edited.} failed {It has now failed and cannot be edited.} cancelled {It is now canceled and cannot be edited.} other {It is now in a state that cannot be edited.}}",
