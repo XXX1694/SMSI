@@ -7,14 +7,15 @@
   padding-inline: max(var(--gut), env(safe-area-inset-left, 0px)) max(var(--gut), env(safe-area-inset-right, 0px)); }
 
 /* ---------- floating nav ---------- */
-.lp-nav { position: fixed; inset: max(0.75rem, env(safe-area-inset-top, 0px)) 0 auto; z-index: 30; border: 0; background: none; backdrop-filter: none; pointer-events: none; }
+.lp-nav { position: fixed; inset: max(0.75rem, env(safe-area-inset-top, 0px)) 0 auto; z-index: 30; border: 0; background: none; backdrop-filter: none; pointer-events: none;
+  /* The name moves to the bar: an ancestor with a view-transition-name is a backdrop root, so the bar's blur would see nothing
+     behind it. The bar still morphs between pages. */
+  view-transition-name: none; }
 .lp-nav-bar {
+  position: relative; view-transition-name: site-nav;
   pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   width: min(62rem, calc(100% - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))); height: 3.25rem; margin-inline: auto; padding: 0; padding-inline: 1.1rem 0.5rem;
-  border: 1px solid hsl(var(--border)); border-radius: 999px;
-  background: color-mix(in srgb, hsl(var(--background)) 94%, transparent);
-  backdrop-filter: blur(14px) saturate(1.5); -webkit-backdrop-filter: blur(14px) saturate(1.5);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.4), var(--shadow-pop);
+  border-radius: 999px;
 }
 .lp-nav .btn { border-radius: 999px; height: 2.25rem; padding-inline: 1rem; }
 @media (max-width: 47.99rem) { .lp-nav .nav > a:not(.btn).hide-sm { display: none; } }
@@ -97,9 +98,9 @@
 }
 
 /* facts */
-.facts-band .lp-wrap { padding-block: clamp(2.5rem, 5vw, 4rem); border-block: 1px solid hsl(var(--border)); }
-.facts-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem; margin: 0; }
-.facts-row > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 0.6rem; }
+.facts-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(0.75rem, 2vw, 1.25rem); margin: 0; }
+/* Stat tiles are panels read at a glance, so they are glass cards (no blur) over the mesh. */
+.facts-row > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 0.6rem; min-width: 0; padding: clamp(1rem, 2.4vw, 1.75rem); border-radius: 20px; }
 .facts-row dt { max-width: 17rem; font-size: 0.9375rem; color: hsl(var(--muted-foreground)); }
 .facts-row dd { margin: 0; }
 .num { font-size: clamp(3.25rem, 7vw, 5.5rem); line-height: 1; font-weight: 650; letter-spacing: -0.055em; font-variant-numeric: tabular-nums; }
@@ -139,7 +140,7 @@
 .run-grid pre { margin: 0; font-size: 0.8125rem; padding: 1.4rem 1.5rem; border-radius: 16px; }
 
 /* closing card */
-.final-card { position: relative; isolation: isolate; overflow: hidden; padding: clamp(2.5rem, 7vw, 5.5rem); border: 1px solid hsl(var(--border)); border-radius: 28px; background: hsl(var(--surface)); }
+.final-card { position: relative; isolation: isolate; overflow: hidden; padding: clamp(2.5rem, 7vw, 5.5rem); border-radius: 28px; }
 .final-card h2 { margin: 0; max-width: 16ch; font-size: clamp(2.1rem, 5.4vw, 4.25rem); line-height: 1.04; font-weight: 650; letter-spacing: -0.045em; text-wrap: balance; }
 .final-card p { margin: 1rem 0 0; max-width: 32rem; color: hsl(var(--muted-foreground)); font-size: 1.0625rem; }
 .final-bg { position: absolute; inset: 0; z-index: -1; }
@@ -172,7 +173,7 @@
   .landing .cta .btn-pill { flex: 1 1 100%; justify-content: space-between; }
   .landing .cta .btn-pill-ghost { justify-content: center; }
   .final-card { border-radius: 20px; }
-  .facts-row { gap: 1.75rem 1rem; }
+  .facts-row { gap: 0.75rem; }
   .net-rows .brand-ico { width: 1.5rem; height: 1.5rem; }
 }
 @media (max-width: 23.99rem) { .strip-head { gap: 0; } .btn-pill { font-size: 0.9rem; } .btn-pill-ghost { padding-inline: 1rem; } }
@@ -189,7 +190,6 @@ html.motion-off { scroll-behavior: auto; }
 /* ---------- languages (D-021) ----------
    The nav menu is a <details>; the footer repeats the choices as plain links. Everything is nowrap and uses logical
    properties, so it works at 320 px and in right-to-left pages. */
-.lp-nav-bar { position: relative; }
 .lang { position: static; }
 .lang-btn { display: inline-flex; align-items: center; gap: 0.4rem; height: 2.25rem; padding-inline: 0.7rem; border-radius: 999px; color: hsl(var(--muted-foreground)); font-size: 0.9rem; white-space: nowrap; cursor: pointer; list-style: none; transition: color 0.3s, background-color 0.3s; }
 .lang-btn::-webkit-details-marker { display: none; }
@@ -262,4 +262,39 @@ html[dir='rtl'] .stage-fx { -webkit-mask-image: linear-gradient(270deg, transpar
 @media (min-width: 62rem) {
   html[dir='rtl'] .stage-fx { inset: -14% -24% -20% -8%; }
   html[dir='rtl'] .stage .frame { transform: rotateY(calc(7deg + var(--ry, 0deg))) rotateX(calc(3deg + var(--rx, 0deg))); }
+}
+
+/* ---------- glass over the mesh (D-024, BRAND section 4) ----------
+   The values are the app's: assets/tokens.css is a copy of frontend/src/styles/tokens.css, so the glass, mesh and blur tokens
+   are shared and never restated here. Chrome (the nav) and the hero frame blur; cards are translucent without blur. Docs
+   pages and long text use style.css and stay solid. The landing shows the mesh at full strength (the app uses less; the
+   contrast test in scripts/glass.test.mjs holds text on the plain mesh to AA at this value). */
+body.landing { --mesh-strength: 1; background: hsl(var(--canvas)); }
+body.landing::before, body.landing::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+body.landing::before { opacity: var(--mesh-strength);
+  background: radial-gradient(42rem 32rem at 8% 0%, var(--mesh-1), transparent 70%), radial-gradient(36rem 30rem at 92% 18%, var(--mesh-3), transparent 70%), radial-gradient(40rem 34rem at 60% 100%, var(--mesh-2), transparent 70%); }
+body.landing::after { opacity: var(--noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+.glass-chrome, .glass-card { border: 1px solid var(--glass-border); }
+.glass-chrome { background-color: var(--glass-chrome); -webkit-backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate)); backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-highlight), var(--shadow-glass); }
+/* The floating nav sits over moving headings and code, where 0.66 alpha lets large text read through even under the blur:
+   it gets the page background at 0.9 instead (BRAND §4: text never shows through chrome). */
+:where(.lp-nav-bar).glass-chrome { background-color: hsl(var(--background) / 0.9); }
+.glass-card { background-color: var(--glass-card); box-shadow: var(--glass-highlight), var(--shadow-glass); }
+/* The hero frame is the one card that blurs (16 px): it sits over the flow canvas. */
+.glass-hero { -webkit-backdrop-filter: blur(var(--glass-blur-hero)) saturate(var(--glass-saturate)); backdrop-filter: blur(var(--glass-blur-hero)) saturate(var(--glass-saturate)); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-chrome { background-color: hsl(var(--surface)); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-chrome, .glass-card { background-color: hsl(var(--background)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body.landing { background: hsl(var(--background)); }
+  body.landing::before, body.landing::after { display: none; }
+}
+@media (forced-colors: active) {
+  .glass-chrome, .glass-card { background-color: Canvas; border-color: CanvasText; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body.landing::before, body.landing::after { display: none; }
 }

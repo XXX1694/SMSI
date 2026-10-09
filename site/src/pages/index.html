@@ -19,7 +19,7 @@
         </div>
         <div class="stage" data-hero-video>
           <div class="stage-fx" aria-hidden="true"><canvas class="hero-flow" data-flow></canvas></div>
-          <div class="frame" data-tilt>
+          <div class="frame glass-card glass-hero" data-tilt>
             <picture class="poster">
               <source media="(prefers-color-scheme: dark)" srcset="{{base}}assets/video/hero-dark.jpg">
               <img src="{{base}}assets/video/hero-light.jpg" width="1280" height="800" alt="{{t:hero.alt}}" fetchpriority="high" decoding="async">
@@ -104,7 +104,7 @@
             <span class="rn rn-gate">{{t:route.gate}}</span>
             <span class="nd nd0" style="--n:0;left:92.8%;top:9.1%">{{brand:linkedin}}</span><span class="nd nd1" style="--n:1;left:92.8%;top:29.5%">{{brand:telegram}}</span><span class="nd nd2" style="--n:2;left:92.8%;top:50.0%">{{brand:discord}}</span><span class="nd nd3" style="--n:3;left:92.8%;top:70.5%">{{brand:mastodon}}</span><span class="nd nd4" style="--n:4;left:92.8%;top:90.9%">{{brand:bluesky}}</span>
           </div>
-          <div class="story-frame">
+          <div class="story-frame glass-card">
             <div class="story-shot s0">{{shot:mcp:}}</div>
             <div class="story-shot s1">{{shot:approvals:}}</div>
             <div class="story-shot s2">{{shot:calendar:}}</div>
@@ -128,10 +128,10 @@
     <section class="lp-section facts-band" aria-label="{{t:facts.aria}}">
       <div class="lp-wrap">
         <dl class="facts-row">
-          <div class="reveal"><dt>{{t:facts.tools}}</dt><dd><span class="num" data-count="{{toolCount}}">{{toolCount}}</span></dd></div>
-          <div class="reveal"><dt>{{t:facts.networks}}</dt><dd><span class="num" data-count="{{liveCount}}">{{liveCount}}</span></dd></div>
-          <div class="reveal"><dt>{{t:facts.retries}}</dt><dd><span class="num" data-count="{{retryCount}}">{{retryCount}}</span></dd></div>
-          <div class="reveal"><dt>{{t:facts.trackers}}</dt><dd><span class="num">0</span></dd></div>
+          <div class="reveal glass-card"><dt>{{t:facts.tools}}</dt><dd><span class="num" data-count="{{toolCount}}">{{toolCount}}</span></dd></div>
+          <div class="reveal glass-card"><dt>{{t:facts.networks}}</dt><dd><span class="num" data-count="{{liveCount}}">{{liveCount}}</span></dd></div>
+          <div class="reveal glass-card"><dt>{{t:facts.retries}}</dt><dd><span class="num" data-count="{{retryCount}}">{{retryCount}}</span></dd></div>
+          <div class="reveal glass-card"><dt>{{t:facts.trackers}}</dt><dd><span class="num">0</span></dd></div>
         </dl>
       </div>
     </section>
@@ -240,7 +240,7 @@ open http://localhost:3000</code></pre>
     </section>
 
     <section class="lp-section final" aria-labelledby="final-title">
-      <div class="lp-wrap final-card reveal">
+      <div class="lp-wrap final-card glass-card reveal">
         <div class="final-bg" aria-hidden="true"><i class="blob blob-a"></i><i class="blob blob-b"></i></div>
         <h2 id="final-title" class="split">{{t:final.title}}</h2>
         <p>{{t:final.text}}</p>

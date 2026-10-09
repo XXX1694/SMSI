@@ -3,7 +3,7 @@
    fan out when you reach "post". Browsers without scroll timelines get the same states from the active step (landing.js).
    Everything is decoration (aria-hidden) and only transform and opacity change, apart from the stroke of the drawn line. */
 .story-stage { position: sticky; top: 6rem; display: grid; gap: 1.25rem; align-self: start; }
-.story-frame { position: relative; aspect-ratio: 16 / 10; padding: 6px; border-radius: 20px; border: 1px solid hsl(var(--border)); background: hsl(var(--foreground) / 0.05); box-shadow: 0 40px 80px -40px hsl(var(--accent) / 0.4); }
+.story-frame { position: relative; aspect-ratio: 16 / 10; padding: 6px; border-radius: 20px; box-shadow: var(--glass-highlight), var(--shadow-glass), 0 40px 80px -40px hsl(var(--accent) / 0.35); }
 .story-shot { position: absolute; inset: 6px; overflow: hidden; border-radius: 14px; background: hsl(var(--surface)); opacity: 0; transform: translateY(26px) scale(0.985); transition: opacity 0.7s var(--lp-ease), transform 0.9s var(--lp-ease); }
 [data-active='0'] .s0, [data-active='1'] .s1, [data-active='2'] .s2 { opacity: 1; transform: none; }
 
@@ -74,7 +74,7 @@ html.motion-off .drw, html.motion-off .gate-ring, html.motion-off .gate-check, h
   .story-grid { display: flex; flex-direction: column; gap: 1rem; }
   .step { scroll-margin-top: 12rem; }
   .story-stage { order: -1; align-self: stretch; top: calc(max(0.75rem, env(safe-area-inset-top, 0px)) + 3.25rem + 0.5rem); z-index: 2; padding: 0.35rem 0.75rem; border: 1px solid hsl(var(--border)); border-radius: 18px;
-    background: hsl(var(--background)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    background: hsl(var(--background)); }
   .story-frame { display: none; }
   .route { max-width: 17.5rem; margin-inline: auto; }
   .route-svg { --sw: 2.6; }
