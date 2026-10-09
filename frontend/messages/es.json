@@ -197,7 +197,7 @@
       "invalidBody": "Puede que haya caducado o que ya se haya usado. Los enlaces funcionan una sola vez y duran 48 horas.",
       "signInToRequest": "Inicia sesión para pedir un enlace nuevo"
     },
-    "deletedNotice": "La eliminación de tu cuenta está programada. Se cerraron tus sesiones y se revocaron tus claves de API. Inicia sesión antes de que termine el plazo para ver la fecha y cancelarla."
+    "deletedNotice": "La eliminación de tu cuenta está programada. Se cerraron todas las sesiones y se revocaron las claves de API. Inicia sesión antes de que termine el plazo para ver la fecha y cancelarla."
   },
   "posts": {
     "editBlockedPublishing": "Esta publicación se está publicando ahora mismo, así que no se puede cambiar.",

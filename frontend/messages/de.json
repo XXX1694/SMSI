@@ -197,7 +197,7 @@
       "invalidBody": "Er ist möglicherweise abgelaufen oder wurde schon verwendet. Links funktionieren einmal und gelten 48 Stunden.",
       "signInToRequest": "Anmelden, um einen neuen Link anzufordern"
     },
-    "deletedNotice": "Die Löschung deines Kontos ist geplant. Deine Sitzungen und API-Schlüssel wurden abgemeldet. Melde dich vor Ablauf der Frist an, um das Datum zu sehen und die Löschung abzubrechen."
+    "deletedNotice": "Die Löschung deines Kontos ist geplant. Alle Sitzungen wurden abgemeldet, API-Schlüssel widerrufen. Melde dich vor Ablauf der Frist an, um das Datum zu sehen und die Löschung abzubrechen."
   },
   "posts": {
     "editBlockedPublishing": "Dieser Beitrag wird gerade veröffentlicht und kann nicht geändert werden.",

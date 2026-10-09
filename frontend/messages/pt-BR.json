@@ -197,7 +197,7 @@
       "invalidBody": "Ele pode ter expirado ou já ter sido usado. Os links funcionam uma vez e valem por 48 horas.",
       "signInToRequest": "Entre para pedir um novo link"
     },
-    "deletedNotice": "A exclusão da sua conta está agendada. Suas sessões e chaves de API foram encerradas. Entre antes do fim do prazo para ver a data e cancelar."
+    "deletedNotice": "A exclusão da sua conta está agendada. Todas as sessões foram encerradas e as chaves de API, revogadas. Entre antes do fim do prazo para ver a data e cancelar."
   },
   "posts": {
     "editBlockedPublishing": "Este post está sendo publicado agora e não pode ser alterado.",

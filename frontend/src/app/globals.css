@@ -13,10 +13,10 @@
     font-feature-settings: 'cv11', 'ss01';
   }
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
-  /* CJK has no spaces, so the browser may break between any two characters, even inside 2026年10月10日 09:00. keep-all keeps such
-     runs whole (breaks stay at spaces, middots and 、。); `overflow-wrap: anywhere` is the escape hatch for a run wider than its
-     box, and unlike `break-word` it also lowers min-content, so flex and grid items still shrink instead of overflowing. */
-  :lang(ja), :lang(zh) { line-break: strict; word-break: keep-all; overflow-wrap: anywhere; }
+  /* CJK has no spaces: strict line breaking keeps 、。 and small kana off the start of a line; `overflow-wrap: anywhere` lets a long
+     run shrink flex and grid items instead of overflowing. Dates that must stay whole carry `whitespace-nowrap` where they render. */
+  :lang(ja), :lang(zh) { line-break: strict; overflow-wrap: anywhere; }
+  :lang(ja) { word-break: auto-phrase; }
 }
 
 /* viewport-fit=cover (root layout) lets the page draw under notches and the home bar; keep content inside the safe area. */

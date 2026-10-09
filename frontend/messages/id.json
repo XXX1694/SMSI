@@ -197,7 +197,7 @@
       "invalidBody": "Tautan mungkin sudah kedaluwarsa atau pernah dipakai. Tautan hanya berlaku sekali dan selama 48 jam.",
       "signInToRequest": "Masuk untuk meminta tautan baru"
     },
-    "deletedNotice": "Penghapusan akun Anda sudah dijadwalkan. Semua sesi dan kunci API Anda telah dikeluarkan. Masuk sebelum masa tenggang berakhir untuk melihat tanggalnya dan membatalkannya."
+    "deletedNotice": "Penghapusan akun Anda sudah dijadwalkan. Semua sesi telah dikeluarkan dan kunci API dicabut. Masuk sebelum masa tenggang berakhir untuk melihat tanggalnya dan membatalkannya."
   },
   "posts": {
     "editBlockedPublishing": "Pos ini sedang diterbitkan, jadi tidak dapat diubah.",

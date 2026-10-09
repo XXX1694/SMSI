@@ -28,7 +28,7 @@ export function PostRow({ post, onRetry }: RowProps) {
         <div className="min-w-32 flex-1">
           <p className="truncate text-sm font-medium">{title}</p>
           <p className="text-xs text-muted-foreground">
-            {postPlatforms(post, t)} · {fmt.dateTime(postTime(post))}
+            {postPlatforms(post, t)} · <span className="whitespace-nowrap">{fmt.dateTime(postTime(post))}</span>
           </p>
         </div>
         <PostStatusBadge status={post.status} />

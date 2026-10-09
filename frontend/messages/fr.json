@@ -197,7 +197,7 @@
       "invalidBody": "Il a peut-être expiré ou déjà été utilisé. Les liens ne fonctionnent qu’une fois et restent valables 48 heures.",
       "signInToRequest": "Connectez-vous pour demander un lien"
     },
-    "deletedNotice": "La suppression de votre compte est programmée. Vos sessions et vos clés d’API ont été fermées. Connectez-vous avant la fin du délai pour voir la date et l’annuler."
+    "deletedNotice": "La suppression de votre compte est programmée. Toutes les sessions ont été fermées et les clés d’API révoquées. Connectez-vous avant la fin du délai pour voir la date et l’annuler."
   },
   "posts": {
     "editBlockedPublishing": "Ce post est en cours de publication et ne peut pas être modifié.",

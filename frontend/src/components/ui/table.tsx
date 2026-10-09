@@ -55,7 +55,7 @@ export function Td({
         'px-3 py-2',
         align === 'right' && 'text-right',
         'max-md:flex max-md:items-baseline max-md:gap-3 max-md:px-0 max-md:py-0.5 max-md:text-left max-md:leading-snug',
-        'max-md:data-[label]:before:w-24 max-md:data-[label]:before:shrink-0 max-md:data-[label]:before:[overflow-wrap:anywhere] max-md:data-[label]:before:text-xs max-md:data-[label]:before:text-muted-foreground max-md:data-[label]:before:content-[attr(data-label)]',
+        'max-md:data-[label]:before:w-20 max-md:data-[label]:before:shrink-0 max-md:data-[label]:before:[overflow-wrap:anywhere] max-md:data-[label]:before:text-xs max-md:data-[label]:before:text-muted-foreground max-md:data-[label]:before:content-[attr(data-label)]',
         className,
       )}
       {...props}
