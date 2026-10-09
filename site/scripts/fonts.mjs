@@ -62,8 +62,8 @@ export function fontFaces({ pkgDir, points, outDir, urlPrefix }) {
 /** The visible text of an HTML document: markup and inline scripts dropped, attributes (alt, aria-label, title) kept. */
 export function pageText(html) {
   return html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ');
 }
 
