@@ -30,7 +30,7 @@ const cursor = `
   try { localStorage.setItem('socialos_mail_notice_dismissed', '1'); } catch {}
   const dot = document.createElement('div');
   dot.setAttribute('aria-hidden', 'true');
-  dot.style.cssText = 'position:fixed;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:rgba(99,102,241,.55);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);z-index:2147483647;pointer-events:none;transition:transform .08s linear,scale .12s';
+  dot.style.cssText = 'position:fixed;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:rgba(8,107,129,.6);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);z-index:2147483647;pointer-events:none;transition:transform .08s linear,scale .12s';
   const mount = () => document.documentElement.append(dot);
   document.readyState === 'loading' ? addEventListener('DOMContentLoaded', mount) : mount();
   addEventListener('mousemove', (e) => { dot.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)'; }, true);
@@ -106,7 +106,7 @@ function ffmpeg(args) {
 function transcode(src, name) {
   const base = join(out, name);
   const common = ['-i', src, '-ss', '0.6', '-an', '-vf', 'fps=30,scale=1280:-2:flags=lanczos'];
-  ffmpeg([...common, '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '40', '-row-mt', '1', '-pix_fmt', 'yuv420p', `${base}.webm`]);
+  ffmpeg([...common, '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '43', '-row-mt', '1', '-pix_fmt', 'yuv420p', `${base}.webm`]);
   ffmpeg([...common, '-c:v', 'libx264', '-preset', 'slow', '-crf', '29', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${base}.mp4`]);
   ffmpeg(['-ss', '8.2', '-i', src, '-frames:v', '1', '-q:v', '4', `${base}.jpg`]);
 }
