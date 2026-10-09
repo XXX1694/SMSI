@@ -29,3 +29,21 @@ func TestWorkerSettingsDefaultAndAreValidated(t *testing.T) {
 		})
 	}
 }
+
+func TestExportRetentionDefaultsAndIsValidated(t *testing.T) {
+	validEnv(t)
+	c, err := Load()
+	if err != nil || c.ExportRetention() != 7*24*time.Hour {
+		t.Fatalf("default: %v %v", c.ExportRetention(), err)
+	}
+	t.Setenv("EXPORT_RETENTION_DAYS", "30")
+	if c, err = Load(); err != nil || c.ExportRetention() != 30*24*time.Hour {
+		t.Fatalf("override: %v %v", c.ExportRetention(), err)
+	}
+	for _, val := range []string{"0", "-1", "31"} {
+		t.Setenv("EXPORT_RETENTION_DAYS", val)
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "EXPORT_RETENTION_DAYS") {
+			t.Fatalf("%s should be rejected, got %v", val, err)
+		}
+	}
+}

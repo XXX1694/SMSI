@@ -15,6 +15,7 @@ import { dayKey, utcToZonedInputs, zonedToUtcIso } from '@/lib/time';
 import type { Post } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/i18n/use-translations';
+import { useFormat } from '@/i18n/use-format';
 
 const TONE_CLASS: Record<string, string> = {
   neutral: 'border-l-muted-foreground/50 bg-muted',
@@ -59,6 +60,9 @@ function Legend() {
 
 function DayCell({ day, month, posts, today, timezone, onOpenDay }: { day: string; month: string; posts: Post[]; today: string; timezone: string; onOpenDay: (day: string) => void }) {
   const t = useTranslations('calendar');
+  const fmt = useFormat();
+  // `day` is a calendar date, not an instant: format it in UTC so a negative offset cannot move it to the day before.
+  const dayLabel = fmt.date(day, { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: undefined });
   return (
     <div className={cn('min-h-[5.5rem] border-b border-r p-1.5', day.slice(0, 7) !== month && 'bg-muted/40 text-muted-foreground')}>
       <p className={cn('mb-1 text-xs tabular-nums', day === today && 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent font-medium text-accent-foreground')}>
@@ -70,15 +74,15 @@ function DayCell({ day, month, posts, today, timezone, onOpenDay }: { day: strin
         ))}
         {posts.length > 3 ? (
           <button type="button" onClick={() => onOpenDay(day)} className="min-h-6 rounded-sm px-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-            {t('more', { count: posts.length - 3 })}
-            <span className="sr-only"> {t('openDay', { day })}</span>
+            <span aria-hidden>{t('more', { count: posts.length - 3 })}</span>
+            <span className="sr-only">{t('moreOnDay', { count: posts.length - 3, day: dayLabel })}</span>
           </button>
         ) : null}
       </div>
       {posts.length > 0 ? (
         <button type="button" onClick={() => onOpenDay(day)} className="inline-flex min-h-11 items-center text-xs text-muted-foreground sm:hidden">
-          {t('postCount', { count: posts.length })}
-          <span className="sr-only"> {t('openDay', { day })}</span>
+          <span aria-hidden>{t('postCount', { count: posts.length })}</span>
+          <span className="sr-only">{t('postsOnDay', { count: posts.length, day: dayLabel })}</span>
         </button>
       ) : null}
     </div>

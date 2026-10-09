@@ -103,7 +103,7 @@ erDiagram
 users(id, email citext unique, password_hash, display_name, status ['active','disabled','deleted'],
       email_verified_at null, terms_accepted_at null, terms_version, plan default 'free', deleted_at null)   -- migration 00003
 email_tokens(id, user_id FK, purpose ['verify_email','reset_password'], token_hash unique, email citext, expires_at, used_at null)   -- migration 00003; only the SHA-256 of the token is stored; a newer token of the same purpose retires older ones
-data_exports(id, user_id FK, status ['pending','running','ready','failed','expired'], storage_key, size_bytes, error_code, expires_at null)   -- migration 00003, used by the export work; one active export per user
+data_exports(id, user_id FK, status ['pending','running','ready','failed','expired'], storage_key, size_bytes, error_code, expires_at null)   -- migration 00003; one active export per user; see Account data export (D-018)
 account_deletions(id, user_id (no FK), requested_at, purged_at null, counts jsonb)   -- migration 00003, used by the deletion work; no PII on purpose
 sessions(id, user_id, token_hash unique, csrf_token, expires_at, user_agent, ip)
 oauth_states(id, user_id, provider, state_hash unique, code_verifier, redirect_after, expires_at, used_at)
@@ -221,6 +221,17 @@ One `free` plan; the limits come from env and are **off by default** (`-1` = unl
 | `agent_requests_per_minute` | `QUOTA_AGENT_RPM` (e.g. 120) | requests of all API keys and MCP connections of one user together (in memory, per API instance); browser sessions are not limited | `middleware.AgentRateLimit`; over the cap it is `429 RATE_LIMITED` with `Retry-After` |
 
 `GET /account/usage` (scope `analytics:read`) → `{plan, period_start, period_end, quotas:{connected_accounts:{used,limit}, scheduled_posts_month:{used,limit}, media_bytes:{used,limit}, agent_requests_per_minute:{limit}}}`; `limit` -1 = unlimited. The MCP tool `get_usage` returns it.
+
+### Account data export (D-018)
+Session only: an API key gets `403` on all of these, whatever its scopes.
+
+| Endpoint | Result |
+|---|---|
+| `POST /account/exports` | `202 {id, status:"pending", size_bytes, error_code, created_at, expires_at}`. `409` while an export is pending or running; `429` with `Retry-After` within 24 hours of the last successful export |
+| `GET /account/exports` | `{items:[…]}`, newest first (at most 20); `status` is `pending`, `running`, `ready`, `failed` or `expired` (a ready export past `expires_at` is reported `expired` before the sweep deletes it) |
+| `GET /account/exports/{id}` | the item plus `url` and `url_expires_at` (5 minutes); `404` for another user's id, `409` unless the export is ready and not expired. Audited as `account.export_downloaded` |
+
+The worker (`account:export` task) streams a ZIP to `users/<uid>/exports/<id>.zip`: `README.txt`, `profile.json`, `social_accounts.json`, `posts.json` (targets and attempts nested), `media.json` and `media/<id><ext>`, `api_keys.json`, `mcp_connections.json`, `approvals.json`, `audit_logs.json`. Never included: password hash, API keys or their hashes, session values, network credentials. `EXPORT_RETENTION_DAYS` (default 7, max 30) sets how long the ZIP stays; an hourly sweep deletes it. Audit actions: `account.export_requested|export_ready|export_failed|export_downloaded`.
 
 ### Approvals
 Dangerous actions made with an **API key** (not a browser session) need the owner's approval first (D-013): `POST /posts/{id}/publish`, `POST /posts/{id}/retry` without `scheduled_at`, `DELETE /posts/{id}`, `DELETE /social/accounts/{id}`, `POST /social/accounts/token`, and any schedule (`POST /posts` with `schedule`, `POST /posts/{id}/schedule`, `PATCH /posts/{id}` or `POST /posts/{id}/retry` with a time) less than `AGENT_MIN_SCHEDULE_LEAD` (default 5m) ahead. The scope check comes first (403); then, for a key whose `dangerous_policy` is `approve` (the default), the call answers `428` and does nothing:

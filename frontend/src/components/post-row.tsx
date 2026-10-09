@@ -20,7 +20,7 @@ export function PostRow({ post, onRetry }: RowProps) {
   const fmt = useFormat();
   const title = postLabel(post, t);
   return (
-    <li className="flex items-center gap-2 pr-1 sm:pr-3">
+    <li className="flex min-w-0 items-center gap-2 pr-1 sm:pr-3">
       <Link
         href={postHref(post.id)}
         className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 py-3 transition-colors hover:bg-muted/60 sm:px-3"

@@ -12,8 +12,14 @@ export function postLabel(post: Pick<Post, 'title' | 'content' | 'targets'>, t: 
   return text.length > 90 ? `${text.slice(0, 89)}…` : text;
 }
 
+/** Display name of a network id; "Unknown" (from the catalog) when the id is empty. Use this, not `providerLabel`, in the UI. */
+export function providerName(id: string, t: AppT): string {
+  return providerLabel(id) || t('common.unknown');
+}
+
+/** Distinct network names of a post's targets; "No targets" when it has none. */
 export function postPlatforms(post: Pick<Post, 'targets'>, t: AppT): string {
-  const names = [...new Set(post.targets.map((x) => providerLabel(x.platform)))];
+  const names = [...new Set(post.targets.map((x) => providerName(x.platform, t)))];
   return joinList(names, t) || t('posts.noTargets');
 }
 

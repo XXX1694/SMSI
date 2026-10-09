@@ -108,7 +108,8 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "mainNav": "Main",
-    "waiting": "waiting",
+    "navWaiting": "{count, plural, one {# request waiting} other {# requests waiting}}",
+    "navBadge": "{over, select, true {99+} other {{count, number}}}",
     "requestsWaiting": "{count, plural, one {# request waits for you} other {# requests wait for you}}",
     "emailBanner": {
       "verifyHeading": "Verify your email.",
@@ -283,6 +284,19 @@
       "agentsUnlimited": "AI agents: no request limit.",
       "agentsLimit": "AI agents: up to {rpm, plural, one {# request} other {# requests}} per minute across all your keys and connections.",
       "loadFailed": "Could not load your usage"
+    },
+    "yourData": "Your data",
+    "export": {
+      "loadFailed": "Could not load your exports",
+      "intro": "Download a ZIP with your profile, posts with their targets and publishing attempts, connected accounts (without credentials), API key names, the audit log, approvals and your media files. Passwords, keys and tokens are never included.",
+      "preparing": "Preparing your export. You can leave this page; it is ready when you come back.",
+      "ready": "Your export ({size}) is ready. The download link works for 5 minutes; the file is deleted on {date}.",
+      "failed": "The last export could not be built. Nothing was kept; try again.",
+      "expired": "Your last export expired and was deleted. Request a new one.",
+      "download": "Download ZIP",
+      "requestNew": "Request a new export",
+      "request": "Request export",
+      "cooldown": "A new export can be requested 24 hours after the last one."
     }
   },
   "dashboard": {
@@ -389,8 +403,8 @@
       "schedule": "Scheduled by network",
       "delete": "Delete",
       "analytics": "Analytics",
-      "supports": "Supports",
-      "no": "No",
+      "supports": "{capability, select, text {Supports text posts} image {Supports image posts} video {Supports video posts} schedule {Supports scheduling by the network} delete {Supports deleting published posts} analytics {Supports analytics} other {Supported}}",
+      "lacks": "{capability, select, text {Does not support text posts} image {Does not support image posts} video {Does not support video posts} schedule {Does not support scheduling by the network} delete {Does not support deleting published posts} analytics {Does not support analytics} other {Not supported}}",
       "characters": "{count, plural, one {# character} other {# characters}}"
     },
     "tokenConnect": {
@@ -521,7 +535,8 @@
     "today": "Today",
     "chipTitle": "{status}: {title}",
     "more": "{count, plural, one {+# more} other {+# more}}",
-    "openDay": "on {day}, open the day",
+    "moreOnDay": "{count, plural, one {# more post on {day}, open the day} other {# more posts on {day}, open the day}}",
+    "postsOnDay": "{count, plural, one {# post on {day}, open the day} other {# posts on {day}, open the day}}",
     "postCount": "{count, plural, one {# post} other {# posts}}",
     "noPostsDay": "No posts",
     "noPostsPeriod": "No posts in this period."
@@ -578,7 +593,7 @@
     "publishStarted": "Publishing started",
     "conflictTitle": "This post changed since you opened it.",
     "conflictEditable": "A newer version was saved in another tab or by an agent. Saving now overwrites it.",
-    "conflictLocked": "It is now {status} and cannot be edited.",
+    "conflictLocked": "{status, select, publishing {It is being published right now and cannot be edited.} published {It is now published and cannot be edited.} partially_published {It is now partially published and cannot be edited.} failed {It has now failed and cannot be edited.} cancelled {It is now canceled and cannot be edited.} other {It is now in a state that cannot be edited.}}",
     "loadLatest": "Load the latest version",
     "saveAnyway": "Save mine anyway",
     "saveChanges": "Save changes",

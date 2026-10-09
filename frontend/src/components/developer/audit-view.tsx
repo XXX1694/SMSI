@@ -146,7 +146,7 @@ export function AuditView() {
   );
   return (
     <div className="space-y-3">
-      <div role="group" aria-label={t('filterLabel')} className="flex gap-2">
+      <div role="group" aria-label={t('filterLabel')} className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Button key={f} size="sm" variant={filter === f ? 'primary' : 'secondary'} aria-pressed={filter === f} onClick={() => setFilter(f)}>
             {t(f)}
