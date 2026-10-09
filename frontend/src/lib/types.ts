@@ -47,6 +47,10 @@ export interface Me {
   verification_enforced: boolean;
   /** "log" means mail is only written to the server log, so nobody receives it. */
   mail_delivery: 'log' | 'smtp';
+  /** When the account will be deleted for good; null unless the owner asked and has not cancelled. */
+  deletion_scheduled_at: string | null;
+  /** Days between asking for deletion and the data going. */
+  deletion_grace_days: number;
 }
 
 export interface Capabilities {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
 import { DataExportCard } from '@/components/data-export';
+import { DeleteAccount } from '@/components/delete-account';
 import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
 import { UsageCard } from '@/components/usage-card';
@@ -73,7 +74,16 @@ export function SettingsView() {
         <PasswordForm />
       </Section>
       <Section title="Your data">
-        <DataExportCard />
+        <div className="space-y-8">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Export</h3>
+            <DataExportCard />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-danger">Delete account</h3>
+            <DeleteAccount />
+          </div>
+        </div>
       </Section>
       <Section title="Legal">
         <p className="text-sm text-muted-foreground">

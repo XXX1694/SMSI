@@ -414,7 +414,7 @@ container's layer.
 
 **Decision.**
 - A browser session (never an API key) asks `POST /account/exports`. The API inserts a `data_exports` row (`pending`) and
-  enqueues `account:export {export_id}` with the export id as the Asynq task id, `MaxRetry(0)` and `Retention(0)`. A
+  enqueues `account:export {export_id}` with `MaxRetry(0)` and `Retention(0)` (no task id: an archived task would keep its id and block re-queueing; a duplicate task is harmless because the build claims the row). A
   failed build is recorded on the row (`failed` plus a short `error_code`) and the user asks again; retrying blindly would
   redo hours of work. Migration 00003's partial unique index allows one `pending|running` export per user (`409`).
   A successful export blocks the next request for 24 hours (`429` with `Retry-After`); when a new one is made the old
@@ -446,3 +446,49 @@ link: mail may be off (`MAIL_PROVIDER=log`) and the link would sit in a mailbox 
 window, which is why it is short and why `GET` is audited. The 5 MiB part size caps an archive at about 50 GB on S3, far
 above the per-user media quota. The partial unique index means a crash that leaves a row `running` blocks the user until
 the sweep fails it (at most 2 hours plus the sweep interval).
+
+## D-019: Account deletion has a grace period, an explicit cancel, and a batched purge by the worker (2026-10-09)
+
+**Context.** The Privacy Policy said deletion would exist "later". Deleting an account is irreversible and removes rows in
+a dozen tables plus S3 objects; a stolen session must not be able to destroy data at once, the worker has 160m, and a
+single `DELETE FROM users` would run one huge transaction and could trip `post_media.media_id ... ON DELETE RESTRICT`.
+
+**Decision.**
+- `POST /account/delete {password, confirm}` needs a browser session (an API key gets `403`), the **current password**
+  (wrong: `400` with `fields.password`; the hasher's `429` passes through) and the account's **email typed** as
+  confirmation (`fields.confirm`). It is rate-limited like password change (`reauth:`).
+- Success schedules the deletion `ACCOUNT_DELETION_GRACE_DAYS` ahead (default 7, 1 to 30; `users.deletion_scheduled_at`,
+  migration 00006) and answers `202 {status:"scheduled", scheduled_for}`. In one transaction every session is deleted, every
+  API key and MCP connection is revoked, an `account_deletions` record is written and `account.deletion_scheduled` is
+  audited; before that, every scheduled post goes back to a draft (queue tasks removed), so nothing is published during the
+  grace period. The owner gets a mail (`account_deletion_scheduled`) that says how to cancel, which is also the alarm when
+  someone else did it. The cookies are cleared.
+- The account stays `active` during the grace period. Signing in works, `/me` carries `user.deletion_scheduled_at`, the web
+  app shows a banner with **Cancel deletion** (`POST /account/delete/cancel`, session, `409` when nothing is scheduled), and
+  export still works. Cancelling clears the schedule and the record; sessions and keys stay revoked and posts stay drafts.
+  Signing in alone does **not** cancel: an accidental sign-in must not undo a decision, and the banner makes the state visible.
+- The hourly worker sweep queues `account:purge {user_id}` (Asynq `Unique(45m)`, `MaxRetry(12)`) for accounts whose date
+  has passed, and for accounts a previous purge left half done. The purge: (1) **claims** the account atomically
+  (`status='deleted'`, `deleted_at`; from then on login, sessions and keys fail on their own); a cancelled, unknown or
+  not-yet-due account is a no-op; (2) fails with a retryable error while a post is `publishing` or an export is being built;
+  (3) stores row counts once; (4) deletes in batches of 200, in this order: `posts` (cascades to targets, media links, jobs,
+  attempts), `audit_logs`, `analytics`, `action_approvals`; (5) per batch of media, the S3 objects first, then the rows;
+  (6) export archives; (7) one transaction deletes the user row (cascades to sessions, accounts and their encrypted
+  credentials, keys, MCP connections, link codes, tokens, export rows) and stamps `account_deletions.purged_at`;
+  (8) mails `account_deleted`. Every step deletes only what is still there, so a retry or a concurrent run is safe.
+- Posts go before media (`RESTRICT`) and before social accounts (`post_targets` has no cascade). Migration 00006 adds the
+  missing indexes on `scheduled_jobs(post_target_id)` and `analytics(post_target_id)`, which the cascades would otherwise
+  scan per deleted target.
+- What stays: `account_deletions(user_id, requested_at, purged_at, counts)`: numbers and ids, no email, no content, no foreign
+  key. The audit log is deleted with the account (it is the user's data); the durable evidence is this record.
+- Credentials of connected networks are **not** destroyed at request time: that would make cancelling a lie. They go with
+  the purge.
+
+**Alternatives.** Immediate irreversible deletion (the first plan): one stolen session, or one mis-click, loses everything.
+A cancel that happens on sign-in: simpler, but silent. Soft delete forever: not deletion. One `DELETE FROM users` cascade:
+a long transaction in the 160m worker, and the `RESTRICT` ordering risk. Anonymising the audit log instead of deleting it:
+it is still personal data about the user's actions and an agent's, and an anonymised log helps nobody.
+
+**Consequences.** Data lives up to the grace period plus an hour after a request, and backups keep it as long as the
+operator keeps them (the Privacy Policy says so). The email address is unavailable for registration until the purge ends.
+Counts are those of the first purge attempt. A post stuck `publishing` delays a purge until the reconciler settles it.

@@ -16,12 +16,12 @@ type Users struct{ db *DB }
 // NewUsers creates the repo.
 func NewUsers(db *DB) *Users { return &Users{db: db} }
 
-const userCols = `id, email, password_hash, display_name, status, created_at, email_verified_at, plan, deleted_at, terms_accepted_at, terms_version`
+const userCols = `id, email, password_hash, display_name, status, created_at, email_verified_at, plan, deleted_at, terms_accepted_at, terms_version, deletion_scheduled_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*user.User, error) {
 	var u user.User
 	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.CreatedAt,
-		&u.EmailVerifiedAt, &u.Plan, &u.DeletedAt, &u.TermsAcceptedAt, &u.TermsVersion); err != nil {
+		&u.EmailVerifiedAt, &u.Plan, &u.DeletedAt, &u.TermsAcceptedAt, &u.TermsVersion, &u.DeletionScheduledAt); err != nil {
 		return nil, err
 	}
 	return &u, nil

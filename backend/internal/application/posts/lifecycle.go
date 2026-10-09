@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/apikey"
 	"github.com/socialos/backend/internal/domain/audit"
@@ -185,4 +186,26 @@ func (s *Service) setTargets(ctx context.Context, p *post.Post, to post.TargetSt
 		}
 	}
 	return nil
+}
+
+// UnscheduleAll takes every scheduled post of the user back to draft and returns how many it stopped. Account deletion
+// uses it so nothing is published during the grace period. Posts already being published are left to finish.
+func (s *Service) UnscheduleAll(ctx context.Context, userID uuid.UUID) (int, error) {
+	a := actor.System(userID, "account_deletion")
+	stopped := 0
+	for {
+		batch, err := s.repo.List(ctx, userID, ListFilter{Status: post.StatusScheduled}, port.Page{Limit: port.MaxLimit})
+		if err != nil {
+			return stopped, err
+		}
+		if len(batch) == 0 {
+			return stopped, nil
+		}
+		for _, p := range batch {
+			if _, err := s.stopPost(ctx, a, p.ID, post.StatusDraft, post.TargetPending, audit.ActionPostUnscheduled); err != nil {
+				return stopped, err
+			}
+			stopped++
+		}
+	}
 }

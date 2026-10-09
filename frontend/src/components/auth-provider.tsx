@@ -15,6 +15,8 @@ interface AuthState {
   logout: () => Promise<void>;
   /** Re-reads /me, e.g. after the email was verified. A failure keeps the current user. */
   refresh: () => Promise<void>;
+  /** Forgets the user without calling the server, after it ended the session itself (account deletion). */
+  endSession: () => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -84,9 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [adopt]);
 
+  const endSession = useCallback(() => adopt(null), [adopt]);
+
   const value = useMemo(
-    () => ({ user, loading, error, retry, login, register, logout, refresh }),
-    [user, loading, error, retry, login, register, logout, refresh],
+    () => ({ user, loading, error, retry, login, register, logout, refresh, endSession }),
+    [user, loading, error, retry, login, register, logout, refresh, endSession],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

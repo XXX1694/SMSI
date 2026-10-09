@@ -11,8 +11,8 @@ import (
 var update = flag.Bool("update", false, "rewrite golden files")
 
 func TestRenderGolden(t *testing.T) {
-	d := Data{Link: "https://app.example.com/verify-email#token=abc123", ExpiresIn: "48 hours"}
-	for _, name := range []string{VerifyEmail, ResetPassword, PasswordChanged, AccountDeleted, ExportReady} {
+	d := Data{Link: "https://app.example.com/verify-email#token=abc123", ExpiresIn: "48 hours", Date: "16 October 2026, 12:00 UTC"}
+	for _, name := range []string{VerifyEmail, ResetPassword, PasswordChanged, AccountDeleted, AccountDeletionScheduled, ExportReady} {
 		m, err := Render(name, "alice@example.com", d)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)

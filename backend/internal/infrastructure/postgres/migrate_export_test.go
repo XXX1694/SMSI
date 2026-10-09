@@ -23,9 +23,7 @@ func TestMigration00005AddsExportIndexesAndRollsBack(t *testing.T) {
 	if got := indexes(); got != 5 {
 		t.Fatalf("up: %d of 5 indexes", got)
 	}
-	if err := postgres.Migrate(ctx, url, "down", testutil.Logger()); err != nil {
-		t.Fatalf("down: %v", err)
-	}
+	rollBack(t, url, 2) // 00006 first
 	if got := indexes(); got != 0 {
 		t.Fatalf("down left %d indexes", got)
 	}

@@ -44,9 +44,9 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
 
       <LegalSection title="How long it is kept">
         <ul>
-          <li>Posts, media and connected networks: until you delete them or the account.</li>
+          <li>Posts, media and connected networks: until you delete them or the account (an account you delete is purged after the grace period).</li>
           <li>Sessions: until they expire (7 days by default) or you sign out.</li>
-          <li>Audit log: kept with the account. There is no automatic expiry yet.</li>
+          <li>Audit log: kept with the account and deleted with it. There is no automatic expiry yet.</li>
           <li>Backups: whatever the operator keeps. Ask them how long.</li>
         </ul>
       </LegalSection>
@@ -57,9 +57,12 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
           accounts (without credentials), API key names, approvals, the audit log and your media files. The file is deleted from storage after a few days.
         </p>
         <p>
-          Deletion: you can delete single posts and media and disconnect a network in the app (disconnecting removes the stored credentials).
-          Self-service deletion of the whole account does not exist yet (it is listed in the project roadmap). Until it does, ask the operator at the contact address below to delete your account.
+          Deletion: in Settings, under &quot;Your data&quot;, you can delete your whole account. You confirm with your password and by typing your email.
+          Your sessions and API keys are signed out at once and scheduled posts are set back to drafts. After a grace period (7 days unless the operator
+          changed it) your posts, media files, connected networks and their stored credentials, API keys, approvals and audit log are deleted. Until then you can sign in
+          and cancel. A record that an account was deleted, with counts only and no personal data, is kept. You can also delete single posts and media and disconnect a network at any time.
         </p>
+        <p>Backups and server logs are not touched by this; they expire on the operator&apos;s schedule.</p>
       </LegalSection>
 
       <LegalSection title="Your rights">

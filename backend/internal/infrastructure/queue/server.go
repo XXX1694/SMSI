@@ -30,6 +30,13 @@ type ServerConfig struct {
 	Auth AuthTasks
 	// Exports, when set, makes this worker build data exports.
 	Exports ExportTasks
+	// Purge, when set, makes this worker delete accounts whose grace period is over.
+	Purge PurgeTasks
+}
+
+// PurgeTasks is what the worker needs from the account deletion service.
+type PurgeTasks interface {
+	Purge(ctx context.Context, userID uuid.UUID) error
 }
 
 // ExportTasks is what the worker needs from the export service.
@@ -90,6 +97,9 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	}
 	if cfg.Exports != nil {
 		mux.HandleFunc(TypeAccountExport, ExportHandler(cfg.Exports.Build))
+	}
+	if cfg.Purge != nil {
+		mux.HandleFunc(TypeAccountPurge, PurgeHandler(cfg.Purge.Purge))
 	}
 	return &Server{srv: srv, mux: mux}
 }

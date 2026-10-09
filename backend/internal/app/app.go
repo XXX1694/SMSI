@@ -187,6 +187,9 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 		return fmt.Errorf("approval fingerprint key: %w", err)
 	}
 	quotaSvc := quota.NewService(postgres.NewQuota(db), cfg.QuotaLimits(), clk)
+	postSvc := posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
+		Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc, Quota: quotaSvc,
+		MinAgentLead: cfg.AgentMinScheduleLead, NoAgentLead: cfg.AgentMinScheduleLead == 0})
 	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Links: postgres.NewLinkCodes(db),
 		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL,
 		Gate: verifiedOwners{users: postgres.NewUsers(db), enforce: requireVerification(cfg)}, Approvals: approvalSvc,
@@ -197,9 +200,11 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 		Exports: account.NewExportService(account.Deps{Exports: postgres.NewExports(db), Data: postgres.NewExportData(db),
 			Store: a.Storage, Queue: a.Queue.ExportQueue(), Tx: db, Audit: auditSvc, Clock: clk, Log: log,
 			Retention: cfg.ExportRetention()}),
-		Posts: posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
-			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc, Quota: quotaSvc,
-			MinAgentLead: cfg.AgentMinScheduleLead, NoAgentLead: cfg.AgentMinScheduleLead == 0}),
+		Posts: postSvc,
+		Deletion: account.NewDeletionService(account.DeletionDeps{Repo: postgres.NewDeletions(db), Users: postgres.NewUsers(db),
+			Passwords: hasher, Sessions: postgres.NewSessions(db), Keys: keyRepo, Posts: postSvc, Queue: a.Queue.PurgeQueue(),
+			Store: a.Storage, Mail: a.MailQueue, Tx: db, Audit: auditSvc, Clock: clk, Log: log, WebBaseURL: cfg.WebBaseURL,
+			Grace: cfg.DeletionGrace()}),
 		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk,
 			media.WithUploadLimit(cfg.MediaUploadConcurrency, media.DefaultUploadWait)).WithQuota(quotaSvc, db),
 		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
@@ -248,7 +253,7 @@ func (a *App) Router() http.Handler {
 		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
 		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, UploadMinKBps: a.Cfg.UploadMinKBps, GatewaySecret: a.Cfg.GatewaySecret,
 		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit, AgentLimiter: a.AgentLimit,
-		MailLimiter: a.MailLimit, MailDelivery: mailDelivery(a.Cfg), RequireVerification: requireVerification(a.Cfg),
+		MailLimiter: a.MailLimit, MailDelivery: mailDelivery(a.Cfg), DeletionGraceDays: a.Cfg.DeletionGraceDays, RequireVerification: requireVerification(a.Cfg),
 		TelegramWebhookSecret: webhookSecret,
 		Ready: []transport.ReadyCheck{
 			{Name: "postgres", Check: a.DB.Ping},

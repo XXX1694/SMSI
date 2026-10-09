@@ -18,6 +18,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
+import { DeletionBanner } from '@/components/deletion-banner';
 import { EmailBanner } from '@/components/email-banner';
 import { PageTransition } from '@/components/page-transition';
 import { TransitionLink } from '@/components/transition-link';
@@ -169,6 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
+        <DeletionBanner />
         <EmailBanner />
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">
           <PageTransition>{children}</PageTransition>

@@ -19,7 +19,9 @@ const (
 	ResetPassword   = "reset_password"
 	PasswordChanged = "password_changed"
 	AccountDeleted  = "account_deleted"
-	ExportReady     = "export_ready"
+	// AccountDeletionScheduled tells the owner that deletion was requested and how to cancel it.
+	AccountDeletionScheduled = "account_deletion_scheduled"
+	ExportReady              = "export_ready"
 )
 
 //go:embed templates/*.tmpl
@@ -33,14 +35,17 @@ type Data struct {
 	ExpiresIn string
 	// KeysRevoked tells the password_changed notice whether API keys and MCP connections were revoked too.
 	KeysRevoked bool
+	// Date is when a scheduled account deletion happens (account_deletion_scheduled), already formatted.
+	Date string
 }
 
 var subjects = map[string]string{
-	VerifyEmail:     "Verify your email for " + ProductName,
-	ResetPassword:   "Reset your " + ProductName + " password",
-	PasswordChanged: "Your " + ProductName + " password was changed",
-	AccountDeleted:  "Your " + ProductName + " account was deleted",
-	ExportReady:     "Your " + ProductName + " data export is ready",
+	VerifyEmail:              "Verify your email for " + ProductName,
+	ResetPassword:            "Reset your " + ProductName + " password",
+	PasswordChanged:          "Your " + ProductName + " password was changed",
+	AccountDeleted:           "Your " + ProductName + " account was deleted",
+	AccountDeletionScheduled: "Your " + ProductName + " account will be deleted",
+	ExportReady:              "Your " + ProductName + " data export is ready",
 }
 
 type pair struct {
