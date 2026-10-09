@@ -232,6 +232,9 @@ func TestApprovalSummaryShowsFullTextOverridesAndMedia(t *testing.T) {
 	if len(targets) != 1 || targets[0].(map[string]any)["content"] != "mock network text" || targets[0].(map[string]any)["platform"] != "mock" {
 		t.Fatalf("per-network text missing: %v", sum["targets"])
 	}
+	if acc, _ := targets[0].(map[string]any)["account"].(string); !strings.HasPrefix(acc, "mock · @") {
+		t.Fatalf("the account behind the text must be named: %v", targets[0])
+	}
 	if m, _ := sum["media"].(map[string]any); m == nil || m["count"] != float64(0) {
 		t.Fatalf("media summary missing: %v", sum["media"])
 	}
