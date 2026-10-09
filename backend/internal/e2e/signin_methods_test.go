@@ -499,7 +499,7 @@ func TestExportListsSignInMethods(t *testing.T) {
 	oid := other.must("GET", "/api/v1/me", nil, 200)["user"].(map[string]any)["id"].(string)
 	oexp := other.must("POST", "/api/v1/account/exports", nil, 202)["id"].(string)
 	other.waitExport(oexp, "ready")
-	if theirs := r.e.zipOf(oid, oexp)["sign_in_methods.json"]; bytes.Contains(theirs, []byte("3501")) || bytes.Contains(theirs, []byte("wes@")) {
+	if theirs := r.e.zipOf(oid, oexp)["sign_in_methods.json"]; !bytes.Contains(theirs, []byte(`"3502"`)) || bytes.Contains(theirs, []byte("3501")) || bytes.Contains(theirs, []byte("wes@")) {
 		t.Fatalf("another user's export lists wes: %s", theirs)
 	}
 	var profile map[string]any

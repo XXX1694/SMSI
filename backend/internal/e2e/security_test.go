@@ -690,7 +690,7 @@ func TestExportIsTenantScoped(t *testing.T) {
 	if bytes.Contains(a["posts.json"], []byte("bob secret plan")) || !bytes.Contains(a["posts.json"], []byte("alice secret plan")) {
 		t.Fatalf("alice's posts.json: %s", a["posts.json"])
 	}
-	for _, name := range []string{"posts.json", "audit_logs.json", "profile.json", "social_accounts.json", "sign_in_methods.json"} {
+	for _, name := range []string{"posts.json", "audit_logs.json", "profile.json", "social_accounts.json"} {
 		if bytes.Contains(b[name], []byte("alice")) {
 			t.Fatalf("bob's %s mentions alice: %s", name, b[name])
 		}

@@ -15,7 +15,7 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
       <LegalSection title="What is stored">
         <ul>
           <li>Account: your email address, your display name and, if you set one, a salted hash of your password (Argon2id). The password itself is never stored.</li>
-          <li>Sign-in with Google or GitHub, if you use it: which provider, your account id there, the email address it reports and whether it verified it, when you connected it and when you last signed in with it. The provider&apos;s access token is used once to read these and then thrown away.</li>
+          <li>Sign-in with Google or GitHub, if you use it: which provider, your account id there, the email address it reports and whether it verified it, when you connected it and when you last signed in with it. The provider&apos;s access token is used only during that sign-in and is never stored.</li>
           <li>Terms: the version of these texts you accepted and when.</li>
           <li>Connected networks: the access tokens or credentials that LinkedIn, Telegram, Discord, Mastodon and Bluesky give Steerpost. They are encrypted at rest and never shown in the interface, logs or audit log.</li>
           <li>Content: your posts, their schedule and status, and the media you upload.</li>
@@ -39,6 +39,7 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
         <ul>
           <li>Posts, media and connected networks: until you delete them or the account (an account you delete is purged after the grace period).</li>
           <li>Sessions: until they expire (7 days by default) or you sign out.</li>
+          <li>An unfinished sign-up with Google or GitHub (the provider&apos;s account id, your email and name, kept until you accept the Terms): deleted when you finish it, otherwise within about an hour.</li>
           <li>Audit log: kept with the account and deleted with it. There is no automatic expiry yet.</li>
           <li>Backups: whatever the operator keeps. Ask them how long.</li>
         </ul>
@@ -95,7 +96,7 @@ function WhatLeavesTheServer() {
         sees your password there and cannot post anything with it. The provider&apos;s own privacy policy applies to that sign-in.
       </p>
       <p>If the operator turned on email, a mail server also receives your address to send verification and password-reset messages.</p>
-      <p>There are no advertising or analytics trackers, and no third-party scripts, in the web app. It sets two cookies, a session cookie and a CSRF cookie, which are needed to sign in. Signing in with Google or GitHub adds a short-lived cookie that ties the provider&apos;s answer to your browser; it expires after 10 minutes.</p>
+      <p>There are no advertising or analytics trackers, and no third-party scripts, in the web app. It sets two cookies, a session cookie and a CSRF cookie, which are needed to sign in. Signing in with Google or GitHub adds one or two short-lived cookies that tie the provider&apos;s answer to your browser (<code>socialos_oauth</code>, and <code>socialos_oauth_ticket</code> while a new account is being created); they expire after 10 minutes.</p>
     </LegalSection>
   );
 }
