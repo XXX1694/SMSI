@@ -504,7 +504,7 @@
       "post_publish": "立即发布",
       "post_retry_now": "立即重试",
       "post_delete": "删除帖子",
-      "post_schedule_soon": "定时在几分钟内发布",
+      "post_schedule_soon": "在几分钟内定时发布",
       "social_account_disconnect": "断开账号连接",
       "social_account_connect_token": "使用令牌连接"
     }
@@ -587,7 +587,7 @@
     "saveAndSchedule": "保存并定时",
     "changesSaved": "更改已保存",
     "changesSavedScheduled": "更改已保存，帖子已定时",
-    "savedNotScheduled": "更改已保存，但帖子未能定时：{reason}",
+    "savedNotScheduled": "更改已保存，但帖子未能设为定时发布：{reason}",
     "fixProblems": "{count, plural, other {请先修复 # 个问题}}",
     "loadFailed": "无法加载这篇帖子",
     "cannotEditTitle": "这篇帖子无法编辑",

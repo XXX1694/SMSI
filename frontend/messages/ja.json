@@ -265,7 +265,7 @@
     "planUsage": "プランと使用状況",
     "preferences": "環境設定",
     "timeZone": "タイムゾーン",
-    "timeZoneHint": "入力する時刻も表示される時刻も、このタイムゾーンで扱われます。現在：{now}",
+    "timeZoneHint": "入力する時刻も表示される時刻も、このタイムゾーンで扱われます。現在：{now}。",
     "theme": "テーマ",
     "themeSystem": "システム設定に合わせる",
     "themeLight": "ライト",
@@ -468,7 +468,7 @@
     "emptyHistoryTitle": "判断の履歴はまだありません",
     "emptyHistoryBody": "承認または却下したリクエストがここに表示されます。",
     "approvedToast": "承認しました：{action}。{agent}が実行できるようになりました。",
-    "deniedToast": "却下しました：{action}",
+    "deniedToast": "却下しました：{action}。",
     "status": {
       "pending": "保留中",
       "approved": "承認済み、エージェント待ち",

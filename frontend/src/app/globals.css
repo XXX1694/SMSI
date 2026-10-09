@@ -13,6 +13,8 @@
     font-feature-settings: 'cv11', 'ss01';
   }
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+  /* CJK: keep dates, numbers and Latin tokens (2026年10月10日 09:00) in one piece; breaks still fall between words and clauses. */
+  :lang(ja), :lang(zh) { word-break: keep-all; line-break: strict; overflow-wrap: break-word; }
 }
 
 /* viewport-fit=cover (root layout) lets the page draw under notches and the home bar; keep content inside the safe area. */
