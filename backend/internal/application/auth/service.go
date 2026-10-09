@@ -14,7 +14,6 @@ import (
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/terms"
 	"github.com/socialos/backend/internal/domain/user"
-	"github.com/socialos/backend/internal/infrastructure/crypto"
 )
 
 // Service is the auth use-case facade.
@@ -36,6 +35,8 @@ type Service struct {
 	webURL string
 	// requireVerified makes unverified owners fail RequireVerified guards.
 	requireVerified bool
+	// social is nil when no sign-in provider is configured.
+	social *socialState
 }
 
 // Deps bundles Service dependencies.
@@ -57,6 +58,8 @@ type Deps struct {
 	WebBaseURL string
 	// RequireVerification enforces email verification (set when mail can really be delivered).
 	RequireVerification bool
+	// Social enables sign-in with external providers (D-023); nil leaves it off.
+	Social *SocialDeps
 }
 
 // NewService creates the auth service.
@@ -74,10 +77,16 @@ func NewService(d Deps) (*Service, error) {
 	if d.Log == nil {
 		d.Log = slog.Default()
 	}
-	return &Service{users: d.Users, sessions: d.Sessions, keys: d.APIKeys, hasher: d.Hasher, tx: d.Tx,
+	svc := &Service{users: d.Users, sessions: d.Sessions, keys: d.APIKeys, hasher: d.Hasher, tx: d.Tx,
 		audit: d.Audit, clock: d.Clock, sessionTTL: d.SessionTTL, dummyHash: dummy,
 		tokens: d.Tokens, mail: d.Mail, forgot: d.Forgot, log: d.Log, webURL: strings.TrimRight(d.WebBaseURL, "/"),
-		requireVerified: d.RequireVerification}, nil
+		requireVerified: d.RequireVerification}
+	if d.Social != nil {
+		if svc.social, err = newSocialState(*d.Social); err != nil {
+			return nil, err
+		}
+	}
+	return svc, nil
 }
 
 // RegisterInput is the registration payload.
@@ -117,10 +126,8 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, ci ClientInfo)
 			return err
 		}
 		var err error
-		if issued, err = s.newSession(ctx, u.ID, ci); err != nil {
-			return err
-		}
-		return s.audit.Record(ctx, userActor(u, ci), audit.ActionUserRegistered, "user", u.ID.String(), nil)
+		issued, err = s.startSession(ctx, u, ci, audit.ActionUserRegistered, nil)
+		return err
 	})
 	if err != nil {
 		return nil, IssuedSession{}, err
@@ -149,6 +156,14 @@ func (s *Service) Login(ctx context.Context, email, password string, ci ClientIn
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
+	if !u.HasPassword() {
+		// A social sign-up account has no hash. Spend the same time as a real check, so the answer's timing
+		// does not tell which addresses belong to such accounts.
+		if err := s.burnDummy(ctx, password); err != nil {
+			return nil, IssuedSession{}, err
+		}
+		return nil, IssuedSession{}, invalid
+	}
 	ok, err := s.hasher.Verify(ctx, password, u.PasswordHash)
 	if errs.CodeOf(err) == errs.RateLimited {
 		return nil, IssuedSession{}, err
@@ -160,10 +175,8 @@ func (s *Service) Login(ctx context.Context, email, password string, ci ClientIn
 	var issued IssuedSession
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
-		if issued, err = s.newSession(ctx, u.ID, ci); err != nil {
-			return err
-		}
-		return s.audit.Record(ctx, userActor(u, ci), audit.ActionUserLogin, "user", u.ID.String(), nil)
+		issued, err = s.startSession(ctx, u, ci, audit.ActionUserLogin, nil)
+		return err
 	})
 	return u, issued, err
 }
@@ -180,7 +193,7 @@ func (s *Service) burnDummy(ctx context.Context, password string) error {
 // rehashIfOutdated upgrades a stored hash made with older argon2 parameters. It is best effort: a failure is logged and
 // never fails the login that triggered it.
 func (s *Service) rehashIfOutdated(ctx context.Context, u *user.User, password string) {
-	if !s.hasher.NeedsRehash(u.PasswordHash) {
+	if !u.HasPassword() || !s.hasher.NeedsRehash(u.PasswordHash) {
 		return
 	}
 	verified := u.PasswordHash
@@ -192,25 +205,6 @@ func (s *Service) rehashIfOutdated(ctx context.Context, u *user.User, password s
 	if err != nil {
 		s.log.WarnContext(ctx, "password rehash failed", slog.String("user_id", u.ID.String()), slog.Any("error", err))
 	}
-}
-
-func (s *Service) newSession(ctx context.Context, userID uuid.UUID, ci ClientInfo) (IssuedSession, error) {
-	token, err := crypto.RandomToken(32)
-	if err != nil {
-		return IssuedSession{}, err
-	}
-	csrf, err := crypto.RandomToken(32)
-	if err != nil {
-		return IssuedSession{}, err
-	}
-	sess := &Session{
-		UserID: userID, TokenHash: crypto.SHA256Hex(token), CSRFToken: csrf,
-		ExpiresAt: s.clock.Now().Add(s.sessionTTL), UserAgent: truncate(ci.UserAgent, 256), IP: ci.IP,
-	}
-	if err := s.sessions.Create(ctx, sess); err != nil {
-		return IssuedSession{}, err
-	}
-	return IssuedSession{Token: token, CSRFToken: csrf, ExpiresAt: sess.ExpiresAt}, nil
 }
 
 // Logout deletes the actor's session.
@@ -243,9 +237,10 @@ func userActor(u *user.User, ci ClientInfo) actor.Actor {
 	return actor.Actor{UserID: u.ID, Type: actor.TypeUser, ID: u.ID.String(), Label: u.Email, RequestID: ci.RequestID, IP: ci.IP}
 }
 
+// truncate cuts s to at most n runes, never in the middle of a character.
 func truncate(s string, n int) string {
-	if len(s) > n {
-		return s[:n]
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
 	}
 	return s
 }

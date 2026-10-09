@@ -50,6 +50,8 @@ type Overrides struct {
 	Hasher    auth.PasswordHasher
 	// Mailer replaces the configured mail adapter (tests).
 	Mailer port.Mailer
+	// SignIn replaces the social sign-in providers built from configuration (tests point them at fakes).
+	SignIn []auth.IdentityProvider
 }
 
 // App holds every wired component.
@@ -173,12 +175,16 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	accountRepo, postRepo, jobRepo := postgres.NewAccounts(db), postgres.NewPosts(db), postgres.NewJobs(db)
 	mediaRepo, keyRepo, analyticsRepo := postgres.NewMedia(db), postgres.NewAPIKeys(db), postgres.NewAnalytics(db)
 
+	social, err := buildSignIn(cfg, db, enc, ov.SignIn)
+	if err != nil {
+		return err
+	}
 	approvalSvc := approvals.NewService(approvals.Deps{Repo: postgres.NewApprovals(db), Tx: db, Audit: auditSvc, Clock: clk,
 		Config: approvals.Config{TTL: cfg.ApprovalTTL, MaxPending: cfg.ApprovalMaxPending, WebBaseURL: cfg.WebBaseURL}})
 	authSvc, err := auth.NewService(auth.Deps{Users: postgres.NewUsers(db), Sessions: postgres.NewSessions(db), APIKeys: keyRepo,
 		Hasher: hasher, Tx: db, Audit: auditSvc, Clock: clk, SessionTTL: cfg.SessionTTL,
 		Tokens: postgres.NewEmailTokens(db), Mail: a.MailQueue, Forgot: a.Queue.ForgotQueue(), Log: log, WebBaseURL: cfg.WebBaseURL,
-		RequireVerification: requireVerification(cfg)})
+		RequireVerification: requireVerification(cfg), Social: social})
 	if err != nil {
 		return fmt.Errorf("auth service: %w", err)
 	}

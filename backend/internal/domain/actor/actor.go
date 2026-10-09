@@ -3,6 +3,7 @@ package actor
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/apikey"
@@ -28,9 +29,11 @@ type Actor struct {
 	Label     string // display name / key name (never a secret)
 	Scopes    []apikey.Scope
 	SessionID uuid.UUID
-	APIKeyID  uuid.UUID
-	RequestID string
-	IP        string
+	// SessionCreatedAt is when the session was issued (zero for API keys and background actors).
+	SessionCreatedAt time.Time
+	APIKeyID         uuid.UUID
+	RequestID        string
+	IP               string
 	// EmailVerified is set by authentication: true when the owner verified the
 	// address, or when the server does not enforce verification (no mail
 	// delivery). Scheduler and system actors need no flag (see RequireVerified).

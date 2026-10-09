@@ -128,6 +128,12 @@
       "resetTitle": "Redefinir a demo?",
       "resetBody": "Tudo o que você alterou nesta demo é removido e os dados de exemplo voltam.",
       "resetConfirm": "Redefinir demo"
+    },
+    "deletionBanner": {
+      "heading": "Sua conta será excluída em {date}.",
+      "body": "Nessa data, todos os seus dados serão apagados e não poderão ser recuperados. Suas chaves de API foram revogadas e os posts agendados viraram rascunhos. Você ainda pode baixar seus dados em Configurações.",
+      "cancel": "Cancelar exclusão",
+      "cancelling": "Cancelando…"
     }
   },
   "legal": {
@@ -190,7 +196,8 @@
       "failTitle": "Não foi possível verificar seu e-mail",
       "invalidBody": "Ele pode ter expirado ou já ter sido usado. Os links funcionam uma vez e valem por 48 horas.",
       "signInToRequest": "Entre para pedir um novo link"
-    }
+    },
+    "deletedNotice": "A exclusão da sua conta está agendada. Todas as sessões foram encerradas e as chaves de API, revogadas. Entre antes do fim do prazo para ver a data e cancelar."
   },
   "posts": {
     "editBlockedPublishing": "Este post está sendo publicado agora e não pode ser alterado.",
@@ -297,6 +304,21 @@
       "requestNew": "Solicitar nova exportação",
       "request": "Solicitar exportação",
       "cooldown": "Uma nova exportação pode ser solicitada 24 horas após a última."
+    },
+    "exportHeading": "Exportação",
+    "deleteAccount": {
+      "heading": "Excluir conta",
+      "intro": "Exclui sua conta, posts, mídia, contas conectadas, chaves de API e registro de auditoria. Isso acontece {days, plural, one {# dia} many {# de dias} other {# dias}} depois da confirmação. Até lá, você pode entrar e cancelar; os posts agendados voltam a ser rascunhos e todas as sessões e chaves de API são encerradas na hora. Baixe seus dados antes se quiser uma cópia.",
+      "open": "Excluir conta…",
+      "dialogTitle": "Excluir sua conta?",
+      "dialogBody": "Tudo o que você tem no Steerpost será excluído ao fim do prazo. Isso não pode ser desfeito.",
+      "formLabel": "Excluir conta",
+      "password": "Sua senha",
+      "confirmLabel": "Digite {email} para confirmar",
+      "yourEmail": "seu e-mail",
+      "wrongPassword": "Essa não é a sua senha atual.",
+      "wrongConfirm": "Digite seu e-mail exatamente como mostrado.",
+      "submit": "Excluir minha conta"
     }
   },
   "dashboard": {

@@ -23,6 +23,7 @@ import (
 
 	"github.com/socialos/backend/internal/adapters/provider"
 	"github.com/socialos/backend/internal/app"
+	"github.com/socialos/backend/internal/application/auth"
 	"github.com/socialos/backend/internal/application/media"
 	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/config"
@@ -64,6 +65,8 @@ type envOpts struct {
 	exportTasks queue.ExportTasks
 	// realMailLimit keeps the production mail-endpoint limiter; by default tests get a permissive one.
 	realMailLimit bool
+	// signIn replaces the social sign-in providers (they are off by default in tests).
+	signIn []auth.IdentityProvider
 }
 
 func newEnv(t *testing.T, o envOpts) *env {
@@ -99,7 +102,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 		log = o.logger
 	}
 	a, err := app.Build(context.Background(), cfg, log, app.Overrides{
-		Storage: store, Providers: o.providers, Mailer: o.mailer, Clock: o.clock,
+		Storage: store, Providers: o.providers, Mailer: o.mailer, Clock: o.clock, SignIn: o.signIn,
 		Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}, 2, 0),
 	})
 	if err != nil {
