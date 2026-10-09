@@ -47,7 +47,7 @@ func TestShutdownWaitsForBothServersConcurrently(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := asynq.NewClient(opt)
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	if _, err := c.Enqueue(asynq.NewTask(TypePublishTarget, []byte("{}")), asynq.Queue(q), asynq.MaxRetry(0)); err != nil {
 		t.Fatal(err)
 	}
