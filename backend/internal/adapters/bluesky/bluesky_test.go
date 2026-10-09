@@ -51,6 +51,7 @@ func TestVerifyRejectsBadInput(t *testing.T) {
 		"no password":   {"handle": testHandle},
 		"http pds":      {"handle": testHandle, "app_password": "x", "pds": "http://pds.example.com"},
 		"pds with path": {"handle": testHandle, "app_password": "x", "pds": "https://pds.example.com/x"},
+		"pds port 8443": {"handle": testHandle, "app_password": "x", "pds": "https://pds.example.com:8443"},
 		"pds userinfo":  {"handle": testHandle, "app_password": "x", "pds": "https://u:p@pds.example.com"},
 	} {
 		if _, _, err := a.Verify(context.Background(), fields); provider.Classify(err) != provider.KindPermanent {

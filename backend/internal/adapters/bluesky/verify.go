@@ -63,8 +63,9 @@ func (a *Adapter) baseFor(raw string) (base string, custom bool, err error) {
 	}
 	u, perr := url.Parse(raw)
 	if perr != nil || u.Scheme != "https" || u.Host == "" || u.User != nil ||
+		(u.Port() != "" && u.Port() != "443") ||
 		(u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
-		return "", false, permanent("BAD_PDS", "The server must be an https address without a path, for example https://pds.example.com")
+		return "", false, permanent("BAD_PDS", "The server must be an https address on the default port without a path, for example https://pds.example.com")
 	}
 	base = "https://" + strings.ToLower(u.Host)
 	return base, base != a.pds, nil

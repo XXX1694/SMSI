@@ -3,6 +3,7 @@ package bluesky
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"regexp"
 	"strings"
@@ -185,13 +186,17 @@ func TestPublishRejectsBadMediaBeforeAnyRequest(t *testing.T) {
 	for name, m := range map[string][]provider.MediaFile{
 		"five images": media(5, 10),
 		"too large":   media(1, MaxImageBytes+1),
-		"video":       {{Kind: "video", MimeType: "video/mp4", Size: 10}},
 	} {
 		r := req("x")
 		r.Media = m
 		if _, err := a.Publish(context.Background(), r); provider.Classify(err) != provider.KindPermanent {
 			t.Errorf("%s: %v", name, err)
 		}
+	}
+	r := req("x")
+	r.Media = []provider.MediaFile{{Kind: "video", MimeType: "video/mp4", Size: 10}}
+	if _, err := a.Publish(context.Background(), r); provider.Classify(err) != provider.KindUnsupported || !errors.Is(err, provider.ErrUnsupported) {
+		t.Errorf("video: want unsupported, got %v", err)
 	}
 	if f.creates != 0 {
 		t.Error("validation must run before logging in")
