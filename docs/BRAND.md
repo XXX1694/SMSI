@@ -174,7 +174,7 @@ layers**, not for reading.
 | Sidebar, app header, landing nav | `--glass-chrome` | `hsl(188 43% 93% / 0.70)` | `hsl(201 36% 9% / 0.66)` | 20 px, saturate 160 % |
 | Cards, stat tiles, panels | `--glass-card` | `hsl(0 0% 100% / 0.78)` | `hsl(204 29% 10% / 0.74)` | none |
 | Popovers, menus, toasts | `--glass-strong` | `hsl(0 0% 100% / 0.90)` | `hsl(204 29% 10% / 0.90)` | 24 px, saturate 160 % |
-| Dialogs | `--glass-strong` | as above | as above | none (over the `--scrim`) |
+| Dialogs | `background` (solid) with the glass edge and shadow | `#ffffff` | `#0d1317` | none (over the `--scrim`) |
 | Landing hero frame | `--glass-card` | as card | as card | 16 px |
 
 - Edge: a 1 px `--glass-border` (`hsl(205 32% 11% / 0.08)` / `hsl(0 0% 100% / 0.08)`) plus a 1 px inner top highlight
@@ -185,7 +185,8 @@ layers**, not for reading.
 - **Never glass**: tables, inputs, the editor and composer, long text (Terms, Privacy, docs), dense lists. These are solid
   `background`. Text never sits on glass with less than 0.66 alpha.
 - **Budget**: at most two blurred layers on screen (chrome plus one popover or dialog). No blur on anything that scrolls.
-  Dialogs are a near-solid panel over a plain dim scrim (`--scrim`), no blur.
+  Dialogs are a solid panel over a plain dim scrim (`--scrim`), no blur: without a blur behind it, translucency would let
+  the page's text show through.
 - **Fallbacks**: without `backdrop-filter` the chrome and floating layers are the solid `surface`;
   `prefers-reduced-transparency` makes every glass layer solid and the mesh flat; `forced-colors` drops fills, shadows and
   the mesh and draws `CanvasText` borders.

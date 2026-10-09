@@ -503,7 +503,7 @@ and a preview) was approved.
   are added. The app spends colour 70 / 20 / 10 by area (a dense dashboard needs neutrals to dominate); the landing uses the
   classic 60 / 30 / 10.
 - **Glass.** Real backdrop blur only on chrome (sidebar, header, landing nav) and floating layers (popovers, menus,
-  toasts); cards are translucent without blur over one fixed mesh layer; dialogs are a near-solid panel over a plain dim scrim; tables, inputs, the composer and long text stay
+  toasts); cards are translucent without blur over one fixed mesh layer; dialogs are a solid panel over a plain dim scrim; tables, inputs, the composer and long text stay
   solid. At most two blurred layers on screen. Fallbacks for missing `backdrop-filter`, `prefers-reduced-transparency`
   and `forced-colors`. Text contrast is checked against the glass composited over the mesh's strongest point.
 - **Status tags.** Square-ish 5 px tags with a hairline border, the label in the text colour and a status glyph that alone
