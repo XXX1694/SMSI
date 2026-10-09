@@ -16,7 +16,7 @@ export function CapabilityBadges({ caps }: { caps: Capabilities }) {
     <ul className="flex flex-wrap gap-1.5" aria-label={t('caps.label')}>
       {items.map(([key, on]) => (
         <li key={key}>
-          <Badge tone={on ? 'neutral' : 'outline'} className={on ? '' : 'line-through'}>
+          <Badge tone={on ? 'neutral' : 'outline'} className={on ? 'text-foreground' : 'border-dashed line-through'}>
             <span className="sr-only">{on ? t('caps.supports') : t('caps.no')} </span>
             {t(`caps.${key}`)}
           </Badge>

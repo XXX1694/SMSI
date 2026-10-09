@@ -5,7 +5,11 @@ import { accountStatusView, attemptStatusView, postStatusView, targetStatusView,
 import type { AppT } from '@/i18n/translate';
 
 function render(v: StatusView) {
-  return <Badge tone={v.tone}>{v.label}</Badge>;
+  return (
+    <Badge tone={v.tone} glyph={v.glyph}>
+      {v.label}
+    </Badge>
+  );
 }
 function badge(view: (s: string, t: AppT) => StatusView) {
   return function StatusBadge({ status }: { status: string }) {

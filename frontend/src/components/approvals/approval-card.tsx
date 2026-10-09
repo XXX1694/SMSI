@@ -7,17 +7,18 @@ import { useFormat } from '@/i18n/use-format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import type { GlyphName } from '@/lib/status';
 import { actionLabel, isIrreversible, isOpen, summaryLines, timeLeft, type SummaryLine } from '@/lib/approvals';
 import { cn } from '@/lib/utils';
 import type { Approval, ApprovalStatus } from '@/lib/types';
 import { useTranslations } from '@/i18n/use-translations';
 
-const STATUS_TONE: Record<ApprovalStatus, 'success' | 'danger' | 'neutral' | 'warning'> = {
-  pending: 'warning',
-  approved: 'success',
-  consumed: 'success',
-  denied: 'danger',
-  expired: 'neutral',
+const STATUS_LOOK: Record<ApprovalStatus, ['success' | 'danger' | 'neutral' | 'warning', GlyphName]> = {
+  pending: ['warning', 'waiting'],
+  approved: ['success', 'done'],
+  consumed: ['success', 'done'],
+  denied: ['danger', 'failed'],
+  expired: ['neutral', 'off'],
 };
 
 interface Props {
@@ -103,7 +104,9 @@ export function ApprovalCard({ approval, now, busy, onApprove, onDeny }: Props) 
         </div>
       ) : (
         <div className="mt-3">
-          <Badge tone={STATUS_TONE[status]}>{t(`status.${status}`)}</Badge>
+          <Badge tone={STATUS_LOOK[status][0]} glyph={STATUS_LOOK[status][1]}>
+            {t(`status.${status}`)}
+          </Badge>
         </div>
       )}
     </Card>

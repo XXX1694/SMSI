@@ -3,49 +3,58 @@ import type { AccountStatus, AttemptStatus, PostStatus, TargetStatus } from './t
 
 export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'accent';
 
+/** A status as a tag shows it. */
 export interface StatusView {
   label: string;
   tone: Tone;
+  /** The shape shown with the label (BRAND.md section 5); absent for a status this version does not know. */
+  glyph?: GlyphName;
 }
 
-const POST: Record<PostStatus, Tone> = {
-  draft: 'neutral',
-  scheduled: 'accent',
-  publishing: 'info',
-  published: 'success',
-  partially_published: 'warning',
-  failed: 'danger',
-  cancelled: 'neutral',
+/** The shapes a status tag can show (components/ui/status-glyph.tsx draws them). One shape per meaning, so colour is never the only cue. */
+export type GlyphName = 'draft' | 'waiting' | 'scheduled' | 'progress' | 'done' | 'partial' | 'failed' | 'alert' | 'off';
+
+type Look = [Tone, GlyphName];
+
+const POST: Record<PostStatus, Look> = {
+  draft: ['neutral', 'draft'],
+  scheduled: ['accent', 'scheduled'],
+  publishing: ['info', 'progress'],
+  published: ['success', 'done'],
+  partially_published: ['warning', 'partial'],
+  failed: ['danger', 'failed'],
+  cancelled: ['neutral', 'off'],
 };
 
-const TARGET: Record<TargetStatus, Tone> = {
-  pending: 'neutral',
-  publishing: 'info',
-  published: 'success',
-  failed: 'danger',
-  cancelled: 'neutral',
-  needs_review: 'warning',
+const TARGET: Record<TargetStatus, Look> = {
+  pending: ['neutral', 'scheduled'],
+  publishing: ['info', 'progress'],
+  published: ['success', 'done'],
+  failed: ['danger', 'failed'],
+  cancelled: ['neutral', 'off'],
+  needs_review: ['warning', 'waiting'],
 };
 
-const ACCOUNT: Record<AccountStatus, Tone> = {
-  active: 'success',
-  expired: 'warning',
-  revoked: 'neutral',
-  error: 'danger',
+const ACCOUNT: Record<AccountStatus, Look> = {
+  active: ['success', 'done'],
+  expired: ['warning', 'alert'],
+  revoked: ['neutral', 'off'],
+  error: ['danger', 'failed'],
 };
 
-const ATTEMPT: Record<AttemptStatus, Tone> = {
-  started: 'info',
-  succeeded: 'success',
-  failed: 'danger',
-  unknown: 'warning',
+const ATTEMPT: Record<AttemptStatus, Look> = {
+  started: ['info', 'progress'],
+  succeeded: ['success', 'done'],
+  failed: ['danger', 'failed'],
+  unknown: ['warning', 'alert'],
 };
 
 /** A status the server sent that this version does not know shows as sent, in the neutral tone. */
-function view(tones: Record<string, Tone>, kind: 'post' | 'target' | 'account' | 'attempt', status: string, t: AppT): StatusView {
-  const tone = tones[status];
+function view(looks: Record<string, Look>, kind: 'post' | 'target' | 'account' | 'attempt', status: string, t: AppT): StatusView {
+  const look = looks[status];
+  if (!look) return { label: status, tone: 'neutral' };
   // The key is built from a known status, so it exists in the catalog.
-  return tone ? { label: t(`common.status.${kind}.${status}` as 'common.status.post.draft'), tone } : { label: status, tone: 'neutral' };
+  return { label: t(`common.status.${kind}.${status}` as 'common.status.post.draft'), tone: look[0], glyph: look[1] };
 }
 
 export const postStatusView = (s: string, t: AppT): StatusView => view(POST, 'post', s, t);
