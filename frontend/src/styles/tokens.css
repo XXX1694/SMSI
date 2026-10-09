@@ -4,6 +4,7 @@
  * prefers-color-scheme rule). Change a value here and both follow.
  *
  * Colours are HSL channel triples so Tailwind can add an alpha value. Keep every `.dark` colour defined in `:root` too.
+ * The glass and mesh values (D-024) are complete colours with their alpha built in: they are composited, never re-tinted.
  * The file lives under frontend/ because the frontend Docker build context stops there.
  */
 :root {
@@ -25,7 +26,40 @@
   --warning-soft: 40 90% 93%;
   --danger: 0 68% 42%;
   --danger-soft: 0 80% 96%;
+  --info: 218 72% 43.5%;
+  --info-soft: 219 77% 95%;
+  /* Lagoon: the structural secondary colour (D-024). Chrome tint, active nav row, selected rows, secondary buttons. */
+  --secondary: 187 45% 88.5%;
+  --secondary-foreground: 190 54% 24.5%;
+  --secondary-strong: 189 46% 42%;
+  /* The page behind the glass. */
+  --canvas: 197 26% 94.5%;
+  --chart-1: 191 88% 27%;
+  --chart-2: 189 46% 42%;
+  --chart-3: 190 29% 66%;
+  --chart-4: 201 12% 62.5%;
+
+  /* Glass (D-024): chrome = sidebar, header, landing nav; card = translucent panels without blur; strong = popovers, menus, toasts. */
+  --glass-chrome: hsl(188 43% 93% / 0.7);
+  --glass-card: hsl(0 0% 100% / 0.78);
+  --glass-strong: hsl(0 0% 100% / 0.9);
+  --glass-border: hsl(205 32% 11% / 0.08);
+  --glass-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.75);
+  --glass-blur-chrome: 20px;
+  --glass-blur-strong: 24px;
+  --glass-blur-hero: 16px;
+  --glass-saturate: 160%;
+  /* The mesh: one fixed layer of soft radial gradients behind every glass surface. */
+  --mesh-1: hsl(187 72% 56% / 0.3);
+  --mesh-2: hsl(162 58% 60% / 0.24);
+  --mesh-3: hsl(202 77% 71% / 0.24);
+  --noise-opacity: 0.035;
+  --shadow-glass: 0 1px 2px hsl(205 32% 11% / 0.04), 0 12px 32px -14px hsl(191 88% 27% / 0.22);
+  --shadow-glass-strong: 0 1px 2px hsl(205 32% 11% / 0.06), 0 24px 56px -20px hsl(205 32% 11% / 0.3);
   --shadow-pop: 0 1px 2px hsl(205 32% 11% / 0.05), 0 18px 40px -18px hsl(205 32% 11% / 0.22);
+
+  /* Type: the script face after Onest. globals.css (and the landing) switch it per <html lang> (D-024). */
+  --font-script: ui-sans-serif;
 
   /* Type scale: size / line height */
   --text-2xs: 0.6875rem;
@@ -72,11 +106,15 @@
   --duration-base: 200ms;
   --duration-slow: 320ms;
   --duration-shimmer: 1400ms;
+  /* The three hero transitions (sign-in, publish now, composer to calendar) and nothing else. */
+  --duration-hero: 520ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   /* The steering motif: a path eases in, bends and settles. Used for drawn lines and the hero flow, never for UI chrome. */
   --ease-steer: cubic-bezier(0.45, 0, 0.15, 1);
+  /* A colour fill or wipe crossing the screen: even acceleration in and out. */
+  --ease-fill: cubic-bezier(0.65, 0, 0.35, 1);
   --duration-path: 900ms;
   --distance-enter: 0.5rem;
   --stagger-step: 40ms;
@@ -100,5 +138,26 @@
   --warning-soft: 38 50% 12%;
   --danger: 0 85% 70%;
   --danger-soft: 0 40% 14%;
+  --info: 220 95% 75.5%;
+  --info-soft: 220 47% 16.5%;
+  --secondary: 192 50% 15.5%;
+  --secondary-foreground: 187 51% 75%;
+  --secondary-strong: 188 45% 56%;
+  --canvas: 207 35% 6%;
+  --chart-1: 187 72% 56%;
+  --chart-2: 188 45% 56%;
+  --chart-3: 189 45% 33.5%;
+  --chart-4: 205 12% 42%;
+  --glass-chrome: hsl(201 36% 9% / 0.66);
+  --glass-card: hsl(204 29% 10% / 0.74);
+  --glass-strong: hsl(204 29% 10% / 0.9);
+  --glass-border: hsl(0 0% 100% / 0.08);
+  --glass-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.06);
+  --mesh-1: hsl(188 75% 41% / 0.26);
+  --mesh-2: hsl(166 64% 34% / 0.18);
+  --mesh-3: hsl(207 67% 33% / 0.24);
+  --noise-opacity: 0.05;
+  --shadow-glass: 0 1px 2px hsl(0 0% 0% / 0.4), 0 16px 40px -18px hsl(0 0% 0% / 0.7);
+  --shadow-glass-strong: 0 1px 2px hsl(0 0% 0% / 0.5), 0 28px 64px -20px hsl(0 0% 0% / 0.8);
   --shadow-pop: 0 1px 2px hsl(0 0% 0% / 0.4), 0 18px 40px -18px hsl(0 0% 0% / 0.7);
 }

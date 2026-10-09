@@ -23,6 +23,7 @@ import hljs from 'highlight.js';
 import { Marked } from 'marked';
 import IntlMessageFormat from 'intl-messageformat';
 import { LOCALES } from './i18n/locales.mjs';
+import { codePoints, fontFaces, pageText } from './scripts/fonts.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
@@ -344,6 +345,9 @@ cpSync(join(here, 'node_modules/mermaid/dist/mermaid.min.js'), join(dist, 'asset
 
 // ------------------------------------------------------------------ landing page, one per locale
 
+/** The script face each locale adds after Onest (D-024); landing.css puts it in the stack under html:lang(). */
+const SCRIPT_FONTS = { ar: 'noto-sans-arabic', ja: 'noto-sans-jp', 'zh-CN': 'noto-sans-sc' };
+
 /** Catalogs: site/i18n/landing.<code>.json. A locale without a catalog is not built. */
 const catalogs = {};
 for (const l of LOCALES) {
@@ -461,6 +465,7 @@ function landingPage(loc, tools) {
     .replaceAll('{{langMenu}}', () => menu)
     .replaceAll('{{langList}}', () => list)
     .replaceAll('{{betaNote}}', () => beta)
+    .replaceAll('{{scriptFonts}}', () => (SCRIPT_FONTS[loc.code] ? `<link rel="stylesheet" href="${BASE}assets/fonts/${loc.code}.css">\n  ` : ''))
     .replaceAll('{{langData}}', () => (data ? `<script type="application/json" id="lang-data">${data}</script>\n  ` : ''))
     .replace('{{content}}', () => content)
     .replaceAll('{{base}}', BASE);
@@ -529,6 +534,21 @@ write(
     .join('\n')}\n</urlset>\n`,
 );
 write('.nojekyll', '');
+
+// Fonts (D-024): Onest on every page, the Arabic, Japanese and Chinese faces only on their own landing page, each cut to the
+// unicode-range slices those pages use. Runs before the demo is copied in: the demo bundles its own fonts.
+{
+  const htmlFiles = (dir) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? htmlFiles(join(dir, e.name)) : e.name.endsWith('.html') ? [join(dir, e.name)] : []));
+  const fontsDir = join(dist, 'assets/fonts');
+  const pkg = (name) => join(here, 'node_modules/@fontsource-variable', name);
+  const everything = new Set(htmlFiles(dist).flatMap((f) => [...codePoints(pageText(read(f)))]));
+  write('assets/fonts/onest.css', fontFaces({ pkgDir: pkg('onest'), points: everything, outDir: fontsDir, urlPrefix: '' }).css);
+  for (const loc of built.filter((l) => SCRIPT_FONTS[l.code])) {
+    const points = codePoints(pageText(read(join(dist, pathOf(loc), 'index.html'))));
+    write(`assets/fonts/${loc.code}.css`, fontFaces({ pkgDir: pkg(SCRIPT_FONTS[loc.code]), points, outDir: fontsDir, urlPrefix: '' }).css);
+  }
+}
 
 // Demo
 if (WITH_DEMO) {

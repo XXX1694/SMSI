@@ -12,7 +12,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        // Onest for Latin and Cyrillic; --font-script is Noto Sans Arabic / JP / SC on those locales only (globals.css, D-024).
+        sans: ['"Onest Variable"', 'var(--font-script)', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       colors: {
@@ -27,7 +28,24 @@ const config: Config = {
         success: { DEFAULT: 'hsl(var(--success) / <alpha-value>)', soft: 'hsl(var(--success-soft) / <alpha-value>)' },
         warning: { DEFAULT: 'hsl(var(--warning) / <alpha-value>)', soft: 'hsl(var(--warning-soft) / <alpha-value>)' },
         danger: { DEFAULT: 'hsl(var(--danger) / <alpha-value>)', soft: 'hsl(var(--danger-soft) / <alpha-value>)' },
+        info: { DEFAULT: 'hsl(var(--info) / <alpha-value>)', soft: 'hsl(var(--info-soft) / <alpha-value>)' },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+          foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)',
+          strong: 'hsl(var(--secondary-strong) / <alpha-value>)',
+        },
+        canvas: 'hsl(var(--canvas) / <alpha-value>)',
+        chart: {
+          1: 'hsl(var(--chart-1) / <alpha-value>)',
+          2: 'hsl(var(--chart-2) / <alpha-value>)',
+          3: 'hsl(var(--chart-3) / <alpha-value>)',
+          4: 'hsl(var(--chart-4) / <alpha-value>)',
+        },
+        // Complete colours with their alpha built in (composited glass, D-024): no <alpha-value>.
+        glass: { chrome: 'var(--glass-chrome)', card: 'var(--glass-card)', strong: 'var(--glass-strong)', border: 'var(--glass-border)' },
       },
+      backdropBlur: { chrome: 'var(--glass-blur-chrome)', strong: 'var(--glass-blur-strong)', hero: 'var(--glass-blur-hero)' },
+      backdropSaturate: { glass: 'var(--glass-saturate)' },
       fontSize: {
         '2xs': ['var(--text-2xs)', 'var(--text-2xs-leading)'],
         xs: ['var(--text-xs)', 'var(--text-xs-leading)'],
@@ -44,10 +62,23 @@ const config: Config = {
       minHeight: { screen: SCREEN_HEIGHT },
       spacing: { gutter: 'var(--space-gutter)', stack: 'var(--space-stack)', section: 'var(--space-section)' },
       borderRadius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)' },
-      boxShadow: { md: 'var(--shadow-md)', lg: 'var(--shadow-lg)', pop: 'var(--shadow-pop)' },
+      boxShadow: {
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        pop: 'var(--shadow-pop)',
+        glass: 'var(--glass-highlight), var(--shadow-glass)',
+        'glass-strong': 'var(--glass-highlight), var(--shadow-glass-strong)',
+      },
       zIndex: { banner: 'var(--z-banner)', overlay: 'var(--z-overlay)', toast: 'var(--z-toast)' },
-      transitionDuration: { DEFAULT: 'var(--duration-fast)', fast: 'var(--duration-fast)', base: 'var(--duration-base)', slow: 'var(--duration-slow)' },
-      transitionTimingFunction: { DEFAULT: 'var(--ease-standard)', standard: 'var(--ease-standard)', enter: 'var(--ease-enter)', exit: 'var(--ease-exit)' },
+      transitionDuration: { DEFAULT: 'var(--duration-fast)', fast: 'var(--duration-fast)', base: 'var(--duration-base)', slow: 'var(--duration-slow)', hero: 'var(--duration-hero)' },
+      transitionTimingFunction: {
+        DEFAULT: 'var(--ease-standard)',
+        standard: 'var(--ease-standard)',
+        enter: 'var(--ease-enter)',
+        exit: 'var(--ease-exit)',
+        fill: 'var(--ease-fill)',
+        steer: 'var(--ease-steer)',
+      },
       // transform and opacity only; durations and easings come from tokens.css. Reduced motion is handled in globals.css.
       keyframes: {
         'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },

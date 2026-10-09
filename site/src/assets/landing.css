@@ -227,12 +227,12 @@ html.motion-off { scroll-behavior: auto; }
 @media (prefers-reduced-motion: no-preference) { .lang-suggest { animation: fade-up 0.6s var(--lp-ease) 0.4s both; } }
 
 /* ---------- scripts without spaces or with joining letters ----------
-   CJK and Arabic use the system fonts (no download). Tight negative tracking is a Latin display habit: it breaks Arabic
-   joins and crowds CJK glyphs, so it is switched off wherever it is set. */
-html:lang(ja) { --cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', Meiryo, 'Noto Sans JP', sans-serif; }
-html:lang(zh) { --cjk: 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif; }
-html:lang(ar) { --cjk: 'Geeza Pro', 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Noto Naskh Arabic', sans-serif; }
-html:lang(ja) body, html:lang(zh) body, html:lang(ar) body { font-family: 'Inter Variable', Inter, var(--cjk), ui-sans-serif, system-ui, sans-serif; }
+   Japanese, Chinese and Arabic get a self-hosted Noto face after Onest (D-024; assets/fonts/<locale>.css, linked only from
+   that page), with the system faces behind it. Tight negative tracking is a Latin display habit: it breaks Arabic joins and
+   crowds CJK glyphs, so it is switched off wherever it is set. */
+html:lang(ja) { --font-script: 'Noto Sans JP Variable', 'Hiragino Sans', 'Yu Gothic UI', Meiryo; }
+html:lang(zh) { --font-script: 'Noto Sans SC Variable', 'PingFang SC', 'Microsoft YaHei UI'; }
+html:lang(ar) { --font-script: 'Noto Sans Arabic Variable', 'Geeza Pro', 'Segoe UI', Tahoma; }
 html:lang(ja) body { line-break: strict; word-break: auto-phrase; line-height: 1.75; }
 html:lang(zh) body { line-break: strict; line-height: 1.75; }
 html:lang(ar) body { line-height: 1.8; }

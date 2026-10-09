@@ -112,7 +112,7 @@ if (!chrome) {
 }
 const { chromium } = await import('playwright-core');
 const browser = await chromium.launch({ executablePath: chrome });
-const fontUrl = `file://${join(root, 'site/src/assets/fonts/inter-latin-wght-normal.woff2')}`;
+const fontUrl = `file://${join(root, 'site/scripts/brand-fonts/inter-latin-wght-normal.woff2')}`;
 async function render(html, w, h, file, transparent = false) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   await page.setContent(`<style>@font-face{font-family:Inter;src:url(${fontUrl});font-weight:100 900}html,body{margin:0;background:transparent}</style>${html}`);
