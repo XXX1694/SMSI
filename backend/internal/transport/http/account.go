@@ -86,3 +86,35 @@ func (a *API) getExport(w http.ResponseWriter, r *http.Request) {
 		URLExpiresAt time.Time `json:"url_expires_at"`
 	}{toExport(*l.Export), l.URL, utc(l.ExpiresAt)})
 }
+
+type deleteReq struct {
+	Password string `json:"password"`
+	// Confirm is the account's email address typed by the owner.
+	Confirm string `json:"confirm"`
+}
+
+// requestDeletion serves POST /account/delete: it schedules the deletion of the session user's account, ends the
+// session and answers 202 with the time the data will be deleted.
+func (a *API) requestDeletion(w http.ResponseWriter, r *http.Request) {
+	var req deleteReq
+	if err := decode(r, &req); err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	s, err := a.svc.Deletion.Request(r.Context(), actorOf(r), req.Password, req.Confirm)
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	a.clearSessionCookies(w)
+	httpx.JSON(w, http.StatusAccepted, map[string]any{"status": "scheduled", "scheduled_for": utc(s.PurgeAt)})
+}
+
+// cancelDeletion serves POST /account/delete/cancel.
+func (a *API) cancelDeletion(w http.ResponseWriter, r *http.Request) {
+	if err := a.svc.Deletion.Cancel(r.Context(), actorOf(r)); err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -61,5 +61,7 @@ const (
 	ActionExportReady       = "account.export_ready"
 	ActionExportFailed      = "account.export_failed"
 	ActionExportDownloaded  = "account.export_downloaded"
+	ActionDeletionScheduled = "account.deletion_scheduled"
+	ActionDeletionCancelled = "account.deletion_cancelled"
 	ActionMCPToolCall       = "mcp.tool_call" // one MCP tool call made with an API key (X-MCP-Tool header)
 )
