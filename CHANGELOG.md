@@ -41,6 +41,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 ### Fixed
 
 - Cancelling, unscheduling or publishing a post while the worker publishes it can no longer deadlock and fail with a 500: the API and the worker now lock rows in the same order (post, then target). A database deadlock or serialization failure that still happens is reported as a retryable `CONFLICT` (#38).
+- Deploying or restarting the worker during a publish no longer sends that post to review: on SIGTERM the worker stops taking tasks, lets in-flight publishes finish (up to `WORKER_SHUTDOWN_TIMEOUT`, default 30s, at most 35s; the worker's `stop_grace_period` is now 45s instead of Docker's 10s), stops its background jobs and only then closes the database. The worker's health address is configurable as `WORKER_HTTP_ADDR` (#39).
 - The Posts date filter now uses the timezone chosen in Settings instead of the browser's, so "From" and "To" cover whole days where you expect them.
 - Colour contrast: unsupported-network badges and the dark-mode "Scheduled" badge now meet WCAG AA (axe `color-contrast` is clean in light and dark). The dark accent is slightly lighter, in the app and on the site.
 - A failed load no longer looks like an empty list: Posts, post detail and the audit log show a titled error with a retry button, "Load more" failures keep the list on screen, and error messages are plain English (no raw codes, JSON or stack traces).
