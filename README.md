@@ -30,7 +30,7 @@
   <img alt="The SocialOS dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures." src="site/src/assets/screens/dashboard-light.png">
 </picture>
 
-> **Status: early (v0.1.0).** LinkedIn, Telegram, Discord and Mastodon publish today. More networks are planned, and the table below says
+> **Status: early (v0.1.0).** LinkedIn, Telegram, Discord, Mastodon and Bluesky publish today. More networks are planned, and the table below says
 > honestly what each one needs. The demo runs entirely in your browser: no sign-up, nothing is sent anywhere.
 
 ## Why SocialOS
@@ -84,7 +84,7 @@ plans, in roughly this order, with no dates.
 | Slack | 🔜 Next | A channel webhook URL. Text only, without delete |
 | Mastodon (and compatible servers) | ✅ Live | An access token from your instance. Text, images, delete |
 | Misskey | 🔜 Next | An access token from your instance |
-| Bluesky | 🔜 Next | Your handle and an app password |
+| Bluesky | ✅ Live | Your handle and an app password. Text with links and hashtags, up to 4 images, delete |
 | Dev.to, WordPress, Ghost | 🔜 Next | An API key or application password; articles need a title |
 | VK | 🔜 Next | A community access key, after a live check |
 | Threads, Instagram, Facebook Pages | 🔜 Next | Your own Meta app. Works for your own accounts; anyone else needs Meta App Review. Instagram needs a Business or Creator account |
@@ -99,8 +99,8 @@ plans, in roughly this order, with no dates.
 
 ✅ publishes today · 🔜 planned, needs no platform review · 🔐 needs app review, verification or a paid API · ⛔ no
 official way to post. Setup for the live networks: [LinkedIn](docs/integrations/linkedin.md),
-[Telegram](docs/integrations/telegram.md), [Discord](docs/integrations/discord.md) and
-[Mastodon](docs/integrations/mastodon.md).
+[Telegram](docs/integrations/telegram.md), [Discord](docs/integrations/discord.md),
+[Mastodon](docs/integrations/mastodon.md) and [Bluesky](docs/integrations/bluesky.md).
 
 ## Use with your AI agent
 
