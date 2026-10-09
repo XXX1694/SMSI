@@ -16,11 +16,13 @@ const guard = (fn, fallback) => {
 const read = () => guard(() => localStorage.getItem(KEY), null);
 const write = (v) => guard(() => localStorage.setItem(KEY, v));
 const dismissed = () => guard(() => localStorage.getItem(DISMISS_KEY) === 'dismissed', false);
-// Carry the in-page anchor over only when it names an element that exists, re-encoded as a fragment.
+// Carry the in-page anchor over only when it names an id that exists on this page. The id is taken from the page's own
+// elements (never from the URL text) and re-encoded as a fragment.
 const hashSuffix = () =>
   guard(() => {
-    const id = decodeURIComponent(location.hash.slice(1));
-    return id && document.getElementById(id) ? `#${encodeURIComponent(id)}` : '';
+    const want = decodeURIComponent(location.hash.slice(1));
+    const el = want ? [...document.querySelectorAll('[id]')].find((e) => e.id === want) : null;
+    return el ? `#${encodeURIComponent(el.id)}` : '';
   }, '');
 
 const data = guard(() => JSON.parse(document.getElementById('lang-data')?.textContent ?? 'null'), null);
@@ -86,7 +88,13 @@ guard(() => {
   const text = document.createElement('p');
   text.textContent = target.text;
   const go = document.createElement('a');
-  go.href = target.href + hashSuffix();
+  // The path comes from the page's own JSON; only a same-origin path is ever used as a link.
+  const dest = guard(() => {
+    const u = new URL(target.href, location.href);
+    return u.origin === location.origin ? u.pathname : null;
+  }, null);
+  if (!dest) return;
+  go.href = dest + hashSuffix();
   go.textContent = target.name;
   go.hreflang = target.lang;
   go.addEventListener('click', () => write(want));
