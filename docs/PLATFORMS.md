@@ -99,7 +99,7 @@ type TokenConnector interface {
 | 429 with Retry-After or `ratelimit-reset`; VK error 6 | Retryable | backoff honours the provider's delay |
 | timeout after the request was sent | Unknown | `needs_review`, except Mastodon (`Idempotency-Key`, so `SafeToRetryAfterUnknown`) and Bluesky (`Lookuper` with a deterministic rkey + `getRecord`) |
 
-**SSRF guard** in the new `adapters/provider/safehttp.go`, for adapters whose host the user supplies:
+**SSRF guard** in the new `adapters/safehttp`, for adapters whose host the user supplies:
 - The dialer `Control` rejects loopback, private, link-local, CGNAT and multicast addresses.
 - https only, redirects only to the same host, response capped at 1 MB.
 - Fixed-host adapters allow-list their host instead (`discord.com`, `hooks.slack.com`).

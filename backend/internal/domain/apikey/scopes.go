@@ -20,8 +20,11 @@ const (
 	PostsPublish     Scope = "posts:publish"
 	PostsDelete      Scope = "posts:delete"
 	SocialDisconnect Scope = "social:disconnect"
-	MediaWrite       Scope = "media:write"
-	AnalyticsRead    Scope = "analytics:read"
+	// SocialConnect lets a key hand a provider credential to SocialOS. It is
+	// critical and never part of DefaultScopes (see D-009).
+	SocialConnect Scope = "social:connect"
+	MediaWrite    Scope = "media:write"
+	AnalyticsRead Scope = "analytics:read"
 )
 
 // Risk classifies how dangerous a scope is.
@@ -41,6 +44,7 @@ var scopeRisk = map[Scope]Risk{
 	PostsPublish:     RiskSensitive,
 	PostsDelete:      RiskSensitive,
 	SocialDisconnect: RiskCritical,
+	SocialConnect:    RiskCritical,
 	MediaWrite:       RiskSafe,
 	AnalyticsRead:    RiskSafe,
 }

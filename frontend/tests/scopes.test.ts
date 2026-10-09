@@ -7,8 +7,8 @@ describe('scope grouping', () => {
     expect(g.safe.length + g.medium.length + g.dangerous.length).toBe(SCOPES.length);
   });
 
-  it('classifies publish, delete and disconnect as dangerous and schedule as medium', () => {
-    expect(groupScopes().dangerous.map((s) => s.scope).sort()).toEqual(['posts:delete', 'posts:publish', 'social:disconnect']);
+  it('classifies publish, delete, connect and disconnect as dangerous and schedule as medium', () => {
+    expect(groupScopes().dangerous.map((s) => s.scope).sort()).toEqual(['posts:delete', 'posts:publish', 'social:connect', 'social:disconnect']);
     expect(scopeRisk('posts:schedule')).toBe('medium');
     expect(scopeRisk('posts:read')).toBe('safe');
     expect(scopeRisk('unknown')).toBeNull();

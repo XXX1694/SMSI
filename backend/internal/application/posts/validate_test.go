@@ -44,7 +44,7 @@ func TestCheckContent(t *testing.T) {
 		"caption within limit":             {photoNet, strings.Repeat("c", 20), []media.Media{img()}, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
-			err := CheckContent("Net", tc.caps, tc.text, tc.media)
+			err := CheckContent("Net", tc.caps, "", tc.text, tc.media)
 			if tc.field == "" {
 				if err != nil {
 					t.Fatalf("unexpected: %v", err)
@@ -153,5 +153,51 @@ func TestErrInvalidStatus(t *testing.T) {
 	e, ok := errs.As(errInvalidStatus(post.Status("bogus")))
 	if !ok || e.Code != errs.Validation || e.Fields["status"] == "" || !strings.Contains(e.Message, "bogus") {
 		t.Fatalf("%v", e)
+	}
+}
+
+func TestCheckContentTitleAndImageSize(t *testing.T) {
+	article := provider.Capabilities{CanPublishText: true, CanPublishImage: true, MaxTextLength: 100, MaxMediaCount: 2, RequiresTitle: true, MaxImageBytes: 1000}
+	big := media.Media{ID: uuid.New(), Kind: media.KindImage, SizeBytes: 1001}
+	ok := media.Media{ID: uuid.New(), Kind: media.KindImage, SizeBytes: 1000}
+	for name, tc := range map[string]struct {
+		title string
+		media []media.Media
+		field string
+	}{
+		"title present":        {"Hello", nil, ""},
+		"missing title":        {"", nil, "title"},
+		"blank title":          {"  \t", nil, "title"},
+		"image at the limit":   {"T", []media.Media{ok}, ""},
+		"image over the limit": {"T", []media.Media{ok, big}, "media_ids"},
+	} {
+		err := CheckContent("Net", article, tc.title, "body", tc.media)
+		if tc.field == "" {
+			if err != nil {
+				t.Errorf("%s: %v", name, err)
+			}
+			continue
+		}
+		if e, ok := errs.As(err); !ok || e.Fields[tc.field] == "" {
+			t.Errorf("%s: want a validation error on %q, got %v", name, tc.field, err)
+		}
+	}
+	// A network without the requirement ignores the title and the size.
+	if err := CheckContent("Net", full, "", "x", []media.Media{big}); err != nil {
+		t.Errorf("no requirement: %v", err)
+	}
+}
+
+func TestCheckContentWithAccountLimits(t *testing.T) {
+	meta := map[string]any{"limits": map[string]any{"max_characters": 5, "max_media": 1}}
+	caps := full.WithAccountLimits(meta)
+	if err := CheckContent("Net", caps, "", "123456", nil); err == nil {
+		t.Error("the account's own text limit must apply")
+	}
+	if err := CheckContent("Net", caps, "", "12345", []media.Media{img(), img()}); err == nil {
+		t.Error("the account's own media limit must apply")
+	}
+	if err := CheckContent("Net", caps, "", "12345", []media.Media{img()}); err != nil {
+		t.Errorf("within both limits: %v", err)
 	}
 }
