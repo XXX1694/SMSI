@@ -119,7 +119,7 @@ export function AuditView() {
               <Td label="When" className="whitespace-nowrap text-muted-foreground">{formatDateTime(l.created_at, timezone)}</Td>
               <Td label="Actor">
                 <span>
-                  <Badge tone={l.actor_type === 'api_key' ? 'accent' : 'neutral'}>{l.actor_type.replace('_', ' ')}</Badge> {l.actor_label}
+                  <Badge tone={l.actor_type === 'api_key' ? 'accent' : 'neutral'}>{l.actor_type === 'api_key' ? 'API key' : l.actor_type === 'user' ? 'You' : l.actor_type.replace('_', ' ')}</Badge> {l.actor_label}
                 </span>
               </Td>
               <Td label="Action">

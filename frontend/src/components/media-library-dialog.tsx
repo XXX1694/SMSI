@@ -47,7 +47,7 @@ function Body({ selected, onDone }: { selected: Media[]; onDone: (m: Media[]) =>
         })}
       </ul>
       <DialogFooter>
-        <Button onClick={() => onDone(picked)}>Attach {picked.length} selected</Button>
+        <Button onClick={() => onDone(picked)}>{picked.length === 1 ? 'Attach 1 file' : `Attach ${picked.length} files`}</Button>
       </DialogFooter>
     </>
   );

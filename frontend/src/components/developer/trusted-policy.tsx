@@ -21,7 +21,7 @@ export function TrustedPolicyField({ trusted, confirmed, onTrusted, onConfirmed 
         <label htmlFor="key-trusted" className="text-sm">
           <span className="font-medium">Trusted key: do not ask me before dangerous actions.</span>
           <span className="block text-muted-foreground">
-            By default every publish, delete, disconnect and near-term schedule by this key waits for your approval in Approvals.
+            By default, dangerous actions by this key wait for your approval in Approvals.
           </span>
         </label>
       </div>

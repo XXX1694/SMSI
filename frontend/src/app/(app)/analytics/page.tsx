@@ -6,7 +6,7 @@ export const metadata = { title: 'Analytics' };
 export default function Page() {
   return (
     <>
-      <PageHeader title="Analytics" description="Performance reported by your platforms." />
+      <PageHeader title="Analytics" description="Metrics your networks report." />
       <AnalyticsView />
     </>
   );

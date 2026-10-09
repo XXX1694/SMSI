@@ -33,7 +33,7 @@ Steerpost sounds like a careful senior engineer who respects your time.
 | Error the user cannot fix | own it, then give a next step | "Steerpost could not reach LinkedIn. It will retry in 2 minutes." |
 | Dangerous action | precise about consequences | "This posts to LinkedIn and Telegram now. Steerpost cannot undo it." |
 | Empty | helpful, one next step | "No drafts yet. Write a post" |
-| Agent activity | factual and attributable | "Claude Desktop called `publish_post` (confirmed)" |
+| Agent activity | factual and attributable | "Claude Desktop called `publish_post` (approved)" |
 
 ## 3. Mechanics (English source)
 
@@ -110,10 +110,11 @@ permission**.
 3. **Confirm button**: the same verb, in danger style. **Dismiss**: "Cancel" (or "Keep …").
 4. Irreversible and wide in scope (deleting the Steerpost account, revoking a key that agents use) → the user types the
    name or email to confirm.
-5. For agents: MCP tools require `confirm: true`, and tool descriptions say "only after the user approved this exact
-   action". Until server-side approval ships (ROADMAP goal 5), UI copy must not imply that Steerpost checks the human's
-   answer. Write "The agent must send a confirmation flag", not "You will be asked to approve".
-6. Approval copy for later: "{agent} wants to publish “{post}” to {accounts} now." [Approve] [Reject]
+5. For agents: dangerous actions need the owner's approval, and the server checks it (D-013). There is no `confirm`
+   flag any more. Say "wait for your approval in Approvals", and name the exception: a key created as trusted skips
+   approval. Use "dangerous actions" in general text, and the full list (see the glossary) where a list is needed.
+6. Approval copy: "Requested by {agent}" with the action and its details. The buttons are [Approve] and [Deny]. A
+   dangerous action that cannot be undone (publish now, delete, disconnect) gets a danger-style Approve button.
 
 ## 8. Numbers
 
@@ -177,7 +178,7 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 | target (in UI) | account | user term (target stays in the API) |
 | universal content | main text | jargon |
 | native scheduling | scheduled by the network | reads as "no scheduling" |
-| needs review (post status) | unconfirmed | clashes with approvals |
+| needs review (post status), unknown outcome (attempt) | unconfirmed | clashes with approvals |
 | stub, mock (in UI) | not available yet / test network | internal |
 | leash, revive, on the fly, out of the box | plain words | idioms do not translate |
 | invalid, illegal, fatal, abort, kill, execute | say the rule; stop; run | harsh or vague |

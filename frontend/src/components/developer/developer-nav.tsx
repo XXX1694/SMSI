@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const ITEMS = [
-  { href: '/developer', label: 'API keys & logs' },
+  { href: '/developer', label: 'API keys & audit log' },
   { href: '/developer/mcp', label: 'MCP connections' },
 ];
 

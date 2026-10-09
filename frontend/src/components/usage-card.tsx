@@ -61,8 +61,8 @@ export function UsageCard() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Plan <span className="font-medium capitalize text-foreground">{data.plan}</span>. Posts are counted from {formatDateTime(data.period_start, timezone)} to{' '}
-        {formatDateTime(data.period_end, timezone)} and count once, when first scheduled or published.
+        Plan: <span className="font-medium capitalize text-foreground">{data.plan}</span>. Period: {formatDateTime(data.period_start, timezone)} –{' '}
+        {formatDateTime(data.period_end, timezone)}. A post counts once, when it is first scheduled or published.
       </p>
       {rows(data).map((r) => (
         <Meter key={r.key} row={r} />

@@ -80,7 +80,7 @@ describe('OnboardingChecklist', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     apiMock.developer.apiKeys.mockRejectedValue(new Error('down'));
     render(<OnboardingChecklist connectedAccounts={0} />);
-    expect(await screen.findByRole('link', { name: 'Go to accounts' })).toHaveAttribute('href', '/accounts');
+    expect(await screen.findByRole('link', { name: 'Connect account' })).toHaveAttribute('href', '/accounts');
     expect(screen.queryByRole('heading', { name: 'Get started' })).not.toBeInTheDocument();
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
@@ -92,7 +92,7 @@ describe('OnboardingChecklist', () => {
     render(<OnboardingChecklist connectedAccounts={1} />);
     await waitFor(() => expect(spy).toHaveBeenCalled());
     expect(screen.queryByRole('heading', { name: 'Get started' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Go to accounts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Connect account' })).not.toBeInTheDocument();
     spy.mockRestore();
   });
 
@@ -134,6 +134,6 @@ describe('OnboardingChecklist', () => {
   it('keeps a next step for an account without networks after dismissal', async () => {
     window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, '1');
     render(<OnboardingChecklist connectedAccounts={0} />);
-    expect(await screen.findByRole('link', { name: 'Go to accounts' })).toHaveAttribute('href', '/accounts');
+    expect(await screen.findByRole('link', { name: 'Connect account' })).toHaveAttribute('href', '/accounts');
   });
 });

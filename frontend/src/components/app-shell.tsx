@@ -124,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Logo animate />
         {pending ? (
           <TransitionLink href="/approvals" className="ml-auto mr-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
-            {pending} waiting for approval
+            {pending === 1 ? '1 request waits for you' : `${pending} requests wait for you`}
           </TransitionLink>
         ) : null}
         <Button variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="sidebar">

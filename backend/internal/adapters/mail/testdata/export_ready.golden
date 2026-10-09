@@ -1,7 +1,7 @@
 Subject: Your Steerpost data export is ready
 
 --- text ---
-Your Steerpost data export is ready. Download it from your settings:
+Your Steerpost data export is ready. Download it here:
 
 https://app.example.com/verify-email#token=abc123
 
@@ -13,7 +13,7 @@ Steerpost
 <!doctype html>
 <html><body style="font-family:sans-serif;line-height:1.5;color:#111">
 <p>Your Steerpost data export is ready.</p>
-<p><a href="https://app.example.com/verify-email#token=abc123">Open settings to download it</a></p>
+<p><a href="https://app.example.com/verify-email#token=abc123">Download your data</a></p>
 <p>The export is available for 48 hours.</p>
 <p style="color:#666;font-size:13px">Steerpost</p>
 </body></html>
