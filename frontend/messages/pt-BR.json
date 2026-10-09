@@ -76,9 +76,9 @@
       },
       "attempt": {
         "started": "Iniciada",
-        "succeeded": "Com sucesso",
-        "failed": "Falhou",
-        "unknown": "Não confirmado"
+        "succeeded": "Bem-sucedida",
+        "failed": "Com falha",
+        "unknown": "Não confirmada"
       }
     }
   },
@@ -284,6 +284,19 @@
       "agentsUnlimited": "Agentes de IA: sem limite de requisições.",
       "agentsLimit": "Agentes de IA: até {rpm, plural, one {# requisição} many {# de requisições} other {# requisições}} por minuto em todas as suas chaves e conexões.",
       "loadFailed": "Não foi possível carregar seu uso"
+    },
+    "yourData": "Seus dados",
+    "export": {
+      "loadFailed": "Não foi possível carregar suas exportações",
+      "intro": "Baixe um ZIP com seu perfil, seus posts com os destinos e as tentativas de publicação, as contas conectadas (sem credenciais), os nomes das chaves de API, o registro de auditoria, as aprovações e seus arquivos de mídia. Senhas, chaves e tokens nunca são incluídos.",
+      "preparing": "Preparando sua exportação. Você pode sair desta página; ela estará pronta quando você voltar.",
+      "ready": "Sua exportação ({size}) está pronta. O link de download funciona por 5 minutos; o arquivo é excluído em {date}.",
+      "failed": "Não foi possível gerar a última exportação. Nada foi guardado; tente de novo.",
+      "expired": "Sua última exportação expirou e foi excluída. Solicite uma nova.",
+      "download": "Baixar ZIP",
+      "requestNew": "Solicitar nova exportação",
+      "request": "Solicitar exportação",
+      "cooldown": "Uma nova exportação pode ser solicitada 24 horas após a última."
     }
   },
   "dashboard": {

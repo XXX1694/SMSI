@@ -261,7 +261,7 @@
     "name": "Nama",
     "email": "Email",
     "verified": "diverifikasi",
-    "notVerified": "tak diverifikasi",
+    "notVerified": "belum diverifikasi",
     "planUsage": "Paket & pemakaian",
     "preferences": "Preferensi",
     "timeZone": "Zona waktu",
@@ -284,6 +284,19 @@
       "agentsUnlimited": "Agen AI: tanpa batas permintaan.",
       "agentsLimit": "Agen AI: hingga {rpm, plural, other {# permintaan}} per menit untuk semua kunci dan koneksi Anda.",
       "loadFailed": "Pemakaian Anda tidak dapat dimuat"
+    },
+    "yourData": "Data Anda",
+    "export": {
+      "loadFailed": "Ekspor Anda tidak dapat dimuat",
+      "intro": "Unduh berkas ZIP berisi profil Anda, pos beserta tujuan dan percobaan publikasinya, akun yang terhubung (tanpa kredensial), nama kunci API, log audit, persetujuan, dan berkas media Anda. Kata sandi, kunci, dan token tidak pernah disertakan.",
+      "preparing": "Ekspor Anda sedang disiapkan. Anda boleh meninggalkan halaman ini; ekspor akan siap saat Anda kembali.",
+      "ready": "Ekspor Anda ({size}) sudah siap. Tautan unduhan berlaku 5 menit; berkas dihapus pada {date}.",
+      "failed": "Ekspor terakhir tidak dapat dibuat. Tidak ada yang disimpan; coba lagi.",
+      "expired": "Ekspor terakhir Anda telah kedaluwarsa dan dihapus. Minta ekspor baru.",
+      "download": "Unduh ZIP",
+      "requestNew": "Minta ekspor baru",
+      "request": "Minta ekspor",
+      "cooldown": "Ekspor baru dapat diminta 24 jam setelah ekspor terakhir."
     }
   },
   "dashboard": {

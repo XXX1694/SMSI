@@ -122,7 +122,7 @@
     },
     "demo": {
       "label": "Démo",
-      "banner": "<b>Démo</b> — données gardées dans le navigateur ·",
+      "banner": "<b>Démo</b> — données locales ·",
       "reset": "Rétablir",
       "about": "À propos de Steerpost",
       "resetTitle": "Rétablir la démo ?",
@@ -284,6 +284,19 @@
       "agentsUnlimited": "Agents IA : aucune limite de requêtes.",
       "agentsLimit": "Agents IA : jusqu’à {rpm, plural, one {# requête} many {# de requêtes} other {# requêtes}} par minute pour l’ensemble de vos clés et connexions.",
       "loadFailed": "Impossible de charger votre utilisation"
+    },
+    "yourData": "Vos données",
+    "export": {
+      "loadFailed": "Impossible de charger vos exports",
+      "intro": "Téléchargez un ZIP contenant votre profil, vos posts avec leurs destinations et leurs tentatives de publication, les comptes connectés (sans identifiants), les noms de vos clés d’API, le journal d’audit, les approbations et vos fichiers multimédias. Les mots de passe, les clés et les jetons ne sont jamais inclus.",
+      "preparing": "Préparation de votre export. Vous pouvez quitter cette page ; il sera prêt à votre retour.",
+      "ready": "Votre export ({size}) est prêt. Le lien de téléchargement fonctionne 5 minutes ; le fichier est supprimé le {date}.",
+      "failed": "Le dernier export n’a pas pu être créé. Rien n’a été conservé ; réessayez.",
+      "expired": "Votre dernier export a expiré et a été supprimé. Demandez-en un nouveau.",
+      "download": "Télécharger le ZIP",
+      "requestNew": "Demander un nouvel export",
+      "request": "Demander un export",
+      "cooldown": "Vous pouvez demander un nouvel export 24 heures après le dernier."
     }
   },
   "dashboard": {
@@ -570,7 +583,7 @@
     "time": "Heure",
     "timezoneNote": "Fuseau horaire : {timezone}. Modifiez-le dans Paramètres.",
     "keepSchedule": "Laissez l’heure telle quelle pour conserver la planification actuelle.",
-    "saveDraft": "Enregistrer",
+    "saveDraft": "Enregistrer le brouillon",
     "scheduleAction": "Planifier",
     "publishNow": "Publier maintenant",
     "publishConfirmTitle": "Publier maintenant ?",

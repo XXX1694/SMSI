@@ -284,6 +284,19 @@
       "agentsUnlimited": "KI-Agenten: kein Anfragelimit.",
       "agentsLimit": "KI-Agenten: bis zu {rpm, plural, one {# Anfrage} other {# Anfragen}} pro Minute für alle deine Schlüssel und Verbindungen.",
       "loadFailed": "Nutzung konnte nicht geladen werden"
+    },
+    "yourData": "Deine Daten",
+    "export": {
+      "loadFailed": "Exporte konnten nicht geladen werden",
+      "intro": "Lade ein ZIP mit deinem Profil, deinen Beiträgen samt Zielen und Veröffentlichungsversuchen, den verbundenen Konten (ohne Zugangsdaten), den Namen deiner API-Schlüssel, dem Audit-Log, den Freigaben und deinen Mediendateien herunter. Passwörter, Schlüssel und Tokens sind nie enthalten.",
+      "preparing": "Dein Export wird vorbereitet. Du kannst diese Seite verlassen; er ist fertig, wenn du zurückkommst.",
+      "ready": "Dein Export ({size}) ist fertig. Der Download-Link funktioniert 5 Minuten; die Datei wird am {date} gelöscht.",
+      "failed": "Der letzte Export konnte nicht erstellt werden. Nichts wurde gespeichert; versuche es erneut.",
+      "expired": "Dein letzter Export ist abgelaufen und wurde gelöscht. Fordere einen neuen an.",
+      "download": "ZIP herunterladen",
+      "requestNew": "Neuen Export anfordern",
+      "request": "Export anfordern",
+      "cooldown": "24 Stunden nach dem letzten Export kannst du einen neuen anfordern."
     }
   },
   "dashboard": {

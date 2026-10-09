@@ -122,7 +122,7 @@
     },
     "demo": {
       "label": "Demo",
-      "banner": "<b>Demo</b> — los datos quedan en tu navegador ·",
+      "banner": "<b>Demo</b> — datos en tu navegador ·",
       "reset": "Restablecer",
       "about": "Acerca de Steerpost",
       "resetTitle": "¿Restablecer la demo?",
@@ -284,6 +284,19 @@
       "agentsUnlimited": "Agentes de IA: sin límite de solicitudes.",
       "agentsLimit": "Agentes de IA: hasta {rpm, plural, one {# solicitud} many {# de solicitudes} other {# solicitudes}} por minuto entre todas tus claves y conexiones.",
       "loadFailed": "No se pudo cargar tu uso"
+    },
+    "yourData": "Tus datos",
+    "export": {
+      "loadFailed": "No se pudieron cargar tus exportaciones",
+      "intro": "Descarga un ZIP con tu perfil, tus publicaciones con sus destinos e intentos de publicación, las cuentas conectadas (sin credenciales), los nombres de las claves de API, el registro de auditoría, las aprobaciones y tus archivos multimedia. Nunca se incluyen contraseñas, claves ni tokens.",
+      "preparing": "Preparando tu exportación. Puedes salir de esta página; estará lista cuando vuelvas.",
+      "ready": "Tu exportación ({size}) está lista. El enlace de descarga funciona 5 minutos; el archivo se elimina el {date}.",
+      "failed": "No se pudo crear la última exportación. No se guardó nada; vuelve a intentarlo.",
+      "expired": "Tu última exportación caducó y se eliminó. Solicita una nueva.",
+      "download": "Descargar ZIP",
+      "requestNew": "Solicitar otra exportación",
+      "request": "Solicitar exportación",
+      "cooldown": "Puedes solicitar una nueva exportación 24 horas después de la última."
     }
   },
   "dashboard": {
