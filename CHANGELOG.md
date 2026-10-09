@@ -26,6 +26,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- i18n groundwork before the first real locale: sentences that were assembled from pieces are single ICU messages now (approvals badge "99+" with the real count for screen readers, "+N more on {date}" with a locale-formatted date, capability badges one sentence per state, the locked-post notice picked by status code); an empty network id reads "Unknown" everywhere (`providerName`, `useProviderName`) instead of "Text on " or an empty list; the dashboard no longer overflows 320 px in the pseudo-locale; the count-only approvals pill on mobile shows the Approvals icon. Dates in the approval summary follow the locale like everywhere else, the duplicate `formatDateTime` in `lib/time` is gone, and ESLint bans it, `providerLabel` in UI code, `toLocale*String` and hard-coded `en-GB`/`en-US`. The pseudo-locale test now covers the dashboard, composer, post detail, calendar, accounts, developer and settings screens.
 - Plural forms in the UI come from ICU messages: "1 requests per minute" for agents is now "1 request per minute", and the same rule covers attempts, accounts, attachments and characters.
 - A failed publishing attempt whose server message is only a code shows the sentence for the attempt's error code (before: the generic "Something went wrong").
 - Outside English the UI never shows the server's English error text; it shows the sentence for the error code from the catalog (field-level messages of the token form are mapped to catalog keys).

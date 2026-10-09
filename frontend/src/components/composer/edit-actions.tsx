@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { validateComposer, type ValidationIssue } from '@/lib/composer';
 import { postHref } from '@/lib/demo/config';
 import { buildUpdate, formFromPost, freshness, type FormValues } from '@/lib/post-edit';
-import { postActions, postStatusView } from '@/lib/status';
+import { postActions } from '@/lib/status';
 import type { Post, Provider, SocialAccount } from '@/lib/types';
 import { useErrorText } from '@/hooks';
 import { Feedback } from './issue-list';
@@ -33,14 +33,13 @@ interface Props {
 type Kind = 'save' | 'schedule';
 
 function Conflict({ latest, onLoad, onForce }: { latest: Post; onLoad: () => void; onForce: () => void }) {
-  const t = useTranslations();
   const tc = useTranslations('composer');
   const stillEditable = postActions(latest.status).edit;
   return (
     <div className="space-y-3" role="alert">
       <Notice tone="danger">
         <span className="font-medium">{tc('conflictTitle')}</span>{' '}
-        {stillEditable ? tc('conflictEditable') : tc('conflictLocked', { status: postStatusView(latest.status, t).label })}
+        {stillEditable ? tc('conflictEditable') : tc('conflictLocked', { status: latest.status })}
       </Notice>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={onLoad}>

@@ -7,9 +7,31 @@
     "@typescript-eslint/no-explicit-any": "error",
     "@next/next/no-img-element": "off",
     "max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
-    "max-lines-per-function": ["error", { "max": 80, "skipBlankLines": true, "skipComments": true }]
+    "max-lines-per-function": ["error", { "max": 80, "skipBlankLines": true, "skipComments": true }],
+    "no-restricted-imports": ["error", {
+      "paths": [
+        { "name": "@/lib/time", "importNames": ["formatDateTime"], "message": "Use useFormat() or '@/i18n/format': they follow the user's locale and time zone." },
+        { "name": "./time", "importNames": ["formatDateTime"], "message": "Use useFormat() or '@/i18n/format': they follow the user's locale and time zone." }
+      ]
+    }]
   },
   "overrides": [
+    {
+      // UI code names networks through useProviderName() (an empty id reads "Unknown") and formats through useFormat().
+      "files": ["src/components/**", "src/app/**"],
+      "rules": {
+        "no-restricted-imports": ["error", {
+          "paths": [
+            { "name": "@/lib/time", "importNames": ["formatDateTime"], "message": "Use useFormat() or '@/i18n/format': they follow the user's locale and time zone." },
+            { "name": "@/lib/normalize", "importNames": ["providerLabel"], "message": "Use useProviderName(): an empty network id must read \"Unknown\", not an empty string." }
+          ]
+        }],
+        "no-restricted-syntax": ["error",
+          { "selector": "Literal[value=/^en-(GB|US)$/]", "message": "Do not hard-code a locale; take it from useFormat() / useLocaleSettings()." },
+          { "selector": "CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/]", "message": "Use useFormat(): toLocale*String ignores the user's locale and time zone." }
+        ]
+      }
+    },
     {
       "files": ["**/*.test.ts", "**/*.test.tsx", "tests/**"],
       "rules": {

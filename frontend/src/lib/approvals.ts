@@ -1,7 +1,7 @@
 import { providerLabel } from './normalize';
 import { postStatusView } from './status';
-import { formatDateTime } from './time';
-import { joinList } from './format';
+import { formatDateTime } from '@/i18n/format';
+import { joinList, providerName } from './format';
 import type { AppT } from '@/i18n/translate';
 import type { Approval, ApprovalAction } from './types';
 
@@ -68,7 +68,7 @@ function sentence(key: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** `linkedin · @alex` -> `LinkedIn · @alex`: the server sends network ids. */
+/** `linkedin · @alex` -> `LinkedIn · @alex`: the server sends network ids. The id is never empty here (the pattern needs a character). */
 function named(account: string): string {
   return account.replace(/^[a-z0-9_]+(?= · )/, providerLabel);
 }
@@ -102,10 +102,10 @@ export function summaryLines(a: Approval, timezone: string, t: AppT): SummaryLin
     const raw = a.summary[key];
     if (key === 'platforms' && Array.isArray(a.summary.accounts)) continue; // the accounts line says it with names
     if (key === 'targets' && Array.isArray(raw)) {
-      for (const tg of raw) if (isRec(tg)) add(t('approvals.summary.textOn', { account: named(asText(tg.account)) || providerLabel(asText(tg.platform)) }), asText(tg.content));
+      for (const tg of raw) if (isRec(tg)) add(t('approvals.summary.textOn', { account: named(asText(tg.account)) || providerName(asText(tg.platform), t) }), asText(tg.content));
     } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw, t));
-    else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone, t.locale));
-    else if ((key === 'platforms' || key === 'provider') && asText(raw)) add(label, joinList(asText(raw).split(', ').map(providerLabel), t));
+    else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, t.locale, timezone));
+    else if ((key === 'platforms' || key === 'provider') && asText(raw)) add(label, joinList(asText(raw).split(', ').map((id) => providerName(id, t)), t));
     else if (key === 'accounts' && Array.isArray(raw)) add(label, joinList(raw.map((x) => named(String(x))), t));
     else add(label, asText(raw));
   }
