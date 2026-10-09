@@ -35,17 +35,15 @@ const config: Config = {
           strong: 'hsl(var(--secondary-strong) / <alpha-value>)',
         },
         canvas: 'hsl(var(--canvas) / <alpha-value>)',
+        // A complete colour with its alpha built in: the dim behind dialogs.
+        scrim: 'var(--scrim)',
         chart: {
           1: 'hsl(var(--chart-1) / <alpha-value>)',
           2: 'hsl(var(--chart-2) / <alpha-value>)',
           3: 'hsl(var(--chart-3) / <alpha-value>)',
           4: 'hsl(var(--chart-4) / <alpha-value>)',
         },
-        // Complete colours with their alpha built in (composited glass, D-024): no <alpha-value>.
-        glass: { chrome: 'var(--glass-chrome)', card: 'var(--glass-card)', strong: 'var(--glass-strong)', border: 'var(--glass-border)' },
       },
-      backdropBlur: { chrome: 'var(--glass-blur-chrome)', strong: 'var(--glass-blur-strong)', hero: 'var(--glass-blur-hero)' },
-      backdropSaturate: { glass: 'var(--glass-saturate)' },
       fontSize: {
         '2xs': ['var(--text-2xs)', 'var(--text-2xs-leading)'],
         xs: ['var(--text-xs)', 'var(--text-xs-leading)'],
@@ -62,13 +60,8 @@ const config: Config = {
       minHeight: { screen: SCREEN_HEIGHT },
       spacing: { gutter: 'var(--space-gutter)', stack: 'var(--space-stack)', section: 'var(--space-section)' },
       borderRadius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)' },
-      boxShadow: {
-        md: 'var(--shadow-md)',
-        lg: 'var(--shadow-lg)',
-        pop: 'var(--shadow-pop)',
-        glass: 'var(--glass-highlight), var(--shadow-glass)',
-        'glass-strong': 'var(--glass-highlight), var(--shadow-glass-strong)',
-      },
+      // Glass surfaces are the .glass-* classes in globals.css (D-024), not utilities: blur, tint, edge and fallbacks travel together.
+      boxShadow: { md: 'var(--shadow-md)', lg: 'var(--shadow-lg)', pop: 'var(--shadow-pop)' },
       zIndex: { banner: 'var(--z-banner)', overlay: 'var(--z-overlay)', toast: 'var(--z-toast)' },
       transitionDuration: { DEFAULT: 'var(--duration-fast)', fast: 'var(--duration-fast)', base: 'var(--duration-base)', slow: 'var(--duration-slow)', hero: 'var(--duration-hero)' },
       transitionTimingFunction: {

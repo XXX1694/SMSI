@@ -536,17 +536,19 @@ write(
 write('.nojekyll', '');
 
 // Fonts (D-024): Onest on every page, the Arabic, Japanese and Chinese faces only on their own landing page, each cut to the
-// unicode-range slices those pages use. Runs before the demo is copied in: the demo bundles its own fonts.
+// unicode-range slices those pages use, each with its OFL licence. Runs before the demo is copied in: the demo bundles its own
+// fonts.
 {
   const htmlFiles = (dir) =>
     readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? htmlFiles(join(dir, e.name)) : e.name.endsWith('.html') ? [join(dir, e.name)] : []));
   const fontsDir = join(dist, 'assets/fonts');
   const pkg = (name) => join(here, 'node_modules/@fontsource-variable', name);
   const everything = new Set(htmlFiles(dist).flatMap((f) => [...codePoints(pageText(read(f)))]));
-  write('assets/fonts/onest.css', fontFaces({ pkgDir: pkg('onest'), points: everything, outDir: fontsDir, urlPrefix: '' }).css);
+  write('assets/fonts/onest.css', fontFaces({ pkgDir: pkg('onest'), points: everything, outDir: fontsDir }));
+  // Script faces never shift the layout: if one is late, that view keeps the system face (font-display: optional).
   for (const loc of built.filter((l) => SCRIPT_FONTS[l.code])) {
     const points = codePoints(pageText(read(join(dist, pathOf(loc), 'index.html'))));
-    write(`assets/fonts/${loc.code}.css`, fontFaces({ pkgDir: pkg(SCRIPT_FONTS[loc.code]), points, outDir: fontsDir, urlPrefix: '' }).css);
+    write(`assets/fonts/${loc.code}.css`, fontFaces({ pkgDir: pkg(SCRIPT_FONTS[loc.code]), points, outDir: fontsDir, display: 'optional' }));
   }
 }
 

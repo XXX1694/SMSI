@@ -79,8 +79,8 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
 
 @layer components {
   /* Glass (D-024). chrome: sidebar and headers. card: translucent panels, no blur (the mesh behind is already soft).
-     float: popovers, menus, toasts. panel: dialogs, near-solid; their overlay carries the only blur. At most two blurred
-     layers on screen, and never on anything that scrolls under the pointer. */
+     float: popovers, menus, toasts. panel: dialogs, a solid fill with the glass edge, over a plain scrim (no blur). At most two blurred layers on
+     screen, and never on anything that scrolls under the pointer. */
   .glass-chrome {
     background-color: var(--glass-chrome);
     -webkit-backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
@@ -100,8 +100,9 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
     border-color: var(--glass-border);
     box-shadow: var(--glass-highlight), var(--shadow-glass-strong);
   }
+  /* Solid fill: without a blur behind it, any translucency would let the page's text show through the dialog's. */
   .glass-panel {
-    background-color: var(--glass-strong);
+    background-color: hsl(var(--background));
     border-color: var(--glass-border);
     box-shadow: var(--glass-highlight), var(--shadow-glass-strong);
   }
@@ -134,8 +135,7 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
 
 /* Glass fallbacks: no backdrop-filter (old engines), reduced transparency, and forced colours (Windows high contrast). */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass-chrome { background-color: color-mix(in srgb, hsl(var(--secondary)) 35%, hsl(var(--background))); }
-  .glass-float, .glass-panel { background-color: hsl(var(--background)); }
+  .glass-chrome, .glass-float { background-color: hsl(var(--surface)); }
 }
 @media (prefers-reduced-transparency: reduce) {
   .glass-chrome, .glass-card, .glass-float, .glass-panel { background-color: hsl(var(--background)); -webkit-backdrop-filter: none; backdrop-filter: none; }
