@@ -191,3 +191,33 @@ describe('parseErrorBody fields', () => {
     expect(parseErrorBody(500, null).fields).toEqual({});
   });
 });
+
+describe('provider sign-in endpoints', () => {
+  it('reads the providers, tolerating junk entries', async () => {
+    mockFetch(200, { providers: [{ id: 'github', name: 'GitHub' }, { id: 'google' }, { name: 'no id' }, 5] });
+    await expect(api.auth.signInProviders()).resolves.toEqual([{ id: 'github', name: 'GitHub' }, { id: 'google', name: 'google' }]);
+    mockFetch(200, {});
+    await expect(api.auth.signInProviders()).resolves.toEqual([]);
+  });
+
+  it('builds the start URL for a full-page navigation, with next only when there is one', () => {
+    expect(api.auth.socialStartUrl('github', null)).toBe('/api/v1/auth/oauth/github/start');
+    expect(api.auth.socialStartUrl('google', '/compose?post=1')).toBe('/api/v1/auth/oauth/google/start?next=%2Fcompose%3Fpost%3D1');
+  });
+
+  it('reads the pending sign-up and completes it with the Terms flag', async () => {
+    mockFetch(200, { provider: 'github', email: 'a@example.com', display_name: 'Ann', next: '/posts' });
+    await expect(api.auth.pendingSignup()).resolves.toEqual({ provider: 'github', email: 'a@example.com', display_name: 'Ann', next: '/posts' });
+    const fn = mockFetch(201, { id: 'u', email: 'a@example.com', display_name: 'Ann', csrf_token: 'c' });
+    await expect(api.auth.completeSignup({ display_name: 'Ann', accept_terms: true })).resolves.toMatchObject({ email: 'a@example.com', csrf_token: 'c' });
+    const [url, init] = fn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/v1/auth/oauth/complete');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe(JSON.stringify({ display_name: 'Ann', accept_terms: true }));
+  });
+
+  it('turns a missing ticket into a 404 error', async () => {
+    mockFetch(404, { error: { code: 'NOT_FOUND', message: 'no sign-up is waiting' } });
+    await expect(api.auth.pendingSignup()).rejects.toMatchObject({ status: 404 });
+  });
+});

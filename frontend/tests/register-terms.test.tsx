@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const auth = vi.hoisted(() => ({ login: vi.fn(), register: vi.fn() }));
+const apiMock = vi.hoisted(() => ({ auth: { signInProviders: vi.fn() } }));
+vi.mock('@/lib/api', async () => ({ ...(await vi.importActual<typeof import('@/lib/api')>('@/lib/api')), api: apiMock }));
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock('@/components/auth-provider', () => ({ useAuth: () => auth }));
 vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => new URLSearchParams('') }));
@@ -10,13 +12,13 @@ vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: ()
 import { AuthForm } from '@/components/auth-form';
 
 beforeEach(() => {
+  apiMock.auth.signInProviders.mockResolvedValue([]);
   auth.register.mockReset();
   auth.register.mockResolvedValue(undefined);
   router.replace.mockReset();
 });
 
 async function fill(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('Name'), 'Sam');
   await user.type(screen.getByLabelText('Email'), 'sam@example.com');
   await user.type(screen.getByLabelText('Password'), 'longenough1');
 }
@@ -44,7 +46,7 @@ describe('register form terms', () => {
     await fill(user);
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Create account' }));
-    await waitFor(() => expect(auth.register).toHaveBeenCalledWith('sam@example.com', 'longenough1', 'Sam', true));
+    await waitFor(() => expect(auth.register).toHaveBeenCalledWith('sam@example.com', 'longenough1', '', true));
     expect(router.replace).toHaveBeenCalledWith('/dashboard');
   });
 

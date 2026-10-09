@@ -100,7 +100,8 @@
     "NETWORK": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
     "UNKNOWN": "Une erreur s’est produite. Réessayez.",
     "access_denied": "La connexion a été annulée, ou l’accès n’a pas été accordé.",
-    "withRef": "{text} (réf. {id})"
+    "withRef": "{text} (réf. {id})",
+    "REAUTH_REQUIRED": "Reconnectez-vous pour continuer."
   },
   "shell": {
     "skipToContent": "Aller au contenu",
@@ -115,10 +116,7 @@
       "verifyHeading": "Vérifiez votre adresse e-mail.",
       "verifyBody": "Steerpost a envoyé un lien à <addr>{email}</addr>. Tant que vous ne l’avez pas ouvert, vous ne pouvez ni connecter de comptes, ni planifier ou publier des posts, ni créer de clés d’API.",
       "sent": "Lien envoyé. Vérifiez votre boîte de réception.",
-      "resend": "Renvoyer l’e-mail",
-      "logHeading": "L’envoi d’e-mails n’est pas configuré sur ce serveur.",
-      "logBody": "Les e-mails de vérification et de réinitialisation du mot de passe ne sont pas envoyés. L’administrateur du serveur peut configurer l’envoi d’e-mails.",
-      "dismiss": "Masquer l’avis sur l’e-mail"
+      "resend": "Renvoyer l’e-mail"
     },
     "demo": {
       "label": "Démo",
@@ -158,7 +156,6 @@
     "createAccount": "Créer un compte",
     "noAccount": "Pas de compte ? <link>Créez-en un</link>",
     "haveAccount": "Déjà un compte ? <link>Connectez-vous</link>",
-    "passwordShort": "Le mot de passe doit comporter au moins 8 caractères.",
     "acceptTerms": "Acceptez les Conditions d’utilisation et la Politique de confidentialité pour créer un compte.",
     "backToSignIn": "Retour à la connexion",
     "repeatPassword": "Répétez le nouveau mot de passe",
@@ -197,7 +194,35 @@
       "invalidBody": "Il a peut-être expiré ou déjà été utilisé. Les liens ne fonctionnent qu’une fois et restent valables 48 heures.",
       "signInToRequest": "Connectez-vous pour demander un lien"
     },
-    "deletedNotice": "La suppression de votre compte est programmée. Toutes les sessions ont été fermées et les clés d’API révoquées. Connectez-vous avant la fin du délai pour voir la date et l’annuler."
+    "deletedNotice": "La suppression de votre compte est programmée. Toutes les sessions ont été fermées et les clés d’API révoquées. Connectez-vous avant la fin du délai pour voir la date et l’annuler.",
+    "continueWith": "Continuer avec {provider}",
+    "signInAgainWith": "Se reconnecter avec {provider}",
+    "orDivider": "ou",
+    "providersLoading": "Chargement des options de connexion…",
+    "providersFailed": "Impossible de charger les options de connexion. Vous pouvez toujours utiliser votre e-mail.",
+    "emailRequired": "Saisissez votre adresse e-mail.",
+    "emailInvalid": "Saisissez une adresse e-mail valide, par exemple nom@example.com.",
+    "passwordRequired": "Saisissez votre mot de passe.",
+    "passwordLength": "Utilisez de 8 à 128 caractères.",
+    "fixFields": "Corrigez les champs en surbrillance pour continuer.",
+    "duplicateEmail": "Un compte existe déjà avec cet e-mail. Connectez-vous ou réinitialisez votre mot de passe.",
+    "loginError": {
+      "oauth_cancelled": "La connexion a été annulée. Réessayez ou utilisez votre e-mail et votre mot de passe.",
+      "oauth_state_invalid": "Le lien de connexion a expiré ou a été ouvert dans un autre navigateur. Recommencez depuis cette page.",
+      "oauth_provider_error": "{provider, select, google {La connexion n’a pas abouti : Google a signalé un problème. Réessayez dans un instant ou utilisez votre e-mail.} github {La connexion n’a pas abouti : GitHub a signalé un problème. Réessayez dans un instant ou utilisez votre e-mail.} other {La connexion n’a pas abouti, car le fournisseur a signalé un problème. Réessayez dans un instant ou utilisez votre e-mail.}}",
+      "email_unverified": "{provider, select, google {Votre adresse e-mail n’est pas vérifiée. Vérifiez votre e-mail principal chez Google, puis réessayez.} github {Votre adresse e-mail n’est pas vérifiée. Vérifiez votre e-mail principal chez GitHub, puis réessayez.} other {Votre adresse e-mail n’est pas vérifiée. Vérifiez votre e-mail principal auprès de votre fournisseur de connexion, puis réessayez.}}",
+      "account_exists": "{provider, select, google {Un compte existe déjà avec cet e-mail. Connectez-vous avec votre mot de passe, puis associez Google dans les paramètres.} github {Un compte existe déjà avec cet e-mail. Connectez-vous avec votre mot de passe, puis associez GitHub dans les paramètres.} other {Un compte existe déjà avec cet e-mail. Connectez-vous avec votre mot de passe, puis associez votre fournisseur de connexion dans les paramètres.}}",
+      "identity_in_use": "Ce compte est déjà associé à un autre compte Steerpost. Connectez-vous à ce compte.",
+      "account_unavailable": "Ce compte ne peut pas se connecter pour le moment. Contactez la personne qui gère ce serveur.",
+      "signup_expired": "L’inscription a expiré. Recommencez depuis cette page.",
+      "unknown": "La connexion a échoué. Réessayez."
+    },
+    "signupComplete": {
+      "title": "Terminez la création de votre compte",
+      "intro": "{provider, select, google {Vous êtes connecté avec Google. Acceptez les Conditions d’utilisation pour créer votre compte.} github {Vous êtes connecté avec GitHub. Acceptez les Conditions d’utilisation pour créer votre compte.} other {Vous êtes connecté avec un fournisseur. Acceptez les Conditions d’utilisation pour créer votre compte.}}",
+      "emailHint": "{provider, select, google {Vérifiée par Google. Vous ne pouvez pas la modifier ici.} github {Vérifiée par GitHub. Vous ne pouvez pas la modifier ici.} other {Vérifiée par votre fournisseur de connexion. Vous ne pouvez pas la modifier ici.}}",
+      "nameTooLong": "Utilisez 100 caractères au maximum."
+    }
   },
   "posts": {
     "editBlockedPublishing": "Ce post est en cours de publication et ne peut pas être modifié.",
@@ -318,7 +343,9 @@
       "yourEmail": "votre e-mail",
       "wrongPassword": "Ce n’est pas votre mot de passe actuel.",
       "wrongConfirm": "Saisissez votre adresse e-mail exactement comme indiquée.",
-      "submit": "Supprimer mon compte"
+      "submit": "Supprimer mon compte",
+      "passwordHint": "Inscrit avec Google ou GitHub ? Laissez ce champ vide.",
+      "reauthBody": "Pour votre sécurité, reconnectez-vous pour supprimer votre compte. Vous reviendrez ensuite dans les paramètres."
     }
   },
   "dashboard": {

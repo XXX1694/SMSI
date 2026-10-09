@@ -100,7 +100,8 @@
     "NETWORK": "无法连接服务器。请检查网络连接后重试。",
     "UNKNOWN": "出了点问题。请重试。",
     "access_denied": "登录已取消，或未获得授权。",
-    "withRef": "{text}（请求 ID {id}）"
+    "withRef": "{text}（请求 ID {id}）",
+    "REAUTH_REQUIRED": "请重新登录以继续。"
   },
   "shell": {
     "skipToContent": "跳到正文",
@@ -115,10 +116,7 @@
       "verifyHeading": "请验证你的邮箱。",
       "verifyBody": "Steerpost 已向 <addr>{email}</addr> 发送了一个链接。在你打开该链接之前，无法连接账号、定时或发布帖子，也无法创建 API 密钥。",
       "sent": "链接已发送。请查收邮件。",
-      "resend": "重新发送邮件",
-      "logHeading": "此服务器未配置邮件发送。",
-      "logBody": "验证邮件和重置密码邮件不会发出。服务器管理员可以设置邮件发送。",
-      "dismiss": "关闭邮件通知"
+      "resend": "重新发送邮件"
     },
     "demo": {
       "label": "演示",
@@ -158,7 +156,6 @@
     "createAccount": "创建账号",
     "noAccount": "还没有账号？<link>立即创建</link>",
     "haveAccount": "已有账号？<link>登录</link>",
-    "passwordShort": "密码至少需要 8 个字符。",
     "acceptTerms": "请同意服务条款和隐私政策以创建账号。",
     "backToSignIn": "返回登录",
     "repeatPassword": "再次输入新密码",
@@ -197,7 +194,35 @@
       "invalidBody": "链接可能已过期或已被使用。链接只能使用一次，有效期 48 小时。",
       "signInToRequest": "登录以获取新链接"
     },
-    "deletedNotice": "账号删除已排期。所有会话都已退出登录，API 密钥已吊销。请在宽限期结束前登录，查看日期并取消删除。"
+    "deletedNotice": "账号删除已排期。所有会话都已退出登录，API 密钥已吊销。请在宽限期结束前登录，查看日期并取消删除。",
+    "continueWith": "使用 {provider} 继续",
+    "signInAgainWith": "使用 {provider} 重新登录",
+    "orDivider": "或",
+    "providersLoading": "正在加载登录方式…",
+    "providersFailed": "无法加载登录方式。你仍可使用邮箱登录。",
+    "emailRequired": "请输入你的邮箱地址。",
+    "emailInvalid": "请输入有效的邮箱地址，例如 name@example.com。",
+    "passwordRequired": "请输入你的密码。",
+    "passwordLength": "请使用 8–128 个字符。",
+    "fixFields": "请修正高亮的字段后继续。",
+    "duplicateEmail": "该邮箱已有账号。请登录，或重置密码。",
+    "loginError": {
+      "oauth_cancelled": "登录已取消。请重试，或使用邮箱和密码登录。",
+      "oauth_state_invalid": "登录链接已过期，或在其他浏览器中打开。请从此页面重新开始。",
+      "oauth_provider_error": "{provider, select, google {登录未完成：Google 报告了问题。请稍后重试，或使用邮箱登录。} github {登录未完成：GitHub 报告了问题。请稍后重试，或使用邮箱登录。} other {登录未完成：提供方报告了问题。请稍后重试，或使用邮箱登录。}}",
+      "email_unverified": "{provider, select, google {你的邮箱地址尚未验证。请在 Google 上验证主邮箱，然后重试。} github {你的邮箱地址尚未验证。请在 GitHub 上验证主邮箱，然后重试。} other {你的邮箱地址尚未验证。请在登录所用的提供方处验证主邮箱，然后重试。}}",
+      "account_exists": "{provider, select, google {该邮箱已有账号。请使用密码登录，然后在设置中关联 Google。} github {该邮箱已有账号。请使用密码登录，然后在设置中关联 GitHub。} other {该邮箱已有账号。请使用密码登录，然后在设置中关联你的登录提供方。}}",
+      "identity_in_use": "该账号已关联到另一个 Steerpost 账号。请登录那个账号。",
+      "account_unavailable": "此账号目前无法登录。请联系运营此服务器的人。",
+      "signup_expired": "注册已过期。请从此页面重新开始。",
+      "unknown": "登录失败。请重试。"
+    },
+    "signupComplete": {
+      "title": "完成创建账号",
+      "intro": "{provider, select, google {你已使用 Google 登录。接受服务条款即可创建账号。} github {你已使用 GitHub 登录。接受服务条款即可创建账号。} other {你已通过提供方登录。接受服务条款即可创建账号。}}",
+      "emailHint": "{provider, select, google {已由 Google 验证。无法在此修改。} github {已由 GitHub 验证。无法在此修改。} other {已由你的登录提供方验证。无法在此修改。}}",
+      "nameTooLong": "请使用不超过 100 个字符。"
+    }
   },
   "posts": {
     "editBlockedPublishing": "此帖子正在发布，暂时无法修改。",
@@ -318,7 +343,9 @@
       "yourEmail": "你的邮箱",
       "wrongPassword": "这不是当前密码。",
       "wrongConfirm": "请按所示内容准确输入邮箱地址。",
-      "submit": "删除我的账号"
+      "submit": "删除我的账号",
+      "passwordHint": "通过 Google 或 GitHub 注册的？请留空。",
+      "reauthBody": "为了安全，请重新登录后再删除账号。完成后你会回到设置。"
     }
   },
   "dashboard": {

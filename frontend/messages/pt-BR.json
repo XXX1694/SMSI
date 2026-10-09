@@ -100,7 +100,8 @@
     "NETWORK": "Não foi possível acessar o servidor. Verifique sua conexão e tente de novo.",
     "UNKNOWN": "Algo deu errado. Tente de novo.",
     "access_denied": "O login foi cancelado ou o acesso não foi concedido.",
-    "withRef": "{text} (ref {id})"
+    "withRef": "{text} (ref {id})",
+    "REAUTH_REQUIRED": "Entre novamente para continuar."
   },
   "shell": {
     "skipToContent": "Ir para o conteúdo",
@@ -115,10 +116,7 @@
       "verifyHeading": "Verifique seu e-mail.",
       "verifyBody": "O Steerpost enviou um link para <addr>{email}</addr>. Até você abri-lo, não é possível conectar contas, agendar ou publicar posts, nem criar chaves de API.",
       "sent": "Link enviado. Confira sua caixa de entrada.",
-      "resend": "Reenviar e-mail",
-      "logHeading": "O envio de e-mails não está configurado neste servidor.",
-      "logBody": "Os e-mails de verificação e de redefinição de senha não são enviados. O administrador do servidor pode configurar o e-mail.",
-      "dismiss": "Dispensar aviso de e-mail"
+      "resend": "Reenviar e-mail"
     },
     "demo": {
       "label": "Demo",
@@ -158,7 +156,6 @@
     "createAccount": "Criar conta",
     "noAccount": "Não tem conta? <link>Crie uma</link>",
     "haveAccount": "Já tem conta? <link>Entre</link>",
-    "passwordShort": "A senha deve ter pelo menos 8 caracteres.",
     "acceptTerms": "Aceite os Termos e a Política de Privacidade para criar uma conta.",
     "backToSignIn": "Voltar para entrar",
     "repeatPassword": "Repita a nova senha",
@@ -197,7 +194,35 @@
       "invalidBody": "Ele pode ter expirado ou já ter sido usado. Os links funcionam uma vez e valem por 48 horas.",
       "signInToRequest": "Entre para pedir um novo link"
     },
-    "deletedNotice": "A exclusão da sua conta está agendada. Todas as sessões foram encerradas e as chaves de API, revogadas. Entre antes do fim do prazo para ver a data e cancelar."
+    "deletedNotice": "A exclusão da sua conta está agendada. Todas as sessões foram encerradas e as chaves de API, revogadas. Entre antes do fim do prazo para ver a data e cancelar.",
+    "continueWith": "Continuar com {provider}",
+    "signInAgainWith": "Entrar novamente com {provider}",
+    "orDivider": "ou",
+    "providersLoading": "Carregando opções de entrada…",
+    "providersFailed": "Não foi possível carregar as opções de entrada. Você ainda pode usar seu e-mail.",
+    "emailRequired": "Informe seu e-mail.",
+    "emailInvalid": "Informe um e-mail válido, por exemplo nome@example.com.",
+    "passwordRequired": "Informe sua senha.",
+    "passwordLength": "Use de 8 a 128 caracteres.",
+    "fixFields": "Corrija os campos destacados para continuar.",
+    "duplicateEmail": "Já existe uma conta com este e-mail. Entre ou redefina sua senha.",
+    "loginError": {
+      "oauth_cancelled": "A entrada foi cancelada. Tente novamente ou use seu e-mail e senha.",
+      "oauth_state_invalid": "O link de entrada expirou ou foi aberto em outro navegador. Comece de novo a partir desta página.",
+      "oauth_provider_error": "{provider, select, google {A entrada não foi concluída: Google informou um problema. Tente novamente em instantes ou use seu e-mail.} github {A entrada não foi concluída: GitHub informou um problema. Tente novamente em instantes ou use seu e-mail.} other {A entrada não foi concluída porque o provedor informou um problema. Tente novamente em instantes ou use seu e-mail.}}",
+      "email_unverified": "{provider, select, google {Seu e-mail não foi verificado. Verifique seu e-mail principal em Google e tente novamente.} github {Seu e-mail não foi verificado. Verifique seu e-mail principal em GitHub e tente novamente.} other {Seu e-mail não foi verificado. Verifique seu e-mail principal no seu provedor de login e tente novamente.}}",
+      "account_exists": "{provider, select, google {Já existe uma conta com este e-mail. Entre com sua senha e depois conecte Google em Configurações.} github {Já existe uma conta com este e-mail. Entre com sua senha e depois conecte GitHub em Configurações.} other {Já existe uma conta com este e-mail. Entre com sua senha e depois conecte seu provedor de login em Configurações.}}",
+      "identity_in_use": "Essa conta já está conectada a outra conta do Steerpost. Entre nessa conta.",
+      "account_unavailable": "Esta conta não pode entrar agora. Fale com quem administra este servidor.",
+      "signup_expired": "O cadastro expirou. Comece de novo a partir desta página.",
+      "unknown": "Não foi possível entrar. Tente novamente."
+    },
+    "signupComplete": {
+      "title": "Conclua a criação da sua conta",
+      "intro": "{provider, select, google {Você entrou com Google. Aceite os Termos para criar sua conta.} github {Você entrou com GitHub. Aceite os Termos para criar sua conta.} other {Você entrou com um provedor. Aceite os Termos para criar sua conta.}}",
+      "emailHint": "{provider, select, google {Verificado por Google. Você não pode alterá-lo aqui.} github {Verificado por GitHub. Você não pode alterá-lo aqui.} other {Verificado pelo seu provedor de login. Você não pode alterá-lo aqui.}}",
+      "nameTooLong": "Use no máximo 100 caracteres."
+    }
   },
   "posts": {
     "editBlockedPublishing": "Este post está sendo publicado agora e não pode ser alterado.",
@@ -318,7 +343,9 @@
       "yourEmail": "seu e-mail",
       "wrongPassword": "Essa não é a sua senha atual.",
       "wrongConfirm": "Digite seu e-mail exatamente como mostrado.",
-      "submit": "Excluir minha conta"
+      "submit": "Excluir minha conta",
+      "passwordHint": "Cadastrou-se com Google ou GitHub? Deixe este campo vazio.",
+      "reauthBody": "Por segurança, entre novamente para excluir sua conta. Depois você volta para Configurações."
     }
   },
   "dashboard": {

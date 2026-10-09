@@ -2,13 +2,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const apiMock = vi.hoisted(() => ({ auth: { me: vi.fn() } }));
+const apiMock = vi.hoisted(() => ({ auth: { me: vi.fn(), completeSignup: vi.fn() } }));
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock('@/lib/api', async () => ({ ...(await vi.importActual<typeof import('@/lib/api')>('@/lib/api')), api: apiMock }));
 vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/posts' }));
 vi.mock('@/components/app-shell', () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 
-import { AuthProvider } from '@/components/auth-provider';
+import { AuthProvider, useAuth } from '@/components/auth-provider';
 import { ApiError } from '@/lib/api';
 import AppLayout from '@/app/(app)/layout';
 
@@ -24,6 +24,7 @@ const mount = () =>
 
 beforeEach(() => {
   apiMock.auth.me.mockReset();
+  apiMock.auth.completeSignup.mockReset();
   router.replace.mockReset();
 });
 
@@ -45,5 +46,31 @@ describe('AuthProvider with /me', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('page body')).toBeInTheDocument();
     expect(apiMock.auth.me).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('AuthProvider.completeSignup', () => {
+  function Probe() {
+    const { user, completeSignup } = useAuth();
+    return (
+      <>
+        <p>{user ? `in as ${user.email}` : 'signed out'}</p>
+        <button onClick={() => void completeSignup('Ann', true)}>finish</button>
+      </>
+    );
+  }
+
+  it('signs the new user in with what the API returned', async () => {
+    apiMock.auth.me.mockRejectedValue(new ApiError(401, 'UNAUTHENTICATED', 'Please sign in.'));
+    apiMock.auth.completeSignup.mockResolvedValue({ ...me, csrf_token: 'fresh' });
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+    expect(await screen.findByText('signed out')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'finish' }));
+    expect(await screen.findByText('in as a@example.com')).toBeInTheDocument();
+    expect(apiMock.auth.completeSignup).toHaveBeenCalledWith({ display_name: 'Ann', accept_terms: true });
   });
 });

@@ -8,7 +8,9 @@ import type {
   Me,
   ApiKey,
   Page,
+  PendingSignup,
   Provider,
+  SignInProvider,
   SocialAccount,
   TelegramLink,
   TelegramLinkState,
@@ -45,6 +47,16 @@ export function normalizeMe(raw: unknown): Me {
     deletion_grace_days: typeof r.deletion_grace_days === 'number' && r.deletion_grace_days > 0 ? r.deletion_grace_days : 7,
     deletion_scheduled_at: typeof user.deletion_scheduled_at === 'string' ? user.deletion_scheduled_at : null,
   };
+}
+
+export function normalizeSignInProviders(raw: unknown): SignInProvider[] {
+  const list = isRec(raw) && Array.isArray(raw.providers) ? raw.providers : [];
+  return list.flatMap((p) => (isRec(p) && typeof p.id === 'string' && p.id ? [{ id: p.id, name: typeof p.name === 'string' && p.name ? p.name : p.id }] : []));
+}
+
+export function normalizePendingSignup(raw: unknown): PendingSignup {
+  const r = isRec(raw) ? raw : {};
+  return { provider: str(r.provider), email: str(r.email), display_name: str(r.display_name), next: typeof r.next === 'string' && r.next ? r.next : null };
 }
 
 const bool = (v: unknown): boolean => v === true;

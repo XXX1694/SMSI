@@ -53,6 +53,21 @@ export interface Me {
   deletion_grace_days: number;
 }
 
+/** A sign-in provider the server has switched on (`GET /auth/providers`). */
+export interface SignInProvider {
+  id: string;
+  name: string;
+}
+
+/** What `/signup/complete` will create after the provider sign-in (`GET /auth/oauth/pending`). */
+export interface PendingSignup {
+  provider: string;
+  email: string;
+  display_name: string;
+  /** The in-app path to go to once the account exists; already checked by the server. */
+  next: string | null;
+}
+
 export interface Capabilities {
   canPublishText: boolean;
   canPublishImage: boolean;

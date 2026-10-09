@@ -1,5 +1,5 @@
 'use client';
-import { MailWarning, X } from 'lucide-react';
+import { MailWarning } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -7,16 +7,13 @@ import { useErrorText } from '@/hooks';
 import { nodes } from '@/i18n/rich';
 import { useTranslations } from '@/i18n/use-translations';
 import { api } from '@/lib/api';
-import { readStorage, writeStorage } from '@/lib/storage';
-
-const DISMISS_KEY = 'socialos_mail_notice_dismissed';
 
 type Resend = { state: 'idle' | 'sending' | 'sent' } | { state: 'error'; message: string };
 
 /**
- * Two honest notices above every signed-in screen:
- *  - the server enforces email verification and this address is not verified yet (with a resend button);
- *  - the server does not deliver email at all, so verification and password-reset mail never arrives.
+ * A notice above every signed-in screen when the server enforces email verification and this address is not verified
+ * yet (with a resend button). The old "email delivery is not configured" notice is gone: it spoke to the server's
+ * admin, not to the people signing in. The forgot-password page still says honestly when no mail can leave.
  */
 export function EmailBanner() {
   const { user } = useAuth();
@@ -24,7 +21,6 @@ export function EmailBanner() {
   const tc = useTranslations('common');
   const errorText = useErrorText();
   const [resend, setResend] = useState<Resend>({ state: 'idle' });
-  const [dismissed, setDismissed] = useState(() => readStorage(DISMISS_KEY) === '1');
   if (!user) return null;
 
   if (!user.email_verified && user.verification_enforced) {
@@ -58,26 +54,5 @@ export function EmailBanner() {
     );
   }
 
-  if (user.mail_delivery === 'log' && !dismissed) {
-    return (
-      <div role="note" className="flex items-center gap-3 border-b bg-muted px-4 py-2.5 text-sm md:px-10">
-        <p className="min-w-0 flex-1">
-          <span className="font-medium">{t('logHeading')}</span> {t('logBody')}
-        </p>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0"
-          aria-label={t('dismiss')}
-          onClick={() => {
-            writeStorage(DISMISS_KEY, '1');
-            setDismissed(true);
-          }}
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </Button>
-      </div>
-    );
-  }
   return null;
 }

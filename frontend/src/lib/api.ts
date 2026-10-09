@@ -5,6 +5,8 @@ import {
   normalizeCreatedApiKey,
   normalizeCreatedMcp,
   normalizeMe,
+  normalizePendingSignup,
+  normalizeSignInProviders,
   normalizePage,
   normalizeTelegramLink,
   normalizeTelegramLinkState,
@@ -26,8 +28,10 @@ import type {
   McpConnection,
   Media,
   Page,
+  PendingSignup,
   Post,
   Provider,
+  SignInProvider,
   SocialAccount,
   TelegramLink,
   TelegramLinkState,
@@ -55,6 +59,30 @@ export const api = {
     },
     async login(input: { email: string; password: string }): Promise<Me> {
       return normalizeMe(await request('/auth/login', { method: 'POST', body: input }));
+    },
+    /** The Google/GitHub sign-in buttons this server has switched on; empty when none is configured. */
+    async signInProviders(): Promise<SignInProvider[]> {
+      return normalizeSignInProviders(await request('/auth/providers'));
+    },
+    /**
+     * Where the browser goes to sign in with a provider. It is a navigation, not a fetch: the API answers with a
+     * redirect to the provider and sets the state cookie. `next` is the in-app path to return to.
+     */
+    socialStartUrl(provider: string, next: string | null): string {
+      return `${API_BASE}/auth/oauth/${enc(provider)}/start${buildQuery({ next })}`;
+    },
+    /** Demo build only: there is no provider to visit, so this answers with the in-app page the redirect would end on. */
+    async startSocialDemo(provider: string, next: string | null): Promise<{ redirect: string }> {
+      const r = (await request(`/auth/oauth/${enc(provider)}/start`, { query: { next } })) as { redirect?: string } | null;
+      return { redirect: r?.redirect ?? '/login' };
+    },
+    /** The sign-up waiting for the Terms after a provider sign-in. 404 when there is none or it expired. */
+    async pendingSignup(): Promise<PendingSignup> {
+      return normalizePendingSignup(await request('/auth/oauth/pending'));
+    },
+    /** Creates the account and signs in. `accept_terms` must be true (D-016); a missing ticket is a 404. */
+    async completeSignup(input: { display_name: string; accept_terms: boolean }): Promise<Me> {
+      return normalizeMe(await request('/auth/oauth/complete', { method: 'POST', body: input }));
     },
     async logout(): Promise<void> {
       await request('/auth/logout', { method: 'POST' });

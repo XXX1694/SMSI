@@ -100,7 +100,8 @@
     "NETWORK": "No se puede conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
     "UNKNOWN": "Algo salió mal. Inténtalo de nuevo.",
     "access_denied": "El inicio de sesión se canceló o no se concedió el acceso.",
-    "withRef": "{text} (ref {id})"
+    "withRef": "{text} (ref {id})",
+    "REAUTH_REQUIRED": "Vuelve a iniciar sesión para continuar."
   },
   "shell": {
     "skipToContent": "Saltar al contenido",
@@ -115,10 +116,7 @@
       "verifyHeading": "Verifica tu correo electrónico.",
       "verifyBody": "Steerpost envió un enlace a <addr>{email}</addr>. Hasta que lo abras, no podrás conectar cuentas, programar o publicar publicaciones, ni crear claves de API.",
       "sent": "Enlace enviado. Revisa tu bandeja de entrada.",
-      "resend": "Reenviar correo",
-      "logHeading": "El envío de correo no está configurado en este servidor.",
-      "logBody": "No se envían los correos de verificación ni de restablecimiento de contraseña. El administrador del servidor puede configurar el correo.",
-      "dismiss": "Descartar aviso de correo"
+      "resend": "Reenviar correo"
     },
     "demo": {
       "label": "Demo",
@@ -158,7 +156,6 @@
     "createAccount": "Crear cuenta",
     "noAccount": "¿No tienes cuenta? <link>Crea una</link>",
     "haveAccount": "¿Ya tienes cuenta? <link>Inicia sesión</link>",
-    "passwordShort": "La contraseña debe tener al menos 8 caracteres.",
     "acceptTerms": "Acepta los Términos y la Política de privacidad para crear una cuenta.",
     "backToSignIn": "Volver a iniciar sesión",
     "repeatPassword": "Repite la contraseña nueva",
@@ -197,7 +194,35 @@
       "invalidBody": "Puede que haya caducado o que ya se haya usado. Los enlaces funcionan una sola vez y duran 48 horas.",
       "signInToRequest": "Inicia sesión para pedir un enlace nuevo"
     },
-    "deletedNotice": "La eliminación de tu cuenta está programada. Se cerraron todas las sesiones y se revocaron las claves de API. Inicia sesión antes de que termine el plazo para ver la fecha y cancelarla."
+    "deletedNotice": "La eliminación de tu cuenta está programada. Se cerraron todas las sesiones y se revocaron las claves de API. Inicia sesión antes de que termine el plazo para ver la fecha y cancelarla.",
+    "continueWith": "Continuar con {provider}",
+    "signInAgainWith": "Volver a iniciar sesión con {provider}",
+    "orDivider": "o",
+    "providersLoading": "Cargando opciones de inicio de sesión…",
+    "providersFailed": "No se pudieron cargar las opciones de inicio de sesión. Todavía puedes usar tu correo.",
+    "emailRequired": "Introduce tu correo electrónico.",
+    "emailInvalid": "Introduce un correo electrónico válido, por ejemplo nombre@example.com.",
+    "passwordRequired": "Introduce tu contraseña.",
+    "passwordLength": "Usa entre 8 y 128 caracteres.",
+    "fixFields": "Corrige los campos resaltados para continuar.",
+    "duplicateEmail": "Ya existe una cuenta con este correo. Inicia sesión o restablece tu contraseña.",
+    "loginError": {
+      "oauth_cancelled": "Se canceló el inicio de sesión. Inténtalo de nuevo o usa tu correo y tu contraseña.",
+      "oauth_state_invalid": "El enlace de inicio de sesión caducó o se abrió en otro navegador. Empieza de nuevo desde esta página.",
+      "oauth_provider_error": "{provider, select, google {El inicio de sesión no terminó: Google informó de un problema. Inténtalo de nuevo en un momento o usa tu correo.} github {El inicio de sesión no terminó: GitHub informó de un problema. Inténtalo de nuevo en un momento o usa tu correo.} other {El inicio de sesión no terminó porque el proveedor informó de un problema. Inténtalo de nuevo en un momento o usa tu correo.}}",
+      "email_unverified": "{provider, select, google {Tu correo electrónico no está verificado. Verifica tu correo principal en Google e inténtalo de nuevo.} github {Tu correo electrónico no está verificado. Verifica tu correo principal en GitHub e inténtalo de nuevo.} other {Tu correo electrónico no está verificado. Verifica tu correo principal con tu proveedor de inicio de sesión e inténtalo de nuevo.}}",
+      "account_exists": "{provider, select, google {Ya existe una cuenta con este correo. Inicia sesión con tu contraseña y luego conecta Google en Ajustes.} github {Ya existe una cuenta con este correo. Inicia sesión con tu contraseña y luego conecta GitHub en Ajustes.} other {Ya existe una cuenta con este correo. Inicia sesión con tu contraseña y luego conecta tu proveedor de inicio de sesión en Ajustes.}}",
+      "identity_in_use": "Esa cuenta ya está conectada a otra cuenta de Steerpost. Inicia sesión en esa cuenta.",
+      "account_unavailable": "Esta cuenta no puede iniciar sesión ahora mismo. Contacta con quien administra este servidor.",
+      "signup_expired": "El registro caducó. Empieza de nuevo desde esta página.",
+      "unknown": "No se pudo iniciar sesión. Inténtalo de nuevo."
+    },
+    "signupComplete": {
+      "title": "Termina de crear tu cuenta",
+      "intro": "{provider, select, google {Iniciaste sesión con Google. Acepta los Términos para crear tu cuenta.} github {Iniciaste sesión con GitHub. Acepta los Términos para crear tu cuenta.} other {Iniciaste sesión con un proveedor. Acepta los Términos para crear tu cuenta.}}",
+      "emailHint": "{provider, select, google {Verificado por Google. No puedes cambiarlo aquí.} github {Verificado por GitHub. No puedes cambiarlo aquí.} other {Verificado por tu proveedor de inicio de sesión. No puedes cambiarlo aquí.}}",
+      "nameTooLong": "Usa 100 caracteres o menos."
+    }
   },
   "posts": {
     "editBlockedPublishing": "Esta publicación se está publicando ahora mismo, así que no se puede cambiar.",
@@ -318,7 +343,9 @@
       "yourEmail": "tu correo electrónico",
       "wrongPassword": "Esa no es tu contraseña actual.",
       "wrongConfirm": "Escribe tu correo electrónico exactamente como se muestra.",
-      "submit": "Eliminar mi cuenta"
+      "submit": "Eliminar mi cuenta",
+      "passwordHint": "¿Te registraste con Google o GitHub? Deja este campo vacío.",
+      "reauthBody": "Por seguridad, vuelve a iniciar sesión para eliminar tu cuenta. Después volverás a Ajustes."
     }
   },
   "dashboard": {
