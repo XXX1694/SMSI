@@ -43,7 +43,7 @@ export function ContentEditor({ content, overrides, selected, providers, onConte
           value={content}
           onChange={(e) => onContent(e.target.value)}
         />
-        <div className="flex justify-between text-xs text-muted-foreground">
+        <div className="flex justify-between gap-3 text-xs text-muted-foreground">
           <span>Used for every selected account unless customised in its tab.</span>
           <CharCounter text={content} max={strictMax} label="Universal content" />
         </div>

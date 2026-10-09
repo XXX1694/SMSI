@@ -77,3 +77,13 @@ export function postActions(status: PostStatus): {
     edit: status === 'draft' || status === 'scheduled',
   };
 }
+
+/** Why a post cannot be edited, or null when it can. Mirrors `PATCH /posts/{id}` (draft and scheduled only). */
+export function editBlockedReason(status: PostStatus): string | null {
+  if (postActions(status).edit) return null;
+  const view = postStatusView(status).label.toLowerCase();
+  if (status === 'publishing') return 'This post is being published right now, so it cannot be changed.';
+  if (status === 'published') return 'This post is already published. Published posts cannot be edited here; edit it on the network.';
+  if (status === 'cancelled') return 'This post was cancelled and cannot be edited.';
+  return `Only drafts and scheduled posts can be edited. This post is ${view}.`;
+}

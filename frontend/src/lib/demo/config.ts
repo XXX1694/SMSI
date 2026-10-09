@@ -34,3 +34,8 @@ export const DEMO_CHANGE_EVENT = 'socialos:demo-change';
 export function postHref(id: string): string {
   return DEMO ? `/posts/view?id=${encodeURIComponent(id)}` : `/posts/${id}`;
 }
+
+/** The composer prefilled with an existing post (draft or scheduled). A query string, so it also works in the static demo. */
+export function editHref(id: string): string {
+  return `/compose?post=${encodeURIComponent(id)}`;
+}
