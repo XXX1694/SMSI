@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildUpdate, formFromPost, freshness, isDirty } from '@/lib/post-edit';
 import { editBlockedReason, postActions } from '@/lib/status';
 import type { Post, PostStatus } from '@/lib/types';
+import { enT } from '@/i18n/en';
 
 const post = (over: Partial<Post> = {}): Post => ({
   id: 'p1', title: 'Launch', content: 'Base text', status: 'scheduled', scheduled_at: '2026-12-01T22:30:00Z', published_at: null,
@@ -75,8 +76,8 @@ describe('editing rules', () => {
     for (const s of all) {
       const ok = s === 'draft' || s === 'scheduled';
       expect(postActions(s).edit).toBe(ok);
-      expect(editBlockedReason(s) === null).toBe(ok);
+      expect(editBlockedReason(s, enT) === null).toBe(ok);
     }
-    expect(editBlockedReason('published')).toMatch(/already published/);
+    expect(editBlockedReason('published', enT)).toMatch(/already published/);
   });
 });

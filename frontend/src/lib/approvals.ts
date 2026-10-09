@@ -1,20 +1,22 @@
 import { providerLabel } from './normalize';
 import { postStatusView } from './status';
 import { formatDateTime } from './time';
+import { joinList } from './format';
+import type { AppT } from '@/i18n/translate';
 import type { Approval, ApprovalAction } from './types';
 
-const LABELS: Record<ApprovalAction, string> = {
-  'post.publish': 'Publish now',
-  'post.retry_now': 'Retry now',
-  'post.delete': 'Delete post',
-  'post.schedule_soon': 'Schedule in the next few minutes',
-  'social_account.disconnect': 'Disconnect account',
-  'social_account.connect_token': 'Connect with a token',
-};
+const LABEL_KEYS = {
+  'post.publish': 'approvals.action.post_publish',
+  'post.retry_now': 'approvals.action.post_retry_now',
+  'post.delete': 'approvals.action.post_delete',
+  'post.schedule_soon': 'approvals.action.post_schedule_soon',
+  'social_account.disconnect': 'approvals.action.social_account_disconnect',
+  'social_account.connect_token': 'approvals.action.social_account_connect_token',
+} as const satisfies Record<ApprovalAction, string>;
 
-/** Plain-English name of what the agent wants to do; unknown actions (a newer server) show as sent. */
-export function actionLabel(action: string): string {
-  return LABELS[action as ApprovalAction] ?? action;
+/** Plain-language name of what the agent wants to do; unknown actions (a newer server) show as sent. */
+export function actionLabel(action: string, t: AppT): string {
+  return action in LABEL_KEYS ? t(LABEL_KEYS[action as ApprovalAction]) : action;
 }
 
 /** Actions that cannot be taken back or put content on the live networks. */
@@ -27,13 +29,12 @@ export function isOpen(a: Approval, now: Date = new Date()): boolean {
 }
 
 /** "9 min left", "Under a minute left", or "Expired". */
-export function timeLeft(expiresAt: string, now: Date = new Date()): string {
+export function timeLeft(expiresAt: string, t: AppT, now: Date = new Date()): string {
   const ms = new Date(expiresAt).getTime() - now.getTime();
-  if (Number.isNaN(ms) || ms <= 0) return 'Expired';
+  if (Number.isNaN(ms) || ms <= 0) return t('approvals.status.expired');
   const min = Math.ceil(ms / 60_000);
-  if (ms < 60_000) return 'Under a minute left';
-  // Translator note: "{n} min left" is the time until an approval request expires. Needs an ICU plural.
-  return min === 1 ? '1 min left' : `${min} min left`;
+  if (ms < 60_000) return t('approvals.underMinute');
+  return t('approvals.minLeft', { count: min });
 }
 
 export interface SummaryLine {
@@ -47,17 +48,17 @@ export interface SummaryLine {
 const CLAMP_CHARS = 280;
 const CLAMP_LINES = 4;
 
-const KNOWN: [key: string, label: string][] = [
-  ['title', 'Title'],
-  ['content', 'Text'],
-  ['targets', ''],
-  ['media', 'Media'],
-  ['platforms', 'Networks'],
-  ['accounts', 'Accounts'],
-  ['provider', 'Network'],
-  ['username', 'Account'],
-  ['scheduled_at', 'Scheduled for'],
-];
+const KNOWN = [
+  ['title', 'approvals.summary.title'],
+  ['content', 'approvals.summary.text'],
+  ['targets', null],
+  ['media', 'approvals.summary.media'],
+  ['platforms', 'approvals.summary.networks'],
+  ['accounts', 'approvals.summary.accounts'],
+  ['provider', 'approvals.summary.network'],
+  ['username', 'approvals.summary.account'],
+  ['scheduled_at', 'approvals.summary.scheduledFor'],
+] as const;
 
 const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -76,17 +77,13 @@ function isLong(value: string): boolean {
   return value.length > CLAMP_CHARS || value.split('\n').length > CLAMP_LINES;
 }
 
-function plural(n: number, one: string): string {
-  return `${n} ${one}${n === 1 ? '' : 's'}`;
-}
-
-function mediaText(m: Record<string, unknown>): string {
+function mediaText(m: Record<string, unknown>, t: AppT): string {
   const images = Number(m.images) || 0;
   const videos = Number(m.videos) || 0;
   const count = Number(m.count) || 0;
-  const parts = [images ? plural(images, 'image') : '', videos ? plural(videos, 'video') : ''].filter(Boolean);
-  if (parts.length) return parts.join(', ');
-  return count ? plural(count, 'file') : '';
+  const parts = [images ? t('approvals.summary.images', { count: images }) : '', videos ? t('approvals.summary.videos', { count: videos }) : ''].filter(Boolean);
+  if (parts.length) return joinList(parts, t);
+  return count ? t('approvals.summary.files', { count }) : '';
 }
 
 function asText(v: unknown): string {
@@ -95,26 +92,27 @@ function asText(v: unknown): string {
 }
 
 /** What the owner needs to see to decide: the server's summary, known fields first, in readable form. */
-export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
+export function summaryLines(a: Approval, timezone: string, t: AppT): SummaryLine[] {
   const out: SummaryLine[] = [];
   const add = (label: string, value: string) => {
     if (value) out.push({ label, value, long: isLong(value) });
   };
-  for (const [key, label] of KNOWN) {
+  for (const [key, labelKey] of KNOWN) {
+    const label = labelKey ? t(labelKey) : '';
     const raw = a.summary[key];
     if (key === 'platforms' && Array.isArray(a.summary.accounts)) continue; // the accounts line says it with names
     if (key === 'targets' && Array.isArray(raw)) {
-      for (const t of raw) if (isRec(t)) add(`Text on ${named(asText(t.account)) || providerLabel(asText(t.platform))}`, asText(t.content));
-    } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw));
-    else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone));
-    else if ((key === 'platforms' || key === 'provider') && asText(raw)) add(label, asText(raw).split(', ').map(providerLabel).join(', '));
-    else if (key === 'accounts' && Array.isArray(raw)) add(label, raw.map((x) => named(String(x))).join(', '));
+      for (const tg of raw) if (isRec(tg)) add(t('approvals.summary.textOn', { account: named(asText(tg.account)) || providerLabel(asText(tg.platform)) }), asText(tg.content));
+    } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw, t));
+    else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone, t.locale));
+    else if ((key === 'platforms' || key === 'provider') && asText(raw)) add(label, joinList(asText(raw).split(', ').map(providerLabel), t));
+    else if (key === 'accounts' && Array.isArray(raw)) add(label, joinList(raw.map((x) => named(String(x))), t));
     else add(label, asText(raw));
   }
   for (const key of Object.keys(a.summary)) {
     if (KNOWN.some(([k]) => k === key)) continue;
     // A post status the server sent as a code ("draft") reads as the badge text ("Draft").
-    add(sentence(key), key === 'status' ? postStatusView(asText(a.summary[key])).label : asText(a.summary[key]));
+    add(sentence(key), key === 'status' ? postStatusView(asText(a.summary[key]), t).label : asText(a.summary[key]));
   }
   return out;
 }

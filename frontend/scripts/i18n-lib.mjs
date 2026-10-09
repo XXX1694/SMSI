@@ -111,6 +111,16 @@ export function usedKeys(source) {
   return keys;
 }
 
+/**
+ * Key prefixes written as template literals, `t(`status.${s}`)`: every key under the prefix counts as used. A head that is
+ * relative to a namespace (`useTranslations('nav')` + `t(`item.${x}`)`) is also expanded with that namespace.
+ */
+export function usedPrefixes(source) {
+  const heads = [...source.matchAll(/`([\w.]*\.)\$\{/g)].map((m) => m[1]);
+  const spaces = [...source.matchAll(/useTranslations\(\s*['"]([\w.]+)['"]\s*\)/g)].map((m) => m[1]);
+  return heads.flatMap((h) => [h, ...spaces.map((ns) => `${ns}.${h}`)]);
+}
+
 /** String literals in a source file (cheap, for the "unused key" heuristic). */
 export function literals(source) {
   return new Set([...source.matchAll(/['"`]([\w.]+)['"`]/g)].map((m) => m[1]));
@@ -172,13 +182,15 @@ export function problems({ catalogs, enabled, meta = {}, sources = [] }) {
 
   const used = new Set();
   const lits = new Set();
+  const prefixes = new Set();
   for (const src of sources) {
+    for (const p of usedPrefixes(src)) prefixes.add(p);
     for (const k of usedKeys(src)) used.add(k);
     for (const l of literals(src)) lits.add(l);
   }
   for (const k of used) if (!(k in enFlat)) errors.push(`code uses ${k}, which is not in messages/en.json`);
   for (const k of Object.keys(enFlat)) {
-    if (used.has(k) || lits.has(k)) continue;
+    if (used.has(k) || lits.has(k) || [...prefixes].some((p) => k.startsWith(p))) continue;
     const parts = k.split('.');
     // dynamic keys: t(item.labelKey) with useTranslations('nav') and the leaf written as a literal elsewhere
     const dynamic = parts.some((_, i) => i > 0 && lits.has(parts.slice(0, i).join('.')) && lits.has(parts.slice(i).join('.')));

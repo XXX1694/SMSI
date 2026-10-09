@@ -18,7 +18,13 @@ interface LocaleSettings {
   timeZone: string;
 }
 
-const LocaleContext = createContext<LocaleSettings | null>(null);
+/**
+ * Without a provider (a component rendered on its own in a test, an error boundary above the provider) the UI is English:
+ * the same text the app had before it was localized.
+ */
+const FALLBACK: LocaleSettings = { locale: 'en', setLocale: () => {}, available: ['en'], messages: en, timeZone: 'UTC' };
+
+const LocaleContext = createContext<LocaleSettings>(FALLBACK);
 
 interface LocaleState {
   locale: AppLocale;
@@ -96,7 +102,5 @@ export function LocaleProvider({
 }
 
 export function useLocaleSettings(): LocaleSettings {
-  const ctx = useContext(LocaleContext);
-  if (!ctx) throw new Error('useLocaleSettings must be used within LocaleProvider');
-  return ctx;
+  return useContext(LocaleContext);
 }

@@ -1,3 +1,4 @@
+import type { AppT } from '@/i18n/translate';
 import type { AnalyticsPoint } from './types';
 
 export interface MetricSummary {
@@ -25,7 +26,11 @@ export function summarizeMetrics(points: AnalyticsPoint[]): MetricSummary[] {
     .sort((a, b) => a.metric.localeCompare(b.metric));
 }
 
-export function metricLabel(metric: string): string {
+const KNOWN_METRICS = ['impressions', 'reactions', 'link_clicks'] as const;
+
+/** A name for a metric id. Metrics a network adds that the catalog does not know yet are shown from their id. */
+export function metricLabel(metric: string, t: AppT): string {
+  if ((KNOWN_METRICS as readonly string[]).includes(metric)) return t(`analytics.metrics.${metric as (typeof KNOWN_METRICS)[number]}`);
   const s = metric.replace(/[_.]/g, ' ');
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
