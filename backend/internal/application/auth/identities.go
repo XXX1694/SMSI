@@ -91,8 +91,8 @@ func (s *Service) StartLink(ctx context.Context, a actor.Actor, id identity.Prov
 	if err := a.RequireSession(); err != nil {
 		return StartResult{}, err
 	}
-	if err := a.RequireNotDeleting(); err != nil {
-		return StartResult{}, err
+	if a.DeletionScheduled {
+		return StartResult{}, errs.New(errs.Conflict, "this account is scheduled for deletion; cancel the deletion to connect a sign-in method")
 	}
 	if _, err := s.socialProvider(id); err != nil {
 		return StartResult{}, err
@@ -183,11 +183,12 @@ func (s *Service) Unlink(ctx context.Context, a actor.Actor, id identity.Provide
 		if err != nil {
 			return err
 		}
+		// An identity whose provider is switched off still lists and unlinks, but it cannot sign anyone in.
 		found, others := false, 0
 		for _, i := range list {
 			if i.Provider == id {
 				found = true
-			} else {
+			} else if _, err := s.socialProvider(i.Provider); err == nil {
 				others++
 			}
 		}

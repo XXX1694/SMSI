@@ -137,7 +137,7 @@ const readBody = (req) => new Promise((resolve) => { const c = []; req.on('data'
 const sessionCookies = (s) => [`socialos_session=${s.token}; Path=/; HttpOnly; SameSite=Lax`, `socialos_csrf=${s.csrf}; Path=/; SameSite=Lax`];
 const meBody = (u, s) => ({
   id: u.id, email: u.email, display_name: u.display_name, csrf_token: s.csrf, scopes: ALL_SCOPES,
-  user: { id: u.id, email: u.email, display_name: u.display_name, email_verified: u.verified !== false, plan: 'free', deletion_scheduled_at: u.deletion_scheduled_at ?? null },
+  user: { id: u.id, email: u.email, display_name: u.display_name, email_verified: u.verified !== false, has_password: true, login_methods: ['password'], plan: 'free', deletion_scheduled_at: u.deletion_scheduled_at ?? null },
   deletion_grace_days: 7,
   verification_enforced: VERIFICATION === 'enforced', mail_delivery: VERIFICATION === 'enforced' ? 'smtp' : 'log',
 });
@@ -249,6 +249,10 @@ async function handle(req, res) {
     user.deletion_scheduled_at = null;
     return send(res, 204);
   }
+  // No sign-in provider is configured here: nothing to link, and the user always has a password.
+  if (path === '/auth/identities' && m === 'GET') return send(res, 200, { identities: [], has_password: true });
+  if (/^\/auth\/identities\/[^/]+(\/link)?$/.test(path) && (m === 'POST' || m === 'DELETE')) return fail(res, 404, 'NOT_FOUND', 'sign-in method not available');
+  if (path === '/auth/password/set' && m === 'POST') return fail(res, 409, 'CONFLICT', 'you already have a password; change it instead');
   if (path === '/auth/password/change' && m === 'POST') {
     if (body.current_password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'current password is incorrect');
     if (String(body.new_password ?? '').length < 8) return fail(res, 400, 'VALIDATION_ERROR', 'password must be 8-128 characters');

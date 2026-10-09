@@ -456,3 +456,22 @@ func TestLinkedIdentitiesSurviveADisabledProvider(t *testing.T) {
 	c.must("DELETE", identitiesPath+"/github", map[string]any{"current_password": "correct horse battery"}, 204)
 	c.must("POST", identitiesPath+"/github/link", map[string]any{"current_password": "correct horse battery"}, 404)
 }
+
+// A linked identity whose provider is switched off cannot sign anyone in, so it does not count as the way that remains.
+func TestADisabledProviderIsNotAWayToSignIn(t *testing.T) {
+	r := newGitHubOnlyRig(t, envOpts{})
+	c := r.githubSignUp(t, 3301, "una", "una@example.com")
+	var uid uuid.UUID
+	if err := r.e.app.DB.Pool.QueryRow(context.Background(), `SELECT user_id FROM user_identities WHERE subject = '3301'`).Scan(&uid); err != nil {
+		t.Fatal(err)
+	}
+	err := postgres.NewIdentities(r.e.app.DB).Create(context.Background(), &identity.Identity{UserID: uid, Provider: identity.Google, Subject: "g-3301", LinkedAt: time.Now().UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.must("DELETE", identitiesPath+"/github", nil, 409)
+	c.must("DELETE", identitiesPath+"/google", nil, 204)
+	if got := providersOf(c.must("GET", identitiesPath, nil, 200)); len(got) != 1 || got[0] != "github" {
+		t.Fatalf("identities left: %v", got)
+	}
+}

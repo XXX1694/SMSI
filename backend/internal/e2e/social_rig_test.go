@@ -32,6 +32,17 @@ type socialRig struct {
 
 func newSocialRig(t *testing.T, o envOpts) *socialRig {
 	t.Helper()
+	return newRig(t, o, true)
+}
+
+// newGitHubOnlyRig is the rig with Google switched off: the fake still runs, but the app does not offer it.
+func newGitHubOnlyRig(t *testing.T, o envOpts) *socialRig {
+	t.Helper()
+	return newRig(t, o, false)
+}
+
+func newRig(t *testing.T, o envOpts, withGoogle bool) *socialRig {
+	t.Helper()
 	gh, goog := githubfake.New(t), oidcfake.New(t)
 	ghAdapter, err := github.New(github.Config{ClientID: gh.ClientID, ClientSecret: gh.ClientSecret, AuthURL: gh.AuthURL(), TokenURL: gh.TokenURL(), APIURL: gh.APIURL()})
 	if err != nil {
@@ -42,7 +53,10 @@ func newSocialRig(t *testing.T, o envOpts) *socialRig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	o.signIn = []auth.IdentityProvider{googAdapter, ghAdapter}
+	o.signIn = []auth.IdentityProvider{ghAdapter}
+	if withGoogle {
+		o.signIn = []auth.IdentityProvider{googAdapter, ghAdapter}
+	}
 	return &socialRig{e: newEnv(t, o), gh: gh, google: goog}
 }
 
