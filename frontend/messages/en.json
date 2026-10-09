@@ -1,0 +1,20 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "compose": "Compose",
+    "posts": "Posts",
+    "calendar": "Calendar",
+    "media": "Media",
+    "analytics": "Analytics",
+    "accounts": "Accounts",
+    "approvals": "Approvals",
+    "developer": "Developer",
+    "settings": "Settings"
+  },
+  "language": {
+    "label": "Language",
+    "hint": "Choose the language of the interface. Dates and times keep following your timezone.",
+    "optionBeta": "{name} (Beta translation)",
+    "pseudo": "Pseudo-locale (testing)"
+  }
+}
