@@ -94,7 +94,7 @@ in sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text
 | muted | `#f0f3f4` | `196 16% 95%` |
 | muted-foreground | `#515e67` | `205 12% 36%` |
 | border | `#dfe4e7` | `200 14% 89%` |
-| input | `#cbd3d8` | `200 14% 82%` |
+| input | `#788891` | `202 10% 52%` |
 | **accent / ring** | `#086b81` | `191 88% 27%` |
 | accent-foreground | `#ffffff` | `0 0% 100%` |
 | accent-soft | `#e7f5f8` | `190 55% 94%` |
@@ -112,7 +112,7 @@ in sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text
 | muted | `#1b2228` | `205 20% 13%` |
 | muted-foreground | `#a0abb1` | `200 10% 66%` |
 | border | `#242d32` | `205 16% 17%` |
-| input | `#333f47` | `205 16% 24%` |
+| input | `#5e6d78` | `205 12% 42%` |
 | **accent / ring** | `#3ecde0` | `187 72% 56%` |
 | accent-foreground | `#0e151b` | `205 30% 8%` |
 | accent-soft | `#142e34` | `190 45% 14%` |
@@ -132,8 +132,7 @@ in sync). Contrast is computed by `frontend/tests/tokens.test.ts` for every text
 | warning on background / soft | 6.2 / 5.6 | 10.4 / 8.6 |
 | danger on background / soft | 6.6 / 5.8 | 6.7 / 5.9 |
 
-Known debt, not changed here: control outlines (`input`) are 1.5:1 against the page, below the 3:1 that WCAG 1.4.11 asks for
-non-text UI; the fix changes every input and belongs in its own change.
+Control outlines (`input`) are held at 3:1 or better against both `background` and `surface` (WCAG 1.4.11); a test enforces it.
 
 ## 5. Iconography and imagery
 

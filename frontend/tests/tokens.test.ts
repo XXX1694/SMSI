@@ -63,6 +63,13 @@ describe('design tokens', () => {
     });
   }
 
+  // Control outlines are non-text UI: WCAG 1.4.11 asks for 3:1 against what they sit on.
+  for (const [name, theme] of [['light', light], ['dark', { ...light, ...dark }]] as const) {
+    it.each([['input', 'background'], ['input', 'surface']])(`%s on %s meets WCAG 1.4.11 (3:1) in the ${name} theme`, (fg, bg) => {
+      expect(contrast(theme[fg] ?? '', theme[bg] ?? '')).toBeGreaterThanOrEqual(3);
+    });
+  }
+
   it('only references tokens that exist', () => {
     const source = JSON.stringify(config);
     const used = [...source.matchAll(/var\(--([\w-]+)\)/g)].map((m) => m[1] ?? '');
