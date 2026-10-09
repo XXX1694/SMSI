@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { T } from '@/i18n/t';
 import { Suspense } from 'react';
 import { PostsView } from '@/components/posts/posts-view';
 import { PageHeader } from '@/components/states';
@@ -10,11 +11,13 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        title="Posts"
-        description="Every draft, scheduled and published post."
+        title={<T k="posts.title" />}
+        description={<T k="posts.subtitle" />}
         actions={
           <Button asChild>
-            <Link href="/compose">New post</Link>
+            <Link href="/compose">
+              <T k="common.newPost" />
+            </Link>
           </Button>
         }
       />
