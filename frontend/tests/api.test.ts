@@ -235,6 +235,11 @@ describe('sign-in methods', () => {
     expect(JSON.parse(sent(bare)[1].body ?? '')).toEqual({});
   });
 
+  it.each(['javascript:alert(1)', 'data:text/html,x', 'not a url', ''])('refuses to hand back %j as the provider URL', async (raw) => {
+    mockFetch(200, { authorize_url: raw });
+    await expect(api.auth.linkIdentity('github', 'pw')).resolves.toEqual({ authorize_url: '' });
+  });
+
   it('unlinks with DELETE and sets a first password', async () => {
     const del = mockFetch(204, undefined);
     await api.auth.unlinkIdentity('github', 'pw');

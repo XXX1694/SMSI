@@ -59,6 +59,16 @@ function reauthBody(currentPassword: string | undefined): Record<string, string>
   return currentPassword ? { current_password: currentPassword } : {};
 }
 
+/** Only an http(s) URL may be navigated to: a `javascript:` or `data:` value in a tampered answer would run in our origin. */
+function webUrl(raw: string | undefined): string {
+  try {
+    const u = new URL(raw ?? '');
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : '';
+  } catch {
+    return '';
+  }
+}
+
 export const api = {
   auth: {
     async register(input: { email: string; password: string; display_name: string; accept_terms: boolean }): Promise<Me> {
@@ -131,7 +141,7 @@ export const api = {
      */
     async linkIdentity(provider: string, currentPassword?: string): Promise<{ authorize_url: string }> {
       const r = (await request(`/auth/identities/${enc(provider)}/link`, { method: 'POST', body: reauthBody(currentPassword) })) as { authorize_url?: string } | null;
-      return { authorize_url: r?.authorize_url ?? '' };
+      return { authorize_url: webUrl(r?.authorize_url) };
     },
     /** Disconnects a provider account (same re-authentication as `linkIdentity`). 409: it is the last way to sign in. */
     async unlinkIdentity(provider: string, currentPassword?: string): Promise<void> {
