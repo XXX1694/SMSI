@@ -385,7 +385,11 @@
         "identity_in_use": "{provider, select, google {Akun Google itu sudah terhubung ke akun Steerpost lain. Putuskan dulu di sana.} github {Akun GitHub itu sudah terhubung ke akun Steerpost lain. Putuskan dulu di sana.} other {Akun penyedia itu sudah terhubung ke akun Steerpost lain. Putuskan dulu di sana.}}",
         "account_unavailable": "Akun ini belum dapat menambah metode masuk. Hubungi orang yang mengelola server ini.",
         "unknown": "Penghubungan gagal. Coba lagi."
-      }
+      },
+      "reauthUnavailable": "Tidak ada penyedia yang Anda gunakan saat mendaftar yang tersedia di server ini, jadi Anda tidak dapat masuk lagi di sini. Minta bantuan kepada orang yang mengelola server ini.",
+      "connectConflict": "Penyedia itu sudah terhubung, atau akun ini menunggu penghapusan. Muat ulang halaman untuk melihat keadaan terbaru.",
+      "connectUnavailable": "Server ini tidak lagi menyediakan penyedia itu. Muat ulang halaman untuk melihat apa yang tersedia.",
+      "disconnectGone": "Penyedia itu sudah tidak terhubung. Muat ulang halaman untuk melihat keadaan terbaru."
     }
   },
   "dashboard": {

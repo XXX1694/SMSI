@@ -39,6 +39,8 @@ export function SetPasswordForm({ onDone, onCancel }: { onDone: () => void; onCa
       onDone();
     } catch (err) {
       if (err instanceof ApiError && err.code === 'REAUTH_REQUIRED') setReauth(true);
+      // 409: the account already has a password (set in another tab). Re-read instead of showing a misleading error.
+      else if (err instanceof ApiError && err.status === 409) return onDone();
       else setError(errorText(err));
       setBusy(false);
     }

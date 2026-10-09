@@ -68,8 +68,11 @@ describe('sign-in method fields', () => {
   });
 
   it('keeps well-formed identities only', () => {
-    const r = normalizeSignInMethods({ has_password: false, identities: [{ provider: 'github', email: 'a@b.c', linked_at: 't', last_login_at: null }, { provider: '' }, 'x', { email: 'no provider' }] });
-    expect(r).toEqual({ has_password: false, identities: [{ provider: 'github', email: 'a@b.c', linked_at: 't', last_login_at: null }] });
+    const r = normalizeSignInMethods({ has_password: false, identities: [{ provider: 'github', email: 'a@b.c', linked_at: '2026-10-01T09:00:00Z', last_login_at: null }, { provider: '' }, 'x', { email: 'no provider' }] });
+    expect(r).toEqual({ has_password: false, identities: [{ provider: 'github', email: 'a@b.c', linked_at: '2026-10-01T09:00:00Z', last_login_at: null }] });
+    // A link without a usable date would reach Intl as an invalid Date.
+    const dated = normalizeSignInMethods({ identities: [{ provider: 'github', linked_at: '' }, { provider: 'google' }, { provider: 'x', linked_at: 'not a date' }] });
+    expect(dated.identities).toEqual([]);
     expect(normalizeSignInMethods(null)).toEqual({ has_password: true, identities: [] });
   });
 });

@@ -134,6 +134,55 @@ describe('connect', () => {
   });
 });
 
+describe('connect failures', () => {
+  async function tryConnect() {
+    render(<SignInMethods />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Connect GitHub' }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText('Your password'), 'pw');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Continue to GitHub' }));
+    return dialog;
+  }
+
+  it('names a provider failure, not a network one, when the API gives no usable address', async () => {
+    apiMock.auth.linkIdentity.mockResolvedValue({ authorize_url: '' });
+    const dialog = await tryConnect();
+    expect(await within(dialog).findByText(/GitHub reported a problem/)).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('rejected the post');
+    expect(nav.navigateTo).not.toHaveBeenCalled();
+  });
+
+  it('explains 409: already connected or waiting for deletion', async () => {
+    apiMock.auth.linkIdentity.mockRejectedValue(new ApiError(409, 'CONFLICT', 'x'));
+    expect(await within(await tryConnect()).findByText(/already connected, or this account is waiting to be deleted/)).toBeInTheDocument();
+    expect(nav.navigateTo).not.toHaveBeenCalled();
+  });
+
+  it('explains 404: the admin switched the provider off meanwhile', async () => {
+    apiMock.auth.linkIdentity.mockRejectedValue(new ApiError(404, 'NOT_FOUND', 'x'));
+    expect(await within(await tryConnect()).findByText(/does not offer that provider any more/)).toBeInTheDocument();
+  });
+
+  it('answers an unknown error code with the generic sentence, never the code', async () => {
+    apiMock.auth.linkIdentity.mockRejectedValue(new ApiError(418, 'TEAPOT_BREWING', 'TEAPOT_BREWING'));
+    const dialog = await tryConnect();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
+    expect(dialog).not.toHaveTextContent('TEAPOT');
+  });
+
+  it('says so when the user is linked only to providers the server no longer offers', async () => {
+    auth.user = { login_methods: ['github'] };
+    apiMock.auth.signInProviders.mockResolvedValue([{ id: 'google', name: 'Google' }]);
+    apiMock.auth.signInMethods.mockResolvedValue({ identities: [github], has_password: false });
+    apiMock.auth.linkIdentity.mockRejectedValue(new ApiError(403, 'REAUTH_REQUIRED', 'x'));
+    render(<SignInMethods />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Connect Google' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Continue to Google' }));
+    expect(await screen.findByText(/None of the providers you signed up with is available/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Sign in again with/ })).toBeNull();
+  });
+});
+
 describe('disconnect', () => {
   beforeEach(() => {
     apiMock.auth.signInMethods.mockResolvedValue({ identities: [github], has_password: true });
@@ -186,6 +235,30 @@ describe('set a password', () => {
     expect(toast.success).toHaveBeenCalledWith('Password set. Your other sessions were signed out.');
     expect(auth.refresh).toHaveBeenCalled();
     expect(await screen.findByText('You can sign in with your email and password.')).toBeInTheDocument();
+  });
+
+  async function submitPassword() {
+    render(<SignInMethods />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Set a password' }));
+    await userEvent.type(screen.getByLabelText('New password'), 'long-enough-pw');
+    await userEvent.click(screen.getByRole('button', { name: 'Set password' }));
+  }
+
+  it('keeps the form and shows the failure on a 400', async () => {
+    apiMock.auth.setPassword.mockRejectedValue(new ApiError(400, 'VALIDATION_ERROR', 'password must be 8-128 characters', null, { new_password: 'bad' }));
+    await submitPassword();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set password' })).toBeEnabled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('re-reads the account on a 409 (a password was set elsewhere) instead of showing an error', async () => {
+    apiMock.auth.setPassword.mockRejectedValue(new ApiError(409, 'CONFLICT', 'you already have a password'));
+    apiMock.auth.signInMethods.mockResolvedValueOnce({ identities: [github], has_password: false }).mockResolvedValue({ identities: [github], has_password: true });
+    await submitPassword();
+    expect(await screen.findByText('You can sign in with your email and password.')).toBeInTheDocument();
+    expect(auth.refresh).toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('shows the sign-in-again notice when the session is too old', async () => {

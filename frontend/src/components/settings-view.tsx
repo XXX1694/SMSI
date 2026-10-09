@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useTranslations } from '@/i18n/use-translations';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
 import { LinkResultNotice } from '@/components/link-result-notice';
@@ -27,6 +27,30 @@ function tzOptions(current: string): string[] {
   return [...set].filter(isValidTimezone).sort();
 }
 
+function LegalSection() {
+  const t = useTranslations('settings');
+  return (
+    <Section title={t('legal')}>
+      <p className="text-sm text-muted-foreground">
+        {nodes(
+          t.rich('legalText', {
+            terms: (c) => (
+              <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
+                {c}
+              </Link>
+            ),
+            privacy: (c) => (
+              <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
+                {c}
+              </Link>
+            ),
+          }),
+        )}
+      </p>
+    </Section>
+  );
+}
+
 export function SettingsView() {
   const { user } = useAuth();
   const { timezone, setTimezone, theme, setTheme } = usePrefs();
@@ -37,7 +61,10 @@ export function SettingsView() {
 
   return (
     <div className="max-w-xl space-y-10">
-      <LinkResultNotice />
+      {/* useSearchParams needs a boundary in the static export, as on the accounts page. */}
+      <Suspense>
+        <LinkResultNotice />
+      </Suspense>
       <Section title={t('profile')}>
         <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
           <dt className="text-muted-foreground">{t('name')}</dt>
@@ -87,24 +114,7 @@ export function SettingsView() {
         </Section>
       )}
       <YourData />
-      <Section title={t('legal')}>
-        <p className="text-sm text-muted-foreground">
-          {nodes(
-            t.rich('legalText', {
-              terms: (c) => (
-                <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
-                  {c}
-                </Link>
-              ),
-              privacy: (c) => (
-                <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
-                  {c}
-                </Link>
-              ),
-            }),
-          )}
-        </p>
-      </Section>
+      <LegalSection />
     </div>
   );
 }

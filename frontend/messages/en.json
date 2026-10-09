@@ -385,7 +385,11 @@
         "identity_in_use": "{provider, select, google {That Google account is already connected to another Steerpost account. Disconnect it there first.} github {That GitHub account is already connected to another Steerpost account. Disconnect it there first.} other {That provider account is already connected to another Steerpost account. Disconnect it there first.}}",
         "account_unavailable": "This account cannot add sign-in methods right now. Contact the person who runs this server.",
         "unknown": "Connecting did not work. Try again."
-      }
+      },
+      "reauthUnavailable": "None of the providers you signed up with is available on this server, so you cannot sign in again here. Ask the person who runs this server for help.",
+      "connectConflict": "That provider is already connected, or this account is waiting to be deleted. Reload the page to see where things stand.",
+      "connectUnavailable": "This server does not offer that provider any more. Reload the page to see what is available.",
+      "disconnectGone": "That provider is not connected any more. Reload the page to see where things stand."
     }
   },
   "dashboard": {

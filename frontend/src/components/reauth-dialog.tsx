@@ -20,10 +20,13 @@ interface Props {
   destructive?: boolean;
   /** Users with a password must type it (the server checks it); users without one are asked for nothing. */
   needsPassword: boolean;
-  /** What a 409 means for this action; other failures use the catalog's wording for the error code. */
-  conflictText?: string;
+  /** What a refusal with this HTTP status means for this action; other failures use the catalog's wording for the error code. */
+  statusText?: Partial<Record<number, string>>;
   onConfirm: (password: string | undefined) => Promise<void>;
 }
+
+/** Thrown by `onConfirm` for a failure that has its own, already translated sentence. */
+export class ReauthFailure extends Error {}
 
 type Problem = { password?: boolean; reauth?: boolean; general?: string };
 
@@ -32,7 +35,7 @@ type Problem = { password?: boolean; reauth?: boolean; general?: string };
  * re-authenticates: a password for users who have one, a fresh session for users who do not (REAUTH_REQUIRED, then the
  * sign-in-again buttons appear in the dialog).
  */
-export function ReauthDialog({ open, onOpenChange, title, description, confirmLabel, destructive, needsPassword, conflictText, onConfirm }: Props) {
+export function ReauthDialog({ open, onOpenChange, title, description, confirmLabel, destructive, needsPassword, statusText, onConfirm }: Props) {
   const t = useTranslations('settings.signIn');
   const tc = useTranslations('common');
   const errorText = useErrorText();
@@ -49,10 +52,12 @@ export function ReauthDialog({ open, onOpenChange, title, description, confirmLa
   }
 
   function refusal(e: unknown): Problem {
+    if (e instanceof ReauthFailure) return { general: e.message };
     if (e instanceof ApiError) {
       if (e.code === 'REAUTH_REQUIRED') return { reauth: true };
       if (e.status === 400 && e.fields.current_password) return { password: true };
-      if (e.status === 409 && conflictText) return { general: conflictText };
+      const own = statusText?.[e.status];
+      if (own) return { general: own };
     }
     return { general: errorText(e) };
   }

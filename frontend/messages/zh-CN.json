@@ -385,7 +385,11 @@
         "identity_in_use": "{provider, select, google {该 Google 账号已关联到另一个 Steerpost 账号。请先在那边解除关联。} github {该 GitHub 账号已关联到另一个 Steerpost 账号。请先在那边解除关联。} other {该 服务商 账号已关联到另一个 Steerpost 账号。请先在那边解除关联。}}",
         "account_unavailable": "此账号目前无法添加登录方式。请联系运行此服务器的人。",
         "unknown": "关联失败。请重试。"
-      }
+      },
+      "reauthUnavailable": "你注册时使用的服务商在此服务器上都不可用，因此无法在这里重新登录。请联系运行此服务器的人寻求帮助。",
+      "connectConflict": "该服务商已关联，或此账号正在等待删除。请刷新页面查看当前状态。",
+      "connectUnavailable": "此服务器已不再提供该服务商。请刷新页面查看可用项。",
+      "disconnectGone": "该服务商已不再关联。请刷新页面查看当前状态。"
     }
   },
   "dashboard": {

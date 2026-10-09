@@ -59,7 +59,7 @@ export function normalizeSignInMethods(raw: unknown): SignInMethodList {
   return {
     has_password: r.has_password !== false,
     identities: list.flatMap((i) =>
-      isRec(i) && typeof i.provider === 'string' && i.provider
+      isRec(i) && typeof i.provider === 'string' && i.provider && !Number.isNaN(Date.parse(str(i.linked_at)))
         ? [{ provider: i.provider, email: str(i.email), linked_at: str(i.linked_at), last_login_at: typeof i.last_login_at === 'string' ? i.last_login_at : null }]
         : [],
     ),
@@ -163,7 +163,7 @@ const LABELS: Record<string, string> = {
   bluesky: 'Bluesky',
 };
 
-/** Display name of a network id. An empty id gives an empty string; the caller supplies the "Unknown" text from the catalog. */
+/** Display name of a network or sign-in provider id (Google and GitHub too). An empty id gives an empty string; the caller supplies the "Unknown" text from the catalog. */
 export function providerLabel(id: string): string {
   return LABELS[id] ?? (id ? id.charAt(0).toUpperCase() + id.slice(1) : '');
 }

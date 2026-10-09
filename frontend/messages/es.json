@@ -385,7 +385,11 @@
         "identity_in_use": "{provider, select, google {Esa cuenta de Google ya está conectada a otra cuenta de Steerpost. Desconéctala allí primero.} github {Esa cuenta de GitHub ya está conectada a otra cuenta de Steerpost. Desconéctala allí primero.} other {Esa cuenta de proveedor ya está conectada a otra cuenta de Steerpost. Desconéctala allí primero.}}",
         "account_unavailable": "Esta cuenta no puede añadir métodos de acceso ahora. Contacta con quien gestiona este servidor.",
         "unknown": "No se pudo conectar. Inténtalo de nuevo."
-      }
+      },
+      "reauthUnavailable": "Ninguno de los proveedores con los que te registraste está disponible en este servidor, así que no puedes volver a iniciar sesión aquí. Pide ayuda a quien gestiona este servidor.",
+      "connectConflict": "Ese proveedor ya está conectado, o esta cuenta está pendiente de eliminación. Recarga la página para ver el estado actual.",
+      "connectUnavailable": "Este servidor ya no ofrece ese proveedor. Recarga la página para ver qué hay disponible.",
+      "disconnectGone": "Ese proveedor ya no está conectado. Recarga la página para ver el estado actual."
     }
   },
   "dashboard": {
