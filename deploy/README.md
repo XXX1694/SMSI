@@ -40,25 +40,6 @@ most half of the machine. Updates can be pushed from GitHub (section 8) or pulle
 Images are built by `.github/workflows/release.yml` and published as `ghcr.io/<owner>/socialos-{backend,mcp,frontend}`.
 Tags: `sha-<7 hex>` (every merge to `main`, immutable, what you deploy), `main` (moves), `X.Y.Z` / `X.Y` / `X` for `vX.Y.Z` git tags.
 
-## Legacy identifiers
-
-The product is called Steerpost. Names that identify stored state or a resource on the host still say `socialos`, because renaming
-them would log users out, create empty volumes or silently disable the guard. They are deliberate, not leftovers. Do not rename
-them without a migration plan (decision D-020 once it is merged).
-
-| Identifier | Why it keeps the old name |
-|---|---|
-| `/opt/socialos`, `SOCIALOS_DIR`, `/var/backups/socialos`, `socialos-db-*.dump` | install and backup paths on existing servers |
-| systemd units `socialos-guard`, `socialos-backup`, `socialos-autoupdate`, `socialos-caddy-precheck`, `socialos.slice`, `*.service.d/socialos.conf` | `socialos-guard.service` has `ConditionPathExists=` on the script name: a rename would make systemd skip the guard without any error |
-| `SOCIALOS_CGROUP_PARENT`, `SOCIALOS_PIDS_LIMIT`, `SOCIALOS_API_URL`, `SOCIALOS_API_KEY`, `SOCIALOS_TIMEOUT_MS`, `SOCIALOS_AUTH_HEADER` | environment variables read from existing server `.env` files and client configs |
-| compose project `socialos`, Postgres user and database `socialos`, `socialos-media` bucket | the project name prefixes the volumes: a new name means an empty database |
-| images `ghcr.io/<owner>/socialos-{backend,mcp,frontend}` | what existing servers pull; Steerpost-named images come later |
-| Caddy snippets `socialos.caddy`, `socialos_common` | installed on shared hosts |
-| cookies `socialos_session`, `socialos_csrf`; headers `X-SocialOS-Gateway`, `X-SocialOS-Client-IP` | renaming logs everyone out, and the header strip list lives in installed Caddy snippets |
-| Redis prefix `socialos:telegram:`; Bluesky record-key salt `socialos:bluesky:rkey:`; Mastodon `Idempotency-Key` prefix `socialos-` | shared across a rolling deploy; changing a salt can duplicate posts on a retry |
-| metrics `socialos_*`, S3 lifecycle rule `socialos-abort-incomplete-multipart`, browser storage keys `socialos_*` | dashboards, an existing bucket rule and saved user preferences |
-| GitHub URLs containing `SMSI` | the repository has not been renamed yet |
-
 ## 1. DNS records
 
 Create these records at your DNS provider **before the first deploy**, all pointing at the server's public IP (add `AAAA` records
@@ -696,6 +677,8 @@ resource, so renaming one is a migration, not a find-and-replace. Do not "clean 
 | Caddy snippet names `socialos.caddy`, `socialos_common` | Imported by the host's Caddyfile. |
 | `SOCIALOS_DIR`, `SOCIALOS_CGROUP_PARENT`, `SOCIALOS_PIDS_LIMIT` | Read from the server `.env`. |
 | `SOCIALOS_API_URL`, `SOCIALOS_API_KEY`, `SOCIALOS_TIMEOUT_MS` | Still read, as a fallback after `STEERPOST_*`; compose sets both. Generated client configs also still use the old names until the identifier rename lands. |
+| `SOCIALOS_AUTH_HEADER` (env var in generated `stdio` client configs) | Kept on purpose: configs users already pasted into their clients keep working. The config key itself is now `steerpost`. |
+| GitHub URLs containing `SMSI` | The repository has not been renamed yet. |
 | Images `socialos-{backend,mcp,frontend}` | Published next to `steerpost-*` until every server pulls the new names. |
 
 ## 16. Sharing a host safely
