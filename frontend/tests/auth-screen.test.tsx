@@ -138,9 +138,13 @@ describe('email form', () => {
     await open('login');
     const password = screen.getByLabelText('Password');
     expect(password).toHaveAttribute('type', 'password');
-    await userEvent.click(screen.getByRole('button', { name: 'Show Password' }));
+    const toggle = screen.getByRole('button', { name: 'Show Password' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(toggle);
     expect(password).toHaveAttribute('type', 'text');
-    await userEvent.click(screen.getByRole('button', { name: 'Hide Password' }));
+    // The name stays fixed; aria-pressed carries the state.
+    expect(screen.getByRole('button', { name: 'Show Password' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(toggle);
     expect(password).toHaveAttribute('type', 'password');
   });
 
@@ -156,6 +160,36 @@ describe('email form', () => {
     expect(screen.getByLabelText('Email')).toHaveFocus();
     expect(screen.getByLabelText('Email')).toBeInvalid();
     expect(auth.register).not.toHaveBeenCalled();
+  });
+
+  it('does not complain about a field that was only tabbed through', async () => {
+    const user = userEvent.setup();
+    await open('register');
+    await user.click(screen.getByLabelText('Email'));
+    await user.tab();
+    await user.tab();
+    expect(screen.queryByText('Enter your email address.')).toBeNull();
+    expect(screen.queryByText('Enter your password.')).toBeNull();
+  });
+
+  it('announces one summary alert on submit, not one per field', async () => {
+    await open('register');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent('Fix the highlighted fields to continue.');
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter your email address.');
+  });
+
+  it('keeps the Terms box unchanged when a link in its text is used, and toggles it from the text', async () => {
+    await open('register');
+    const box = screen.getByRole('checkbox');
+    const link = screen.getAllByRole('link', { name: 'Terms' })[0] as HTMLElement;
+    link.addEventListener('click', (e) => e.preventDefault());
+    await userEvent.click(link);
+    expect(box).not.toBeChecked();
+    await userEvent.click(screen.getByText(/I agree to the/));
+    expect(box).toBeChecked();
   });
 
   it('checks a field when it loses focus, and clears the message once it is fixed', async () => {
@@ -217,9 +251,9 @@ describe('/login?error=', () => {
   it.each([
     ['oauth_cancelled', /Sign-in was canceled/],
     ['oauth_state_invalid', /expired or was opened in another browser/],
-    ['oauth_provider_error', /Sign-in did not finish: the provider reported a problem/],
-    ['email_unverified', /Verify your primary email on the provider, then try again/],
-    ['account_exists', /Sign in with your password, then connect the provider in Settings/],
+    ['oauth_provider_error', /Sign-in did not finish because the provider reported a problem/],
+    ['email_unverified', /Verify your primary email with your sign-in provider, then try again/],
+    ['account_exists', /Sign in with your password, then connect your sign-in provider in Settings/],
     ['identity_in_use', /already connected to another Steerpost account/],
     ['account_unavailable', /cannot sign in right now/],
     ['signup_expired', /sign-up expired/],
@@ -241,7 +275,7 @@ describe('/login?error=', () => {
   it('never echoes an unknown provider value', async () => {
     query.value = 'error=account_exists&provider=%3Cscript%3E';
     await open('login');
-    expect(screen.getByRole('alert')).toHaveTextContent('connect the provider in Settings');
+    expect(screen.getByRole('alert')).toHaveTextContent('connect your sign-in provider in Settings');
   });
 
   it('shows nothing on the register page or without an error', async () => {

@@ -200,7 +200,6 @@
     "orDivider": "oder",
     "providersLoading": "Anmeldeoptionen werden geladen…",
     "providersFailed": "Die Anmeldeoptionen konnten nicht geladen werden. Du kannst weiterhin deine E-Mail verwenden.",
-    "providerFallback": "der Anbieter",
     "emailRequired": "Gib deine E-Mail-Adresse ein.",
     "emailInvalid": "Gib eine gültige E-Mail-Adresse ein, zum Beispiel name@example.com.",
     "passwordRequired": "Gib dein Passwort ein.",
@@ -210,9 +209,9 @@
     "loginError": {
       "oauth_cancelled": "Die Anmeldung wurde abgebrochen. Versuche es erneut oder verwende E-Mail und Passwort.",
       "oauth_state_invalid": "Der Anmeldelink ist abgelaufen oder wurde in einem anderen Browser geöffnet. Beginne erneut auf dieser Seite.",
-      "oauth_provider_error": "Die Anmeldung wurde nicht abgeschlossen: {provider} meldet ein Problem. Versuche es gleich noch einmal oder verwende deine E-Mail.",
-      "email_unverified": "Deine E-Mail-Adresse ist nicht bestätigt. Bestätige deine primäre E-Mail-Adresse bei {provider} und versuche es erneut.",
-      "account_exists": "Zu dieser E-Mail-Adresse gibt es bereits ein Konto. Melde dich mit deinem Passwort an und verbinde dann {provider} in den Einstellungen.",
+      "oauth_provider_error": "{provider, select, google {Die Anmeldung wurde nicht abgeschlossen: Google meldet ein Problem. Versuche es gleich noch einmal oder verwende deine E-Mail.} github {Die Anmeldung wurde nicht abgeschlossen: GitHub meldet ein Problem. Versuche es gleich noch einmal oder verwende deine E-Mail.} other {Die Anmeldung wurde nicht abgeschlossen, weil der Anbieter ein Problem gemeldet hat. Versuche es gleich noch einmal oder verwende deine E-Mail.}}",
+      "email_unverified": "{provider, select, google {Deine E-Mail-Adresse ist nicht bestätigt. Bestätige deine primäre E-Mail-Adresse bei Google und versuche es erneut.} github {Deine E-Mail-Adresse ist nicht bestätigt. Bestätige deine primäre E-Mail-Adresse bei GitHub und versuche es erneut.} other {Deine E-Mail-Adresse ist nicht bestätigt. Bestätige deine primäre E-Mail-Adresse bei deinem Anmeldeanbieter und versuche es erneut.}}",
+      "account_exists": "{provider, select, google {Zu dieser E-Mail-Adresse gibt es bereits ein Konto. Melde dich mit deinem Passwort an und verbinde dann Google in den Einstellungen.} github {Zu dieser E-Mail-Adresse gibt es bereits ein Konto. Melde dich mit deinem Passwort an und verbinde dann GitHub in den Einstellungen.} other {Zu dieser E-Mail-Adresse gibt es bereits ein Konto. Melde dich mit deinem Passwort an und verbinde dann deinen Anmeldeanbieter in den Einstellungen.}}",
       "identity_in_use": "Dieses Konto ist bereits mit einem anderen Steerpost-Konto verbunden. Melde dich bei diesem Konto an.",
       "account_unavailable": "Mit diesem Konto kann man sich gerade nicht anmelden. Wende dich an die Person, die diesen Server betreibt.",
       "signup_expired": "Die Registrierung ist abgelaufen. Beginne erneut auf dieser Seite.",
@@ -220,8 +219,8 @@
     },
     "signupComplete": {
       "title": "Konto fertig einrichten",
-      "intro": "Du hast dich mit {provider} angemeldet. Akzeptiere die Nutzungsbedingungen, um dein Konto zu erstellen.",
-      "emailHint": "Bestätigt von {provider}. Du kannst sie hier nicht ändern.",
+      "intro": "{provider, select, google {Du hast dich mit Google angemeldet. Akzeptiere die Nutzungsbedingungen, um dein Konto zu erstellen.} github {Du hast dich mit GitHub angemeldet. Akzeptiere die Nutzungsbedingungen, um dein Konto zu erstellen.} other {Du hast dich über einen Anbieter angemeldet. Akzeptiere die Nutzungsbedingungen, um dein Konto zu erstellen.}}",
+      "emailHint": "{provider, select, google {Bestätigt von Google. Du kannst sie hier nicht ändern.} github {Bestätigt von GitHub. Du kannst sie hier nicht ändern.} other {Von deinem Anmeldeanbieter bestätigt. Du kannst sie hier nicht ändern.}}",
       "nameTooLong": "Verwende höchstens 100 Zeichen."
     }
   },

@@ -2,7 +2,7 @@
 import type en from '../../messages/en.json';
 import { Notice } from '@/components/states';
 import { useTranslations } from '@/i18n/use-translations';
-import { signInProviderName } from '@/lib/sign-in-providers';
+import { signInProviderKey } from '@/lib/sign-in-providers';
 
 /**
  * The codes the API puts in `/login?error=<code>` after a provider round trip, plus `signup_expired`, which the
@@ -23,8 +23,8 @@ const isCode = (c: string): c is Code => (CODES as readonly string[]).includes(c
 
 export function LoginErrorNotice({ code, provider }: { code: string; provider: string | null }) {
   const t = useTranslations('auth');
-  // The API does not always say which provider failed, so the sentence falls back to a neutral phrase.
-  const name = signInProviderName(provider) ?? t('providerFallback');
+  // The API does not always say which provider failed: the messages then use their `other` sentence.
+  const name = signInProviderKey(provider);
   return (
     <div className="mt-4">
       <Notice tone="danger">{isCode(code) ? t(`loginError.${code}`, { provider: name }) : t('loginError.unknown')}</Notice>

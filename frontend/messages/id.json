@@ -200,7 +200,6 @@
     "orDivider": "atau",
     "providersLoading": "Memuat opsi masuk…",
     "providersFailed": "Opsi masuk tidak dapat dimuat. Anda masih bisa memakai email.",
-    "providerFallback": "penyedia",
     "emailRequired": "Masukkan alamat email Anda.",
     "emailInvalid": "Masukkan alamat email yang valid, misalnya nama@example.com.",
     "passwordRequired": "Masukkan kata sandi Anda.",
@@ -210,9 +209,9 @@
     "loginError": {
       "oauth_cancelled": "Proses masuk dibatalkan. Coba lagi, atau gunakan email dan kata sandi Anda.",
       "oauth_state_invalid": "Tautan masuk sudah kedaluwarsa atau dibuka di browser lain. Mulai lagi dari halaman ini.",
-      "oauth_provider_error": "Proses masuk tidak selesai: {provider} melaporkan masalah. Coba lagi sebentar lagi, atau gunakan email Anda.",
-      "email_unverified": "Alamat email Anda belum diverifikasi. Verifikasi email utama Anda di {provider}, lalu coba lagi.",
-      "account_exists": "Akun dengan email ini sudah ada. Masuk dengan kata sandi Anda, lalu hubungkan {provider} di Pengaturan.",
+      "oauth_provider_error": "{provider, select, google {Proses masuk tidak selesai: Google melaporkan masalah. Coba lagi sebentar lagi, atau gunakan email Anda.} github {Proses masuk tidak selesai: GitHub melaporkan masalah. Coba lagi sebentar lagi, atau gunakan email Anda.} other {Proses masuk tidak selesai karena penyedia melaporkan masalah. Coba lagi sebentar lagi, atau gunakan email Anda.}}",
+      "email_unverified": "{provider, select, google {Alamat email Anda belum diverifikasi. Verifikasi email utama Anda di Google, lalu coba lagi.} github {Alamat email Anda belum diverifikasi. Verifikasi email utama Anda di GitHub, lalu coba lagi.} other {Alamat email Anda belum diverifikasi. Verifikasi email utama Anda di penyedia masuk Anda, lalu coba lagi.}}",
+      "account_exists": "{provider, select, google {Akun dengan email ini sudah ada. Masuk dengan kata sandi Anda, lalu hubungkan Google di Pengaturan.} github {Akun dengan email ini sudah ada. Masuk dengan kata sandi Anda, lalu hubungkan GitHub di Pengaturan.} other {Akun dengan email ini sudah ada. Masuk dengan kata sandi Anda, lalu hubungkan penyedia masuk Anda di Pengaturan.}}",
       "identity_in_use": "Akun itu sudah terhubung ke akun Steerpost lain. Masuk ke akun tersebut.",
       "account_unavailable": "Akun ini tidak dapat masuk saat ini. Hubungi orang yang mengelola server ini.",
       "signup_expired": "Pendaftaran sudah kedaluwarsa. Mulai lagi dari halaman ini.",
@@ -220,8 +219,8 @@
     },
     "signupComplete": {
       "title": "Selesaikan pembuatan akun Anda",
-      "intro": "Anda masuk dengan {provider}. Setujui Ketentuan untuk membuat akun Anda.",
-      "emailHint": "Diverifikasi oleh {provider}. Anda tidak dapat mengubahnya di sini.",
+      "intro": "{provider, select, google {Anda masuk dengan Google. Setujui Ketentuan untuk membuat akun Anda.} github {Anda masuk dengan GitHub. Setujui Ketentuan untuk membuat akun Anda.} other {Anda masuk melalui sebuah penyedia. Setujui Ketentuan untuk membuat akun Anda.}}",
+      "emailHint": "{provider, select, google {Diverifikasi oleh Google. Anda tidak dapat mengubahnya di sini.} github {Diverifikasi oleh GitHub. Anda tidak dapat mengubahnya di sini.} other {Diverifikasi oleh penyedia masuk Anda. Anda tidak dapat mengubahnya di sini.}}",
       "nameTooLong": "Gunakan maksimal 100 karakter."
     }
   },

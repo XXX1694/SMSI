@@ -12,7 +12,7 @@ import { useAsync, useErrorText } from '@/hooks';
 import { useTranslations } from '@/i18n/use-translations';
 import { ApiError, api } from '@/lib/api';
 import { safeNext } from '@/lib/safe-next';
-import { signInProviderName } from '@/lib/sign-in-providers';
+import { signInProviderKey } from '@/lib/sign-in-providers';
 import type { PendingSignup } from '@/lib/types';
 
 const EXPIRED = '/login?error=signup_expired';
@@ -30,7 +30,7 @@ function SignupForm({ pending }: { pending: PendingSignup }) {
   const [nameError, setNameError] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const provider = signInProviderName(pending.provider) ?? ta('providerFallback');
+  const provider = signInProviderKey(pending.provider);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -38,6 +38,7 @@ function SignupForm({ pending }: { pending: PendingSignup }) {
     setNameError(false);
     if (!accepted) {
       setTermsError(true);
+      setFormError(ta('fixFields'));
       document.getElementById('accept-terms')?.focus();
       return;
     }
@@ -47,7 +48,10 @@ function SignupForm({ pending }: { pending: PendingSignup }) {
       router.replace(safeNext(pending.next) ?? '/dashboard');
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) router.replace(EXPIRED);
-      else if (err instanceof ApiError && err.fields.display_name) setNameError(true);
+      else if (err instanceof ApiError && err.fields.display_name) {
+        setNameError(true);
+        setFormError(ta('fixFields'));
+      }
       else setFormError(errorText(err));
       setBusy(false);
     }
@@ -59,7 +63,7 @@ function SignupForm({ pending }: { pending: PendingSignup }) {
         <Field label={ta('email')} htmlFor="email" hint={t('emailHint', { provider })}>
           <Input id="email" type="email" value={pending.email} readOnly autoComplete="email" className="max-md:h-11" />
         </Field>
-        <Field label={ta('name')} htmlFor="name" optional error={nameError ? t('nameTooLong') : undefined}>
+        <Field label={ta('name')} htmlFor="name" optional announce={false} error={nameError ? t('nameTooLong') : undefined}>
           <Input id="name" autoComplete="name" className="max-md:h-11" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <TermsCheckbox

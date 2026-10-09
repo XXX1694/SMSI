@@ -6,7 +6,7 @@ import { useTranslations } from '@/i18n/use-translations';
 import { cn } from '@/lib/utils';
 
 type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> & {
-  /** Accessible name of the toggle, e.g. "Password": it reads "Show Password" / "Hide Password" (common.showField). */
+  /** Accessible name of the toggle, e.g. "Password": it reads "Show Password" and stays so; `aria-pressed` carries the state. */
   label: string;
 };
 
@@ -32,7 +32,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, Props>(({ classN
         type="button"
         onClick={() => setShown((s) => !s)}
         aria-pressed={shown}
-        aria-label={t(shown ? 'hideField' : 'showField', { label })}
+        aria-label={t('showField', { label })}
         className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted-foreground hover:text-foreground"
       >
         {shown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}

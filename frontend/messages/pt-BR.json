@@ -200,7 +200,6 @@
     "orDivider": "ou",
     "providersLoading": "Carregando opções de entrada…",
     "providersFailed": "Não foi possível carregar as opções de entrada. Você ainda pode usar seu e-mail.",
-    "providerFallback": "o provedor",
     "emailRequired": "Informe seu e-mail.",
     "emailInvalid": "Informe um e-mail válido, por exemplo nome@example.com.",
     "passwordRequired": "Informe sua senha.",
@@ -210,9 +209,9 @@
     "loginError": {
       "oauth_cancelled": "A entrada foi cancelada. Tente novamente ou use seu e-mail e senha.",
       "oauth_state_invalid": "O link de entrada expirou ou foi aberto em outro navegador. Comece de novo a partir desta página.",
-      "oauth_provider_error": "A entrada não foi concluída: {provider} informou um problema. Tente novamente em instantes ou use seu e-mail.",
-      "email_unverified": "Seu e-mail não foi verificado. Verifique seu e-mail principal em {provider} e tente novamente.",
-      "account_exists": "Já existe uma conta com este e-mail. Entre com sua senha e depois conecte {provider} em Configurações.",
+      "oauth_provider_error": "{provider, select, google {A entrada não foi concluída: Google informou um problema. Tente novamente em instantes ou use seu e-mail.} github {A entrada não foi concluída: GitHub informou um problema. Tente novamente em instantes ou use seu e-mail.} other {A entrada não foi concluída porque o provedor informou um problema. Tente novamente em instantes ou use seu e-mail.}}",
+      "email_unverified": "{provider, select, google {Seu e-mail não foi verificado. Verifique seu e-mail principal em Google e tente novamente.} github {Seu e-mail não foi verificado. Verifique seu e-mail principal em GitHub e tente novamente.} other {Seu e-mail não foi verificado. Verifique seu e-mail principal no seu provedor de login e tente novamente.}}",
+      "account_exists": "{provider, select, google {Já existe uma conta com este e-mail. Entre com sua senha e depois conecte Google em Configurações.} github {Já existe uma conta com este e-mail. Entre com sua senha e depois conecte GitHub em Configurações.} other {Já existe uma conta com este e-mail. Entre com sua senha e depois conecte seu provedor de login em Configurações.}}",
       "identity_in_use": "Essa conta já está conectada a outra conta do Steerpost. Entre nessa conta.",
       "account_unavailable": "Esta conta não pode entrar agora. Fale com quem administra este servidor.",
       "signup_expired": "O cadastro expirou. Comece de novo a partir desta página.",
@@ -220,8 +219,8 @@
     },
     "signupComplete": {
       "title": "Conclua a criação da sua conta",
-      "intro": "Você entrou com {provider}. Aceite os Termos para criar sua conta.",
-      "emailHint": "Verificado por {provider}. Você não pode alterá-lo aqui.",
+      "intro": "{provider, select, google {Você entrou com Google. Aceite os Termos para criar sua conta.} github {Você entrou com GitHub. Aceite os Termos para criar sua conta.} other {Você entrou com um provedor. Aceite os Termos para criar sua conta.}}",
+      "emailHint": "{provider, select, google {Verificado por Google. Você não pode alterá-lo aqui.} github {Verificado por GitHub. Você não pode alterá-lo aqui.} other {Verificado pelo seu provedor de login. Você não pode alterá-lo aqui.}}",
       "nameTooLong": "Use no máximo 100 caracteres."
     }
   },

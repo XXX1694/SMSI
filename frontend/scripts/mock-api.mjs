@@ -26,6 +26,8 @@ const VERIFICATION = process.env.MOCK_VERIFICATION ?? '';
 // MOCK_SIGN_IN_PROVIDERS="" hides the "Continue with ..." buttons (a server with no provider configured).
 const SIGN_IN_PROVIDERS = (process.env.MOCK_SIGN_IN_PROVIDERS ?? 'github,google').split(',').filter(Boolean).map((id) => ({ id, name: id === 'github' ? 'GitHub' : id === 'google' ? 'Google' : id }));
 const pendingSignups = new Map();
+// Same rules as the API's redirect.SafePath: no backslash, control characters or embedded scheme.
+const safeNext = (p) => (p && p.length <= 512 && p.startsWith('/') && !p.startsWith('//') && !/[\\\u0000-\u001f\u007f]/.test(p) && !p.includes('://') ? p : null);
 const LINK_DELAY_MS = Number(process.env.MOCK_LINK_DELAY_MS ?? 5000);
 const LINK_TTL_S = Number(process.env.MOCK_LINK_TTL_SECONDS ?? 900);
 const MAX_ACTIVE_LINKS = 3;
@@ -218,7 +220,7 @@ async function handle(req, res) {
     if (!SIGN_IN_PROVIDERS.some((p) => p.id === r[1])) return fail(res, 404, 'NOT_FOUND', 'sign-in provider not found');
     const ticket = randomBytes(16).toString('hex');
     const next = url.searchParams.get('next') ?? '';
-    pendingSignups.set(ticket, { provider: r[1], email: 'sam.rivera@example.com', display_name: 'Sam Rivera', next: next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard' });
+    pendingSignups.set(ticket, { provider: r[1], email: 'sam.rivera@example.com', display_name: 'Sam Rivera', next: safeNext(next) ?? '/dashboard' });
     res.writeHead(302, { Location: '/signup/complete', 'Set-Cookie': [`socialos_oauth_ticket=${ticket}; Path=/api/v1/auth/oauth; HttpOnly; SameSite=Lax`] });
     return res.end();
   }

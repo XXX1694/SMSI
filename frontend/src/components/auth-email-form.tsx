@@ -38,7 +38,7 @@ export function AuthEmailForm({ mode, next }: { mode: 'login' | 'register'; next
   const f = useAuthEmailForm(mode, next);
   return (
     <form ref={f.form} onSubmit={f.submit} className="space-y-4" noValidate>
-      <Field label={t('email')} htmlFor="email" error={f.errors.email} required>
+      <Field label={t('email')} htmlFor="email" error={f.errors.email} announce={false} required>
         <Input
           id="email"
           type="email"
@@ -54,7 +54,7 @@ export function AuthEmailForm({ mode, next }: { mode: 'login' | 'register'; next
         />
       </Field>
       {f.duplicate ? <DuplicateEmail next={next} /> : null}
-      <Field label={t('password')} htmlFor="password" error={f.errors.password} hint={f.isLogin ? undefined : t('passwordHint')} required>
+      <Field label={t('password')} htmlFor="password" error={f.errors.password} announce={false} hint={f.isLogin ? undefined : t('passwordHint')} required>
         <PasswordInput
           id="password"
           label={t('password')}

@@ -55,10 +55,17 @@ export function useAuthEmailForm(mode: 'login' | 'register', next: string | null
   const [duplicate, setDuplicate] = useState(false);
   const [busy, setBusy] = useState(false);
   const form = useRef<HTMLFormElement>(null);
+  // A field is checked on blur only once the person has typed in it: tabbing through an empty form is not an error.
+  const edited = useRef(new Set<FieldName>());
   const values = { email, password, accepted };
 
   const setField = (field: FieldName, message: string | undefined) => setErrors((e) => ({ ...e, [field]: message }));
+  const edit = (field: FieldName, set: (v: string) => void) => (v: string) => {
+    edited.current.add(field);
+    set(v);
+  };
   const blur = (field: FieldName) => () => {
+    if (!edited.current.has(field)) return;
     setDuplicate(false);
     setField(field, check(field, values, isLogin, t));
   };
@@ -99,5 +106,5 @@ export function useAuthEmailForm(mode: 'login' | 'register', next: string | null
     }
   }
 
-  return { form, email, setEmail, password, setPassword, accepted, accept, errors, formError, duplicate, busy, blur, submit, isLogin };
+  return { form, email, setEmail: edit('email', setEmail), password, setPassword: edit('password', setPassword), accepted, accept, errors, formError, duplicate, busy, blur, submit, isLogin };
 }

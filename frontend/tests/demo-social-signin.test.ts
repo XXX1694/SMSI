@@ -30,8 +30,10 @@ describe('demo provider sign-in', () => {
   it('refuses an unknown provider and an off-site next', () => {
     const { call } = fresh();
     expect(call('GET', '/auth/oauth/myspace/start').status).toBe(404);
-    call('GET', '/auth/oauth/google/start', undefined, { next: '//evil.example' });
-    expect(call('GET', '/auth/oauth/pending').body.next).toBe('/dashboard');
+    for (const bad of ['//evil.example', '/\t/evil.example', '/\n/evil.example']) {
+      call('GET', '/auth/oauth/google/start', undefined, { next: bad });
+      expect(call('GET', '/auth/oauth/pending').body.next).toBe('/dashboard');
+    }
   });
 
   it('complete needs the Terms, then signs in and forgets the ticket', () => {

@@ -61,8 +61,8 @@ export function Hint({ className, ...props }: React.HTMLAttributes<HTMLParagraph
   return <p className={cn('text-xs text-muted-foreground', className)} {...props} />;
 }
 
-export function FieldError({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p role="alert" className={cn('text-xs text-danger', className)} {...props} />;
+export function FieldError({ className, role = 'alert', ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+  return <p role={role || undefined} className={cn('text-xs text-danger', className)} {...props} />;
 }
 
 /**
@@ -75,6 +75,7 @@ export function Field({
   error,
   required,
   optional,
+  announce = true,
   htmlFor,
   children,
 }: {
@@ -84,6 +85,8 @@ export function Field({
   required?: boolean;
   /** Appends "(optional)" to the label. */
   optional?: boolean;
+  /** False when the form shows one summary alert itself: the field error is then only linked to its control, not announced. */
+  announce?: boolean;
   htmlFor?: string;
   children: React.ReactNode;
 }) {
@@ -99,7 +102,7 @@ export function Field({
         <Label htmlFor={id}>{optional ? t('optionalLabel', { label }) : label}</Label>
         {children}
         {showHint ? <Hint id={`${id}-hint`}>{hint}</Hint> : null}
-        {error ? <FieldError id={`${id}-error`}>{error}</FieldError> : null}
+        {error ? <FieldError id={`${id}-error`} role={announce ? 'alert' : ''}>{error}</FieldError> : null}
       </div>
     </FieldContext.Provider>
   );

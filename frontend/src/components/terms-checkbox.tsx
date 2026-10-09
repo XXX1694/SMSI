@@ -12,12 +12,20 @@ export function TermsCheckbox({ checked, onCheckedChange, error }: { checked: bo
       <div className="flex items-start gap-2 text-sm">
         <Checkbox
           id="accept-terms"
+          aria-labelledby="accept-terms-text"
           checked={checked}
           onCheckedChange={(v) => onCheckedChange(v === true)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? 'accept-terms-error' : undefined}
         />
-        <label htmlFor="accept-terms" className="leading-snug">
+        {/* Not a <label>: a click on the Terms or Privacy link inside one would also toggle the box. */}
+        <span
+          id="accept-terms-text"
+          className="leading-snug"
+          onClick={(e) => {
+            if (!(e.target as HTMLElement).closest('a')) onCheckedChange(!checked);
+          }}
+        >
           {nodes(
             t.rich('agree', {
               terms: (c) => (
@@ -32,10 +40,10 @@ export function TermsCheckbox({ checked, onCheckedChange, error }: { checked: bo
               ),
             }),
           )}
-        </label>
+        </span>
       </div>
       {error ? (
-        <p id="accept-terms-error" role="alert" className="mt-1.5 text-xs text-danger">
+        <p id="accept-terms-error" className="mt-1.5 text-xs text-danger">
           {error}
         </p>
       ) : null}

@@ -200,7 +200,6 @@
     "orDivider": "或",
     "providersLoading": "正在加载登录方式…",
     "providersFailed": "无法加载登录方式。你仍可使用邮箱登录。",
-    "providerFallback": "提供方",
     "emailRequired": "请输入你的邮箱地址。",
     "emailInvalid": "请输入有效的邮箱地址，例如 name@example.com。",
     "passwordRequired": "请输入你的密码。",
@@ -210,9 +209,9 @@
     "loginError": {
       "oauth_cancelled": "登录已取消。请重试，或使用邮箱和密码登录。",
       "oauth_state_invalid": "登录链接已过期，或在其他浏览器中打开。请从此页面重新开始。",
-      "oauth_provider_error": "登录未完成：{provider} 报告了问题。请稍后重试，或使用邮箱登录。",
-      "email_unverified": "你的邮箱地址尚未验证。请在 {provider} 上验证主邮箱，然后重试。",
-      "account_exists": "该邮箱已有账号。请使用密码登录，然后在设置中关联 {provider}。",
+      "oauth_provider_error": "{provider, select, google {登录未完成：Google 报告了问题。请稍后重试，或使用邮箱登录。} github {登录未完成：GitHub 报告了问题。请稍后重试，或使用邮箱登录。} other {登录未完成：提供方报告了问题。请稍后重试，或使用邮箱登录。}}",
+      "email_unverified": "{provider, select, google {你的邮箱地址尚未验证。请在 Google 上验证主邮箱，然后重试。} github {你的邮箱地址尚未验证。请在 GitHub 上验证主邮箱，然后重试。} other {你的邮箱地址尚未验证。请在登录所用的提供方处验证主邮箱，然后重试。}}",
+      "account_exists": "{provider, select, google {该邮箱已有账号。请使用密码登录，然后在设置中关联 Google。} github {该邮箱已有账号。请使用密码登录，然后在设置中关联 GitHub。} other {该邮箱已有账号。请使用密码登录，然后在设置中关联你的登录提供方。}}",
       "identity_in_use": "该账号已关联到另一个 Steerpost 账号。请登录那个账号。",
       "account_unavailable": "此账号目前无法登录。请联系运营此服务器的人。",
       "signup_expired": "注册已过期。请从此页面重新开始。",
@@ -220,8 +219,8 @@
     },
     "signupComplete": {
       "title": "完成创建账号",
-      "intro": "你已使用 {provider} 登录。接受服务条款即可创建账号。",
-      "emailHint": "已由 {provider} 验证。无法在此修改。",
+      "intro": "{provider, select, google {你已使用 Google 登录。接受服务条款即可创建账号。} github {你已使用 GitHub 登录。接受服务条款即可创建账号。} other {你已通过提供方登录。接受服务条款即可创建账号。}}",
+      "emailHint": "{provider, select, google {已由 Google 验证。无法在此修改。} github {已由 GitHub 验证。无法在此修改。} other {已由你的登录提供方验证。无法在此修改。}}",
       "nameTooLong": "请使用不超过 100 个字符。"
     }
   },

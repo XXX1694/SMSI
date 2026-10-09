@@ -200,7 +200,6 @@
     "orDivider": "or",
     "providersLoading": "Loading sign-in options…",
     "providersFailed": "Sign-in options could not be loaded. You can still use your email.",
-    "providerFallback": "the provider",
     "emailRequired": "Enter your email address.",
     "emailInvalid": "Enter a valid email address, for example name@example.com.",
     "passwordRequired": "Enter your password.",
@@ -210,9 +209,9 @@
     "loginError": {
       "oauth_cancelled": "Sign-in was canceled. Try again, or use your email and password.",
       "oauth_state_invalid": "The sign-in link expired or was opened in another browser. Start again from this page.",
-      "oauth_provider_error": "Sign-in did not finish: {provider} reported a problem. Try again in a moment, or use your email.",
-      "email_unverified": "Your email address was not verified. Verify your primary email on {provider}, then try again.",
-      "account_exists": "An account with this email already exists. Sign in with your password, then connect {provider} in Settings.",
+      "oauth_provider_error": "{provider, select, google {Sign-in did not finish: Google reported a problem. Try again in a moment, or use your email.} github {Sign-in did not finish: GitHub reported a problem. Try again in a moment, or use your email.} other {Sign-in did not finish because the provider reported a problem. Try again in a moment, or use your email.}}",
+      "email_unverified": "{provider, select, google {Your email address was not verified. Verify your primary email on Google, then try again.} github {Your email address was not verified. Verify your primary email on GitHub, then try again.} other {Your email address was not verified. Verify your primary email with your sign-in provider, then try again.}}",
+      "account_exists": "{provider, select, google {An account with this email already exists. Sign in with your password, then connect Google in Settings.} github {An account with this email already exists. Sign in with your password, then connect GitHub in Settings.} other {An account with this email already exists. Sign in with your password, then connect your sign-in provider in Settings.}}",
       "identity_in_use": "That account is already connected to another Steerpost account. Sign in to that account instead.",
       "account_unavailable": "This account cannot sign in right now. Contact the person who runs this server.",
       "signup_expired": "Your sign-up expired. Start again from this page.",
@@ -220,8 +219,8 @@
     },
     "signupComplete": {
       "title": "Finish creating your account",
-      "intro": "You signed in with {provider}. Accept the Terms to create your account.",
-      "emailHint": "Verified by {provider}. You cannot change it here.",
+      "intro": "{provider, select, google {You signed in with Google. Accept the Terms to create your account.} github {You signed in with GitHub. Accept the Terms to create your account.} other {You signed in with a provider. Accept the Terms to create your account.}}",
+      "emailHint": "{provider, select, google {Verified by Google. You cannot change it here.} github {Verified by GitHub. You cannot change it here.} other {Verified by your sign-in provider. You cannot change it here.}}",
       "nameTooLong": "Use 100 characters or fewer."
     }
   },

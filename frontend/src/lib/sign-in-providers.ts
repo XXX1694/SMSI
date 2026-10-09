@@ -1,6 +1,10 @@
-/** Display names of the sign-in providers the API can name. An id we do not know is not echoed back into a sentence. */
-const NAMES: Record<string, string> = { google: 'Google', github: 'GitHub' };
+export type SignInProviderKey = 'google' | 'github' | 'other';
 
-export function signInProviderName(id: string | null | undefined): string | null {
-  return (id && NAMES[id.toLowerCase()]) || null;
+/**
+ * The `{provider}` argument of messages that name a provider: an ICU `select` with `google`, `github` and `other`, so
+ * the sentence for an unknown or missing provider is written whole, not built from a noun that would not decline.
+ */
+export function signInProviderKey(id: string | null | undefined): SignInProviderKey {
+  const key = id?.toLowerCase();
+  return key === 'google' || key === 'github' ? key : 'other';
 }
