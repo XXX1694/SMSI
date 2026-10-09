@@ -15,7 +15,7 @@ All endpoints are under `/api/v1`. Errors look like this:
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /me` (user, scopes, csrf_token) · `POST /auth/verify-email` · `POST /auth/verify-email/resend` · `POST /auth/password/forgot` · `POST /auth/password/reset` · `POST /auth/password/change` |
+| Auth | `POST /auth/register` (needs `accept_terms: true`) · `POST /auth/login` · `POST /auth/logout` · `GET /me` (user, scopes, csrf_token) · `POST /auth/verify-email` · `POST /auth/verify-email/resend` · `POST /auth/password/forgot` · `POST /auth/password/reset` · `POST /auth/password/change` |
 | Social | `GET /social/providers` · `GET /social/accounts` · `GET /social/accounts/{id}` · `GET /social/{provider}/connect` · `GET /social/{provider}/callback` · `POST /social/telegram/connect` (no body, returns a link code) · `GET /social/telegram/connect/{id}` (link status) · `DELETE /social/accounts/{id}` |
 | Posts | `POST /posts` · `GET /posts?status=&from=&to=&cursor=` · `GET /posts/{id}` · `PATCH /posts/{id}` · `DELETE /posts/{id}` · `POST /posts/{id}/publish` · `/schedule` · `/unschedule` · `/cancel` · `/retry` · `GET /posts/{id}/status` |
 | Media | `POST /media` (multipart; images ≤ 10 MB, video ≤ 100 MB; MIME sniffed) · `GET /media` · `GET /media/{id}` · `DELETE /media/{id}` |

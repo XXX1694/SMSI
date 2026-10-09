@@ -46,7 +46,7 @@ function assert(cond, msg) {
 
 // 1. register
 const email = `acceptance+${Date.now()}@example.com`;
-let res = await browser("POST", "/api/v1/auth/register", { email, password: "correct horse battery", display_name: "Acceptance" });
+let res = await browser("POST", "/api/v1/auth/register", { email, password: "correct horse battery", display_name: "Acceptance", accept_terms: true });
 assert(res.status === 201 || res.status === 200, `register returned ${res.status}`);
 const me = await (await browser("GET", "/api/v1/me")).json();
 const csrf = me.csrf_token;

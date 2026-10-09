@@ -209,6 +209,10 @@ services:
     <<: *app
     image: ghcr.io/${GHCR_OWNER:-xxx1694}/socialos-frontend:${IMAGE_TAG:-main}
     mem_limit: ${FRONTEND_MEM_LIMIT:-512m}
+    environment:
+      # Shown on /privacy and /terms; read per request, so a restart is enough to change them.
+      OPERATOR_NAME: ${OPERATOR_NAME:-}
+      OPERATOR_CONTACT: ${OPERATOR_CONTACT:-}
     # healthcheck: from the image (GET /login)
     depends_on:
       backend: { condition: service_healthy }
