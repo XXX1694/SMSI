@@ -30,7 +30,6 @@
       "files": [
         "src/components/auth-form.tsx",
         "src/components/calendar-view.tsx",
-        "src/components/composer/composer-view.tsx",
         "src/components/composer/media-section.tsx",
         "src/components/developer/audit-view.tsx",
         "src/components/media-view.tsx",

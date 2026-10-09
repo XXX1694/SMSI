@@ -1,13 +1,13 @@
-import { ComposerView } from '@/components/composer/composer-view';
-import { PageHeader } from '@/components/states';
+import { Suspense } from 'react';
+import { LoadingRows } from '@/components/states';
+import { ComposeRoute } from './compose-route';
 
 export const metadata = { title: 'Compose' };
 
 export default function Page() {
   return (
-    <>
-      <PageHeader title="Compose" description="Write once, tailor per platform, publish or schedule." />
-      <ComposerView />
-    </>
+    <Suspense fallback={<LoadingRows rows={4} />}>
+      <ComposeRoute />
+    </Suspense>
   );
 }

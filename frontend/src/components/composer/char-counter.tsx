@@ -6,7 +6,7 @@ export function CharCounter({ text, max, label }: { text: string; max: number; l
   const tone = counterTone(len, max);
   return (
     <span
-      className={cn('text-xs tabular-nums', tone === 'ok' && 'text-muted-foreground', tone === 'warn' && 'text-warning', tone === 'over' && 'font-medium text-danger')}
+      className={cn('shrink-0 whitespace-nowrap text-xs tabular-nums', tone === 'ok' && 'text-muted-foreground', tone === 'warn' && 'text-warning', tone === 'over' && 'font-medium text-danger')}
       aria-label={`${label}: ${len} of ${max > 0 ? max : 'unlimited'} characters`}
     >
       {len}

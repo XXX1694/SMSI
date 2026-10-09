@@ -150,7 +150,7 @@ function newSession(u) {
 
 const publicPost = (p, full) => {
   const { user_id, media_ids, deleted, attempts, ...rest } = p;
-  const base = { ...rest, content: p.targets[0]?.content };
+  const base = { ...rest, content: p.content ?? p.targets[0]?.content };
   return full ? { ...base, media: db.media.filter((m) => media_ids.includes(m.id)), attempts } : base;
 };
 
@@ -323,7 +323,7 @@ async function handle(req, res) {
     const accs = (body.social_account_ids ?? []).map((id) => mine(db.accounts).find((a) => a.id === id));
     if (!body.content?.trim() && !body.targets?.length) return fail(res, 400, 'VALIDATION_ERROR', 'content is required');
     if (accs.length === 0 || accs.some((a) => !a)) return fail(res, 400, 'VALIDATION_ERROR', 'social_account_ids must reference your accounts');
-    const p = { id: randomUUID(), user_id: user.id, title: body.title ?? null, status: 'draft', scheduled_at: null, published_at: null, created_by: 'user', created_at: now(), updated_at: now(), media_ids: body.media_ids ?? [], attempts: [] };
+    const p = { id: randomUUID(), user_id: user.id, title: body.title ?? null, content: body.content, status: 'draft', scheduled_at: null, published_at: null, created_by: 'user', created_at: now(), updated_at: now(), media_ids: body.media_ids ?? [], attempts: [] };
     p.targets = accs.map((a) => mkTarget(p.id, a, body.targets?.find((t) => t.social_account_id === a.id)?.content ?? body.content, 'pending'));
     if (body.scheduled_at && body.schedule) { p.status = 'scheduled'; p.scheduled_at = body.scheduled_at; }
     db.posts.push(p); audit(user.display_name, 'post.create', 'post', p.id);
@@ -342,6 +342,24 @@ async function handle(req, res) {
     if (!act && m === 'GET') return send(res, 200, publicPost(p, true));
     if (act === 'status') return send(res, 200, { id: p.id, status: p.status, targets: p.targets.map((t) => ({ id: t.id, status: t.status })) });
     if (!act && m === 'DELETE') { db.posts = db.posts.filter((x) => x !== p); audit(user.display_name, 'post.delete', 'post', p.id); return send(res, 204); }
+    if (!act && m === 'PATCH') {
+      if (p.status !== 'draft' && p.status !== 'scheduled') return fail(res, 409, 'INVALID_STATE_TRANSITION', `post in status ${p.status} cannot be edited`);
+      const content = typeof body.content === 'string' ? body.content : (p.content ?? p.targets[0]?.content ?? '');
+      const ids = body.social_account_ids ?? p.targets.map((t) => t.social_account_id);
+      const accs = ids.map((id) => mine(db.accounts).find((a) => a.id === id));
+      if (!content.trim() || accs.length === 0 || accs.some((a) => !a)) return fail(res, 400, 'VALIDATION_ERROR', 'content and your social_account_ids are required');
+      if (body.scheduled_at !== undefined) {
+        if (p.status !== 'scheduled') return fail(res, 400, 'VALIDATION_ERROR', 'use POST /posts/{id}/schedule to schedule a draft');
+        if (new Date(body.scheduled_at) <= new Date()) return fail(res, 400, 'VALIDATION_ERROR', 'scheduled_at must be in the future');
+        p.scheduled_at = body.scheduled_at;
+      }
+      const old = p.targets;
+      p.targets = accs.map((a) => { const t = mkTarget(p.id, a, body.targets?.find((x) => x.social_account_id === a.id)?.content || content, 'pending'); const o = old.find((x) => x.social_account_id === a.id); if (o) t.id = o.id; return t; });
+      if ('title' in body) p.title = (body.title ?? '').trim() || null;
+      if (body.media_ids) p.media_ids = body.media_ids;
+      p.content = content; p.updated_at = now(); audit(user.display_name, 'post.update', 'post', p.id);
+      return send(res, 200, publicPost(p, true));
+    }
     if (m !== 'POST') return fail(res, 404, 'NOT_FOUND', 'Not found');
     const to = { publish: 'publishing', schedule: 'scheduled', cancel: 'cancelled', retry: 'publishing' }[act];
     if (!canMove(p, to)) return fail(res, 409, 'INVALID_STATE_TRANSITION', `Cannot go from ${p.status} to ${to}`);
