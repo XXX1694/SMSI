@@ -19,6 +19,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- Landing hero video: the cursor no longer jerks. The recording script now moves the pointer in timed, eased glides instead of a burst of mouse events (which landed in one or two captured frames), places the dot at its start position from the first frame, and encodes at the 25 fps Playwright captures at instead of resampling to 30 (which repeated every sixth frame). The video and posters were re-recorded.
 - Pages no longer scroll slightly on notched iPhones: the safe-area body padding is now subtracted from the `min-h-screen` and `md:h-screen` heights (dynamic viewport units, so the mobile browser bars are accounted for); desktop and Android, with zero insets, are unchanged.
 - The completed setup checklist collapses to a "Set up" line with a "Show steps" button; the Approvals tab is kept in the URL (`?tab=history`); stacked table rows (Developer on phones) are more compact.
 - Calendar month view no longer scrolls sideways at 768 to 1280 px; event chips are at least 24 px tall with a gap between them.

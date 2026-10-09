@@ -7,10 +7,12 @@
  *
  * Output: src/assets/video/hero-<light|dark>.{webm,mp4} and hero-<light|dark>.jpg (poster), all committed.
  * Needs ffmpeg (libvpx-vp9, libx264). The recording adds one thing the app does not draw: a small cursor dot,
- * because browser video capture does not include the pointer.
+ * because browser video capture does not include the pointer. Playwright captures at 25 fps, so the output stays at 25
+ * (resampling to 30 repeats every sixth frame and the cursor visibly stutters) and the dot is moved by timed, eased
+ * glides instead of a burst of mouse events.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,7 +32,7 @@ const cursor = `
   try { localStorage.setItem('socialos_mail_notice_dismissed', '1'); } catch {}
   const dot = document.createElement('div');
   dot.setAttribute('aria-hidden', 'true');
-  dot.style.cssText = 'position:fixed;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:rgba(8,107,129,.6);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);z-index:2147483647;pointer-events:none;transition:transform .08s linear,scale .12s';
+  dot.style.cssText = 'position:fixed;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:rgba(8,107,129,.6);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);z-index:2147483647;pointer-events:none;transform:translate(980px,120px);transition:scale .12s';
   const mount = () => document.documentElement.append(dot);
   document.readyState === 'loading' ? addEventListener('DOMContentLoaded', mount) : mount();
   addEventListener('mousemove', (e) => { dot.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)'; }, true);
@@ -38,12 +40,40 @@ const cursor = `
   addEventListener('mouseup', () => { dot.style.scale = '1'; }, true);
 `;
 
+let at = { x: 980, y: 120 };
+let bend = 1;
+const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+
+/**
+ * Glide like a person: one eased quadratic arc, paced by the wall clock. Mouse events are timed (not a burst of
+ * `steps`, which land in one or two captured frames and read as a jump), so the dot covers about the same distance
+ * in every captured frame whatever the capture rate is.
+ */
+async function glide(page, x, y) {
+  const { x: x0, y: y0 } = at;
+  const dist = Math.hypot(x - x0, y - y0);
+  if (dist < 1) return;
+  const dur = Math.min(1500, 450 + dist * 1.1);
+  bend = -bend;
+  const cx = (x0 + x) / 2 - ((y - y0) / dist) * dist * 0.1 * bend;
+  const cy = (y0 + y) / 2 + ((x - x0) / dist) * dist * 0.1 * bend;
+  const t0 = Date.now();
+  for (let t = 0; t < 1; ) {
+    t = Math.min(1, (Date.now() - t0) / dur);
+    const e = easeInOut(t);
+    const u = 1 - e;
+    await page.mouse.move(u * u * x0 + 2 * u * e * cx + e * e * x, u * u * y0 + 2 * u * e * cy + e * e * y);
+    if (t < 1) await pause(page, 6);
+  }
+  at = { x, y };
+}
+
 /** Move like a person: a short eased glide, then click. */
 async function clickOn(page, locator) {
   const el = locator.first();
   await el.scrollIntoViewIfNeeded();
   const box = await el.boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 18 });
+  await glide(page, box.x + box.width / 2, box.y + box.height / 2);
   await pause(page, 140);
   await page.mouse.down();
   await pause(page, 70);
@@ -61,6 +91,7 @@ async function record(browser, scheme, tmp) {
   await ctx.addInitScript(cursor);
   const page = await ctx.newPage();
   await page.clock.setFixedTime(NOW);
+  at = { x: 980, y: 120 };
   await page.mouse.move(980, 120);
 
   await page.goto(`${ORIGIN}/dashboard/`);
@@ -81,6 +112,7 @@ async function record(browser, scheme, tmp) {
   await page.locator('#sched-time').fill('09:00');
   await page.locator('#sched-time').blur();
   await pause(page, 700);
+  const poster = await page.screenshot({ type: 'jpeg', quality: 88 });
   await clickOn(page, page.getByRole('button', { name: 'Schedule', exact: true }));
   await page.waitForURL(/\/posts\//);
   await page.getByText('Scheduled', { exact: true }).first().waitFor();
@@ -94,7 +126,7 @@ async function record(browser, scheme, tmp) {
 
   const video = page.video();
   await ctx.close();
-  return video.path();
+  return { video: await video.path(), poster };
 }
 
 function ffmpeg(args) {
@@ -103,12 +135,12 @@ function ffmpeg(args) {
 }
 
 /** Trim the blank first frames, loop-friendly: ends on the approved state, starts on the dashboard. */
-function transcode(src, name) {
+function transcode(src, poster, name) {
   const base = join(out, name);
-  const common = ['-i', src, '-ss', '0.6', '-an', '-vf', 'fps=30,scale=1280:-2:flags=lanczos'];
+  const common = ['-i', src, '-ss', '0.6', '-an', '-vf', 'fps=25,scale=1280:-2:flags=lanczos'];
   ffmpeg([...common, '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '43', '-row-mt', '1', '-pix_fmt', 'yuv420p', `${base}.webm`]);
   ffmpeg([...common, '-c:v', 'libx264', '-preset', 'slow', '-crf', '29', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${base}.mp4`]);
-  ffmpeg(['-ss', '8.2', '-i', src, '-frames:v', '1', '-q:v', '4', `${base}.jpg`]);
+  writeFileSync(`${base}.jpg`, poster);
 }
 
 mkdirSync(out, { recursive: true });
@@ -117,8 +149,8 @@ const server = await startServer({ dir: demoDir, port: PORT, base: '/steerpost/d
 const browser = await launch();
 try {
   for (const scheme of ['light', 'dark']) {
-    const raw = await record(browser, scheme, tmp);
-    transcode(raw, `hero-${scheme}`);
+    const { video, poster } = await record(browser, scheme, tmp);
+    transcode(video, poster, `hero-${scheme}`);
     console.log(`hero-${scheme}.{webm,mp4,jpg}`);
   }
 } finally {
