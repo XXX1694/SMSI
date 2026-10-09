@@ -58,7 +58,7 @@
 
 - An MCP server with 13 tools, over Streamable HTTP or stdio.
 - Keys carry only the scopes you tick. Tools outside a key's scope are not even listed, and the API checks every call again.
-- `publish_post`, `delete_post` and `disconnect_account` are off by default and need `confirm: true`.
+- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in SocialOS before it runs.
 - Every agent action is in the audit log, with an "Agent actions" filter.
 
 **Self-hosting**
