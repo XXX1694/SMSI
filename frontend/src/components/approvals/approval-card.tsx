@@ -41,7 +41,7 @@ function SummaryRow({ line }: { line: SummaryLine }) {
         {line.long ? (
           <button
             type="button"
-            className="mt-1 block text-xs font-medium text-accent underline-offset-4 hover:underline"
+            className="mt-1 flex min-h-6 items-center text-xs font-medium max-md:min-h-11 text-accent underline-offset-4 hover:underline"
             aria-expanded={open}
             aria-controls={id}
             onClick={() => setOpen((o) => !o)}

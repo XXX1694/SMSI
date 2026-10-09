@@ -70,7 +70,7 @@ function DayCell({ day, month, posts, today, timezone, onOpenDay }: { day: strin
         ) : null}
       </div>
       {posts.length > 0 ? (
-        <button type="button" onClick={() => onOpenDay(day)} className="text-xs text-muted-foreground sm:hidden">
+        <button type="button" onClick={() => onOpenDay(day)} className="inline-flex min-h-11 items-center text-xs text-muted-foreground sm:hidden">
           {posts.length === 1 ? '1 post' : `${posts.length} posts`}
           <span className="sr-only"> on {day}, open the day</span>
         </button>
