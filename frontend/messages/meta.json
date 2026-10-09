@@ -636,6 +636,8 @@
   "settings.themeSystem": { "type": "label", "description": "Option: follow the device setting" },
   "settings.themeLight": { "type": "label", "description": "Option: light appearance" },
   "settings.themeDark": { "type": "label", "description": "Option: dark appearance" },
+  "settings.pauseMotion": { "type": "label", "description": "Checkbox label: stop all animations in the app. Same wording as the landing page's Pause motion button (hero.pause)." },
+  "settings.pauseMotionHint": { "type": "hint", "description": "Under the Pause motion checkbox. \"Reduce motion\" is the operating-system accessibility setting; use the name the OS uses in your language." },
   "settings.password": { "type": "title", "description": "Section heading of the change-password form" },
   "settings.legal": { "type": "title", "description": "Section heading" },
   "settings.legalText": { "type": "body", "description": "<terms> and <privacy> become links. \"Server admin\" is the person who runs this Steerpost server." },

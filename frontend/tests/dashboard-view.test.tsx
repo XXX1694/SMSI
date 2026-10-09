@@ -68,3 +68,17 @@ describe('DashboardView failed posts', () => {
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
   });
 });
+
+describe('DashboardView first-load stagger', () => {
+  it('staggers the sections on the first load in a tab only', async () => {
+    window.sessionStorage.clear();
+    const first = render(<DashboardView />);
+    await screen.findByRole('button', { name: 'Retry Broken launch' });
+    expect(first.container.querySelector('.stagger')).not.toBeNull();
+    first.unmount();
+
+    render(<DashboardView />);
+    await screen.findByRole('button', { name: 'Retry Broken launch' });
+    expect(document.querySelector('.stagger')).toBeNull();
+  });
+});

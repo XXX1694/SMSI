@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { CalendarClock, Link2, Send, TriangleAlert } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { OnboardingChecklist } from '@/components/onboarding-checklist';
 import { PostList } from '@/components/post-row';
 import { ErrorState, LoadingRows } from '@/components/states';
@@ -9,6 +9,7 @@ import { RetryPostDialog } from '@/components/posts/retry-post-dialog';
 import { useToast } from '@/components/toast';
 import { Section } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import type { DashboardSummary, Post } from '@/lib/types';
 import { useAsync } from '@/hooks';
 import { useTranslations } from '@/i18n/use-translations';
@@ -63,6 +64,31 @@ function PostSection({ name, posts, href, onRetry }: SectionProps) {
   );
 }
 
+const STAGGERED_KEY = 'socialos_dashboard_staggered';
+
+/**
+ * The dashboard's sections rise in one after another on its first load in a tab only; every later visit is instant
+ * (BRAND §7: frequent navigation never staggers). The flag is written in an effect, not the state initializer, which
+ * React may call twice.
+ */
+function useFirstLoadStagger(): boolean {
+  const [first] = useState(() => {
+    try {
+      return !window.sessionStorage.getItem(STAGGERED_KEY);
+    } catch {
+      return false; // blocked storage: no stagger rather than one on every visit
+    }
+  });
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(STAGGERED_KEY, '1');
+    } catch {
+      /* blocked storage: already handled by not staggering */
+    }
+  }, []);
+  return first;
+}
+
 export function DashboardView() {
   const t = useTranslations('dashboard');
   const tp = useTranslations('posts');
@@ -77,13 +103,14 @@ export function DashboardView() {
   const { data, error, loading, reload } = useAsync(load);
   const toast = useToast();
   const [retryTarget, setRetryTarget] = useState<Post | null>(null);
+  const staggered = useFirstLoadStagger();
 
   if (loading && !data) return <LoadingRows rows={4} />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
   const { summary, drafts, failed } = data;
 
   return (
-    <div className="stagger space-y-10">
+    <div className={cn('space-y-10', staggered && 'stagger')}>
       <div>
         <h2 className="sr-only">{t('overview')}</h2>
         <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
@@ -94,7 +121,7 @@ export function DashboardView() {
         </dl>
       </div>
       <OnboardingChecklist connectedAccounts={summary.connected_accounts} />
-      <div className="stagger grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-2">
         <PostSection name="upcoming" posts={summary.upcoming} href="/posts?status=scheduled" />
         <PostSection name="drafts" posts={drafts} href="/posts?status=draft" />
         <PostSection name="recent" posts={summary.recent} href="/posts?status=published" />

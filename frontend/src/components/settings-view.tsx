@@ -8,6 +8,7 @@ import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
 import { YourData } from '@/components/your-data';
 import { UsageCard } from '@/components/usage-card';
+import { CheckboxField } from '@/components/ui/checkbox';
 import { Field, Select } from '@/components/ui/input';
 import { LanguageSelect } from '@/i18n/language-select';
 import { useFormat } from '@/i18n/use-format';
@@ -27,7 +28,7 @@ function tzOptions(current: string): string[] {
 
 export function SettingsView() {
   const { user } = useAuth();
-  const { timezone, setTimezone, theme, setTheme } = usePrefs();
+  const { timezone, setTimezone, theme, setTheme, motionPaused, setMotionPaused } = usePrefs();
   const [zones] = useState(() => tzOptions(timezone));
   const tl = useTranslations('language');
   const t = useTranslations('settings');
@@ -72,6 +73,7 @@ export function SettingsView() {
               <option value="dark">{t('themeDark')}</option>
             </Select>
           </Field>
+          <CheckboxField id="pause-motion" label={t('pauseMotion')} description={t('pauseMotionHint')} checked={motionPaused} onCheckedChange={(c) => setMotionPaused(c === true)} />
         </div>
       </Section>
       <Section title={t('password')}>

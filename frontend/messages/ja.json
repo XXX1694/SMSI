@@ -302,6 +302,8 @@
     "themeSystem": "システム設定に合わせる",
     "themeLight": "ライト",
     "themeDark": "ダーク",
+    "pauseMotion": "動きを止める",
+    "pauseMotionHint": "このデバイスでアプリのアニメーションをオフにします。システムの「視差効果を減らす」設定でも同じになります。",
     "password": "パスワード",
     "legal": "法的情報",
     "legalText": "<terms>利用規約</terms>と<privacy>プライバシーポリシー</privacy>をご確認ください。どちらもサーバー管理者の責任となります。",
