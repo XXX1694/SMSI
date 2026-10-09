@@ -118,7 +118,7 @@ First release: the MVP, ready to self-host on one server.
 - A Telegram channel can only be connected by proving ownership with a one-time link code.
 - CI scans every change: govulncheck, npm audit, gitleaks over the history, Trivy on the images and CodeQL; the runtime images no longer ship npm.
 
-[Unreleased]: https://github.com/XXX1694/SMSI/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/XXX1694/steerpost/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/XXX1694/SMSI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/XXX1694/SMSI/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/XXX1694/SMSI/releases/tag/v0.1.0

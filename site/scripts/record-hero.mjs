@@ -21,7 +21,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, process.argv[2] ?? '../src/assets/video');
 const demoDir = resolve(here, process.env.DEMO_DIR ?? '../../frontend/out');
 const PORT = 4182;
-const ORIGIN = `http://127.0.0.1:${PORT}/SMSI/demo`;
+const ORIGIN = `http://127.0.0.1:${PORT}/steerpost/demo`;
 const SIZE = { width: 1280, height: 800 };
 const NOW = new Date('2026-10-14T10:20:00Z');
 const pause = (page, ms) => page.waitForTimeout(ms);
@@ -113,7 +113,7 @@ function transcode(src, name) {
 
 mkdirSync(out, { recursive: true });
 const tmp = mkdtempSync(join(tmpdir(), 'hero-rec-'));
-const server = await startServer({ dir: demoDir, port: PORT, base: '/SMSI/demo/' });
+const server = await startServer({ dir: demoDir, port: PORT, base: '/steerpost/demo/' });
 const browser = await launch();
 try {
   for (const scheme of ['light', 'dark']) {

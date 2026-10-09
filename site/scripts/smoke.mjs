@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * End-to-end smoke test of the built site, run in a real browser against dist/ served below /SMSI/
+ * End-to-end smoke test of the built site, run in a real browser against dist/ served below /steerpost/
  * (exactly how GitHub Pages serves a project site). SITE_BASE overrides the base path.
  *
  *   npm run build && npm run smoke
@@ -20,8 +20,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const dist = resolve(here, process.env.SITE_DIST ?? '../dist');
 const PORT = Number(process.env.SMOKE_PORT ?? 4190);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
-// The base the site was built for (SITE_BASE, default /SMSI/ as on GitHub Pages project sites).
-const BASE = `/${(process.env.SITE_BASE ?? '/SMSI/').replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
+// The base the site was built for (SITE_BASE, default /steerpost/ as on GitHub Pages project sites).
+const BASE = `/${(process.env.SITE_BASE ?? '/steerpost/').replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
 const SITE = `${ORIGIN}${BASE.slice(0, -1)}`;
 const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const out = process.env.SMOKE_OUT ? resolve(process.env.SMOKE_OUT) : mkdtempSync(join(tmpdir(), 'site-smoke-'));

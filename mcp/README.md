@@ -59,7 +59,7 @@ Claude Desktop, option 3 (local build, stdio):
   "mcpServers": {
     "steerpost": {
       "command": "node",
-      "args": ["/path/to/SMSI/mcp/dist/index.js", "--stdio"],
+      "args": ["/path/to/steerpost/mcp/dist/index.js", "--stdio"],
       "env": { "SOCIALOS_API_URL": "http://localhost:8080", "SOCIALOS_API_KEY": "sk_live_..." }
     }
   }

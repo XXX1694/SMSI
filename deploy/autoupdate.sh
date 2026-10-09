@@ -5,7 +5,7 @@
 #   ./autoupdate.sh              check the latest release and deploy it if it is new
 #   ./autoupdate.sh --dry-run    only say what would happen
 #
-# Reads from .env: AUTOUPDATE (false/0/no/off = do nothing), GITHUB_REPO (<owner>/<repo>, default XXX1694/SMSI; the API follows
+# Reads from .env: AUTOUPDATE (false/0/no/off = do nothing), GITHUB_REPO (<owner>/<repo>, default XXX1694/steerpost; the API follows
 # the redirect GitHub answers with after a repository rename).
 # Asks https://api.github.com/repos/<repo>/releases/latest (no token). Only a tag shaped vX.Y.Z is accepted; the image tag
 # is the same without the "v" (that is how release.yml names it), and the deployed tag is what deploy.sh recorded in
@@ -137,7 +137,7 @@ if [ -e "$STATE_DIR/guard/shed" ]; then
 fi
 
 repo=${GITHUB_REPO:-$(env_get GITHUB_REPO)}
-repo=${repo:-XXX1694/SMSI}
+repo=${repo:-XXX1694/steerpost}
 [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
   warn "GITHUB_REPO in .env is not <owner>/<repo>: $repo"
   exit 1

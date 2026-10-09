@@ -3,7 +3,7 @@
  * Link check for the built site (no browser needed): every internal href/src in dist/**.html must
  * resolve to a file, and every #fragment on the site's own pages must exist on its target page.
  *
- *   node scripts/check.mjs [dist=dist] [base=/SMSI/]
+ *   node scripts/check.mjs [dist=dist] [base=/steerpost/]
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = resolve(here, '..', process.argv[2] ?? 'dist');
-const base = process.argv[3] ?? '/SMSI/';
+const base = process.argv[3] ?? '/steerpost/';
 const problems = [];
 
 const walk = (dir) =>

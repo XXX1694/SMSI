@@ -40,7 +40,7 @@ describe('postHref', () => {
     vi.resetModules();
     const { postHref, BASE_PATH, SITE_HREF } = await import('@/lib/demo/config');
     expect(postHref('a b')).toBe('/posts/view?id=a%20b');
-    expect(BASE_PATH).toBe('/SMSI/demo');
-    expect(SITE_HREF).toBe('/SMSI/');
+    expect(BASE_PATH).toBe('/steerpost/demo');
+    expect(SITE_HREF).toBe('/steerpost/');
   });
 });

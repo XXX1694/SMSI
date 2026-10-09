@@ -2,7 +2,7 @@ import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/hooks';
 import type { ConnectField } from '@/lib/types';
 
-const DOCS_BASE = 'https://github.com/XXX1694/SMSI/blob/main/docs/integrations';
+const DOCS_BASE = 'https://github.com/XXX1694/steerpost/blob/main/docs/integrations';
 
 /** The how-to for a provider (docs/integrations/<provider>.md). */
 export function integrationDocsUrl(provider: string): string {
