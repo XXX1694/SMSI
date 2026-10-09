@@ -6,7 +6,6 @@ import { LanguageSelect } from '@/i18n/language-select';
 import { LocaleProvider, useLocaleSettings } from '@/i18n/locale-provider';
 import { useFormat } from '@/i18n/use-format';
 import { useTranslations } from '@/i18n/use-translations';
-import en from '../messages/en.json';
 
 // A partial Arabic catalog: one translated key, the rest must fall back to English.
 vi.mock('../messages/ar.json', () => ({ default: { nav: { dashboard: 'لوحة التحكم' } } }));
@@ -26,7 +25,7 @@ function Probe() {
 function setup(ui = <Probe />, props: { userLocale?: string | null } = {}) {
   return render(
     <PrefsProvider>
-      <LocaleProvider enMessages={en} enabled={ENABLED} {...props}>
+      <LocaleProvider enabled={ENABLED} {...props}>
         {ui}
       </LocaleProvider>
     </PrefsProvider>,

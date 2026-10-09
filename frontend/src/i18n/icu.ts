@@ -130,6 +130,7 @@ class Parser {
         this.i++;
         style = this.word();
         this.ws();
+        if (!SUPPORTED_STYLES[kind].includes(style)) throw new IcuSyntaxError(`unsupported ${kind} style "${style}"`);
       }
       this.expect('}');
       return { t: 'arg', name, fmt: kind, style };
@@ -183,7 +184,29 @@ export interface FormatContext<R> {
   values: Record<string, IcuValue | ((chunks: R[]) => R)>;
 }
 
-const DATE_STYLES = new Set(['short', 'medium', 'long', 'full']);
+/** Named styles, identical to FormatJS's defaults. Skeletons (`::currency/EUR`) are not supported; i18n:check rejects them. */
+export const NUMBER_STYLES: Record<string, Intl.NumberFormatOptions> = {
+  integer: { maximumFractionDigits: 0 },
+  percent: { style: 'percent' },
+};
+const DATE_PRESETS: Record<string, Intl.DateTimeFormatOptions> = {
+  short: { month: 'numeric', day: 'numeric', year: '2-digit' },
+  medium: { month: 'short', day: 'numeric', year: 'numeric' },
+  long: { month: 'long', day: 'numeric', year: 'numeric' },
+  full: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' },
+};
+const TIME_PRESETS: Record<string, Intl.DateTimeFormatOptions> = {
+  short: { hour: 'numeric', minute: 'numeric' },
+  medium: { hour: 'numeric', minute: 'numeric', second: 'numeric' },
+  long: { hour: 'numeric', minute: 'numeric', second: 'numeric', timeZoneName: 'short' },
+  full: { hour: 'numeric', minute: 'numeric', second: 'numeric', timeZoneName: 'short' },
+};
+/** Every style the runtime implements; the check script uses the same lists. */
+export const SUPPORTED_STYLES = {
+  number: Object.keys(NUMBER_STYLES),
+  date: Object.keys(DATE_PRESETS),
+  time: Object.keys(TIME_PRESETS),
+};
 
 function scalar<R>(ctx: FormatContext<R>, name: string): IcuValue {
   const v = ctx.values[name];
@@ -202,11 +225,10 @@ export function formatNodes<R = string>(nodes: Node[], ctx: FormatContext<R>, po
       const v = scalar(ctx, n.name);
       if (v === undefined || v === null) throw new Error(`missing value for "${n.name}"`);
       if (n.fmt === 'number') {
-        const opts: Intl.NumberFormatOptions = n.style === 'percent' ? { style: 'percent' } : {};
-        out.push(new Intl.NumberFormat(tag, opts).format(Number(v)));
+        out.push(new Intl.NumberFormat(tag, n.style ? NUMBER_STYLES[n.style] : {}).format(Number(v)));
       } else if (n.fmt === 'date' || n.fmt === 'time') {
-        const style = n.style && DATE_STYLES.has(n.style) ? (n.style as 'short') : 'medium';
-        const opts: Intl.DateTimeFormatOptions = n.fmt === 'date' ? { dateStyle: style } : { timeStyle: style };
+        const presets = n.fmt === 'date' ? DATE_PRESETS : TIME_PRESETS;
+        const opts: Intl.DateTimeFormatOptions = n.style ? (presets[n.style] ?? {}) : n.fmt === 'time' ? { hour: 'numeric', minute: 'numeric', second: 'numeric' } : {};
         out.push(new Intl.DateTimeFormat(tag, { ...opts, timeZone: ctx.timeZone }).format(new Date(v as string | number | Date)));
       } else out.push(String(v));
     } else if (n.t === 'select') {

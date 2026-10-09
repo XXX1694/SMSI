@@ -22,9 +22,13 @@ export interface TranslatorConfig {
   locale: string;
   messages: Catalog;
   timeZone?: string;
+  /** English catalog: used when a key is missing or its message fails to format in `messages`. */
+  fallback?: Catalog;
   /** Called for a key that is in no catalog. Default: `console.error` outside production. */
   onMissing?: (path: string) => void;
 }
+
+const logged = new Set<string>();
 
 function lookup(messages: Catalog, path: string): string | undefined {
   let cur: string | Catalog | undefined = messages;
@@ -37,24 +41,31 @@ function lookup(messages: Catalog, path: string): string | undefined {
 
 export function createTranslator<N extends Namespace | undefined = undefined>(config: TranslatorConfig, ns?: N): Translator<KeysOf<N>> {
   const prefix = ns ? `${ns}.` : '';
-  const missing =
+  const report =
     config.onMissing ??
     ((p: string) => {
-      if (process.env.NODE_ENV !== 'production') console.error(`MISSING_MESSAGE: ${p} (${config.locale})`);
+      if (process.env.NODE_ENV !== 'production' && !logged.has(p)) {
+        logged.add(p);
+        console.error(`MISSING_MESSAGE: ${p} (${config.locale})`);
+      }
     });
-  const run = (key: string, values: FormatContext<unknown>['values']): (string | unknown)[] => {
-    const path = prefix + key;
-    const msg = lookup(config.messages, path);
-    if (msg === undefined) {
-      missing(path);
-      return [path];
-    }
+  const attempt = (catalog: Catalog, path: string, values: FormatContext<unknown>['values']): (string | unknown)[] | null => {
+    const msg = lookup(catalog, path);
+    if (msg === undefined) return null;
     try {
       return formatNodes<unknown>(parseIcu(msg), { locale: config.locale, timeZone: config.timeZone, values });
-    } catch (e) {
-      missing(`${path}: ${(e as Error).message}`);
-      return [path];
+    } catch {
+      return null;
     }
+  };
+  // Order: the active catalog, then English, then the key itself. Each step down is logged once (dev).
+  const run = (key: string, values: FormatContext<unknown>['values']): (string | unknown)[] => {
+    const path = prefix + key;
+    const own = attempt(config.messages, path, values);
+    if (own) return own;
+    report(path);
+    const english = config.fallback && config.fallback !== config.messages ? attempt(config.fallback, path, values) : null;
+    return english ?? [path];
   };
   const t = (key: string, values: Values = {}) => run(key, values).join('');
   const rich = (key: string, values: FormatContext<unknown>['values']) => run(key, values);

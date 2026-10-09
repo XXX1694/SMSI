@@ -6,6 +6,13 @@ import { parse, TYPE } from '@formatjs/icu-messageformat-parser';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+/** Mirrors SUPPORTED_STYLES in src/i18n/icu.ts (a test keeps the two equal). */
+export const STYLES = {
+  number: ['integer', 'percent'],
+  date: ['short', 'medium', 'long', 'full'],
+  time: ['short', 'medium', 'long', 'full'],
+};
+
 /** `{ a: { b: 'x' } }` -> `{ 'a.b': 'x' }`. Non-string leaves are reported by `problems`. */
 export function flatten(obj, prefix = '') {
   const out = {};
@@ -24,10 +31,18 @@ export function shape(message) {
   const walk = (els) => {
     for (const el of els) {
       switch (el.type) {
-        case TYPE.argument:
         case TYPE.number:
         case TYPE.date:
-        case TYPE.time:
+        case TYPE.time: {
+          const name = { [TYPE.number]: 'number', [TYPE.date]: 'date', [TYPE.time]: 'time' }[el.type];
+          // The runtime (src/i18n/icu.ts) implements named styles only: no skeletons, no custom patterns.
+          if (el.style != null && !(typeof el.style === 'string' && STYLES[name].includes(el.style))) {
+            throw new Error(`unsupported ${name} style ${JSON.stringify(typeof el.style === 'string' ? el.style : '::skeleton')}`);
+          }
+          args.add(`${el.value}:${el.type}`);
+          break;
+        }
+        case TYPE.argument:
           args.add(`${el.value}:${el.type}`);
           break;
         case TYPE.plural:

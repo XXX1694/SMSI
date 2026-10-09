@@ -10,3 +10,4 @@ export function problems(input: {
   meta?: object;
   sources?: string[];
 }): { errors: string[]; warnings: string[] };
+export const STYLES: { number: string[]; date: string[]; time: string[] };

@@ -93,3 +93,14 @@ describe('typed keys', () => {
     createTranslator({ locale: 'en', messages: en }, 'nonsense');
   });
 });
+
+describe('English fallback', () => {
+  const messages = { nav: { a: '{broken', b: 'B-local' } } as never;
+  const t = createTranslator({ locale: 'ru', messages, fallback: { nav: { a: 'A-en', b: 'B-en', c: 'C-en' } }, onMissing: () => {} });
+  it('a broken message falls back to English, then to the key', () => {
+    expect(t('nav.a' as never)).toBe('A-en');
+    expect(t('nav.b' as never)).toBe('B-local');
+    expect(t('nav.c' as never)).toBe('C-en');
+    expect(t('nav.zzz' as never)).toBe('nav.zzz');
+  });
+});
