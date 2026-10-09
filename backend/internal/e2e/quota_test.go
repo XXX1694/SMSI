@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/png"
@@ -168,10 +169,28 @@ func TestQuotaHoldsUnderConcurrency(t *testing.T) {
 		t.Errorf("%d concurrent scheduled posts passed, want exactly 2", got)
 	}
 	png := noisePNG(t, 1)
-	// One upload per user runs at a time (D-015), so most of these are refused with 429 before they reach the quota;
-	// what matters is that the limit (3 files) is never exceeded.
-	if got := race(8, func(i int) bool { return c.upload("n.png", png).status == 201 }); got < 1 || got > 3 {
-		t.Errorf("%d concurrent uploads passed, want 1 to 3", got)
+	// One upload per user runs at a time (D-015) and that gate is in memory, so the database-level race is covered in
+	// postgres/quota_test.go. Here every refusal must be that gate's 429, and what was stored must match the 201s.
+	var created, gated, other atomic.Int32
+	race(8, func(i int) bool {
+		r := c.upload("n.png", png)
+		switch {
+		case r.status == 201:
+			created.Add(1)
+		case r.status == 429 && r.errCode(t) == "RATE_LIMITED":
+			gated.Add(1)
+		default:
+			other.Add(1)
+			t.Errorf("unexpected upload result %d %s", r.status, r.body)
+		}
+		return r.status == 201
+	})
+	var rows int
+	if err := e.app.DB.Pool.QueryRow(context.Background(), `SELECT count(*) FROM media`).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if created.Load() < 1 || created.Load() > 3 || int(created.Load())+int(gated.Load()) != 8 || rows != int(created.Load()) || e.storage.Len() != rows {
+		t.Errorf("created=%d gated=%d other=%d rows=%d objects=%d", created.Load(), gated.Load(), other.Load(), rows, e.storage.Len())
 	}
 }
 
@@ -285,6 +304,13 @@ func TestQuotaStreamedUploadOverTheLimit(t *testing.T) {
 	}
 	if r := c.upload("small.png", noisePNG(t, 1)); r.status != 201 {
 		t.Fatalf("a file under the limit: %d %s", r.status, r.body)
+	}
+	// Videos take the streaming path with an unknown size; the limit applies the same way and the object is removed.
+	video := append([]byte("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"), make([]byte, 2<<20)...)
+	before := e.storage.Len()
+	requireQuotaExceeded(t, c.upload("big.mp4", video), "media_bytes")
+	if e.storage.Len() != before {
+		t.Fatalf("a refused video left an object behind: %d -> %d", before, e.storage.Len())
 	}
 
 	u := newEnv(t, withQuota(unlimited))
