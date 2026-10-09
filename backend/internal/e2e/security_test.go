@@ -17,7 +17,9 @@ import (
 
 	"github.com/socialos/backend/internal/config"
 	"github.com/socialos/backend/internal/domain/errs"
+	"github.com/socialos/backend/internal/domain/identity"
 	"github.com/socialos/backend/internal/domain/post"
+	"github.com/socialos/backend/internal/domain/user"
 	"github.com/socialos/backend/internal/infrastructure/postgres"
 )
 
@@ -264,6 +266,52 @@ func TestTargetIsolation(t *testing.T) {
 	if err := e.app.DB.Pool.QueryRow(ctx, `SELECT content, status FROM post_targets WHERE id = $1`, tid).Scan(&content, &status); err != nil ||
 		content != "alice only" || status != "pending" {
 		t.Fatalf("alice's target row: %q %q %v", content, status, err)
+	}
+}
+
+// A linked sign-in identity belongs to one user. Bob must not list, touch or unlink Alice's, nor claim the same
+// external account, and a password-less account must not be usable through the password login.
+func TestIdentityIsolation(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	alice, bob := e.browser(), e.browser()
+	aliceID := uuid.MustParse(alice.register("alice@identity.test")["user"].(map[string]any)["id"].(string))
+	bobID := uuid.MustParse(bob.register("bob@identity.test")["user"].(map[string]any)["id"].(string))
+
+	ctx, repo := context.Background(), postgres.NewIdentities(e.app.DB)
+	linkedAt := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+	if err := repo.Create(ctx, &identity.Identity{UserID: aliceID, Provider: identity.GitHub, Subject: "1001", Email: "alice@identity.test", EmailVerified: true, LinkedAt: linkedAt}); err != nil {
+		t.Fatal(err)
+	}
+	if ids, err := repo.ListByUser(ctx, bobID); err != nil || len(ids) != 0 {
+		t.Fatalf("bob lists alice's identities: %v %v", ids, err)
+	}
+	if err := repo.Delete(ctx, bobID, identity.GitHub); !errs.Is(err, errs.NotFound) {
+		t.Fatalf("bob unlinked alice's identity: %v", err)
+	}
+	if err := repo.TouchLogin(ctx, bobID, identity.GitHub, "bob@identity.test", true, linkedAt); !errs.Is(err, errs.NotFound) {
+		t.Fatalf("bob touched alice's identity: %v", err)
+	}
+	if err := repo.Create(ctx, &identity.Identity{UserID: bobID, Provider: identity.GitHub, Subject: "1001", LinkedAt: linkedAt}); !errs.Is(err, errs.Conflict) {
+		t.Fatalf("bob claimed alice's external account: %v", err)
+	}
+	got, err := repo.GetBySubject(ctx, identity.GitHub, "1001")
+	if err != nil || got.UserID != aliceID || got.LastLoginAt != nil || got.Email != "alice@identity.test" {
+		t.Fatalf("alice's identity changed: %+v %v", got, err)
+	}
+
+	// A user created without a password (a social sign-up) cannot sign in with any password, and the answer is the
+	// same as for a wrong password.
+	if err := postgres.NewUsers(e.app.DB).Create(ctx, &user.User{Email: "social@identity.test", Status: user.StatusActive}); err != nil {
+		t.Fatal(err)
+	}
+	anon := e.browser()
+	for _, pw := range []string{"", "correct horse battery"} {
+		r := anon.do("POST", "/api/v1/auth/login", map[string]any{"email": "social@identity.test", "password": pw})
+		w := anon.do("POST", "/api/v1/auth/login", map[string]any{"email": "alice@identity.test", "password": "wrong password!!"})
+		if r.status != 401 || r.errCode(t) != "UNAUTHENTICATED" || w.status != 401 ||
+			r.json(t)["error"].(map[string]any)["message"] != w.json(t)["error"].(map[string]any)["message"] {
+			t.Fatalf("password-less login: %d %s (wrong password: %d %s)", r.status, r.body, w.status, w.body)
+		}
 	}
 }
 

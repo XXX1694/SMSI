@@ -149,6 +149,14 @@ func (s *Service) Login(ctx context.Context, email, password string, ci ClientIn
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
+	if !u.HasPassword() {
+		// A social sign-up account has no hash. Spend the same time as a real check, so the answer's timing
+		// does not tell which addresses belong to such accounts.
+		if err := s.burnDummy(ctx, password); err != nil {
+			return nil, IssuedSession{}, err
+		}
+		return nil, IssuedSession{}, invalid
+	}
 	ok, err := s.hasher.Verify(ctx, password, u.PasswordHash)
 	if errs.CodeOf(err) == errs.RateLimited {
 		return nil, IssuedSession{}, err
@@ -180,7 +188,7 @@ func (s *Service) burnDummy(ctx context.Context, password string) error {
 // rehashIfOutdated upgrades a stored hash made with older argon2 parameters. It is best effort: a failure is logged and
 // never fails the login that triggered it.
 func (s *Service) rehashIfOutdated(ctx context.Context, u *user.User, password string) {
-	if !s.hasher.NeedsRehash(u.PasswordHash) {
+	if !u.HasPassword() || !s.hasher.NeedsRehash(u.PasswordHash) {
 		return
 	}
 	verified := u.PasswordHash

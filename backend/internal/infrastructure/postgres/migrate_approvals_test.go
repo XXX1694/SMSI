@@ -24,9 +24,11 @@ func TestMigration00004ApprovesExistingKeysAndRollsBack(t *testing.T) {
 		t.Fatalf("up: table=%v column=%v", tbl, col)
 	}
 
-	// A key that exists before the migration must come out with the safe policy.
-	if err := postgres.Migrate(ctx, url, "down", testutil.Logger()); err != nil {
-		t.Fatalf("down: %v", err)
+	// A key that exists before the migration must come out with the safe policy. 00008 sits on top: roll it back first.
+	for _, n := range []string{"00008", "00004"} {
+		if err := postgres.Migrate(ctx, url, "down", testutil.Logger()); err != nil {
+			t.Fatalf("down %s: %v", n, err)
+		}
 	}
 	if tbl, col := has(); tbl || col {
 		t.Fatalf("down: table=%v column=%v", tbl, col)

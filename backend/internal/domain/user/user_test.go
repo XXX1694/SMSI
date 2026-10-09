@@ -28,3 +28,11 @@ func TestValidatePassword(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestHasPassword(t *testing.T) {
+	for hash, want := range map[string]bool{"": false, UnusablePasswordHash: false, "$argon2id$v=19$m=1,t=1,p=1$a$b": true} {
+		if got := (&User{PasswordHash: hash}).HasPassword(); got != want {
+			t.Errorf("HasPassword(%q) = %v, want %v", hash, got, want)
+		}
+	}
+}

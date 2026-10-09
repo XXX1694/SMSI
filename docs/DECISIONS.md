@@ -479,3 +479,35 @@ others).
 **Consequences.** Product copy may say "open-source (AGPL-3.0)". Contributions are accepted under the same licence. The
 owner, as the sole author so far, could still dual-license later; once outside contributions land, that would need their
 agreement or a CLA.
+
+## D-023: Social sign-in runs in the Go backend: OAuth 2.0 / OIDC with Authorization Code + PKCE, Google and GitHub first, each optional per deployment (2026-10-09)
+
+**Decision.** Users can sign in with Google or GitHub through the Steerpost API itself: Authorization Code with PKCE (S256),
+a `state` cookie bound to the browser, a nonce checked in our code, and provider access tokens thrown away after login. A provider
+is on only when its client id and secret are configured. The Google adapter is generic OIDC (a static provider config), so a
+self-hoster can later point it at Keycloak or Authentik. Apple and Microsoft come later: Apple needs the paid developer program
+(99 USD a year), which conflicts with D-005 (free tiers only).
+
+**Alternatives.** A hosted identity service (Firebase, Auth0, Clerk): every self-hoster would need a vendor account, which breaks
+D-022's promise that anyone can self-host; every user's email would go to another processor; the vendors ship third-party
+JavaScript against "no third-party trackers" (AGENTS §7); and it adds a second session system next to our revocable server-side
+sessions. Hand-rolled OIDC: verifying ID tokens ourselves (algorithm confusion, key rotation, clock skew) is the risky part, and
+`coreos/go-oidc` already does it.
+
+**Linking rules** (the pure function `domain/identity.Decide`):
+1. A known `(provider, subject)` signs its owner in; an inactive owner is refused (`account_unavailable`).
+2. A local account with the same email is linked automatically only when the provider is authoritative for that address
+   (Google: a `gmail.com` address, or a verified address with an `hd` claim; GitHub: primary and verified) and the local email is
+   already verified. Otherwise the flow ends with `account_exists` ("sign in with your password, then connect the provider in
+   Settings"). Unverified emails are never auto-linked: that blocks pre-hijacking, where someone registers a victim's address
+   first. Production does not verify emails yet (`MAIL_PROVIDER=log`), so this refusal will be common for existing users.
+3. No match starts a pending sign-up, completed after the user accepts the Terms (D-016); no user row exists before that. A
+   provider without a verified email ends with `email_unverified`. The new account's email is stored as verified only when the
+   provider is authoritative for it.
+
+Users may have no password (`users.password_hash` is nullable): login spends the cost of a real check for them, so timing does
+not reveal them, and password change points them to set-password. Provider email changes are not synced to `users.email`.
+
+**Consequences.** Google needs a domain the owner can verify (sslip.io hosts cannot be), so GitHub ships first. We now own
+account-linking security. Flow state lives in `auth_oauth_flows` (migration 00008) as hashes; user links in `user_identities`.
+The Down migration marks password-less users with an unusable hash, so they sign in again only through a password reset.

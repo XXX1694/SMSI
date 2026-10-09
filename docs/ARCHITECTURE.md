@@ -84,6 +84,7 @@ erDiagram
   users ||--o{ mcp_connections : owns
   users ||--o{ telegram_link_codes : requests
   users ||--o{ email_tokens : "is mailed"
+  users ||--o{ user_identities : "signs in with"
   users ||--o{ data_exports : requests
   telegram_link_codes }o--o| social_accounts : "connected"
   users ||--o{ audit_logs : generates
@@ -100,12 +101,16 @@ erDiagram
 ```
 
 ```sql
-users(id, email citext unique, password_hash, display_name, status ['active','disabled','deleted'],
+users(id, email citext unique, password_hash null (null = signed up with a provider, see user_identities), display_name, status ['active','disabled','deleted'],
       email_verified_at null, terms_accepted_at null, terms_version, plan default 'free', deleted_at null)   -- migration 00003
 email_tokens(id, user_id FK, purpose ['verify_email','reset_password'], token_hash unique, email citext, expires_at, used_at null)   -- migration 00003; only the SHA-256 of the token is stored; a newer token of the same purpose retires older ones
 data_exports(id, user_id FK, status ['pending','running','ready','failed','expired'], storage_key, size_bytes, error_code, expires_at null)   -- migration 00003, used by the export work; one active export per user
 account_deletions(id, user_id (no FK), requested_at, purged_at null, counts jsonb)   -- migration 00003, used by the deletion work; no PII on purpose
 sessions(id, user_id, token_hash unique, csrf_token, expires_at, user_agent, ip)
+user_identities(id, user_id FK cascade, provider ['google','github'], subject, email citext, email_verified, linked_at, last_login_at null,
+                unique(provider, subject), unique(user_id, provider))   -- migration 00008, D-023; subject is the provider's stable id, never an email
+auth_oauth_flows(id, provider, intent ['login','link'], link_user_id null FK, state_hash unique, nonce_hash, code_verifier_enc, redirect_after,
+                 expires_at, used_at null, ticket_hash unique null, ticket_expires_at null, pending jsonb null)   -- migration 00008; only hashes; the ticket is the pending sign-up
 oauth_states(id, user_id, provider, state_hash unique, code_verifier, redirect_after, expires_at, used_at)
 social_accounts(id, user_id, provider, provider_account_id, username, display_name, avatar_url,
                 scopes text[], metadata jsonb, status ['active','expired','revoked','error'], connected_at,
@@ -126,7 +131,7 @@ mcp_connections(id, user_id, api_key_id, name, client_name, last_seen_at, revoke
 audit_logs(id, user_id, actor_type ['user','api_key','scheduler','system'], actor_id, actor_label, action, resource_type, resource_id, metadata jsonb, request_id, ip)
 analytics(id, user_id, social_account_id, post_target_id null, metric, value bigint, captured_at)   -- MVP: table + endpoint, filled by adapters that CanAnalytics (none yet) and by internal counters
 ```
-Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `action_approvals(user_id, status, created_at desc)`, `action_approvals(expires_at)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`, `email_tokens(user_id, purpose, created_at desc)`, `email_tokens(expires_at)`.
+Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `action_approvals(user_id, status, created_at desc)`, `action_approvals(expires_at)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`, `email_tokens(user_id, purpose, created_at desc)`, `email_tokens(expires_at)`, `auth_oauth_flows(expires_at)`.
 
 ## 4. REST API (`/api/v1`)
 
