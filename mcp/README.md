@@ -6,10 +6,10 @@ Tools are listed per key scope (`GET /me`), and the REST API enforces scopes aga
 
 | Env | Default | |
 |---|---|---|
-| `SOCIALOS_API_URL` | `http://localhost:8080` | REST base (`/api/v1` is appended if missing) |
-| `SOCIALOS_API_KEY` | – | stdio mode only |
+| `STEERPOST_API_URL` (legacy `SOCIALOS_API_URL`) | `http://localhost:8080` | REST base (`/api/v1` is appended if missing) |
+| `STEERPOST_API_KEY` (legacy `SOCIALOS_API_KEY`) | – | stdio mode only |
 | `PORT` / `HOST` | `3333` / `0.0.0.0` | HTTP mode |
-| `SOCIALOS_TIMEOUT_MS` | `15000` | upstream timeout |
+| `STEERPOST_TIMEOUT_MS` (legacy `SOCIALOS_TIMEOUT_MS`) | `15000` | upstream timeout |
 
 ```bash
 npm install && npm run build

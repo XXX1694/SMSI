@@ -551,7 +551,7 @@ The server polls GitHub and deploys by itself; nothing can reach the server from
 timer runs `autoupdate.sh` every 5 minutes (plus up to a minute of random delay; a run missed while the machine was off happens at
 boot). Each run:
 
-1. asks `https://api.github.com/repos/<repo>/releases/latest` (public API, no token; `GITHUB_REPO` in `.env`, default `XXX1694/SMSI`);
+1. asks `https://api.github.com/repos/<repo>/releases/latest` (public API, no token; `GITHUB_REPO` in `.env` or the environment, default `XXX1694/SMSI`). Redirects are followed (`curl -L`, https only, at most 3), so a renamed repository keeps working. Anything but HTTP 200 at the end is logged as a warning in the journal and the run ends cleanly, to try again at the next tick;
 2. accepts only a tag shaped `vX.Y.Z` (pre-releases and drafts are never "latest"; anything else is logged and ignored);
 3. compares it with the tag `deploy.sh` recorded in `.deploy/current_tag` (the image tag is the release tag without the `v`, as
    `release.yml` names the images) and goes on only for a **strictly newer** version, compared as numbers (`1.10.0` is newer than
@@ -622,7 +622,8 @@ A release is a git tag `vX.Y.Z` on `main`. Everything after the tag is automatic
    administrator can create them. A pre-release candidate is `vX.Y.Z-rc.N`; it is published as a GitHub pre-release and is never
    "latest", so servers do not pick it up.
 3. **The images build.** `release.yml` pushes `ghcr.io/<owner>/socialos-{backend,mcp,frontend}` with the tags `X.Y.Z`, `X.Y` and
-   (from 1.0) `X`. Set the repository variables `API_PUBLIC_URL` and `MCP_PUBLIC_URL` first (section 3, *Frontend URLs*): they are baked
+   (from 1.0) `X`, and the same build again as `ghcr.io/<owner>/steerpost-{backend,mcp,frontend}` (same digest, same tags; see
+   *Image names* below). Compose and autoupdate keep using `socialos-*`. Set the repository variables `API_PUBLIC_URL` and `MCP_PUBLIC_URL` first (section 3, *Frontend URLs*): they are baked
    into the frontend image.
 4. **The GitHub Release is created automatically**, as the last job and only if all three images were pushed. Its notes are the
    tag's `CHANGELOG.md` section. Re-running the workflow only refreshes the notes of an existing release.
@@ -633,6 +634,50 @@ A release is a git tag `vX.Y.Z` on `main`. Everything after the tag is automatic
 If the Release workflow fails on the CHANGELOG check, fix the changelog on `main`, then move the tag to the fixed commit
 (`git tag -f vX.Y.Z <sha> && git push -f origin vX.Y.Z`; an administrator can do that despite the protection) or delete the tag and
 push it again. No server has seen the release yet, because it does not exist before its images and notes do.
+
+### 15.1 Image names (Steerpost rename, D-020)
+
+The product is now called Steerpost, but every server still pulls `socialos-*`. Until they are all moved, each build is published
+under both names with one push, so the digests are identical. The `org.opencontainers.image.title` label stays `socialos-*`, because
+`deploy.sh` finds images to prune by it.
+
+**One-time owner step per new package.** GHCR creates `steerpost-backend`, `steerpost-mcp` and `steerpost-frontend` **private** on the
+first push, and `autoupdate.sh` checks images anonymously, so they must be made public before any server is switched to them:
+
+1. Push to `main` (or a tag) once, so the three `steerpost-*` packages exist.
+2. Open `https://github.com/users/<owner>/packages` (or the organization's Packages tab) and click a package, for example `steerpost-backend`.
+3. Package settings (right-hand side) -> scroll to **Danger Zone** -> **Change visibility** -> **Public** -> type the package name -> confirm.
+4. Repeat for `steerpost-mcp` and `steerpost-frontend`.
+5. Check without a login: `docker logout ghcr.io; docker pull ghcr.io/<owner>/steerpost-backend:main`.
+6. Check that the package is connected to the repository (Package settings -> *Manage Actions access*), so later pushes by
+   `GITHUB_TOKEN` keep working. If the list is empty, add the repository with the *Write* role.
+
+Nothing reads the new names yet; making them public early is harmless.
+
+### 15.2 Legacy identifiers
+
+These keep the name `socialos` on purpose, even though the product is called Steerpost. They name stored state or a host
+resource, so renaming one is a migration, not a find-and-replace. Do not "clean them up" without a plan (D-020).
+
+| Identifier | Why it stays |
+|---|---|
+| Cookies `socialos_session`, `socialos_csrf` | Renaming logs every user out. |
+| Headers `X-SocialOS-Gateway`, `X-SocialOS-Client-IP` | The proxy strips them in Caddy snippets installed on shared hosts; an old snippet would stop stripping a renamed header and a client could forge it. |
+| Redis keys `socialos:*` (e.g. `socialos:telegram:`) | The poller lease must be shared across a rolling deploy of old and new versions. |
+| Bluesky record-key salt (`bluesky/tid.go`) | **Permanent.** The key is derived from it; changing it makes a retry that crosses a deploy publish the post twice. |
+| Mastodon `Idempotency-Key` prefix `socialos-` (`mastodon/publish.go`) | **Permanent.** Same reason: duplicate toots on a retry. |
+| S3 lifecycle rule ID, default bucket `socialos-media` | The rule is matched by ID (a rename adds a duplicate); the default bucket name points at existing data. |
+| Metrics `socialos_*` | External dashboards and alerts use them. |
+| localStorage keys `socialos_*` | Renaming resets users' preferences. |
+| Compose project `socialos` (`name:`) | Volumes and networks are named after it: a new name means new, empty volumes (an empty database). The guard filters by its label. |
+| Database, user and bucket names `socialos` | Stored data. |
+| `/opt/socialos`, `/var/backups/socialos`, `socialos-db-*.dump` | Paths on live hosts, referenced by units, timers and backup tooling. |
+| systemd units `socialos-{guard,backup,autoupdate,caddy-precheck}`, drop-ins `*.service.d/socialos.conf`, `socialos.slice` | Installed on hosts; the cgroup budget depends on the slice name. |
+| `host-proxy/socialos-guard.sh` | `socialos-guard.service` has `ConditionPathExists=` on this path: after a rename systemd would skip the guard **silently**. |
+| Caddy snippet names `socialos.caddy`, `socialos_common` | Imported by the host's Caddyfile. |
+| `SOCIALOS_DIR`, `SOCIALOS_CGROUP_PARENT`, `SOCIALOS_PIDS_LIMIT` | Read from the server `.env`. |
+| `SOCIALOS_API_URL`, `SOCIALOS_API_KEY`, `SOCIALOS_TIMEOUT_MS` | Still read, as a fallback after `STEERPOST_*`; compose sets both. Generated client configs also still use the old names until the identifier rename lands. |
+| Images `socialos-{backend,mcp,frontend}` | Published next to `steerpost-*` until every server pulls the new names. |
 
 ## 16. Sharing a host safely
 

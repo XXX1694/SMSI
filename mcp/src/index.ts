@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SocialOSClient } from "./api-client.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, readEnv } from "./config.js";
 import { createHttpServer } from "./http.js";
 import { log } from "./log.js";
 import { buildServer } from "./server.js";
 
 async function runStdio(): Promise<void> {
   const config = loadConfig();
-  const apiKey = process.env.SOCIALOS_API_KEY;
-  if (!apiKey) throw new Error("SOCIALOS_API_KEY is required in stdio mode");
+  const apiKey = readEnv(process.env, "API_KEY");
+  if (!apiKey) throw new Error("STEERPOST_API_KEY (or the legacy SOCIALOS_API_KEY) is required in stdio mode");
   const client = new SocialOSClient({ baseUrl: config.apiUrl, apiKey, timeoutMs: config.timeoutMs });
   const { scopes } = await client.me();
   await buildServer(client, scopes).connect(new StdioServerTransport());

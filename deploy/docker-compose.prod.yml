@@ -198,6 +198,8 @@ services:
     <<: *app
     image: ghcr.io/${GHCR_OWNER:-xxx1694}/socialos-mcp:${IMAGE_TAG:-main}
     environment:
+      # Both names: the server reads STEERPOST_* first, SOCIALOS_* keeps an older image working after a rollback (D-020).
+      STEERPOST_API_URL: http://backend:8080
       SOCIALOS_API_URL: http://backend:8080
       PORT: "3333"
       MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-}

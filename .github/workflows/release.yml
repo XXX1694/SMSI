@@ -2,6 +2,7 @@ name: Release
 
 # Builds the three images and pushes them to GHCR:
 #   ghcr.io/<owner>/socialos-backend | socialos-mcp | socialos-frontend      (owner is lower-cased)
+# and, from the same build and with the same tags and digest, steerpost-backend | steerpost-mcp | steerpost-frontend (D-020).
 #
 #   * every commit on main whose CI run succeeded  ->  sha-<7 hex> and main
 #   * a tag vX.Y.Z (or vX.Y.Z-rc.1)                ->  sha-<7 hex>, X.Y.Z, X.Y (and X from 1.0 on)
@@ -127,6 +128,11 @@ jobs:
             fi
           fi
 
+          # D-020: the same build is also published as steerpost-<image>. One push with all tags, so both names share one
+          # digest. Compose keeps pulling socialos-* until every server is moved; the image.title label stays socialos-*.
+          alias_repo="ghcr.io/${owner}/steerpost-${IMAGE}"
+          for t in "${tags[@]}"; do tags+=("${alias_repo}:${t#"${repo}":}"); done
+
           {
             echo "sha=${sha}"
             echo "short=${short}"
@@ -136,7 +142,7 @@ jobs:
             echo "EOF"
           } >>"$GITHUB_OUTPUT"
           {
-            echo "### socialos-${IMAGE}"
+            echo "### socialos-${IMAGE} (also steerpost-${IMAGE})"
             for t in "${tags[@]}"; do echo "- \`${t}\`"; done
           } >>"$GITHUB_STEP_SUMMARY"
 

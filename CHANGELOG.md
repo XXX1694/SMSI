@@ -6,6 +6,11 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Changed
+
+- Rename shims for Steerpost (D-020). The MCP server reads `STEERPOST_API_URL`, `STEERPOST_API_KEY` and `STEERPOST_TIMEOUT_MS` first and falls back to the `SOCIALOS_*` names; both compose files set both URL variables. Releases publish the images under `steerpost-{backend,mcp,frontend}` as well as `socialos-*` (same digest and tags). `deploy/README.md` lists the legacy identifiers that keep the `socialos` name and the steps to make the new GHCR packages public.
+- `autoupdate.sh` follows redirects when it asks GitHub for the latest release (a renamed repository answers 301), reads `GITHUB_REPO` from the environment as well as `.env`, and logs a warning for any answer other than 200 instead of an info line.
+
 ### Added
 
 - Edit drafts and scheduled posts in the web UI. "Edit" on the Posts list and on the post page opens the composer (`/compose?post=<id>`) prefilled with the title, text, per-network overrides, media and schedule (shown in the Settings timezone); saving calls `PATCH /posts/{id}`. A scheduled post keeps its time unless you change it; a draft can be saved and scheduled in one step. Other statuses show why they cannot be edited. Unsaved edits are guarded (browser prompt on reload or close, a dialog on in-app links). The API has no ETag or `If-Match`, so before saving the UI re-reads the post and, if its `updated_at` or status moved, shows a conflict message with "Load the latest version" and "Save mine anyway" (best effort: the check and the write are not atomic).
