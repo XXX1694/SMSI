@@ -6,6 +6,10 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- Dashboard "Get started" checklist for new users: connect a network, write a first post, connect an AI agent (an MCP connection or an API key) and, optionally, review an approval. Each step ticks off from existing data (accounts, posts, keys, connections, approvals), has a one-line explanation and a direct link, and the list can be dismissed (remembered in this browser). The empty Accounts, Posts and Developer screens link back to the setup steps. The demo reflects its own state.
+
 ## [0.2.1] - 2026-10-09
 
 ### Added

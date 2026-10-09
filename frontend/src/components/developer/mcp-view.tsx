@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState, ErrorState, InlineError, LoadingRows, Notice } from '@/components/states';
@@ -128,7 +129,7 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
 }
 
 function ConnectionList({ items, onRevoke }: { items: McpConnection[]; onRevoke: (c: McpConnection) => void }) {
-  if (items.length === 0) return <EmptyState title="No agents connected">Create a connection above, then paste the config into your MCP client.</EmptyState>;
+  if (items.length === 0) return <EmptyState title="No agents connected">Create a connection above, then paste the config into your MCP client. Steps are on the <Link href="/dashboard" className="underline underline-offset-4">setup checklist</Link>.</EmptyState>;
   return (
     <ul className="divide-y rounded-lg border">
       {items.map((c) => (
