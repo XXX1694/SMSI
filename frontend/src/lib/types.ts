@@ -51,6 +51,10 @@ export interface Me {
   deletion_scheduled_at: string | null;
   /** Days between asking for deletion and the data going. */
   deletion_grace_days: number;
+  /** False for accounts created with Google or GitHub that never set a password. Servers that predate D-023 report true. */
+  has_password: boolean;
+  /** `"password"` and/or the linked provider ids. Empty when the server does not say. */
+  login_methods: string[];
 }
 
 /** A sign-in provider the server has switched on (`GET /auth/providers`). */
@@ -58,6 +62,16 @@ export interface SignInProvider {
   id: string;
   name: string;
 }
+
+/** A provider account linked to the signed-in user (`GET /auth/identities`; the provider's subject id is never sent). */
+export interface Identity {
+  provider: string;
+  email: string;
+  linked_at: string;
+  last_login_at: string | null;
+}
+
+export interface SignInMethodList { identities: Identity[]; has_password: boolean }
 
 /** What `/signup/complete` will create after the provider sign-in (`GET /auth/oauth/pending`). */
 export interface PendingSignup {

@@ -221,3 +221,33 @@ describe('provider sign-in endpoints', () => {
     await expect(api.auth.pendingSignup()).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe('sign-in methods', () => {
+  const sent = (fn: ReturnType<typeof mockFetch>) => fn.mock.calls[0] as unknown as [string, { method: string; body?: string }];
+
+  it('sends current_password only when there is one', async () => {
+    const fn = mockFetch(200, { authorize_url: 'https://p.example/a' });
+    await expect(api.auth.linkIdentity('github', 'pw')).resolves.toEqual({ authorize_url: 'https://p.example/a' });
+    expect(sent(fn)[0]).toContain('/auth/identities/github/link');
+    expect(JSON.parse(sent(fn)[1].body ?? '')).toEqual({ current_password: 'pw' });
+    const bare = mockFetch(200, { authorize_url: 'https://p.example/b' });
+    await api.auth.linkIdentity('google');
+    expect(JSON.parse(sent(bare)[1].body ?? '')).toEqual({});
+  });
+
+  it('unlinks with DELETE and sets a first password', async () => {
+    const del = mockFetch(204, undefined);
+    await api.auth.unlinkIdentity('github', 'pw');
+    expect(sent(del)[1].method).toBe('DELETE');
+    expect(sent(del)[0]).toContain('/auth/identities/github');
+    const set = mockFetch(204, undefined);
+    await api.auth.setPassword('long-enough');
+    expect(sent(set)[0]).toContain('/auth/password/set');
+    expect(JSON.parse(sent(set)[1].body ?? '')).toEqual({ new_password: 'long-enough' });
+  });
+
+  it('turns 409 on unlink into an ApiError the UI can recognise', async () => {
+    mockFetch(409, { error: { code: 'CONFLICT', message: 'keep at least one way to sign in' } });
+    await expect(api.auth.unlinkIdentity('github')).rejects.toMatchObject({ status: 409, code: 'CONFLICT' });
+  });
+});
