@@ -52,7 +52,7 @@ export function PostRow({ post, onRetry }: RowProps) {
 
 export function PostList({ posts, onRetry }: { posts: Post[]; onRetry?: (post: Post) => void }) {
   return (
-    <ul className="stagger divide-y overflow-hidden rounded-lg border">
+    <ul className="stagger divide-y overflow-hidden rounded-lg border bg-background">
       {posts.map((p) => (
         <PostRow key={p.id} post={p} onRetry={onRetry} />
       ))}
