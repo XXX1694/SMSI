@@ -1,0 +1,19 @@
+{
+  "title": "Calendario",
+  "subtitle": "Borradores y publicaciones programadas, publicadas y fallidas en tu zona horaria.",
+  "month": "Mes",
+  "week": "Semana",
+  "day": "Día",
+  "viewLabel": "Vista",
+  "legend": "Leyenda",
+  "previous": "Anterior",
+  "next": "Siguiente",
+  "today": "Hoy",
+  "chipTitle": "{status}: {title}",
+  "more": "{count, plural, one {+# más} many {+# más} other {+# más}}",
+  "moreOnDay": "{count, plural, one {# publicación más el {day}, abrir el día} many {# de publicaciones más el {day}, abrir el día} other {# publicaciones más el {day}, abrir el día}}",
+  "postsOnDay": "{count, plural, one {# publicación el {day}, abrir el día} many {# de publicaciones el {day}, abrir el día} other {# publicaciones el {day}, abrir el día}}",
+  "postCount": "{count, plural, one {# publicación} many {# de publicaciones} other {# publicaciones}}",
+  "noPostsDay": "Sin publicaciones",
+  "noPostsPeriod": "Sin publicaciones en este periodo."
+}

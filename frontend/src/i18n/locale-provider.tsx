@@ -7,7 +7,7 @@ import type { Catalog } from '@/i18n/pseudo';
 import { LOCALE_STORAGE_KEY, resolveLocale } from '@/i18n/resolve';
 import { loadScriptFont } from '@/i18n/script-fonts';
 import { readStorage, writeStorage } from '@/lib/storage';
-import en from '../../messages/en.json';
+import en from '@/i18n/en-all';
 
 interface LocaleSettings {
   locale: AppLocale;

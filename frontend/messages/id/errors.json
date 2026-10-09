@@ -1,0 +1,21 @@
+{
+  "VALIDATION_ERROR": "Sebagian isian tidak sesuai. Periksa lalu coba lagi.",
+  "UNAUTHENTICATED": "Anda belum masuk, atau sesi Anda telah berakhir. Masuk lagi.",
+  "FORBIDDEN": "Anda tidak memiliki izin untuk melakukan ini.",
+  "INSUFFICIENT_SCOPE": "Kunci API ini tidak memiliki izin untuk tindakan tersebut.",
+  "QUOTA_EXCEEDED": "Anda telah mencapai batas paket Anda. Lihat Pengaturan untuk melihat pemakaian Anda.",
+  "EMAIL_NOT_VERIFIED": "Verifikasi alamat email Anda dulu, lalu coba lagi.",
+  "NOT_FOUND": "Item ini sudah tidak ada. Mungkin sudah dihapus.",
+  "INVALID_STATE_TRANSITION": "Status pos ini berubah. Muat ulang halaman untuk melihatnya.",
+  "CONFLICT": "Ini sudah ada. Gunakan nama lain.",
+  "RATE_LIMITED": "Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.",
+  "SOCIAL_ACCOUNT_EXPIRED": "Akun ini perlu dihubungkan ulang. Hubungkan ulang di Akun.",
+  "PROVIDER_NOT_AVAILABLE": "Jaringan ini belum tersedia.",
+  "PROVIDER_ERROR": "Jaringan menolak pos ini. Lihat alasannya di bawah percobaan publikasi pos.",
+  "INTERNAL": "Steerpost mengalami masalah. Coba lagi sebentar lagi.",
+  "NETWORK": "Tidak dapat menjangkau server. Periksa koneksi Anda lalu coba lagi.",
+  "UNKNOWN": "Terjadi kesalahan. Coba lagi.",
+  "access_denied": "Proses masuk dibatalkan, atau akses tidak diberikan.",
+  "withRef": "{text} (ref {id})",
+  "REAUTH_REQUIRED": "Masuk lagi untuk melanjutkan."
+}

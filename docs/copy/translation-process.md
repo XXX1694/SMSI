@@ -9,7 +9,9 @@ steps; the schema and API changes below need a plan under AGENTS.md section 2.
 - **The English catalog is the only source.** It holds ICU MessageFormat strings. Every other locale is derived from it.
   Nobody edits a translation without a matching English key.
 - Layout:
-  - `frontend/messages/{locale}.json` for the dashboard and demo, nested by area (`composer.publishNow`).
+  - `frontend/messages/{locale}/{namespace}.json` for the dashboard and demo: one file per top-level namespace (`composer.json`
+    holds `composer.publishNow`). English is the source; `src/i18n/catalog.ts` lists the namespaces (bundles) and types them
+    from `messages/en/`. A locale may lack a file; that namespace then reads English. A file English lacks is an error.
   - `frontend/messages/meta.json` holds per-key metadata for translators and checks:
     `{ "composer.publishNow": { "type": "button", "description": "Publishes immediately; opens a confirmation", "maxLength": 18 } }`.
     `type` is one of `button | tab | badge | nav | title | body | error | toast | aria`.
@@ -60,7 +62,7 @@ the rule.
 
 Also:
 
-- **Types.** The `Messages` type is generated from `en.json`, so using a missing key fails `tsc`.
+- **Types.** The `Messages` type is generated from `messages/en/*.json` (via `src/i18n/catalog.ts`), so using a missing key fails `tsc`.
 - **No literals.** `npm run i18n:literals` (part of `npm run lint`, and `tests/i18n-literals.test.ts`) parses every file in
   `src/components`, `src/app` and `src/lib` and fails on JSX text, on `aria-label`, `title`, `placeholder`, `alt` and the copy
   props of our components (`label`, `description`, `hint`, `note`, `confirmLabel`, `dismissLabel`, `retryLabel`), and on
@@ -111,7 +113,7 @@ Also:
   no request at render time.
 - It uses ICU MessageFormat (FormatJS `intl-messageformat`), the same syntax as the catalogs and the checks above. There is
   one syntax everywhere.
-- Its typed keys come from `en.json`, so missing keys fail `make lint`.
+- Its typed keys come from `messages/en/*.json`, so missing keys fail `make lint`.
 - `useFormatter` takes a global `timeZone` and `now`. It replaces the hardcoded `en-GB` and `en` Intl calls in
   `lib/time.ts` and `lib/calendar.ts`.
 - It is small, MIT-licensed and actively maintained.

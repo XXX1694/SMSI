@@ -1,0 +1,23 @@
+{
+  "title": "Médias",
+  "subtitle": "Images et vidéos réutilisables.",
+  "unsupportedType": "{name} : type non pris en charge. Utilisez JPEG, PNG, WebP, GIF, MP4 ou MOV.",
+  "imageTooLarge": "{name} : fichier trop volumineux ({size}). Les images sont limitées à {limit}.",
+  "videoTooLarge": "{name} : fichier trop volumineux ({size}). Les vidéos sont limitées à {limit}.",
+  "emptyFile": "{name} : le fichier est vide.",
+  "uploadFiles": "Importer des fichiers",
+  "limits": "Images jusqu’à 10 Mo · vidéos jusqu’à 100 Mo",
+  "noneTitle": "Aucun média pour l’instant",
+  "noneBody": "Importez des images ou des vidéos pour les réutiliser dans vos posts.",
+  "kindVideo": "Vidéo",
+  "kindFile": "Fichier",
+  "deleteLabel": "Supprimer {name}",
+  "deleteTitle": "Supprimer ce fichier ?",
+  "deleteBody": "{name} sera retiré de votre médiathèque. Les fichiers utilisés dans un post ne peuvent pas être supprimés.",
+  "deleteBodyUnnamed": "Le fichier sera retiré de votre médiathèque. Les fichiers utilisés dans un post ne peuvent pas être supprimés.",
+  "deleted": "Fichier supprimé",
+  "libraryTitle": "Médiathèque",
+  "libraryBody": "Choisissez les fichiers à joindre à ce post.",
+  "libraryEmpty": "Votre médiathèque est vide. Importez d’abord un fichier.",
+  "attach": "{count, plural, one {Joindre # fichier} many {Joindre # de fichiers} other {Joindre # fichiers}}"
+}

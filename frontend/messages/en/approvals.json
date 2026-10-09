@@ -1,0 +1,52 @@
+{
+  "title": "Approvals",
+  "subtitle": "Dangerous actions by agents and API keys wait here. Nothing happens until you approve.",
+  "tabWaiting": "Waiting for you",
+  "tabHistory": "History",
+  "showLabel": "Show approvals",
+  "emptyPendingTitle": "Nothing is waiting for you",
+  "emptyPendingBody": "Requests from agents appear here.",
+  "emptyHistoryTitle": "No decisions yet",
+  "emptyHistoryBody": "Approved and denied requests are listed here.",
+  "approvedToast": "Approved: {action}. {agent} can go ahead now.",
+  "deniedToast": "Denied: {action}.",
+  "status": {
+    "pending": "Waiting",
+    "approved": "Approved, waiting for the agent",
+    "consumed": "Approved and done",
+    "denied": "Denied",
+    "expired": "Expired"
+  },
+  "requestedBy": "Requested by <b>{agent}</b>",
+  "deny": "Deny",
+  "approve": "Approve",
+  "approving": "Approving…",
+  "denyLabel": "Deny: {action}",
+  "approveLabel": "Approve: {action}",
+  "showLess": "Show less",
+  "showFull": "Show full text",
+  "underMinute": "Under a minute left",
+  "minLeft": "{count, plural, one {# min left} other {# min left}}",
+  "summary": {
+    "title": "Title",
+    "text": "Text",
+    "media": "Media",
+    "networks": "Networks",
+    "accounts": "Accounts",
+    "network": "Network",
+    "account": "Account",
+    "scheduledFor": "Scheduled for",
+    "textOn": "Text on {account}",
+    "images": "{count, plural, one {# image} other {# images}}",
+    "videos": "{count, plural, one {# video} other {# videos}}",
+    "files": "{count, plural, one {# file} other {# files}}"
+  },
+  "action": {
+    "post_publish": "Publish now",
+    "post_retry_now": "Retry now",
+    "post_delete": "Delete post",
+    "post_schedule_soon": "Schedule in the next few minutes",
+    "social_account_disconnect": "Disconnect account",
+    "social_account_connect_token": "Connect with a token"
+  }
+}

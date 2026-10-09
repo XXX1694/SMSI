@@ -25,7 +25,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft` (shown as "Beta translation").
-Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/pt-BR.json` (676 keys, same structure as `en.json`).
+Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/pt-BR/*.json` (676 keys, same structure as `en.json`).
 
 Register: você. Buttons use the infinitive (Salvar, Agendar), body text uses the imperative (Conecte uma conta.). Brazilian
 forms only (tela, arquivo, usuário). Quotes “…”.

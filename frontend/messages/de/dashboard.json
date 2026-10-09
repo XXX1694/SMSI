@@ -1,0 +1,70 @@
+{
+  "title": "Übersicht",
+  "subtitle": "Was rausgeht und was Aufmerksamkeit braucht.",
+  "overview": "Überblick",
+  "stats": {
+    "accounts": "Verbundene Konten",
+    "scheduled": "Geplant",
+    "publishedMonth": "Diesen Monat veröffentlicht",
+    "failed": "Fehlgeschlagen"
+  },
+  "viewAll": "Alle anzeigen",
+  "sections": {
+    "upcoming": {
+      "title": "Anstehend",
+      "empty": "Nichts geplant.",
+      "viewAll": "Alle anstehenden anzeigen"
+    },
+    "drafts": {
+      "title": "Entwürfe",
+      "empty": "Keine Entwürfe.",
+      "viewAll": "Alle Entwürfe anzeigen"
+    },
+    "recent": {
+      "title": "Zuletzt veröffentlicht",
+      "empty": "Noch nichts veröffentlicht.",
+      "viewAll": "Alle zuletzt veröffentlichten anzeigen"
+    },
+    "failed": {
+      "title": "Fehlgeschlagen",
+      "empty": "Keine fehlgeschlagenen Beiträge.",
+      "viewAll": "Alle fehlgeschlagenen anzeigen"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "Verbinde dein erstes Konto",
+    "noAccountBody": "Verbinde ein Netzwerk, um zu veröffentlichen.",
+    "showChecklist": "Einrichtungsliste zeigen",
+    "setUp": "Eingerichtet",
+    "showSteps": "Schritte zeigen",
+    "dismiss": "Einrichtungsliste schließen",
+    "doneTitle": "Alles eingerichtet",
+    "getStarted": "Los geht’s",
+    "doneBody": "Alle erforderlichen Schritte sind erledigt. Du kannst diese Liste ausblenden.",
+    "progress": "{done} von {total, plural, one {# Schritt} other {# Schritten}} erledigt.",
+    "doneSr": "(erledigt)",
+    "optional": "Optional",
+    "steps": {
+      "network": {
+        "title": "Netzwerk verbinden",
+        "hint": "Steerpost veröffentlicht auf den Konten, die du verbindest. Wähle LinkedIn, Telegram oder ein anderes Netzwerk.",
+        "action": "Konto verbinden"
+      },
+      "post": {
+        "title": "Schreibe deinen ersten Beitrag",
+        "hint": "Speichere einen Entwurf oder plane ihn. Nichts wird veröffentlicht, bevor du es sagst.",
+        "action": "Beitrag schreiben"
+      },
+      "agent": {
+        "title": "KI-Agent verbinden",
+        "hint": "Erstelle eine MCP-Verbindung oder einen API-Schlüssel, damit Claude oder deine eigenen Skripte Beiträge für dich entwerfen können.",
+        "action": "Agent verbinden"
+      },
+      "approval": {
+        "title": "Freigabe prüfen",
+        "hint": "Wenn ein Agent veröffentlichen, löschen oder trennen will, wartet die Anfrage hier.",
+        "action": "Freigaben öffnen"
+      }
+    }
+  }
+}

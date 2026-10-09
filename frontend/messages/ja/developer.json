@@ -1,0 +1,186 @@
+{
+  "title": "開発者",
+  "subtitle": "APIキー、MCP接続、使用状況、監査ログ。",
+  "navLabel": "開発者向けのセクション",
+  "navKeys": "APIキーと監査ログ",
+  "navMcp": "MCP接続",
+  "keysSection": "APIキー",
+  "usageSection": "使用状況",
+  "auditSection": "監査ログ",
+  "usage": {
+    "noneTitle": "API使用状況はまだありません",
+    "noneBody": "APIキーまたはMCP接続で送信されたリクエストが、ここに集計されます。",
+    "totalRequests": "リクエスト総数",
+    "perDay": "1日あたりのリクエスト数",
+    "tableLabel": "キーごとのリクエスト数",
+    "colKey": "キー",
+    "colRequests": "リクエスト数",
+    "colLastUsed": "最終使用"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "安全",
+      "medium": "中",
+      "dangerous": "危険"
+    },
+    "dangerNotice": "危険なスコープを付与すると、このキーで実際のアカウントを操作したり、データを削除したりできます。必要な場合にのみ付与してください。",
+    "social_read": {
+      "label": "アカウントの読み取り",
+      "description": "連携済みのアカウントとSNSを一覧表示します。"
+    },
+    "posts_read": {
+      "label": "投稿の読み取り",
+      "description": "投稿、ステータス、試行履歴を一覧表示します。"
+    },
+    "analytics_read": {
+      "label": "分析の読み取り",
+      "description": "分析データを読み取ります。"
+    },
+    "posts_write": {
+      "label": "下書きの作成と編集",
+      "description": "下書きの作成、投稿の編集とキャンセルを行います。"
+    },
+    "media_write": {
+      "label": "メディアのアップロード",
+      "description": "メディアライブラリにファイルをアップロードします。"
+    },
+    "posts_schedule": {
+      "label": "投稿の予約",
+      "description": "後で投稿されるように予約します。"
+    },
+    "posts_publish": {
+      "label": "即時投稿",
+      "description": "実際のSNSアカウントに今すぐ投稿します。"
+    },
+    "posts_delete": {
+      "label": "投稿の削除",
+      "description": "Steerpostから投稿を削除します。各SNSに投稿済みのものは、そのまま残ります。"
+    },
+    "social_disconnect": {
+      "label": "アカウントの連携解除",
+      "description": "連携済みのSNSアカウントを削除します。"
+    },
+    "social_connect": {
+      "label": "アカウントの連携",
+      "description": "SNSの認証情報（トークン、アプリパスワード、Webhook URL）をSteerpostに渡します。このキーを持つ人は誰でもアカウントを追加できます。"
+    }
+  },
+  "trusted": {
+    "label": "信頼済みキー：危険な操作の前に確認しない。",
+    "hint": "デフォルトでは、このキーによる危険な操作は、承認ページであなたの承認を待ちます。",
+    "warning": "信頼済みキーは、確認なしで動作します。キーが漏えいしたり、エージェントが誤動作したりすると、実際のSNSへの投稿、投稿の削除、アカウントの連携解除が直ちに行われる可能性があります。無人で動作させるキーでない限り、オフのままにしてください。",
+    "ack": "このキーが、承認なしで投稿、削除、連携解除を行えることを理解しています。"
+  },
+  "apiKeys": {
+    "rawTitle": "APIキーをコピー",
+    "rawBody": "キー全体が表示されるのは、この1回だけです。安全な場所に保管してください。",
+    "copyKey": "キーをコピー",
+    "expiryNever": "なし",
+    "expiryDays": "{days, plural, other {#日}}",
+    "expiryYear": "1年",
+    "nameRequired": "キーの名前を入力してください。",
+    "scopesRequired": "スコープを1つ以上選択してください。",
+    "ackRequired": "危険なスコープのリスクを理解したことを確認してください。",
+    "trustAckRequired": "このキーがあなたの承認なしで動作することを確認するか、信頼済みのオプションをオフにしてください。",
+    "createTitle": "APIキーを作成",
+    "createBody": "キーはあなたとして動作します。連携に必要な権限だけを付与してください。",
+    "nameLabel": "名前",
+    "namePlaceholder": "CI投稿ツール",
+    "expiresLabel": "有効期限",
+    "ackDangerous": "このキーが投稿、削除、連携解除を要求できることを理解しています。各リクエストは、私の承認を待ちます。",
+    "createKey": "キーを作成",
+    "colName": "名前",
+    "colScopes": "スコープ",
+    "colLastUsed": "最終使用",
+    "colActions": "操作",
+    "badgeTrusted": "信頼済み：確認なしで動作",
+    "badgeAsks": "危険な操作の前に確認",
+    "expired": "期限切れ",
+    "revoke": "無効化",
+    "revokeLabel": "{name}を無効化",
+    "intro": "APIキーは、スクリプトや連携に使用します。次のヘッダーで送信します：<code>{header}</code>",
+    "emptyTitle": "APIキーはありません",
+    "emptyBody": "キーを作成すると、独自のツールからREST APIを呼び出せます。AIエージェントを接続するには、<link>MCP接続を使用</link>してください。",
+    "tableLabel": "APIキー",
+    "revokeTitle": "APIキーを無効化しますか？",
+    "revokeBody": "「{name}」を使用しているものはすべて、直ちに動作しなくなります。この操作は元に戻せません。",
+    "revoked": "キーを無効化しました"
+  },
+  "mcp": {
+    "createdTitle": "接続「{name}」を作成しました",
+    "createdBody": "この設定にはAPIキーが含まれ、表示されるのは1回だけです。今すぐMCPクライアントに貼り付けてください。",
+    "clientLabel": "クライアント",
+    "tabHttp": "Claude Code、Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "AuthorizationヘッダーによるネイティブHTTP接続です。Claude Codeでは、下のワンライナーを実行します。Cursorでは、JSONを<code>mcp.json</code>に記述します。キーを環境変数に保存する場合は、キーを<code>{envKey}</code>に置き換えてください。",
+    "httpConfig": "HTTP設定",
+    "connectorIntro": "<b>コネクター（インストール不要）：</b>MCPのURLとヘッダー<code>{header}</code>を指定して、カスタムコネクターを追加します。URLはHTTPSで到達できる必要があります。手順：<link>MCPドキュメント</link>",
+    "bridgeIntro": "<b>ブリッジ：</b>次の内容を<code>claude_desktop_config.json</code>に貼り付けて、Claude Desktopを再起動します。コミュニティパッケージ<code>mcp-remote</code>を、バージョンを固定して実行します。キーはコマンドラインではなく、<code>env</code>ブロックに保持されます。",
+    "bridgeConfig": "ブリッジ設定",
+    "copyKeyOnly": "APIキーのみコピー",
+    "nameRequired": "接続に名前を付けてください（例：「Claude Desktop」）。",
+    "permsRequired": "権限を1つ以上選択してください。",
+    "ackRequired": "危険な権限のリスクを理解したことを確認してください。",
+    "nameLabel": "接続名",
+    "nameHint": "MCP接続の一覧に表示されます。",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "権限",
+    "approvalNotice": "投稿、削除、連携解除は、そのたびに承認ページであなたの承認を待ちます。",
+    "ackLabel": "理解したうえで、これらの権限を付与します。",
+    "create": "接続を作成",
+    "emptyTitle": "接続中のエージェントはありません",
+    "emptyBody": "上で接続を作成し、その設定をMCPクライアントに貼り付けてください。",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}最終アクセス：{when}",
+    "connectSection": "AIエージェントを接続",
+    "listSection": "MCP接続",
+    "revokeTitle": "接続を無効化しますか？",
+    "revokeBody": "「{name}」は直ちにアクセスできなくなり、そのAPIキーも使用できなくなります。",
+    "revoked": "接続を無効化しました",
+    "perms": {
+      "read": {
+        "label": "投稿の読み取り",
+        "description": "エージェントは、アカウント、投稿、ステータス、分析を一覧表示できます。"
+      },
+      "draft": {
+        "label": "下書きの作成",
+        "description": "エージェントは、アップロード済みのメディアを使って下書きを作成・編集できます。"
+      },
+      "schedule": {
+        "label": "予約",
+        "description": "エージェントは、後で投稿されるように予約できます。"
+      },
+      "publish": {
+        "label": "投稿",
+        "description": "エージェントは、実際のアカウントに今すぐ投稿できます。"
+      },
+      "delete": {
+        "label": "削除",
+        "description": "エージェントは、投稿を削除できます。"
+      },
+      "disconnect": {
+        "label": "連携解除",
+        "description": "エージェントは、SNSアカウントの連携を解除できます。"
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "監査イベントを絞り込む",
+    "all": "すべてのアクティビティ",
+    "agents": "エージェントの操作",
+    "loadFailed": "監査ログを読み込めませんでした",
+    "emptyAgentsTitle": "エージェントの操作はまだありません",
+    "emptyAgentsBody": "MCP経由のツール呼び出しがここに表示されます。",
+    "emptyTitle": "監査イベントはまだありません",
+    "tableLabel": "監査イベント",
+    "colWhen": "日時",
+    "colActor": "実行者",
+    "colAction": "操作",
+    "colResource": "対象",
+    "actorApiKey": "APIキー",
+    "actorUser": "あなた",
+    "unknownTool": "不明なツール",
+    "directApi": "直接API",
+    "directApiTitle": "MCPサーバーを経由せず、APIに直接送信されました",
+    "moreFailed": "イベントをこれ以上読み込めませんでした。{reason}"
+  }
+}

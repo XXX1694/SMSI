@@ -1,0 +1,23 @@
+{
+  "title": "Media",
+  "subtitle": "Gambar dan video yang dapat dipakai ulang.",
+  "unsupportedType": "{name}: jenis tidak didukung. Gunakan JPEG, PNG, WebP, GIF, MP4, atau MOV.",
+  "imageTooLarge": "{name}: terlalu besar ({size}). Gambar dibatasi hingga {limit}.",
+  "videoTooLarge": "{name}: terlalu besar ({size}). Video dibatasi hingga {limit}.",
+  "emptyFile": "{name}: berkas kosong.",
+  "uploadFiles": "Unggah berkas",
+  "limits": "Gambar hingga 10 MB · video hingga 100 MB",
+  "noneTitle": "Belum ada media",
+  "noneBody": "Unggah gambar atau video untuk dipakai ulang di berbagai pos.",
+  "kindVideo": "Video",
+  "kindFile": "Berkas",
+  "deleteLabel": "Hapus {name}",
+  "deleteTitle": "Hapus berkas ini?",
+  "deleteBody": "{name} akan dihapus dari pustaka Anda. Berkas yang dipakai di sebuah pos tidak dapat dihapus.",
+  "deleteBodyUnnamed": "Berkas akan dihapus dari pustaka Anda. Berkas yang dipakai di sebuah pos tidak dapat dihapus.",
+  "deleted": "Berkas dihapus",
+  "libraryTitle": "Pustaka media",
+  "libraryBody": "Pilih berkas untuk dilampirkan ke pos ini.",
+  "libraryEmpty": "Pustaka Anda kosong. Unggah berkas dulu.",
+  "attach": "{count, plural, other {Lampirkan # berkas}}"
+}

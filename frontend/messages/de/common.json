@@ -1,0 +1,65 @@
+{
+  "cancel": "Abbrechen",
+  "close": "Schließen",
+  "loading": "Wird geladen…",
+  "working": "Wird ausgeführt…",
+  "sending": "Wird gesendet…",
+  "saving": "Wird gespeichert…",
+  "tryAgain": "Erneut versuchen",
+  "retry": "Erneut senden",
+  "edit": "Bearbeiten",
+  "optionalLabel": "{label} (optional)",
+  "showField": "{label} anzeigen",
+  "hideField": "{label} ausblenden",
+  "never": "Nie",
+  "justNow": "gerade eben",
+  "unknown": "Unbekannt",
+  "loadingFailed": "Laden fehlgeschlagen",
+  "newPost": "Neuer Beitrag",
+  "listSeparator": ", ",
+  "bytes": "{size} B",
+  "kilobytes": "{size} KB",
+  "megabytes": "{size} MB",
+  "connectAccount": "Konto verbinden",
+  "delete": "Löschen",
+  "copy": "Kopieren",
+  "copyTitle": "{title} kopieren",
+  "copied": "Kopiert",
+  "copyFailed": "Kopieren nicht möglich. Markiere den Text und kopiere ihn von Hand.",
+  "haveSaved": "Ist gespeichert",
+  "creating": "Wird erstellt…",
+  "loadMore": "Mehr laden",
+  "upload": "Hochladen",
+  "uploading": "Wird hochgeladen…",
+  "status": {
+    "post": {
+      "draft": "Entwurf",
+      "scheduled": "Geplant",
+      "publishing": "Wird veröffentlicht",
+      "published": "Veröffentlicht",
+      "partially_published": "Teilweise veröffentlicht",
+      "failed": "Fehlgeschlagen",
+      "cancelled": "Abgebrochen"
+    },
+    "target": {
+      "pending": "Ausstehend",
+      "publishing": "Wird veröffentlicht",
+      "published": "Veröffentlicht",
+      "failed": "Fehlgeschlagen",
+      "cancelled": "Abgebrochen",
+      "needs_review": "Unbestätigt"
+    },
+    "account": {
+      "active": "Aktiv",
+      "expired": "Neu verbinden nötig",
+      "revoked": "Widerrufen",
+      "error": "Fehler"
+    },
+    "attempt": {
+      "started": "Gestartet",
+      "succeeded": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "unknown": "Unbestätigt"
+    }
+  }
+}

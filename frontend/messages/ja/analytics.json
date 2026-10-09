@@ -1,0 +1,22 @@
+{
+  "title": "分析",
+  "subtitle": "各SNSが報告する指標です。",
+  "period": "期間",
+  "lastDays": "{days, plural, other {過去#日間}}",
+  "none": "分析を報告しているSNSは、まだ連携されていません。",
+  "supportedBy": "分析に対応しているSNS：{networks}",
+  "emptyTitle": "この期間の分析データはありません",
+  "emptyBody": "連携したSNSが指標を報告すると、ここに表示されます。",
+  "tableLabel": "指標",
+  "colMetric": "指標",
+  "colLatest": "最新",
+  "colTotal": "合計",
+  "colTrend": "推移",
+  "trend": "{metric}の推移",
+  "notEnough": "データが不足しています",
+  "metrics": {
+    "impressions": "インプレッション",
+    "reactions": "リアクション",
+    "link_clicks": "リンクのクリック数"
+  }
+}

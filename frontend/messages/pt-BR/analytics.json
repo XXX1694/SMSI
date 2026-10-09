@@ -1,0 +1,22 @@
+{
+  "title": "Análises",
+  "subtitle": "Métricas que as suas redes informam.",
+  "period": "Período",
+  "lastDays": "{days, plural, one {Último # dia} many {Últimos # de dias} other {Últimos # dias}}",
+  "none": "Nenhuma das redes conectadas informa análises ainda.",
+  "supportedBy": "Análises disponíveis em: {networks}.",
+  "emptyTitle": "Sem dados de análises neste período",
+  "emptyBody": "As métricas aparecem aqui quando uma rede conectada as informar.",
+  "tableLabel": "Métricas",
+  "colMetric": "Métrica",
+  "colLatest": "Última",
+  "colTotal": "Total",
+  "colTrend": "Tendência",
+  "trend": "Tendência de {metric}",
+  "notEnough": "Dados insuficientes",
+  "metrics": {
+    "impressions": "Impressões",
+    "reactions": "Reações",
+    "link_clicks": "Cliques em links"
+  }
+}

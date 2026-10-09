@@ -1,0 +1,52 @@
+{
+  "title": "Aprobaciones",
+  "subtitle": "Aquí esperan las acciones peligrosas de agentes y claves de API. No ocurre nada hasta que apruebes.",
+  "tabWaiting": "Esperan tu decisión",
+  "tabHistory": "Historial",
+  "showLabel": "Mostrar aprobaciones",
+  "emptyPendingTitle": "Nada espera tu decisión",
+  "emptyPendingBody": "Las solicitudes de los agentes aparecen aquí.",
+  "emptyHistoryTitle": "Aún no hay decisiones",
+  "emptyHistoryBody": "Aquí se listan las solicitudes aprobadas y denegadas.",
+  "approvedToast": "Aprobado: {action}. {agent} ya puede continuar.",
+  "deniedToast": "Denegado: {action}.",
+  "status": {
+    "pending": "En espera",
+    "approved": "Aprobada, espera al agente",
+    "consumed": "Aprobada y hecha",
+    "denied": "Denegada",
+    "expired": "Caducada"
+  },
+  "requestedBy": "Solicitado por <b>{agent}</b>",
+  "deny": "Denegar",
+  "approve": "Aprobar",
+  "approving": "Aprobando…",
+  "denyLabel": "Denegar: {action}",
+  "approveLabel": "Aprobar: {action}",
+  "showLess": "Mostrar menos",
+  "showFull": "Ver texto completo",
+  "underMinute": "Queda menos de un minuto",
+  "minLeft": "{count, plural, one {Queda # min} many {Quedan # min} other {Quedan # min}}",
+  "summary": {
+    "title": "Título",
+    "text": "Texto",
+    "media": "Multimedia",
+    "networks": "Redes sociales",
+    "accounts": "Cuentas",
+    "network": "Red social",
+    "account": "Cuenta",
+    "scheduledFor": "Programada para",
+    "textOn": "Texto en {account}",
+    "images": "{count, plural, one {# imagen} many {# de imágenes} other {# imágenes}}",
+    "videos": "{count, plural, one {# video} many {# de videos} other {# videos}}",
+    "files": "{count, plural, one {# archivo} many {# de archivos} other {# archivos}}"
+  },
+  "action": {
+    "post_publish": "Publicar ahora",
+    "post_retry_now": "Reintentar ahora",
+    "post_delete": "Eliminar publicación",
+    "post_schedule_soon": "Programar para dentro de unos minutos",
+    "social_account_disconnect": "Desconectar cuenta",
+    "social_account_connect_token": "Conectar con un token"
+  }
+}

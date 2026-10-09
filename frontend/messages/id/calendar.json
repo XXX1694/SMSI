@@ -1,0 +1,19 @@
+{
+  "title": "Kalender",
+  "subtitle": "Draf, pos terjadwal, terbit, dan gagal di zona waktu Anda.",
+  "month": "Bulan",
+  "week": "Pekan",
+  "day": "Hari",
+  "viewLabel": "Tampilan",
+  "legend": "Keterangan",
+  "previous": "Sebelumnya",
+  "next": "Berikutnya",
+  "today": "Hari ini",
+  "chipTitle": "{status}: {title}",
+  "more": "{count, plural, other {+# lagi}}",
+  "moreOnDay": "{count, plural, other {# pos lagi pada {day}, buka hari}}",
+  "postsOnDay": "{count, plural, other {# pos pada {day}, buka hari}}",
+  "postCount": "{count, plural, other {# pos}}",
+  "noPostsDay": "Tidak ada pos",
+  "noPostsPeriod": "Tidak ada pos pada periode ini."
+}

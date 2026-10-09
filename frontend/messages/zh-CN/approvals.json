@@ -1,0 +1,52 @@
+{
+  "title": "审批",
+  "subtitle": "智能体和 API 密钥发起的危险操作会在这里等待。在你批准之前，不会执行任何操作。",
+  "tabWaiting": "等你处理",
+  "tabHistory": "历史记录",
+  "showLabel": "显示审批",
+  "emptyPendingTitle": "没有待处理的请求",
+  "emptyPendingBody": "智能体发来的请求会显示在这里。",
+  "emptyHistoryTitle": "还没有处理记录",
+  "emptyHistoryBody": "已批准和已拒绝的请求会列在这里。",
+  "approvedToast": "已批准：{action}。{agent} 现在可以继续了。",
+  "deniedToast": "已拒绝：{action}。",
+  "status": {
+    "pending": "等待中",
+    "approved": "已批准，等待智能体",
+    "consumed": "已批准并已完成",
+    "denied": "已拒绝",
+    "expired": "已过期"
+  },
+  "requestedBy": "请求方：<b>{agent}</b>",
+  "deny": "拒绝",
+  "approve": "批准",
+  "approving": "正在批准…",
+  "denyLabel": "拒绝：{action}",
+  "approveLabel": "批准：{action}",
+  "showLess": "收起",
+  "showFull": "显示全文",
+  "underMinute": "剩余不到 1 分钟",
+  "minLeft": "{count, plural, other {剩余 # 分钟}}",
+  "summary": {
+    "title": "标题",
+    "text": "正文",
+    "media": "媒体",
+    "networks": "社交网络",
+    "accounts": "账号",
+    "network": "社交网络",
+    "account": "账号",
+    "scheduledFor": "定时发布时间",
+    "textOn": "{account}的正文",
+    "images": "{count, plural, other {# 张图片}}",
+    "videos": "{count, plural, other {# 个视频}}",
+    "files": "{count, plural, other {# 个文件}}"
+  },
+  "action": {
+    "post_publish": "立即发布",
+    "post_retry_now": "立即重试",
+    "post_delete": "删除帖子",
+    "post_schedule_soon": "在几分钟内定时发布",
+    "social_account_disconnect": "断开账号连接",
+    "social_account_connect_token": "使用令牌连接"
+  }
+}

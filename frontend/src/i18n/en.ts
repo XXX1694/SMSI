@@ -1,4 +1,4 @@
-import en from '../../messages/en.json';
+import en from '@/i18n/en-all';
 import { createTranslator, type AppT } from '@/i18n/translate';
 
 /**

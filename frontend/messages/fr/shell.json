@@ -1,0 +1,31 @@
+{
+  "skipToContent": "Aller au contenu",
+  "signOut": "Déconnexion",
+  "openMenu": "Ouvrir le menu",
+  "closeMenu": "Fermer le menu",
+  "mainNav": "Principal",
+  "navWaiting": "{count, plural, one {# demande en attente} many {# de demandes en attente} other {# demandes en attente}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, one {# demande vous attend} many {# de demandes vous attendent} other {# demandes vous attendent}}",
+  "emailBanner": {
+    "verifyHeading": "Vérifiez votre adresse e-mail.",
+    "verifyBody": "Steerpost a envoyé un lien à <addr>{email}</addr>. Tant que vous ne l’avez pas ouvert, vous ne pouvez ni connecter de comptes, ni planifier ou publier des posts, ni créer de clés d’API.",
+    "sent": "Lien envoyé. Vérifiez votre boîte de réception.",
+    "resend": "Renvoyer l’e-mail"
+  },
+  "demo": {
+    "label": "Démo",
+    "banner": "<b>Démo</b> — données locales ·",
+    "reset": "Rétablir",
+    "about": "À propos de Steerpost",
+    "resetTitle": "Rétablir la démo ?",
+    "resetBody": "Tout ce que vous avez modifié dans cette démo est supprimé et les données d’exemple reviennent.",
+    "resetConfirm": "Rétablir"
+  },
+  "deletionBanner": {
+    "heading": "Votre compte sera supprimé le {date}.",
+    "body": "Toutes vos données disparaîtront alors et ne pourront pas être récupérées. Vos clés d’API ont été révoquées et les posts planifiés sont redevenus des brouillons. Vous pouvez encore télécharger vos données dans les paramètres.",
+    "cancel": "Annuler la suppression",
+    "cancelling": "Annulation…"
+  }
+}

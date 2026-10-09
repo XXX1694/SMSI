@@ -1,0 +1,186 @@
+{
+  "title": "Developer",
+  "subtitle": "Kunci API, koneksi MCP, pemakaian, dan log audit.",
+  "navLabel": "Bagian Developer",
+  "navKeys": "Kunci API & log audit",
+  "navMcp": "Koneksi MCP",
+  "keysSection": "Kunci API",
+  "usageSection": "Pemakaian",
+  "auditSection": "Log audit",
+  "usage": {
+    "noneTitle": "Belum ada pemakaian API",
+    "noneBody": "Permintaan dengan kunci API atau koneksi MCP dihitung di sini.",
+    "totalRequests": "Total permintaan",
+    "perDay": "Permintaan per hari",
+    "tableLabel": "Permintaan per kunci",
+    "colKey": "Kunci",
+    "colRequests": "Permintaan",
+    "colLastUsed": "Terakhir dipakai"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "Aman",
+      "medium": "Sedang",
+      "dangerous": "Berbahaya"
+    },
+    "dangerNotice": "Cakupan berbahaya memungkinkan kunci ini bertindak pada akun aktif atau menghapus data. Berikan hanya saat Anda membutuhkannya.",
+    "social_read": {
+      "label": "Baca akun",
+      "description": "Melihat daftar akun dan jaringan yang terhubung."
+    },
+    "posts_read": {
+      "label": "Baca pos",
+      "description": "Melihat daftar pos, status, dan percobaan."
+    },
+    "analytics_read": {
+      "label": "Baca analitik",
+      "description": "Membaca data analitik."
+    },
+    "posts_write": {
+      "label": "Buat dan edit draf",
+      "description": "Membuat draf, mengedit dan membatalkan pos."
+    },
+    "media_write": {
+      "label": "Unggah media",
+      "description": "Mengunggah berkas ke pustaka media."
+    },
+    "posts_schedule": {
+      "label": "Jadwalkan pos",
+      "description": "Menjadwalkan pos untuk dipublikasikan nanti."
+    },
+    "posts_publish": {
+      "label": "Publikasikan langsung",
+      "description": "Memublikasikan ke akun sosial aktif saat itu juga."
+    },
+    "posts_delete": {
+      "label": "Hapus pos",
+      "description": "Menghapus pos dari Steerpost. Salinan yang sudah terbit tetap ada di jaringan."
+    },
+    "social_disconnect": {
+      "label": "Putuskan koneksi akun",
+      "description": "Menghapus akun sosial yang terhubung."
+    },
+    "social_connect": {
+      "label": "Hubungkan akun",
+      "description": "Menyerahkan kredensial jaringan (token, kata sandi aplikasi, URL webhook) kepada Steerpost. Siapa pun yang memegang kunci ini dapat menambahkan akun."
+    }
+  },
+  "trusted": {
+    "label": "Kunci tepercaya: jangan tanya saya sebelum tindakan berbahaya.",
+    "hint": "Secara default, tindakan berbahaya dari kunci ini menunggu persetujuan Anda di Persetujuan.",
+    "warning": "Kunci tepercaya bertindak tanpa bertanya. Jika bocor, atau agen berperilaku salah, kunci ini dapat langsung memublikasikan ke jaringan aktif Anda, menghapus pos, dan memutus koneksi akun. Biarkan nonaktif kecuali kunci berjalan tanpa pengawasan.",
+    "ack": "Saya memahami bahwa kunci ini dapat memublikasikan, menghapus, dan memutus koneksi tanpa persetujuan saya."
+  },
+  "apiKeys": {
+    "rawTitle": "Salin kunci API Anda",
+    "rawBody": "Inilah satu-satunya saat kunci lengkap ditampilkan. Simpan di tempat yang aman.",
+    "copyKey": "Salin kunci",
+    "expiryNever": "Tidak pernah",
+    "expiryDays": "{days, plural, other {# hari}}",
+    "expiryYear": "1 tahun",
+    "nameRequired": "Beri nama untuk kunci.",
+    "scopesRequired": "Pilih minimal satu cakupan.",
+    "ackRequired": "Konfirmasi bahwa Anda memahami risiko cakupan berbahaya.",
+    "trustAckRequired": "Konfirmasi bahwa kunci ini boleh bertindak tanpa persetujuan Anda, atau matikan opsi tepercaya.",
+    "createTitle": "Buat kunci API",
+    "createBody": "Kunci bertindak atas nama Anda. Berikan hanya yang dibutuhkan integrasi.",
+    "nameLabel": "Nama",
+    "namePlaceholder": "Penerbit CI",
+    "expiresLabel": "Kedaluwarsa",
+    "ackDangerous": "Saya memahami bahwa kunci ini dapat meminta untuk memublikasikan, menghapus, atau memutus koneksi. Setiap permintaan menunggu persetujuan saya.",
+    "createKey": "Buat kunci",
+    "colName": "Nama",
+    "colScopes": "Cakupan",
+    "colLastUsed": "Terakhir dipakai",
+    "colActions": "Tindakan",
+    "badgeTrusted": "Tepercaya: bertindak tanpa bertanya",
+    "badgeAsks": "Bertanya sebelum tindakan berbahaya",
+    "expired": "Berakhir",
+    "revoke": "Cabut",
+    "revokeLabel": "Cabut {name}",
+    "intro": "Gunakan kunci API untuk skrip dan integrasi. Kirim sebagai <code>{header}</code>",
+    "emptyTitle": "Tidak ada kunci API",
+    "emptyBody": "Buat kunci untuk memanggil REST API dari alat Anda sendiri. Untuk menghubungkan agen AI, <link>gunakan koneksi MCP</link>.",
+    "tableLabel": "Kunci API",
+    "revokeTitle": "Cabut kunci API?",
+    "revokeBody": "Apa pun yang memakai “{name}” langsung berhenti berfungsi. Ini tidak dapat diurungkan.",
+    "revoked": "Kunci dicabut"
+  },
+  "mcp": {
+    "createdTitle": "Koneksi “{name}” dibuat",
+    "createdBody": "Konfigurasi ini berisi kunci API dan hanya ditampilkan sekali. Tempel ke klien MCP Anda sekarang.",
+    "clientLabel": "Klien",
+    "tabHttp": "Claude Code, Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "HTTP native dengan header Authorization. Di Claude Code, jalankan perintah satu baris di bawah; di Cursor, masukkan JSON ke <code>mcp.json</code> dan ganti kuncinya dengan <code>{envKey}</code> jika Anda menyimpannya di variabel lingkungan.",
+    "httpConfig": "Konfigurasi HTTP",
+    "connectorIntro": "<b>Konektor (tanpa instalasi):</b> tambahkan konektor kustom dengan URL MCP Anda dan header <code>{header}</code>. URL harus dapat dijangkau melalui HTTPS. Langkah: <link>dokumentasi MCP</link>.",
+    "bridgeIntro": "<b>Jembatan:</b> tempel ini ke <code>claude_desktop_config.json</code> lalu mulai ulang Claude Desktop. Ini menjalankan paket komunitas <code>mcp-remote</code> yang dikunci pada versi tertentu; kunci tetap di blok <code>env</code>, bukan di baris perintah.",
+    "bridgeConfig": "Konfigurasi jembatan",
+    "copyKeyOnly": "Salin kunci API saja",
+    "nameRequired": "Beri nama koneksi, misalnya “Claude Desktop”.",
+    "permsRequired": "Pilih minimal satu izin.",
+    "ackRequired": "Konfirmasi bahwa Anda memahami risiko izin berbahaya.",
+    "nameLabel": "Nama koneksi",
+    "nameHint": "Ditampilkan di koneksi MCP Anda.",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "Izin",
+    "approvalNotice": "Memublikasikan, menghapus, dan memutus koneksi menunggu persetujuan Anda di Persetujuan, setiap kali.",
+    "ackLabel": "Saya memahami dan ingin memberikan izin ini.",
+    "create": "Buat koneksi",
+    "emptyTitle": "Belum ada agen terhubung",
+    "emptyBody": "Buat koneksi di atas, lalu tempel konfigurasinya ke klien MCP Anda.",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}terakhir terlihat {when}",
+    "connectSection": "Hubungkan agen AI",
+    "listSection": "Koneksi MCP",
+    "revokeTitle": "Cabut koneksi?",
+    "revokeBody": "“{name}” langsung kehilangan akses dan kunci API-nya berhenti berfungsi.",
+    "revoked": "Koneksi dicabut",
+    "perms": {
+      "read": {
+        "label": "Baca pos",
+        "description": "Agen dapat melihat daftar akun, pos, status, dan analitik."
+      },
+      "draft": {
+        "label": "Buat draf",
+        "description": "Agen dapat membuat dan mengedit draf dengan media yang Anda unggah."
+      },
+      "schedule": {
+        "label": "Jadwalkan",
+        "description": "Agen dapat menjadwalkan pos untuk dipublikasikan nanti."
+      },
+      "publish": {
+        "label": "Publikasikan",
+        "description": "Agen dapat langsung memublikasikan ke akun aktif."
+      },
+      "delete": {
+        "label": "Hapus",
+        "description": "Agen dapat menghapus pos."
+      },
+      "disconnect": {
+        "label": "Putuskan",
+        "description": "Agen dapat memutus koneksi akun sosial."
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "Filter peristiwa audit",
+    "all": "Semua aktivitas",
+    "agents": "Tindakan agen",
+    "loadFailed": "Log audit tidak dapat dimuat",
+    "emptyAgentsTitle": "Belum ada tindakan agen",
+    "emptyAgentsBody": "Panggilan alat lewat MCP muncul di sini.",
+    "emptyTitle": "Belum ada peristiwa audit",
+    "tableLabel": "Peristiwa audit",
+    "colWhen": "Waktu",
+    "colActor": "Pelaku",
+    "colAction": "Tindakan",
+    "colResource": "Sumber daya",
+    "actorApiKey": "Kunci API",
+    "actorUser": "Anda",
+    "unknownTool": "alat tidak dikenal",
+    "directApi": "API langsung",
+    "directApiTitle": "Dikirim langsung ke API, tidak melalui server MCP",
+    "moreFailed": "Peristiwa lainnya tidak dapat dimuat. {reason}"
+  }
+}

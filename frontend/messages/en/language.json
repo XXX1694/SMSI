@@ -1,0 +1,6 @@
+{
+  "label": "Language",
+  "hint": "Choose the language of the interface. Dates and times keep following your timezone.",
+  "optionBeta": "{name} (Beta translation)",
+  "pseudo": "Pseudo-locale (testing)"
+}

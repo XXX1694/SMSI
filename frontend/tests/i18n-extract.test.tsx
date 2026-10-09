@@ -33,7 +33,7 @@ import { editBlockedReason } from '@/lib/status';
 import { formatBytes } from '@/lib/media';
 import { formatRelative } from '@/lib/time';
 import type { Approval, Post } from '@/lib/types';
-import en from '../messages/en.json';
+import en from '@/i18n/en-all';
 import meta from '../messages/meta.json';
 
 vi.mock('next/navigation', () => ({

@@ -1,0 +1,31 @@
+{
+  "skipToContent": "Saltar al contenido",
+  "signOut": "Cerrar sesión",
+  "openMenu": "Abrir menú",
+  "closeMenu": "Cerrar menú",
+  "mainNav": "Principal",
+  "navWaiting": "{count, plural, one {# solicitud en espera} many {# de solicitudes en espera} other {# solicitudes en espera}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, one {# solicitud te espera} many {# de solicitudes te esperan} other {# solicitudes te esperan}}",
+  "emailBanner": {
+    "verifyHeading": "Verifica tu correo electrónico.",
+    "verifyBody": "Steerpost envió un enlace a <addr>{email}</addr>. Hasta que lo abras, no podrás conectar cuentas, programar o publicar publicaciones, ni crear claves de API.",
+    "sent": "Enlace enviado. Revisa tu bandeja de entrada.",
+    "resend": "Reenviar correo"
+  },
+  "demo": {
+    "label": "Demo",
+    "banner": "<b>Demo</b> — datos en tu navegador ·",
+    "reset": "Restablecer",
+    "about": "Acerca de Steerpost",
+    "resetTitle": "¿Restablecer la demo?",
+    "resetBody": "Se elimina todo lo que cambiaste en esta demo y vuelven los datos de ejemplo.",
+    "resetConfirm": "Restablecer demo"
+  },
+  "deletionBanner": {
+    "heading": "Tu cuenta se eliminará el {date}.",
+    "body": "Entonces se borrarán todos tus datos y no se podrán recuperar. Tus claves de API ya se revocaron y las publicaciones programadas pasaron a borradores. Aún puedes descargar tus datos en Configuración.",
+    "cancel": "Cancelar eliminación",
+    "cancelling": "Cancelando…"
+  }
+}

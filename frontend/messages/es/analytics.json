@@ -1,0 +1,22 @@
+{
+  "title": "Analítica",
+  "subtitle": "Métricas que informan tus redes sociales.",
+  "period": "Periodo",
+  "lastDays": "{days, plural, one {Último # día} many {Últimos # de días} other {Últimos # días}}",
+  "none": "Ninguna de las redes sociales conectadas informa analítica todavía.",
+  "supportedBy": "Analítica admitida por: {networks}.",
+  "emptyTitle": "Sin datos de analítica en este periodo",
+  "emptyBody": "Las métricas aparecerán aquí cuando una red social conectada las informe.",
+  "tableLabel": "Métricas",
+  "colMetric": "Métrica",
+  "colLatest": "Último valor",
+  "colTotal": "Total",
+  "colTrend": "Tendencia",
+  "trend": "Tendencia de {metric}",
+  "notEnough": "Datos insuficientes",
+  "metrics": {
+    "impressions": "Impresiones",
+    "reactions": "Reacciones",
+    "link_clicks": "Clics en enlaces"
+  }
+}

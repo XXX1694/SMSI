@@ -1,0 +1,65 @@
+{
+  "cancel": "キャンセル",
+  "close": "閉じる",
+  "loading": "読み込み中…",
+  "working": "処理中…",
+  "sending": "送信中…",
+  "saving": "保存中…",
+  "tryAgain": "再読み込み",
+  "retry": "再試行",
+  "edit": "編集",
+  "optionalLabel": "{label}（任意）",
+  "showField": "{label}を表示",
+  "hideField": "{label}を非表示",
+  "never": "なし",
+  "justNow": "たった今",
+  "unknown": "不明",
+  "loadingFailed": "読み込めませんでした",
+  "newPost": "新規投稿",
+  "listSeparator": "、",
+  "bytes": "{size}B",
+  "kilobytes": "{size}KB",
+  "megabytes": "{size}MB",
+  "connectAccount": "アカウントを連携",
+  "delete": "削除",
+  "copy": "コピー",
+  "copyTitle": "{title}をコピー",
+  "copied": "コピーしました",
+  "copyFailed": "コピーできませんでした。テキストを選択して手動でコピーしてください。",
+  "haveSaved": "保存しました",
+  "creating": "作成中…",
+  "loadMore": "さらに読み込む",
+  "upload": "アップロード",
+  "uploading": "アップロード中…",
+  "status": {
+    "post": {
+      "draft": "下書き",
+      "scheduled": "予約済み",
+      "publishing": "投稿中",
+      "published": "投稿済み",
+      "partially_published": "一部投稿済み",
+      "failed": "失敗",
+      "cancelled": "キャンセル済み"
+    },
+    "target": {
+      "pending": "待機中",
+      "publishing": "投稿中",
+      "published": "投稿済み",
+      "failed": "失敗",
+      "cancelled": "キャンセル済み",
+      "needs_review": "未確認"
+    },
+    "account": {
+      "active": "有効",
+      "expired": "再連携が必要",
+      "revoked": "無効化済み",
+      "error": "エラー"
+    },
+    "attempt": {
+      "started": "開始",
+      "succeeded": "成功",
+      "failed": "失敗",
+      "unknown": "未確認"
+    }
+  }
+}

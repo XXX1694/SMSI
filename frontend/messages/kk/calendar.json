@@ -1,0 +1,19 @@
+{
+  "title": "Күнтізбе",
+  "subtitle": "Уақыт белдеуіңіздегі нобай, жоспарланған, жарияланған және сәтсіз жазбалар.",
+  "month": "Ай",
+  "week": "Апта",
+  "day": "Күн",
+  "viewLabel": "Көрініс",
+  "legend": "Шартты белгілер",
+  "previous": "Алдыңғы",
+  "next": "Келесі",
+  "today": "Бүгін",
+  "chipTitle": "{status}: {title}",
+  "more": "{count, plural, one {тағы #} other {тағы #}}",
+  "moreOnDay": "{count, plural, one {{day} күні тағы # жазба, күнді ашу} other {{day} күні тағы # жазба, күнді ашу}}",
+  "postsOnDay": "{count, plural, one {{day} күні # жазба, күнді ашу} other {{day} күні # жазба, күнді ашу}}",
+  "postCount": "{count, plural, one {# жазба} other {# жазба}}",
+  "noPostsDay": "Жазба жоқ",
+  "noPostsPeriod": "Бұл кезеңде жазба жоқ."
+}

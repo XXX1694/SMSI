@@ -533,7 +533,7 @@ The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*
 *Amended by D-024: the "CJK and Arabic use system fonts" rule no longer holds, in the app or on the landing.*
 
 **Decision.** The dashboard and the demo use a client-side provider (`frontend/src/i18n/`) with ICU catalogs in
-`frontend/messages/{locale}.json` (typed from `en.json`) and a `useTranslations(ns)` hook with the same shape as next-intl's.
+`frontend/messages/{locale}.json` (typed from `en.json`; since #145 split into `messages/{locale}/{namespace}.json`) and a `useTranslations(ns)` hook with the same shape as next-intl's.
 The runtime is a small in-house ICU subset (`src/i18n/icu.ts`: arguments, number/date/time, plural, selectordinal, select,
 `#`, rich tags), not next-intl itself: next-intl 4.14 supports Next 15 but measured +14 kB gzipped on every route (see the
 CHANGELOG), this is about 2 kB. A test asserts that it prints the same text as FormatJS `intl-messageformat`, and

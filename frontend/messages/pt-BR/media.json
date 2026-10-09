@@ -1,0 +1,23 @@
+{
+  "title": "Mídia",
+  "subtitle": "Imagens e vídeos reutilizáveis.",
+  "unsupportedType": "{name}: tipo não aceito. Use JPEG, PNG, WebP, GIF, MP4 ou MOV.",
+  "imageTooLarge": "{name}: grande demais ({size}). As imagens são limitadas a {limit}.",
+  "videoTooLarge": "{name}: grande demais ({size}). Os vídeos são limitados a {limit}.",
+  "emptyFile": "{name}: o arquivo está vazio.",
+  "uploadFiles": "Enviar arquivos",
+  "limits": "Imagens até 10 MB · vídeos até 100 MB",
+  "noneTitle": "Nenhuma mídia ainda",
+  "noneBody": "Envie imagens ou vídeos para reutilizá-los em vários posts.",
+  "kindVideo": "Vídeo",
+  "kindFile": "Arquivo",
+  "deleteLabel": "Excluir {name}",
+  "deleteTitle": "Excluir este arquivo?",
+  "deleteBody": "{name} será removido da sua biblioteca. Arquivos usados em um post não podem ser excluídos.",
+  "deleteBodyUnnamed": "O arquivo será removido da sua biblioteca. Arquivos usados em um post não podem ser excluídos.",
+  "deleted": "Arquivo excluído",
+  "libraryTitle": "Biblioteca de mídia",
+  "libraryBody": "Escolha arquivos para anexar a este post.",
+  "libraryEmpty": "Sua biblioteca está vazia. Envie um arquivo primeiro.",
+  "attach": "{count, plural, one {Anexar # arquivo} many {Anexar # de arquivos} other {Anexar # arquivos}}"
+}

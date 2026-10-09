@@ -27,7 +27,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft` (shown as "Beta translation" in the language switcher once `ja` is enabled in `frontend/src/i18n/locales.ts`).
-Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/ja.json`, 676 keys, first drafted with the PR that added it.
+Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/ja/*.json`, 676 keys, first drafted with the PR that added it.
 Checked: `npm run i18n:check` with `ja` enabled locally (0 errors), the demo at 320, 390 and 1440 px on the dashboard, compose,
 calendar and settings pages (no horizontal overflow). No back-translation sample yet.
 

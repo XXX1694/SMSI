@@ -1,0 +1,186 @@
+{
+  "title": "Desenvolvedor",
+  "subtitle": "Chaves de API, conexões MCP, uso e registro de auditoria.",
+  "navLabel": "Seções do Desenvolvedor",
+  "navKeys": "Chaves de API e auditoria",
+  "navMcp": "Conexões MCP",
+  "keysSection": "Chaves de API",
+  "usageSection": "Uso",
+  "auditSection": "Registro de auditoria",
+  "usage": {
+    "noneTitle": "Nenhum uso da API ainda",
+    "noneBody": "As requisições feitas com chaves de API ou conexões MCP serão contadas aqui.",
+    "totalRequests": "Total de requisições",
+    "perDay": "Requisições por dia",
+    "tableLabel": "Requisições por chave",
+    "colKey": "Chave",
+    "colRequests": "Requisições",
+    "colLastUsed": "Último uso"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "Seguro",
+      "medium": "Médio",
+      "dangerous": "Perigoso"
+    },
+    "dangerNotice": "Escopos perigosos permitem que esta chave aja em contas reais ou remova dados. Conceda-os só quando precisar.",
+    "social_read": {
+      "label": "Ler contas",
+      "description": "Listar contas e redes conectadas."
+    },
+    "posts_read": {
+      "label": "Ler posts",
+      "description": "Listar posts, status e tentativas."
+    },
+    "analytics_read": {
+      "label": "Ler análises",
+      "description": "Ler os dados de análises."
+    },
+    "posts_write": {
+      "label": "Criar e editar rascunhos",
+      "description": "Criar rascunhos, editar e cancelar posts."
+    },
+    "media_write": {
+      "label": "Enviar mídia",
+      "description": "Enviar arquivos para a biblioteca de mídia."
+    },
+    "posts_schedule": {
+      "label": "Agendar posts",
+      "description": "Agendar posts para publicar mais tarde."
+    },
+    "posts_publish": {
+      "label": "Publicar imediatamente",
+      "description": "Publicar agora em contas reais."
+    },
+    "posts_delete": {
+      "label": "Excluir posts",
+      "description": "Excluir posts do Steerpost. As cópias publicadas continuam nas redes."
+    },
+    "social_disconnect": {
+      "label": "Desconectar contas",
+      "description": "Remover contas sociais conectadas."
+    },
+    "social_connect": {
+      "label": "Conectar contas",
+      "description": "Entregar ao Steerpost uma credencial de rede (token, senha de app, URL de webhook). Quem tiver esta chave pode anexar contas."
+    }
+  },
+  "trusted": {
+    "label": "Chave confiável: não me pergunte antes de ações perigosas.",
+    "hint": "Por padrão, as ações perigosas desta chave esperam a sua aprovação em Aprovações.",
+    "warning": "Uma chave confiável age sem perguntar. Se ela vazar ou o agente se comportar mal, ela pode publicar nas suas redes reais, excluir posts e desconectar contas na hora. Deixe desmarcado, a menos que a chave rode sem supervisão.",
+    "ack": "Entendo que esta chave pode publicar, excluir e desconectar sem a minha aprovação."
+  },
+  "apiKeys": {
+    "rawTitle": "Copie sua chave de API",
+    "rawBody": "Esta é a única vez que a chave completa é mostrada. Guarde-a em um lugar seguro.",
+    "copyKey": "Copiar chave",
+    "expiryNever": "Nunca",
+    "expiryDays": "{days, plural, one {# dia} many {# de dias} other {# dias}}",
+    "expiryYear": "1 ano",
+    "nameRequired": "Dê um nome à chave.",
+    "scopesRequired": "Selecione pelo menos um escopo.",
+    "ackRequired": "Confirme que você entende o risco dos escopos perigosos.",
+    "trustAckRequired": "Confirme que esta chave pode agir sem a sua aprovação ou desative a opção de chave confiável.",
+    "createTitle": "Criar chave de API",
+    "createBody": "As chaves agem em seu nome. Conceda só o que a integração precisa.",
+    "nameLabel": "Nome",
+    "namePlaceholder": "Publicador de CI",
+    "expiresLabel": "Expira em",
+    "ackDangerous": "Entendo que esta chave pode pedir para publicar, excluir ou desconectar. Cada pedido espera a minha aprovação.",
+    "createKey": "Criar chave",
+    "colName": "Nome",
+    "colScopes": "Escopos",
+    "colLastUsed": "Último uso",
+    "colActions": "Ações",
+    "badgeTrusted": "Confiável: age sem perguntar",
+    "badgeAsks": "Pergunta antes de ações perigosas",
+    "expired": "Expirada",
+    "revoke": "Revogar",
+    "revokeLabel": "Revogar {name}",
+    "intro": "Use chaves de API para scripts e integrações. Envie como <code>{header}</code>",
+    "emptyTitle": "Nenhuma chave de API",
+    "emptyBody": "Crie uma chave para chamar a API REST das suas próprias ferramentas. Para conectar um agente de IA, <link>use uma conexão MCP</link>.",
+    "tableLabel": "Chaves de API",
+    "revokeTitle": "Revogar a chave de API?",
+    "revokeBody": "Tudo o que usa “{name}” para de funcionar na hora. Isto não pode ser desfeito.",
+    "revoked": "Chave revogada"
+  },
+  "mcp": {
+    "createdTitle": "Conexão “{name}” criada",
+    "createdBody": "Esta configuração contém a chave de API e é mostrada uma única vez. Cole-a no seu cliente MCP agora.",
+    "clientLabel": "Cliente",
+    "tabHttp": "Claude Code, Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "HTTP nativo com um cabeçalho Authorization. No Claude Code, execute o comando abaixo; no Cursor, coloque o JSON em <code>mcp.json</code> e troque a chave por <code>{envKey}</code> se você a guarda em uma variável de ambiente.",
+    "httpConfig": "Configuração HTTP",
+    "connectorIntro": "<b>Conector (sem instalação):</b> adicione um conector personalizado com a sua URL MCP e o cabeçalho <code>{header}</code>. A URL precisa estar acessível por HTTPS. Passos: <link>documentação do MCP</link>.",
+    "bridgeIntro": "<b>Ponte:</b> cole isto em <code>claude_desktop_config.json</code> e reinicie o Claude Desktop. Ele executa o pacote da comunidade <code>mcp-remote</code> fixado em uma versão exata; a chave fica no bloco <code>env</code>, não na linha de comando.",
+    "bridgeConfig": "Configuração da ponte",
+    "copyKeyOnly": "Copiar só a chave de API",
+    "nameRequired": "Dê um nome à conexão, por exemplo “Claude Desktop”.",
+    "permsRequired": "Selecione pelo menos uma permissão.",
+    "ackRequired": "Confirme que você entende o risco das permissões perigosas.",
+    "nameLabel": "Nome da conexão",
+    "nameHint": "Aparece em suas conexões MCP.",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "Permissões",
+    "approvalNotice": "Publicar, excluir e desconectar esperam a sua aprovação em Aprovações, sempre.",
+    "ackLabel": "Entendo e quero conceder estas permissões.",
+    "create": "Criar conexão",
+    "emptyTitle": "Nenhum agente conectado",
+    "emptyBody": "Crie uma conexão acima e cole a configuração no seu cliente MCP.",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}último acesso em {when}",
+    "connectSection": "Conectar um agente de IA",
+    "listSection": "Conexões MCP",
+    "revokeTitle": "Revogar a conexão?",
+    "revokeBody": "“{name}” perde o acesso na hora e a chave de API dela para de funcionar.",
+    "revoked": "Conexão revogada",
+    "perms": {
+      "read": {
+        "label": "Ler posts",
+        "description": "Os agentes podem listar contas, posts, status e análises."
+      },
+      "draft": {
+        "label": "Criar rascunhos",
+        "description": "Os agentes podem criar e editar rascunhos com a mídia que você enviou."
+      },
+      "schedule": {
+        "label": "Agendar",
+        "description": "Os agentes podem agendar posts para publicar mais tarde."
+      },
+      "publish": {
+        "label": "Publicar",
+        "description": "Os agentes podem publicar imediatamente em contas reais."
+      },
+      "delete": {
+        "label": "Excluir",
+        "description": "Os agentes podem excluir posts."
+      },
+      "disconnect": {
+        "label": "Desconectar",
+        "description": "Os agentes podem desconectar contas sociais."
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "Filtrar eventos de auditoria",
+    "all": "Toda a atividade",
+    "agents": "Ações de agentes",
+    "loadFailed": "Não foi possível carregar o registro de auditoria",
+    "emptyAgentsTitle": "Nenhuma ação de agente ainda",
+    "emptyAgentsBody": "As chamadas de ferramentas feitas pelo MCP aparecem aqui.",
+    "emptyTitle": "Nenhum evento de auditoria ainda",
+    "tableLabel": "Eventos de auditoria",
+    "colWhen": "Quando",
+    "colActor": "Autor",
+    "colAction": "Ação",
+    "colResource": "Objeto",
+    "actorApiKey": "Chave de API",
+    "actorUser": "Você",
+    "unknownTool": "ferramenta desconhecida",
+    "directApi": "API direta",
+    "directApiTitle": "Enviado direto para a API, sem passar pelo servidor MCP",
+    "moreFailed": "Não foi possível carregar mais eventos. {reason}"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "title": "承認",
+  "subtitle": "エージェントやAPIキーによる危険な操作は、ここで待機します。承認するまで何も実行されません。",
+  "tabWaiting": "承認待ち",
+  "tabHistory": "履歴",
+  "showLabel": "承認を表示",
+  "emptyPendingTitle": "承認待ちはありません",
+  "emptyPendingBody": "エージェントからのリクエストがここに表示されます。",
+  "emptyHistoryTitle": "判断の履歴はまだありません",
+  "emptyHistoryBody": "承認または却下したリクエストがここに表示されます。",
+  "approvedToast": "承認しました：{action}。{agent}が実行できるようになりました。",
+  "deniedToast": "却下しました：{action}。",
+  "status": {
+    "pending": "保留中",
+    "approved": "承認済み、エージェント待ち",
+    "consumed": "承認済み、実行済み",
+    "denied": "却下",
+    "expired": "期限切れ"
+  },
+  "requestedBy": "<b>{agent}</b>からのリクエスト",
+  "deny": "却下",
+  "approve": "承認",
+  "approving": "承認中…",
+  "denyLabel": "却下：{action}",
+  "approveLabel": "承認：{action}",
+  "showLess": "表示を減らす",
+  "showFull": "全文を表示",
+  "underMinute": "残り1分未満",
+  "minLeft": "{count, plural, other {残り#分}}",
+  "summary": {
+    "title": "タイトル",
+    "text": "本文",
+    "media": "メディア",
+    "networks": "SNS",
+    "accounts": "アカウント",
+    "network": "SNS",
+    "account": "アカウント",
+    "scheduledFor": "予約日時",
+    "textOn": "{account}の本文",
+    "images": "{count, plural, other {画像#枚}}",
+    "videos": "{count, plural, other {動画#本}}",
+    "files": "{count, plural, other {ファイル#件}}"
+  },
+  "action": {
+    "post_publish": "今すぐ投稿",
+    "post_retry_now": "今すぐ再試行",
+    "post_delete": "投稿を削除",
+    "post_schedule_soon": "数分以内に予約",
+    "social_account_disconnect": "アカウントの連携を解除",
+    "social_account_connect_token": "トークンで連携"
+  }
+}

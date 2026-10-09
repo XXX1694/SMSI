@@ -1,0 +1,52 @@
+{
+  "title": "Approbations",
+  "subtitle": "Les actions dangereuses des agents et des clés d’API attendent ici. Rien ne se passe tant que vous n’approuvez pas.",
+  "tabWaiting": "À traiter",
+  "tabHistory": "Historique",
+  "showLabel": "Afficher les approbations",
+  "emptyPendingTitle": "Rien ne vous attend",
+  "emptyPendingBody": "Les demandes des agents apparaissent ici.",
+  "emptyHistoryTitle": "Aucune décision pour l’instant",
+  "emptyHistoryBody": "Les demandes approuvées et refusées sont listées ici.",
+  "approvedToast": "Approuvé : {action}. {agent} peut continuer.",
+  "deniedToast": "Refusé : {action}.",
+  "status": {
+    "pending": "En attente",
+    "approved": "Approuvée, en attente de l’agent",
+    "consumed": "Approuvée et terminée",
+    "denied": "Refusée",
+    "expired": "Expirée"
+  },
+  "requestedBy": "Demandé par <b>{agent}</b>",
+  "deny": "Refuser",
+  "approve": "Approuver",
+  "approving": "Approbation…",
+  "denyLabel": "Refuser : {action}",
+  "approveLabel": "Approuver : {action}",
+  "showLess": "Voir moins",
+  "showFull": "Voir tout le texte",
+  "underMinute": "Moins d’une minute restante",
+  "minLeft": "{count, plural, one {Il reste # min} many {Il reste # min} other {Il reste # min}}",
+  "summary": {
+    "title": "Titre",
+    "text": "Texte",
+    "media": "Médias",
+    "networks": "Réseaux",
+    "accounts": "Comptes",
+    "network": "Réseau",
+    "account": "Compte",
+    "scheduledFor": "Planifié pour",
+    "textOn": "Texte sur {account}",
+    "images": "{count, plural, one {# image} many {# d’images} other {# images}}",
+    "videos": "{count, plural, one {# vidéo} many {# de vidéos} other {# vidéos}}",
+    "files": "{count, plural, one {# fichier} many {# de fichiers} other {# fichiers}}"
+  },
+  "action": {
+    "post_publish": "Publier maintenant",
+    "post_retry_now": "Relancer maintenant",
+    "post_delete": "Supprimer le post",
+    "post_schedule_soon": "Planifier dans les prochaines minutes",
+    "social_account_disconnect": "Déconnecter le compte",
+    "social_account_connect_token": "Connecter avec un jeton"
+  }
+}

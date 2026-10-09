@@ -1,0 +1,22 @@
+{
+  "title": "Statistiques",
+  "subtitle": "Les indicateurs transmis par vos réseaux.",
+  "period": "Période",
+  "lastDays": "{days, plural, one {# dernier jour} many {# derniers jours} other {# derniers jours}}",
+  "none": "Aucun des réseaux connectés ne fournit encore de statistiques.",
+  "supportedBy": "Statistiques prises en charge par : {networks}.",
+  "emptyTitle": "Aucune statistique sur cette période",
+  "emptyBody": "Les indicateurs apparaîtront ici dès qu’un réseau connecté les transmettra.",
+  "tableLabel": "Indicateurs",
+  "colMetric": "Indicateur",
+  "colLatest": "Dernière valeur",
+  "colTotal": "Total",
+  "colTrend": "Tendance",
+  "trend": "Tendance : {metric}",
+  "notEnough": "Pas assez de données",
+  "metrics": {
+    "impressions": "Impressions",
+    "reactions": "Réactions",
+    "link_clicks": "Clics sur les liens"
+  }
+}

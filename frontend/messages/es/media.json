@@ -1,0 +1,23 @@
+{
+  "title": "Multimedia",
+  "subtitle": "Imágenes y videos reutilizables.",
+  "unsupportedType": "{name}: tipo no admitido. Usa JPEG, PNG, WebP, GIF, MP4 o MOV.",
+  "imageTooLarge": "{name}: demasiado grande ({size}). Las imágenes tienen un límite de {limit}.",
+  "videoTooLarge": "{name}: demasiado grande ({size}). Los videos tienen un límite de {limit}.",
+  "emptyFile": "{name}: el archivo está vacío.",
+  "uploadFiles": "Subir archivos",
+  "limits": "Imágenes hasta 10 MB · videos hasta 100 MB",
+  "noneTitle": "Aún no hay archivos multimedia",
+  "noneBody": "Sube imágenes o videos para reutilizarlos en varias publicaciones.",
+  "kindVideo": "Video",
+  "kindFile": "Archivo",
+  "deleteLabel": "Eliminar {name}",
+  "deleteTitle": "¿Eliminar este archivo?",
+  "deleteBody": "{name} se quitará de tu biblioteca. Los archivos usados en una publicación no se pueden eliminar.",
+  "deleteBodyUnnamed": "El archivo se quitará de tu biblioteca. Los archivos usados en una publicación no se pueden eliminar.",
+  "deleted": "Archivo eliminado",
+  "libraryTitle": "Biblioteca multimedia",
+  "libraryBody": "Elige los archivos que quieres adjuntar a esta publicación.",
+  "libraryEmpty": "Tu biblioteca está vacía. Sube un archivo primero.",
+  "attach": "{count, plural, one {Adjuntar # archivo} many {Adjuntar # de archivos} other {Adjuntar # archivos}}"
+}

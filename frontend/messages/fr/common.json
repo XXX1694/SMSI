@@ -1,0 +1,65 @@
+{
+  "cancel": "Annuler",
+  "close": "Fermer",
+  "loading": "Chargement…",
+  "working": "Traitement…",
+  "sending": "Envoi…",
+  "saving": "Enregistrement…",
+  "tryAgain": "Réessayer",
+  "retry": "Relancer",
+  "edit": "Modifier",
+  "optionalLabel": "{label} (facultatif)",
+  "showField": "Afficher {label}",
+  "hideField": "Masquer {label}",
+  "never": "Jamais",
+  "justNow": "à l’instant",
+  "unknown": "Inconnu",
+  "loadingFailed": "Échec du chargement",
+  "newPost": "Nouveau post",
+  "listSeparator": ", ",
+  "bytes": "{size} o",
+  "kilobytes": "{size} Ko",
+  "megabytes": "{size} Mo",
+  "connectAccount": "Connecter un compte",
+  "delete": "Supprimer",
+  "copy": "Copier",
+  "copyTitle": "Copier {title}",
+  "copied": "Copié",
+  "copyFailed": "Impossible de copier. Sélectionnez le texte et copiez-le à la main.",
+  "haveSaved": "Je l’ai conservé",
+  "creating": "Création…",
+  "loadMore": "Charger plus",
+  "upload": "Importer",
+  "uploading": "Importation…",
+  "status": {
+    "post": {
+      "draft": "Brouillon",
+      "scheduled": "Planifié",
+      "publishing": "En publication",
+      "published": "Publié",
+      "partially_published": "Partiellement publié",
+      "failed": "Échoué",
+      "cancelled": "Annulé"
+    },
+    "target": {
+      "pending": "En attente",
+      "publishing": "En publication",
+      "published": "Publié",
+      "failed": "Échoué",
+      "cancelled": "Annulé",
+      "needs_review": "Non confirmé"
+    },
+    "account": {
+      "active": "Actif",
+      "expired": "Reconnexion requise",
+      "revoked": "Révoqué",
+      "error": "Erreur"
+    },
+    "attempt": {
+      "started": "Démarrée",
+      "succeeded": "Réussie",
+      "failed": "Échouée",
+      "unknown": "Non confirmée"
+    }
+  }
+}

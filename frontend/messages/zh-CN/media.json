@@ -1,0 +1,23 @@
+{
+  "title": "媒体",
+  "subtitle": "可重复使用的图片和视频。",
+  "unsupportedType": "{name}：不支持的类型。请使用 JPEG、PNG、WebP、GIF、MP4 或 MOV。",
+  "imageTooLarge": "{name}：文件过大（{size}）。图片限制为 {limit}。",
+  "videoTooLarge": "{name}：文件过大（{size}）。视频限制为 {limit}。",
+  "emptyFile": "{name}：文件为空。",
+  "uploadFiles": "上传文件",
+  "limits": "图片最大 10 MB · 视频最大 100 MB",
+  "noneTitle": "还没有媒体",
+  "noneBody": "上传图片或视频，即可在多篇帖子中重复使用。",
+  "kindVideo": "视频",
+  "kindFile": "文件",
+  "deleteLabel": "删除{name}",
+  "deleteTitle": "删除这个文件？",
+  "deleteBody": "{name}将从你的媒体库中移除。已用于帖子的文件无法删除。",
+  "deleteBodyUnnamed": "该文件将从你的媒体库中移除。已用于帖子的文件无法删除。",
+  "deleted": "文件已删除",
+  "libraryTitle": "媒体库",
+  "libraryBody": "选择要附加到这篇帖子的文件。",
+  "libraryEmpty": "你的媒体库为空。请先上传文件。",
+  "attach": "{count, plural, other {附加 # 个文件}}"
+}

@@ -1,0 +1,22 @@
+{
+  "title": "Analitik",
+  "subtitle": "Metrik yang dilaporkan jaringan Anda.",
+  "period": "Periode",
+  "lastDays": "{days, plural, other {# hari terakhir}}",
+  "none": "Belum ada jaringan terhubung yang melaporkan analitik.",
+  "supportedBy": "Analitik didukung oleh: {networks}.",
+  "emptyTitle": "Tidak ada data analitik pada periode ini",
+  "emptyBody": "Metrik akan muncul di sini setelah jaringan terhubung melaporkannya.",
+  "tableLabel": "Metrik",
+  "colMetric": "Metrik",
+  "colLatest": "Terbaru",
+  "colTotal": "Total",
+  "colTrend": "Tren",
+  "trend": "Tren {metric}",
+  "notEnough": "Data belum cukup",
+  "metrics": {
+    "impressions": "Impresi",
+    "reactions": "Reaksi",
+    "link_clicks": "Klik tautan"
+  }
+}

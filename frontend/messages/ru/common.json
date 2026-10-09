@@ -1,0 +1,65 @@
+{
+  "cancel": "Отмена",
+  "close": "Закрыть",
+  "loading": "Загрузка…",
+  "working": "Выполняется…",
+  "sending": "Отправка…",
+  "saving": "Сохранение…",
+  "tryAgain": "Повторить попытку",
+  "retry": "Повторить публикацию",
+  "edit": "Изменить",
+  "optionalLabel": "{label} (необязательно)",
+  "showField": "Показать: {label}",
+  "hideField": "Скрыть: {label}",
+  "never": "Никогда",
+  "justNow": "только что",
+  "unknown": "Неизвестно",
+  "loadingFailed": "Не удалось загрузить",
+  "newPost": "Новый пост",
+  "listSeparator": ", ",
+  "bytes": "{size} Б",
+  "kilobytes": "{size} КБ",
+  "megabytes": "{size} МБ",
+  "connectAccount": "Подключить аккаунт",
+  "delete": "Удалить",
+  "copy": "Копировать",
+  "copyTitle": "Копировать: {title}",
+  "copied": "Скопировано",
+  "copyFailed": "Не удалось скопировать. Выделите текст и скопируйте вручную.",
+  "haveSaved": "Значение сохранено",
+  "creating": "Создание…",
+  "loadMore": "Показать ещё",
+  "upload": "Загрузить",
+  "uploading": "Загрузка…",
+  "status": {
+    "post": {
+      "draft": "Черновик",
+      "scheduled": "Запланировано",
+      "publishing": "Публикуется",
+      "published": "Опубликовано",
+      "partially_published": "Опубликовано частично",
+      "failed": "Ошибка",
+      "cancelled": "Отменено"
+    },
+    "target": {
+      "pending": "Ожидает",
+      "publishing": "Публикуется",
+      "published": "Опубликовано",
+      "failed": "Ошибка",
+      "cancelled": "Отменено",
+      "needs_review": "Не подтверждено"
+    },
+    "account": {
+      "active": "Активен",
+      "expired": "Нужно переподключить",
+      "revoked": "Отозван",
+      "error": "Ошибка"
+    },
+    "attempt": {
+      "started": "Начата",
+      "succeeded": "Успешно",
+      "failed": "Ошибка",
+      "unknown": "Не подтверждено"
+    }
+  }
+}

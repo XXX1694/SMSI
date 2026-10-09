@@ -1,0 +1,52 @@
+{
+  "title": "Aprovações",
+  "subtitle": "Ações perigosas de agentes e chaves de API esperam aqui. Nada acontece até você aprovar.",
+  "tabWaiting": "Aguardando você",
+  "tabHistory": "Histórico",
+  "showLabel": "Mostrar aprovações",
+  "emptyPendingTitle": "Nada aguardando você",
+  "emptyPendingBody": "Os pedidos dos agentes aparecem aqui.",
+  "emptyHistoryTitle": "Nenhuma decisão ainda",
+  "emptyHistoryBody": "Os pedidos aprovados e negados aparecem aqui.",
+  "approvedToast": "Aprovado: {action}. {agent} já pode prosseguir.",
+  "deniedToast": "Negado: {action}.",
+  "status": {
+    "pending": "Aguardando",
+    "approved": "Aprovado, aguardando o agente",
+    "consumed": "Aprovado e concluído",
+    "denied": "Negado",
+    "expired": "Expirado"
+  },
+  "requestedBy": "Pedido de <b>{agent}</b>",
+  "deny": "Negar",
+  "approve": "Aprovar",
+  "approving": "Aprovando…",
+  "denyLabel": "Negar: {action}",
+  "approveLabel": "Aprovar: {action}",
+  "showLess": "Mostrar menos",
+  "showFull": "Ver texto todo",
+  "underMinute": "Menos de 1 minuto restante",
+  "minLeft": "{count, plural, one {# min restante} many {# min restantes} other {# min restantes}}",
+  "summary": {
+    "title": "Título",
+    "text": "Texto",
+    "media": "Mídia",
+    "networks": "Redes",
+    "accounts": "Contas",
+    "network": "Rede",
+    "account": "Conta",
+    "scheduledFor": "Agendado para",
+    "textOn": "Texto em {account}",
+    "images": "{count, plural, one {# imagem} many {# de imagens} other {# imagens}}",
+    "videos": "{count, plural, one {# vídeo} many {# de vídeos} other {# vídeos}}",
+    "files": "{count, plural, one {# arquivo} many {# de arquivos} other {# arquivos}}"
+  },
+  "action": {
+    "post_publish": "Publicar agora",
+    "post_retry_now": "Repetir envio agora",
+    "post_delete": "Excluir post",
+    "post_schedule_soon": "Agendar para os próximos minutos",
+    "social_account_disconnect": "Desconectar conta",
+    "social_account_connect_token": "Conectar com um token"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "cancel": "取消",
+  "close": "关闭",
+  "loading": "加载中…",
+  "working": "处理中…",
+  "sending": "发送中…",
+  "saving": "保存中…",
+  "tryAgain": "重新加载",
+  "retry": "重试",
+  "edit": "编辑",
+  "optionalLabel": "{label}（可选）",
+  "showField": "显示{label}",
+  "hideField": "隐藏{label}",
+  "never": "从未",
+  "justNow": "刚刚",
+  "unknown": "未知",
+  "loadingFailed": "加载失败",
+  "newPost": "新建帖子",
+  "listSeparator": "、",
+  "bytes": "{size} B",
+  "kilobytes": "{size} KB",
+  "megabytes": "{size} MB",
+  "connectAccount": "连接账号",
+  "delete": "删除",
+  "copy": "复制",
+  "copyTitle": "复制{title}",
+  "copied": "已复制",
+  "copyFailed": "无法复制。请选中文本后手动复制。",
+  "haveSaved": "我已保存",
+  "creating": "创建中…",
+  "loadMore": "加载更多",
+  "upload": "上传",
+  "uploading": "上传中…",
+  "status": {
+    "post": {
+      "draft": "草稿",
+      "scheduled": "已定时",
+      "publishing": "发布中",
+      "published": "已发布",
+      "partially_published": "部分已发布",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
+    "target": {
+      "pending": "待发布",
+      "publishing": "发布中",
+      "published": "已发布",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "needs_review": "未确认"
+    },
+    "account": {
+      "active": "正常",
+      "expired": "需要重新连接",
+      "revoked": "已撤销",
+      "error": "错误"
+    },
+    "attempt": {
+      "started": "已开始",
+      "succeeded": "成功",
+      "failed": "失败",
+      "unknown": "未确认"
+    }
+  }
+}

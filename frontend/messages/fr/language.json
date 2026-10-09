@@ -1,0 +1,6 @@
+{
+  "label": "Langue",
+  "hint": "Choisissez la langue de l’interface. Les dates et les heures continuent de suivre votre fuseau horaire.",
+  "optionBeta": "{name} (traduction bêta)",
+  "pseudo": "Pseudo-locale (test)"
+}

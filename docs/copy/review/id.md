@@ -25,7 +25,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft` (shown as "Beta translation").
-Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/id.json` (676 keys, drafted from `frontend/messages/en.json` and `meta.json`).
+Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/id/*.json` (676 keys, drafted from `frontend/messages/en.json` and `meta.json`).
 
 Register: Anda, capitalized. Buttons use the base verb (Simpan, Jadwalkan); body text is polite (Hubungkan akun.). Quotes “…”, sentence case, no exclamation marks.
 

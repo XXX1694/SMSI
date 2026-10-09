@@ -1,0 +1,186 @@
+{
+  "title": "Developer",
+  "subtitle": "API-Schlüssel, MCP-Verbindungen, Nutzung und Audit-Log.",
+  "navLabel": "Developer-Bereiche",
+  "navKeys": "API-Schlüssel & Audit-Log",
+  "navMcp": "MCP-Verbindungen",
+  "keysSection": "API-Schlüssel",
+  "usageSection": "Nutzung",
+  "auditSection": "Audit-Log",
+  "usage": {
+    "noneTitle": "Noch keine API-Nutzung",
+    "noneBody": "Anfragen mit API-Schlüsseln oder MCP-Verbindungen werden hier gezählt.",
+    "totalRequests": "Anfragen gesamt",
+    "perDay": "Anfragen pro Tag",
+    "tableLabel": "Anfragen pro Schlüssel",
+    "colKey": "Schlüssel",
+    "colRequests": "Anfragen",
+    "colLastUsed": "Zuletzt verwendet"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "Sicher",
+      "medium": "Mittel",
+      "dangerous": "Gefährlich"
+    },
+    "dangerNotice": "Gefährliche Scopes erlauben diesem Schlüssel, auf echten Konten zu handeln oder Daten zu entfernen. Vergib sie nur, wenn du sie brauchst.",
+    "social_read": {
+      "label": "Konten lesen",
+      "description": "Verbundene Konten und Netzwerke auflisten."
+    },
+    "posts_read": {
+      "label": "Beiträge lesen",
+      "description": "Beiträge, Status und Versuche auflisten."
+    },
+    "analytics_read": {
+      "label": "Analysen lesen",
+      "description": "Analysedaten lesen."
+    },
+    "posts_write": {
+      "label": "Entwürfe erstellen und bearbeiten",
+      "description": "Entwürfe erstellen, Beiträge bearbeiten und abbrechen."
+    },
+    "media_write": {
+      "label": "Medien hochladen",
+      "description": "Dateien in die Mediathek hochladen."
+    },
+    "posts_schedule": {
+      "label": "Beiträge planen",
+      "description": "Beiträge zur späteren Veröffentlichung planen."
+    },
+    "posts_publish": {
+      "label": "Sofort veröffentlichen",
+      "description": "Sofort auf echten Konten veröffentlichen."
+    },
+    "posts_delete": {
+      "label": "Beiträge löschen",
+      "description": "Beiträge aus Steerpost löschen. Veröffentlichte Kopien bleiben in den Netzwerken."
+    },
+    "social_disconnect": {
+      "label": "Konten trennen",
+      "description": "Verbundene Konten entfernen."
+    },
+    "social_connect": {
+      "label": "Konten verbinden",
+      "description": "Zugangsdaten eines Netzwerks (Token, App-Passwort, Webhook-URL) an Steerpost übergeben. Wer diesen Schlüssel besitzt, kann Konten hinzufügen."
+    }
+  },
+  "trusted": {
+    "label": "Vertrauenswürdiger Schlüssel: bei gefährlichen Aktionen nicht nachfragen.",
+    "hint": "Standardmäßig warten gefährliche Aktionen dieses Schlüssels unter Freigaben auf deine Freigabe.",
+    "warning": "Ein vertrauenswürdiger Schlüssel handelt ohne Rückfrage. Wenn er in falsche Hände gerät oder der Agent sich falsch verhält, kann er sofort auf deinen echten Netzwerken veröffentlichen, Beiträge löschen und Konten trennen. Lass die Option aus, außer der Schlüssel läuft ohne Aufsicht.",
+    "ack": "Ich verstehe, dass dieser Schlüssel ohne meine Freigabe veröffentlichen, löschen und trennen kann."
+  },
+  "apiKeys": {
+    "rawTitle": "API-Schlüssel kopieren",
+    "rawBody": "Nur jetzt wird der vollständige Schlüssel angezeigt. Bewahre ihn sicher auf.",
+    "copyKey": "Schlüssel kopieren",
+    "expiryNever": "Nie",
+    "expiryDays": "{days, plural, one {# Tag} other {# Tage}}",
+    "expiryYear": "1 Jahr",
+    "nameRequired": "Gib dem Schlüssel einen Namen.",
+    "scopesRequired": "Wähle mindestens einen Scope.",
+    "ackRequired": "Bestätige, dass du das Risiko gefährlicher Scopes verstehst.",
+    "trustAckRequired": "Bestätige, dass dieser Schlüssel ohne deine Freigabe handeln darf, oder schalte die Option „vertrauenswürdig“ aus.",
+    "createTitle": "API-Schlüssel erstellen",
+    "createBody": "Schlüssel handeln in deinem Namen. Vergib nur, was die Integration braucht.",
+    "nameLabel": "Name",
+    "namePlaceholder": "CI-Veröffentlichung",
+    "expiresLabel": "Läuft ab",
+    "ackDangerous": "Ich verstehe, dass dieser Schlüssel das Veröffentlichen, Löschen oder Trennen anfragen kann. Jede Anfrage wartet auf meine Freigabe.",
+    "createKey": "Erstellen",
+    "colName": "Name",
+    "colScopes": "Scopes",
+    "colLastUsed": "Zuletzt verwendet",
+    "colActions": "Aktionen",
+    "badgeTrusted": "Vertrauenswürdig: handelt ohne Rückfrage",
+    "badgeAsks": "Fragt bei gefährlichen Aktionen nach",
+    "expired": "Abgelaufen",
+    "revoke": "Widerrufen",
+    "revokeLabel": "{name} widerrufen",
+    "intro": "Verwende API-Schlüssel für Skripte und Integrationen. Sende sie als <code>{header}</code>",
+    "emptyTitle": "Keine API-Schlüssel",
+    "emptyBody": "Erstelle einen Schlüssel, um die REST-API aus deinen eigenen Tools aufzurufen. Um einen KI-Agenten zu verbinden, <link>nutze eine MCP-Verbindung</link>.",
+    "tableLabel": "API-Schlüssel",
+    "revokeTitle": "API-Schlüssel widerrufen?",
+    "revokeBody": "Alles, was „{name}“ verwendet, funktioniert sofort nicht mehr. Das lässt sich nicht rückgängig machen.",
+    "revoked": "Schlüssel widerrufen"
+  },
+  "mcp": {
+    "createdTitle": "Verbindung „{name}“ erstellt",
+    "createdBody": "Diese Konfiguration enthält den API-Schlüssel und wird nur einmal angezeigt. Füge sie jetzt in deinen MCP-Client ein.",
+    "clientLabel": "Client",
+    "tabHttp": "Claude Code, Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "Natives HTTP mit Authorization-Header. In Claude Code führst du den Einzeiler unten aus; in Cursor fügst du das JSON in <code>mcp.json</code> ein und ersetzt den Schlüssel durch <code>{envKey}</code>, wenn du ihn in einer Umgebungsvariable speicherst.",
+    "httpConfig": "HTTP-Konfiguration",
+    "connectorIntro": "<b>Connector (ohne Installation):</b> Füge einen benutzerdefinierten Connector mit deiner MCP-URL und dem Header <code>{header}</code> hinzu. Die URL muss über HTTPS erreichbar sein. Anleitung: <link>MCP-Dokumentation</link>.",
+    "bridgeIntro": "<b>Bridge:</b> Füge dies in <code>claude_desktop_config.json</code> ein und starte Claude Desktop neu. Es startet das Community-Paket <code>mcp-remote</code> in einer festen Version; der Schlüssel steht im <code>env</code>-Block, nicht in der Befehlszeile.",
+    "bridgeConfig": "Bridge-Konfiguration",
+    "copyKeyOnly": "Nur Schlüssel kopieren",
+    "nameRequired": "Gib der Verbindung einen Namen, zum Beispiel „Claude Desktop“.",
+    "permsRequired": "Wähle mindestens eine Berechtigung.",
+    "ackRequired": "Bestätige, dass du das Risiko gefährlicher Berechtigungen verstehst.",
+    "nameLabel": "Name der Verbindung",
+    "nameHint": "Wird unter deinen MCP-Verbindungen angezeigt.",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "Berechtigungen",
+    "approvalNotice": "Veröffentlichen, Löschen und Trennen warten jedes Mal unter Freigaben auf deine Freigabe.",
+    "ackLabel": "Ich verstehe das und möchte diese Berechtigungen erteilen.",
+    "create": "Verbindung erstellen",
+    "emptyTitle": "Keine Agenten verbunden",
+    "emptyBody": "Erstelle oben eine Verbindung und füge die Konfiguration dann in deinen MCP-Client ein.",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}zuletzt gesehen {when}",
+    "connectSection": "KI-Agent verbinden",
+    "listSection": "MCP-Verbindungen",
+    "revokeTitle": "Verbindung widerrufen?",
+    "revokeBody": "„{name}“ verliert sofort den Zugriff, und der API-Schlüssel funktioniert nicht mehr.",
+    "revoked": "Verbindung widerrufen",
+    "perms": {
+      "read": {
+        "label": "Beiträge lesen",
+        "description": "Agenten können Konten, Beiträge, Status und Analysen auflisten."
+      },
+      "draft": {
+        "label": "Entwürfe erstellen",
+        "description": "Agenten können Entwürfe mit von dir hochgeladenen Medien erstellen und bearbeiten."
+      },
+      "schedule": {
+        "label": "Planen",
+        "description": "Agenten können Beiträge zur späteren Veröffentlichung planen."
+      },
+      "publish": {
+        "label": "Veröffentlichen",
+        "description": "Agenten können sofort auf echten Konten veröffentlichen."
+      },
+      "delete": {
+        "label": "Löschen",
+        "description": "Agenten können Beiträge löschen."
+      },
+      "disconnect": {
+        "label": "Trennen",
+        "description": "Agenten können Konten trennen."
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "Audit-Ereignisse filtern",
+    "all": "Alle Aktivitäten",
+    "agents": "Agenten-Aktionen",
+    "loadFailed": "Audit-Log konnte nicht geladen werden",
+    "emptyAgentsTitle": "Noch keine Agenten-Aktionen",
+    "emptyAgentsBody": "Tool-Aufrufe über MCP erscheinen hier.",
+    "emptyTitle": "Noch keine Audit-Ereignisse",
+    "tableLabel": "Audit-Ereignisse",
+    "colWhen": "Wann",
+    "colActor": "Wer",
+    "colAction": "Aktion",
+    "colResource": "Ressource",
+    "actorApiKey": "API-Schlüssel",
+    "actorUser": "Du",
+    "unknownTool": "unbekanntes Tool",
+    "directApi": "Direkte API",
+    "directApiTitle": "Direkt an die API gesendet, nicht über den MCP-Server",
+    "moreFailed": "Weitere Ereignisse konnten nicht geladen werden. {reason}"
+  }
+}

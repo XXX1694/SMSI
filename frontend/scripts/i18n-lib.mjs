@@ -3,7 +3,7 @@
  * Rules come from docs/copy/translation-process.md section 3; the rest of them land as warnings later.
  */
 import { parse, TYPE } from '@formatjs/icu-messageformat-parser';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** Mirrors SUPPORTED_STYLES in src/i18n/icu.ts (a test keeps the two equal). */
@@ -135,7 +135,7 @@ export function problems({ catalogs, enabled, meta = {}, sources = [] }) {
   const errors = [];
   const warnings = [];
   const en = catalogs.en;
-  if (!en) return { errors: ['messages/en.json is missing'], warnings };
+  if (!en) return { errors: ['messages/en/ is missing'], warnings };
   const enFlat = flatten(en);
   for (const [k, v] of Object.entries(enFlat)) {
     if (typeof v !== 'string') errors.push(`en: ${k} must be a string`);
@@ -188,7 +188,7 @@ export function problems({ catalogs, enabled, meta = {}, sources = [] }) {
     for (const k of usedKeys(src)) used.add(k);
     for (const l of literals(src)) lits.add(l);
   }
-  for (const k of used) if (!(k in enFlat)) errors.push(`code uses ${k}, which is not in messages/en.json`);
+  for (const k of used) if (!(k in enFlat)) errors.push(`code uses ${k}, which is not in messages/en/*.json`);
   for (const k of Object.keys(enFlat)) {
     if (used.has(k) || lits.has(k) || [...prefixes].some((p) => k.startsWith(p))) continue;
     const parts = k.split('.');
@@ -201,4 +201,45 @@ export function problems({ catalogs, enabled, meta = {}, sources = [] }) {
 
 export function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** Bundle ids of a locale directory (`messages/ru/` -> ['nav', 'posts', ...]); a locale without a directory has none. */
+export function listBundles(localeDir) {
+  if (!existsSync(localeDir)) return [];
+  return readdirSync(localeDir)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => f.slice(0, -'.json'.length))
+    .sort();
+}
+
+/** Rebuilds a locale tree from its bundle files: `messages/ru/{nav,posts}.json` -> `{ nav: {...}, posts: {...} }`. */
+export function readLocale(localeDir) {
+  return Object.fromEntries(listBundles(localeDir).map((id) => [id, readJson(join(localeDir, `${id}.json`))]));
+}
+
+/** The bundle ids that `src/i18n/catalog.ts` lists in `BUNDLES`, and those its `Messages` type points at. */
+export function catalogBundles(source) {
+  const list = [...(/export const BUNDLES = \[([^\]]*)\]/.exec(source)?.[1] ?? '').matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  const typed = [...source.matchAll(/typeof import\('\.\.\/\.\.\/messages\/en\/([^']+)\.json'\)/g)].map((m) => m[1]);
+  return { list, typed };
+}
+
+/**
+ * Checks the file layout against English and `src/i18n/catalog.ts`.
+ * @param {{ bundles: Record<string, string[]>, catalog: { list: string[], typed: string[] } }} input
+ * `bundles` maps a locale to the bundle ids it has a file for; `catalog` is the result of `catalogBundles`.
+ * @returns {string[]} errors
+ */
+export function layoutProblems({ bundles, catalog }) {
+  const errors = [];
+  const en = bundles.en ?? [];
+  for (const [locale, ids] of Object.entries(bundles)) {
+    if (locale === 'en') continue;
+    for (const id of ids) if (!en.includes(id)) errors.push(`messages/${locale}/${id}.json: English has no ${id}.json`);
+  }
+  for (const [where, ids] of [['BUNDLES', catalog.list], ['the Messages type', catalog.typed]]) {
+    for (const id of ids) if (!en.includes(id)) errors.push(`src/i18n/catalog.ts: ${where} lists ${id}, but messages/en/${id}.json does not exist`);
+    for (const id of en) if (!ids.includes(id)) errors.push(`messages/en/${id}.json is not in ${where} (src/i18n/catalog.ts)`);
+  }
+  return errors;
 }

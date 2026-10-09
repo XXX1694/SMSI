@@ -1,0 +1,70 @@
+{
+  "title": "Painel",
+  "subtitle": "O que está saindo e o que precisa de atenção.",
+  "overview": "Visão geral",
+  "stats": {
+    "accounts": "Contas conectadas",
+    "scheduled": "Agendados",
+    "publishedMonth": "Publicados neste mês",
+    "failed": "Com falha"
+  },
+  "viewAll": "Ver todos",
+  "sections": {
+    "upcoming": {
+      "title": "Próximos",
+      "empty": "Nada agendado.",
+      "viewAll": "Ver todos os próximos"
+    },
+    "drafts": {
+      "title": "Rascunhos",
+      "empty": "Nenhum rascunho.",
+      "viewAll": "Ver todos os rascunhos"
+    },
+    "recent": {
+      "title": "Publicados recentemente",
+      "empty": "Nada publicado ainda.",
+      "viewAll": "Ver todos os publicados recentemente"
+    },
+    "failed": {
+      "title": "Com falha",
+      "empty": "Nenhum post com falha.",
+      "viewAll": "Ver todos os com falha"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "Conecte sua primeira conta",
+    "noAccountBody": "Conecte uma rede para começar a publicar.",
+    "showChecklist": "Mostrar lista de etapas",
+    "setUp": "Configurado",
+    "showSteps": "Mostrar etapas",
+    "dismiss": "Dispensar lista de etapas",
+    "doneTitle": "Tudo configurado",
+    "getStarted": "Primeiros passos",
+    "doneBody": "Todas as etapas obrigatórias estão feitas. Você pode ocultar esta lista.",
+    "progress": "{done} de {total, plural, one {# etapa concluída} many {# de etapas concluídas} other {# etapas concluídas}}.",
+    "doneSr": "(concluída)",
+    "optional": "Opcional",
+    "steps": {
+      "network": {
+        "title": "Conecte uma rede",
+        "hint": "O Steerpost publica nas contas que você conecta. Escolha LinkedIn, Telegram ou outra rede.",
+        "action": "Conectar conta"
+      },
+      "post": {
+        "title": "Escreva seu primeiro post",
+        "hint": "Salve um rascunho ou agende. Nada é publicado até você decidir.",
+        "action": "Escrever um post"
+      },
+      "agent": {
+        "title": "Conecte um agente de IA",
+        "hint": "Crie uma conexão MCP ou uma chave de API para que o Claude ou seus próprios scripts criem rascunhos de posts para você.",
+        "action": "Conectar agente"
+      },
+      "approval": {
+        "title": "Revise uma aprovação",
+        "hint": "Quando um agente pede para publicar, excluir ou desconectar, o pedido espera aqui.",
+        "action": "Abrir aprovações"
+      }
+    }
+  }
+}

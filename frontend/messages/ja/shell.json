@@ -1,0 +1,31 @@
+{
+  "skipToContent": "本文へスキップ",
+  "signOut": "ログアウト",
+  "openMenu": "メニューを開く",
+  "closeMenu": "メニューを閉じる",
+  "mainNav": "メイン",
+  "navWaiting": "{count, plural, other {承認待ちのリクエスト#件}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, other {承認待ちのリクエストが#件あります}}",
+  "emailBanner": {
+    "verifyHeading": "メールアドレスを確認してください。",
+    "verifyBody": "Steerpostから<addr>{email}</addr>にリンクを送信しました。リンクを開くまで、アカウントの連携、投稿の予約と投稿、APIキーの作成はできません。",
+    "sent": "リンクを送信しました。受信トレイを確認してください。",
+    "resend": "メールを再送"
+  },
+  "demo": {
+    "label": "デモ",
+    "banner": "<b>デモ</b>：データはブラウザー内に保存 ·",
+    "reset": "リセット",
+    "about": "Steerpostについて",
+    "resetTitle": "デモをリセットしますか？",
+    "resetBody": "このデモで変更した内容はすべて削除され、サンプルデータに戻ります。",
+    "resetConfirm": "デモをリセット"
+  },
+  "deletionBanner": {
+    "heading": "アカウントは{date}に削除されます。",
+    "body": "その時点ですべてのデータが削除され、復元できません。APIキーは無効化済みで、予約済みの投稿は下書きに戻っています。データは設定からまだダウンロードできます。",
+    "cancel": "削除を取り消す",
+    "cancelling": "取り消し中…"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "cancel": "Cancelar",
+  "close": "Cerrar",
+  "loading": "Cargando…",
+  "working": "Procesando…",
+  "sending": "Enviando…",
+  "saving": "Guardando…",
+  "tryAgain": "Volver a intentar",
+  "retry": "Reintentar",
+  "edit": "Editar",
+  "optionalLabel": "{label} (opcional)",
+  "showField": "Mostrar {label}",
+  "hideField": "Ocultar {label}",
+  "never": "Nunca",
+  "justNow": "ahora mismo",
+  "unknown": "Desconocida",
+  "loadingFailed": "Error al cargar",
+  "newPost": "Nueva publicación",
+  "listSeparator": ", ",
+  "bytes": "{size} B",
+  "kilobytes": "{size} KB",
+  "megabytes": "{size} MB",
+  "connectAccount": "Conectar cuenta",
+  "delete": "Eliminar",
+  "copy": "Copiar",
+  "copyTitle": "Copiar {title}",
+  "copied": "Copiado",
+  "copyFailed": "No se pudo copiar. Selecciona el texto y cópialo a mano.",
+  "haveSaved": "Ya lo guardé",
+  "creating": "Creando…",
+  "loadMore": "Cargar más",
+  "upload": "Subir",
+  "uploading": "Subiendo…",
+  "status": {
+    "post": {
+      "draft": "Borrador",
+      "scheduled": "Programada",
+      "publishing": "Publicando",
+      "published": "Publicada",
+      "partially_published": "Publicada en parte",
+      "failed": "Fallida",
+      "cancelled": "Cancelada"
+    },
+    "target": {
+      "pending": "Pendiente",
+      "publishing": "Publicando",
+      "published": "Publicada",
+      "failed": "Fallida",
+      "cancelled": "Cancelada",
+      "needs_review": "Sin confirmar"
+    },
+    "account": {
+      "active": "Activa",
+      "expired": "Reconexión necesaria",
+      "revoked": "Revocada",
+      "error": "Error"
+    },
+    "attempt": {
+      "started": "Iniciado",
+      "succeeded": "Correcto",
+      "failed": "Fallido",
+      "unknown": "Sin confirmar"
+    }
+  }
+}

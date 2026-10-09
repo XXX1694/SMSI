@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
  * `npm run i18n:check` (part of `npm run lint`). Offline, a few seconds.
- *   errors:   a catalog key that English lacks, invalid ICU, placeholders that differ from English, a missing key or
- *             plural category in an ENABLED locale, code that asks for a key English lacks.
+ *   errors:   a bundle file that English lacks, `src/i18n/catalog.ts` out of step with messages/en/, a catalog key that
+ *             English lacks, invalid ICU, placeholders that differ from English, a missing key or plural category in an
+ *             ENABLED locale, code that asks for a key English lacks.
  *   warnings: unused keys, keys without a meta.json description.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listSources, problems, readJson } from './i18n-lib.mjs';
+import { catalogBundles, layoutProblems, listBundles, listSources, problems, readJson, readLocale } from './i18n-lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'messages');
@@ -18,14 +19,21 @@ const enabled = [...(/export const ENABLED_LOCALES[^=]*=\s*\[([^\]]*)\]/.exec(lo
 const known = [...(/export const LOCALES = \[([^\]]*)\]/.exec(locales)?.[1] ?? '').matchAll(/'([^']+)'/g)].map((m) => m[1]);
 
 const catalogs = {};
+const bundles = {};
 const errors = [];
-for (const f of readdirSync(dir)) {
-  if (!f.endsWith('.json') || f === 'meta.json') continue;
-  const locale = f.replace(/\.json$/, '');
-  if (!known.includes(locale)) errors.push(`messages/${f}: "${locale}" is not in LOCALES (src/i18n/locales.ts)`);
-  catalogs[locale] = readJson(join(dir, f));
+for (const f of readdirSync(dir, { withFileTypes: true })) {
+  if (!f.isDirectory()) {
+    if (f.name !== 'meta.json') errors.push(`messages/${f.name}: catalogs live in messages/{locale}/{bundle}.json`);
+    continue;
+  }
+  if (!known.includes(f.name)) errors.push(`messages/${f.name}/: "${f.name}" is not in LOCALES (src/i18n/locales.ts)`);
 }
-for (const l of known) if (!(l in catalogs)) errors.push(`messages/${l}.json is missing`);
+// A locale without a directory has no translations yet: an empty catalog (it falls back to English).
+for (const l of known) {
+  catalogs[l] = readLocale(join(dir, l));
+  bundles[l] = listBundles(join(dir, l));
+}
+errors.push(...layoutProblems({ bundles, catalog: catalogBundles(readFileSync(join(root, 'src/i18n/catalog.ts'), 'utf8')) }));
 
 const sources = listSources(join(root, 'src')).map((p) => readFileSync(p, 'utf8'));
 const res = problems({ catalogs, enabled, meta: readJson(join(dir, 'meta.json')), sources });
