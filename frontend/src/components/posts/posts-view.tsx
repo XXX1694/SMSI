@@ -11,9 +11,14 @@ import { api } from '@/lib/api';
 import { POST_STATUSES, postStatusView } from '@/lib/status';
 import { zonedDayRangeIso } from '@/lib/time';
 import type { Post } from '@/lib/types';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
+import { nodes } from '@/i18n/rich';
 
 export function PostsView() {
+  const t = useTranslations();
+  const tp = useTranslations('posts');
+  const errorText = useErrorText();
   const router = useRouter();
   const params = useSearchParams();
   const status = params.get('status') ?? '';
@@ -25,7 +30,7 @@ export function PostsView() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [more, setMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [moreError, setMoreError] = useState<string | null>(null);
 
   const fetchPage = useCallback(
@@ -47,7 +52,7 @@ export function PostsView() {
         setLoading(false);
       },
       (e: unknown) => {
-        setError(errorMessage(e));
+        setError(e);
         setLoading(false);
       },
     );
@@ -67,7 +72,7 @@ export function PostsView() {
       setCursor(p.next_cursor);
     } catch (e) {
       // Keep the page that is already on screen; only the next page failed.
-      setMoreError(errorMessage(e));
+      setMoreError(errorText(e));
     } finally {
       setMore(false);
     }
@@ -85,46 +90,54 @@ export function PostsView() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="Status" htmlFor="f-status">
+        <Field label={tp('filterStatus')} htmlFor="f-status">
           <Select id="f-status" value={status} onChange={(e) => setFilter('status', e.target.value)} className="w-48">
-            <option value="">All statuses</option>
+            <option value="">{tp('allStatuses')}</option>
             {POST_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {postStatusView(s).label}
+                {postStatusView(s, t).label}
               </option>
             ))}
           </Select>
         </Field>
-        <Field label="From" htmlFor="f-from">
+        <Field label={tp('filterFrom')} htmlFor="f-from">
           <Input id="f-from" type="date" value={from} onChange={(e) => setFilter('from', e.target.value)} className="w-40" />
         </Field>
-        <Field label="To" htmlFor="f-to">
+        <Field label={tp('filterTo')} htmlFor="f-to">
           <Input id="f-to" type="date" value={to} onChange={(e) => setFilter('to', e.target.value)} className="w-40" />
         </Field>
         {filtered ? (
           <Button variant="ghost" size="sm" onClick={() => router.replace('/posts')}>
-            Clear filters
+            {tp('clearFilters')}
           </Button>
         ) : null}
       </div>
       {loading ? (
         <LoadingRows rows={4} />
       ) : error ? (
-        <ErrorState title="Could not load posts" error={new Error(error)} onRetry={reload} />
+        <ErrorState title={tp('loadFailed')} error={error} onRetry={reload} />
       ) : items.length === 0 ? (
         <EmptyState
-          title={filtered ? 'No posts match these filters' : 'No posts yet'}
+          title={filtered ? tp('noMatch') : tp('none')}
           action={
             filtered ? undefined : (
               <Button asChild>
-                <Link href="/compose">Write a post</Link>
+                <Link href="/compose">{tp('writePost')}</Link>
               </Button>
             )
           }
         >
           {filtered ? undefined : (
             <>
-              Posts go to the accounts you connect. <Link href="/accounts" className="underline underline-offset-4">Connect an account</Link>.
+              {nodes(
+                tp.rich('emptyBody', {
+                  link: (c) => (
+                    <Link href="/accounts" className="underline underline-offset-4">
+                      {c}
+                    </Link>
+                  ),
+                }),
+              )}
             </>
           )}
         </EmptyState>
@@ -133,13 +146,13 @@ export function PostsView() {
           <PostList posts={items} />
           {moreError ? (
             <InlineError onRetry={() => void loadMore()} retryDisabled={more} className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2">
-              Could not load more posts. {moreError}
+              {tp('loadMoreFailed', { reason: moreError })}
             </InlineError>
           ) : null}
           {cursor && !moreError ? (
             <div className="text-center">
               <Button variant="secondary" onClick={() => void loadMore()} disabled={more}>
-                {more ? 'Loading…' : 'Load more'}
+                {more ? t('common.loading') : t('common.loadMore')}
               </Button>
             </div>
           ) : null}

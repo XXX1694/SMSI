@@ -3,7 +3,8 @@ import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { InlineError } from '@/components/states';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
 
 interface Props {
   open: boolean;
@@ -11,7 +12,7 @@ interface Props {
   title: string;
   description: string;
   confirmLabel: string;
-  /** Label of the button that closes the dialog; "Cancel" by default. */
+  /** Label of the button that closes the dialog; "Cancel" (common.cancel) by default. */
   dismissLabel?: string;
   destructive?: boolean;
   onConfirm: () => Promise<void>;
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, dismissLabel, destructive, onConfirm, children }: Props) {
+  const t = useTranslations('common');
+  const errorText = useErrorText();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +32,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
       await onConfirm();
       onOpenChange(false);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -52,11 +55,10 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
         ) : null}
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
-            {/* Translator note: "Cancel" closes the dialog. "Cancel post" (the post action) and "Keep post" (its dismiss button) are different keys. */}
-            {dismissLabel ?? 'Cancel'}
+            {dismissLabel ?? t('cancel')}
           </Button>
           <Button variant={destructive ? 'danger' : 'primary'} onClick={run} disabled={busy}>
-            {busy ? 'Working…' : confirmLabel}
+            {busy ? t('working') : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,6 @@
 /** The HTTP core of the API client: base URLs, CSRF, the request function. Only api.ts imports it (ESLint enforces that). */
 import { ApiError, parseErrorBody } from './api-error';
+import { enT } from '@/i18n/en';
 import { describeErrorCode } from './errors';
 
 export const API_BASE = '/api/v1';
@@ -78,7 +79,7 @@ export async function request(path: string, opts: RequestOptions = {}): Promise<
       credentials: opts.direct && base !== API_BASE ? 'include' : 'same-origin',
     });
   } catch {
-    throw new ApiError(0, 'NETWORK', describeErrorCode('NETWORK'));
+    throw new ApiError(0, 'NETWORK', describeErrorCode('NETWORK', enT));
   }
   const text = await res.text();
   let json: unknown = null;

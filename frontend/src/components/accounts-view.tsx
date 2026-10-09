@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { CapabilityBadges } from '@/components/capability-badges';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { usePrefs } from '@/components/prefs-provider';
 import { ErrorState, LoadingRows, Notice } from '@/components/states';
 import { AccountStatusBadge } from '@/components/status-badge';
 import { TelegramConnect } from '@/components/telegram-connect';
@@ -15,33 +14,38 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { DEMO } from '@/lib/demo/config';
 import { describeErrorCode } from '@/lib/errors';
-import { providerLabel } from '@/lib/normalize';
-import { formatDateTime } from '@/lib/time';
+import { useProviderName } from '@/i18n/use-provider-name';
 import type { Provider, SocialAccount } from '@/lib/types';
-import { errorMessage, useAsync } from '@/hooks';
+import { useAsync, useErrorText } from '@/hooks';
+import { nodes } from '@/i18n/rich';
+import type { AppT } from '@/i18n/translate';
+import { useTranslations } from '@/i18n/use-translations';
+import { useFormat } from '@/i18n/use-format';
 
-function unavailableReason(p: Provider): string {
+function unavailableReason(p: Provider, t: AppT): string {
   // Each unavailable network states its own reason in capabilities.notes (Medium, X and Hashnode are not about approval).
   if (p.capabilities.notes) return p.capabilities.notes;
-  if (!p.unsupported && !p.configured) return 'Not configured on this server.';
-  return 'Not available yet.';
+  if (!p.unsupported && !p.configured) return t('accounts.notConfigured');
+  return t('accounts.notAvailableYet');
 }
 
 function AccountItem({ account, provider, onDisconnect, onConnected }: { account: SocialAccount; provider: Provider; onDisconnect: (a: SocialAccount) => void; onConnected: () => void }) {
-  const { timezone } = usePrefs();
+  const t = useTranslations('accounts');
+  const fmt = useFormat();
+  const name = account.display_name || account.username;
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 py-2">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{account.display_name || account.username}</p>
         <p className="text-xs text-muted-foreground">
-          {account.username ? `${account.username} · ` : ''}connected {formatDateTime(account.connected_at, timezone)}
+          {t('meta', { hasName: String(Boolean(account.username)), username: account.username ?? '', when: fmt.dateTime(account.connected_at) })}
         </p>
       </div>
       <div className="flex items-center gap-2">
         <AccountStatusBadge status={account.status} />
-        {account.status === 'expired' ? <ConnectAction provider={provider} hasAccounts={false} label="Reconnect" onConnected={onConnected} /> : null}
-        <Button variant="ghost" size="sm" onClick={() => onDisconnect(account)} aria-label={`Disconnect ${account.display_name || account.username}`}>
-          Disconnect
+        {account.status === 'expired' ? <ConnectAction provider={provider} hasAccounts={false} label={t('reconnect')} onConnected={onConnected} /> : null}
+        <Button variant="ghost" size="sm" onClick={() => onDisconnect(account)} aria-label={t('disconnectLabel', { account: name })}>
+          {t('disconnect')}
         </Button>
       </div>
     </li>
@@ -49,10 +53,9 @@ function AccountItem({ account, provider, onDisconnect, onConnected }: { account
 }
 
 function DemoNote({ provider }: { provider: Provider }) {
+  const t = useTranslations('accounts');
   if (provider.id === 'telegram') return null;
-  const text = isTokenProvider(provider)
-    ? `Demo: nothing is sent to ${provider.name}. Any details connect a sample account; a secret containing "invalid" is rejected so you can see the error.`
-    : `Demo: the real ${provider.name} sign-in is skipped; Connect adds a sample account.`;
+  const text = t(isTokenProvider(provider) ? 'demoToken' : 'demoOauth', { network: provider.name });
   return <p className="text-xs text-muted-foreground">{text}</p>;
 }
 
@@ -62,20 +65,21 @@ function isTokenProvider(p: Provider): boolean {
 
 /** The Connect button: a form for token providers, a redirect for OAuth ones, an instant sample account in the demo. Telegram has its own panel. */
 function ConnectAction({ provider, hasAccounts, label: forced, onConnected }: { provider: Provider; hasAccounts: boolean; label?: string; onConnected: () => void }) {
+  const t = useTranslations('accounts');
+  const errorText = useErrorText();
   const toast = useToast();
   const [connecting, setConnecting] = useState(false);
   const [tokenOpen, setTokenOpen] = useState(false);
-  // Translator note: "Connect" and "Connect another" sit next to a network name; the object is that network's account. "Reconnect" is its own key.
-  const label = forced ?? (hasAccounts ? 'Connect another' : 'Connect');
+  const label = forced ?? (hasAccounts ? t('connectAnother') : t('connect'));
 
   async function connectDemo() {
     setConnecting(true);
     try {
       const account = await api.social.connectDemo(provider.id);
-      toast.success(`Connected ${account.display_name} (demo account, no real sign-in)`);
+      toast.success(t('demoConnected', { name: account.display_name }));
       onConnected();
     } catch (e) {
-      toast.error(errorMessage(e));
+      toast.error(errorText(e));
     } finally {
       setConnecting(false);
     }
@@ -93,7 +97,7 @@ function ConnectAction({ provider, hasAccounts, label: forced, onConnected }: { 
           onOpenChange={setTokenOpen}
           onConnected={(account) => {
             setTokenOpen(false);
-            toast.success(`Connected ${account.display_name || account.username || provider.name}`);
+            toast.success(t('connected', { name: account.display_name || account.username || provider.name }));
             onConnected();
           }}
         />
@@ -126,13 +130,14 @@ function ProviderRow({
   onDisconnect: (a: SocialAccount) => void;
   onConnected: () => void;
 }) {
+  const t = useTranslations();
   const caps = provider.capabilities;
   if (!provider.available) {
     return (
       <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
         <h2 className="text-sm font-medium">{provider.name}</h2>
-        <Badge tone="warning">Not available</Badge>
-        <span className="text-sm text-muted-foreground">{unavailableReason(provider)}</span>
+        <Badge tone="warning">{t('accounts.notAvailable')}</Badge>
+        <span className="text-sm text-muted-foreground">{unavailableReason(provider, t)}</span>
       </li>
     );
   }
@@ -149,7 +154,7 @@ function ProviderRow({
       {DEMO ? <DemoNote provider={provider} /> : null}
       {provider.id === 'telegram' ? <TelegramConnect onConnected={onConnected} /> : null}
       {accounts.length > 0 ? (
-        <ul className="divide-y rounded-md border px-3" aria-label={`${provider.name} accounts`}>
+        <ul className="divide-y rounded-md border px-3" aria-label={t('accounts.listLabel', { network: provider.name })}>
           {accounts.map((a) => (
             <AccountItem key={a.id} account={a} provider={provider} onDisconnect={onDisconnect} onConnected={onConnected} />
           ))}
@@ -166,6 +171,8 @@ interface ConnectResult {
 
 /** The message for `?connected=` / `?error=`, shown once; the parameters are then removed from the address. */
 function useConnectResult(): ConnectResult | null {
+  const t = useTranslations();
+  const providerName = useProviderName();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -174,17 +181,19 @@ function useConnectResult(): ConnectResult | null {
   const failed = params.get('error');
   const provider = params.get('provider');
   useEffect(() => {
-    if (connected) setResult({ tone: 'info', text: `${providerLabel(connected)} connected.` });
+    if (connected) setResult({ tone: 'info', text: t('accounts.resultConnected', { network: providerName(connected) }) });
     else if (failed) {
-      const who = provider ? providerLabel(provider) : 'the account';
-      setResult({ tone: 'danger', text: `Could not connect ${who}. ${describeErrorCode(failed)}` });
+      const reason = describeErrorCode(failed, t);
+      setResult({ tone: 'danger', text: provider ? t('accounts.resultFailed', { network: providerName(provider), reason }) : t('accounts.resultFailedGeneric', { reason }) });
     } else return;
     router.replace(pathname);
-  }, [connected, failed, provider, router, pathname]);
+  }, [connected, failed, provider, router, pathname, t, providerName]);
   return result;
 }
 
 export function AccountsView() {
+  const t = useTranslations('accounts');
+  const providerName = useProviderName();
   const result = useConnectResult();
   const toast = useToast();
   const load = useCallback(async () => {
@@ -193,6 +202,9 @@ export function AccountsView() {
   }, []);
   const { data, error, loading, reload } = useAsync(load);
   const [target, setTarget] = useState<SocialAccount | null>(null);
+  const targetName = target?.display_name || target?.username;
+  const network = target ? providerName(target.provider) : '';
+  const disconnectBody = targetName ? t('disconnectBody', { account: targetName, network }) : t('disconnectBodyUnnamed', { network });
 
   if (loading && !data) return <LoadingRows rows={4} />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
@@ -207,7 +219,15 @@ export function AccountsView() {
       {result ? <Notice tone={result.tone}>{result.text}</Notice> : null}
       {data.accounts.length === 0 ? (
         <Notice tone="info">
-          No account connected yet. Connect one below, then <Link href="/compose" className="underline underline-offset-4">write your first post</Link>.
+          {nodes(
+            t.rich('noneYet', {
+              link: (c) => (
+                <Link href="/compose" className="underline underline-offset-4">
+                  {c}
+                </Link>
+              ),
+            }),
+          )}
         </Notice>
       ) : null}
       <ul className="stagger divide-y border-y">
@@ -221,18 +241,18 @@ export function AccountsView() {
           />
         ))}
       </ul>
-      {orphans.length > 0 ? <p className="text-xs text-muted-foreground">{orphans.length === 1 ? '1 account belongs to a network that is no longer available.' : `${orphans.length} accounts belong to a network that is no longer available.`}</p> : null}
+      {orphans.length > 0 ? <p className="text-xs text-muted-foreground">{t('orphans', { count: orphans.length })}</p> : null}
       <ConfirmDialog
         open={target !== null}
         onOpenChange={(o) => !o && setTarget(null)}
-        title="Disconnect account?"
-        description={`Posts scheduled for ${target?.display_name || target?.username || 'this account'} fail unless you connect it again before they are due. Published posts stay on ${target ? providerLabel(target.provider) : 'the network'}.`}
-        confirmLabel="Disconnect"
+        title={t('disconnectTitle')}
+        description={disconnectBody}
+        confirmLabel={t('disconnect')}
         destructive
         onConfirm={async () => {
           if (!target) return;
           await api.social.disconnect(target.id);
-          toast.success('Account disconnected');
+          toast.success(t('disconnected'));
           reload();
         }}
       />

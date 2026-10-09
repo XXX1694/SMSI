@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState, ErrorState, InlineError, LoadingRows, Notice } from '@/components/states';
 import { Section } from '@/components/ui/card';
@@ -10,54 +10,70 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field, Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
-import { MCP_PERMISSIONS, mcpDefaultSelection, permissionsToScopes } from '@/lib/scopes';
+import { joinList } from '@/lib/format';
+import { MCP_PERMISSIONS, mcpDefaultSelection, permissionDescription, permissionLabel, permissionsToScopes } from '@/lib/scopes';
 import { formatRelative } from '@/lib/time';
 import type { CreatedMcpConnection, McpConnection } from '@/lib/types';
-import { errorMessage, useAsync } from '@/hooks';
+import { useAsync, useErrorText } from '@/hooks';
+import { nodes } from '@/i18n/rich';
 import { CodeBlock, CopyButton } from './copy-block';
+import { useTranslations } from '@/i18n/use-translations';
+
+const MCP_DOCS = 'https://github.com/XXX1694/steerpost/blob/main/mcp/README.md';
+const code = (c: ReactNode) => <code>{c}</code>;
 
 function CreatedPanel({ created, onDone }: { created: CreatedMcpConnection; onDone: () => void }) {
+  const t = useTranslations('developer.mcp');
+  const tc = useTranslations('common');
   return (
     <div className="space-y-4 rounded-lg border border-accent/40 p-4" data-testid="mcp-created">
       <div>
-        <p className="text-sm font-semibold">Connection “{created.connection.name}” created</p>
-        <p className="text-sm text-muted-foreground">This config contains the API key and is shown only once. Paste it into your MCP client now.</p>
+        <p className="text-sm font-semibold">{t('createdTitle', { name: created.connection.name })}</p>
+        <p className="text-sm text-muted-foreground">{t('createdBody')}</p>
       </div>
       <Tabs defaultValue="http">
-        <TabsList aria-label="Client">
-          <TabsTrigger value="http">Claude Code, Cursor</TabsTrigger>
-          <TabsTrigger value="stdio">Claude Desktop</TabsTrigger>
+        <TabsList aria-label={t('clientLabel')}>
+          <TabsTrigger value="http">{t('tabHttp')}</TabsTrigger>
+          <TabsTrigger value="stdio">{t('tabStdio')}</TabsTrigger>
         </TabsList>
         <TabsContent value="http">
           <p className="mb-2 text-sm text-muted-foreground">
-            Native HTTP with an Authorization header. In Claude Code run the one-liner below; in Cursor put the JSON into <code>mcp.json</code> and
-            replace the key with <code>{'${env:STEERPOST_API_KEY}'}</code> if you keep it in an environment variable.
+            {nodes(t.rich('httpIntro', { envKey: '${env:STEERPOST_API_KEY}', code }))}
           </p>
-          <CodeBlock title="HTTP config" code={created.config.http} />
+          <CodeBlock title={t('httpConfig')} code={created.config.http} />
         </TabsContent>
         <TabsContent value="stdio">
           <div className="mb-2 space-y-2 text-sm text-muted-foreground">
             <p>
-              <strong>Connector (no install):</strong> add a custom connector with your MCP URL and the header{' '}
-              <code>Authorization: Bearer &lt;key&gt;</code>. The URL must be reachable over HTTPS. Steps: <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/XXX1694/steerpost/blob/main/mcp/README.md" target="_blank" rel="noreferrer">MCP docs</a>.
+              {nodes(
+                t.rich('connectorIntro', {
+                  header: 'Authorization: Bearer <key>',
+                  b: (c) => <strong>{c}</strong>,
+                  code,
+                  link: (c) => (
+                    <a className="text-accent underline-offset-4 hover:underline" href={MCP_DOCS} target="_blank" rel="noreferrer">
+                      {c}
+                    </a>
+                  ),
+                }),
+              )}
             </p>
-            <p>
-              <strong>Bridge:</strong> paste this into <code>claude_desktop_config.json</code> and restart Claude Desktop. It runs the community package{' '}
-              <code>mcp-remote</code> pinned to an exact version; the key stays in the <code>env</code> block, not in the command line.
-            </p>
+            <p>{nodes(t.rich('bridgeIntro', { b: (c) => <strong>{c}</strong>, code }))}</p>
           </div>
-          <CodeBlock title="Bridge config" code={created.config.stdio} />
+          <CodeBlock title={t('bridgeConfig')} code={created.config.stdio} />
         </TabsContent>
       </Tabs>
       <div className="flex items-center gap-2">
-        <CopyButton text={created.rawKey} label="Copy API key only" />
-        <Button onClick={onDone}>I have saved it</Button>
+        <CopyButton text={created.rawKey} label={t('copyKeyOnly')} />
+        <Button onClick={onDone}>{tc('haveSaved')}</Button>
       </div>
     </div>
   );
 }
 
 function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => void }) {
+  const t = useTranslations();
+  const errorText = useErrorText();
   const [name, setName] = useState('');
   const [perms, setPerms] = useState<string[]>(mcpDefaultSelection());
   const [ack, setAck] = useState(false);
@@ -66,9 +82,9 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
   const risky = MCP_PERMISSIONS.some((p) => perms.includes(p.id) && p.risk === 'dangerous');
 
   async function submit() {
-    if (!name.trim()) return setError('Give the connection a name, e.g. “Claude Desktop”.');
-    if (perms.length === 0) return setError('Select at least one permission.');
-    if (risky && !ack) return setError('Confirm that you understand the risk of dangerous permissions.');
+    if (!name.trim()) return setError(t('developer.mcp.nameRequired'));
+    if (perms.length === 0) return setError(t('developer.mcp.permsRequired'));
+    if (risky && !ack) return setError(t('developer.mcp.ackRequired'));
     setBusy(true);
     setError(null);
     try {
@@ -78,7 +94,7 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
       setAck(false);
       onCreated(c);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -92,20 +108,20 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
       }}
       className="max-w-xl space-y-5"
     >
-      <Field label="Connection name" htmlFor="mcp-name" hint="Shown in your MCP connections.">
-        <Input id="mcp-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Claude Desktop" />
+      <Field label={t('developer.mcp.nameLabel')} htmlFor="mcp-name" hint={t('developer.mcp.nameHint')}>
+        <Input id="mcp-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder={t('developer.mcp.namePlaceholder')} />
       </Field>
       <fieldset className="space-y-3">
-        <legend className="mb-1 text-sm font-medium">Permissions</legend>
+        <legend className="mb-1 text-sm font-medium">{t('developer.mcp.permissions')}</legend>
         {MCP_PERMISSIONS.map((p) => {
           const id = `mcp-perm-${p.id}`;
           return (
             <div key={p.id} className="flex items-start gap-2.5">
               <Checkbox id={id} checked={perms.includes(p.id)} onCheckedChange={(c) => setPerms((cur) => (c === true ? [...cur, p.id] : cur.filter((x) => x !== p.id)))} />
               <label htmlFor={id} className="text-sm">
-                <span className="font-medium">{p.label}</span>{' '}
-                {p.risk === 'dangerous' ? <Badge tone="danger">Dangerous</Badge> : p.risk === 'medium' ? <Badge tone="warning">Medium</Badge> : null}
-                <span className="block text-xs text-muted-foreground">{p.description}</span>
+                <span className="font-medium">{permissionLabel(p.id, t)}</span>{' '}
+                {p.risk === 'dangerous' ? <Badge tone="danger">{t('developer.scopes.risk.dangerous')}</Badge> : p.risk === 'medium' ? <Badge tone="warning">{t('developer.scopes.risk.medium')}</Badge> : null}
+                <span className="block text-xs text-muted-foreground">{permissionDescription(p.id, t)}</span>
               </label>
             </div>
           );
@@ -113,37 +129,38 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
       </fieldset>
       {risky ? (
         <>
-          <Notice>Publishing, deleting and disconnecting wait for your approval in Approvals, every time.</Notice>
+          <Notice>{t('developer.mcp.approvalNotice')}</Notice>
           <div className="flex items-start gap-2.5">
             <Checkbox id="mcp-ack" checked={ack} onCheckedChange={(c) => setAck(c === true)} />
-            <label htmlFor="mcp-ack" className="text-sm">I understand and want to grant these permissions.</label>
+            <label htmlFor="mcp-ack" className="text-sm">{t('developer.mcp.ackLabel')}</label>
           </div>
         </>
       ) : null}
       {error ? <InlineError>{error}</InlineError> : null}
-      <Button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create connection'}</Button>
+      <Button type="submit" disabled={busy}>{busy ? t('common.creating') : t('developer.mcp.create')}</Button>
     </form>
   );
 }
 
 function ConnectionList({ items, onRevoke }: { items: McpConnection[]; onRevoke: (c: McpConnection) => void }) {
-  if (items.length === 0) return <EmptyState title="No agents connected">Create a connection above, then paste the config into your MCP client.</EmptyState>;
+  const t = useTranslations();
+  if (items.length === 0) return <EmptyState title={t('developer.mcp.emptyTitle')}>{t('developer.mcp.emptyBody')}</EmptyState>;
   return (
     <ul className="divide-y rounded-lg border">
       {items.map((c) => (
         <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <p className="text-sm font-medium">
-              {c.name} {c.revoked_at ? <Badge>Revoked</Badge> : null}
+              {c.name} {c.revoked_at ? <Badge>{t('common.status.account.revoked')}</Badge> : null}
             </p>
             <p className="text-xs text-muted-foreground">
-              {c.client_name ? `${c.client_name} · ` : ''}last seen {formatRelative(c.last_seen_at)}
+              {t('developer.mcp.lastSeen', { hasClient: String(Boolean(c.client_name)), client: c.client_name ?? '', when: formatRelative(c.last_seen_at, t) })}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">{c.scopes.join(', ')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{joinList(c.scopes, t)}</p>
           </div>
           {c.revoked_at ? null : (
-            <Button variant="ghost" size="sm" onClick={() => onRevoke(c)} aria-label={`Revoke ${c.name}`}>
-              Revoke
+            <Button variant="ghost" size="sm" onClick={() => onRevoke(c)} aria-label={t('developer.apiKeys.revokeLabel', { name: c.name })}>
+              {t('developer.apiKeys.revoke')}
             </Button>
           )}
         </li>
@@ -153,6 +170,7 @@ function ConnectionList({ items, onRevoke }: { items: McpConnection[]; onRevoke:
 }
 
 export function McpView() {
+  const t = useTranslations();
   const load = useCallback(() => api.developer.mcpConnections(), []);
   const { data, error, loading, reload } = useAsync(load);
   const toast = useToast();
@@ -161,7 +179,7 @@ export function McpView() {
 
   return (
     <div className="space-y-10">
-      <Section title="Connect an AI agent">
+      <Section title={t('developer.mcp.connectSection')}>
         {created ? (
           <CreatedPanel created={created} onDone={() => setCreated(null)} />
         ) : (
@@ -173,20 +191,20 @@ export function McpView() {
           />
         )}
       </Section>
-      <Section title="MCP connections">
+      <Section title={t('developer.mcp.listSection')}>
         {loading && !data ? <LoadingRows rows={2} /> : error || !data ? <ErrorState error={error} onRetry={reload} /> : <ConnectionList items={data} onRevoke={setRevoking} />}
       </Section>
       <ConfirmDialog
         open={revoking !== null}
         onOpenChange={(o) => !o && setRevoking(null)}
-        title="Revoke connection?"
-        description={`“${revoking?.name ?? ''}” loses access immediately and its API key stops working.`}
-        confirmLabel="Revoke"
+        title={t('developer.mcp.revokeTitle')}
+        description={revoking ? t('developer.mcp.revokeBody', { name: revoking.name }) : ''}
+        confirmLabel={t('developer.apiKeys.revoke')}
         destructive
         onConfirm={async () => {
           if (!revoking) return;
           await api.developer.revokeMcpConnection(revoking.id);
-          toast.success('Connection revoked');
+          toast.success(t('developer.mcp.revoked'));
           reload();
         }}
       />

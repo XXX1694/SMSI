@@ -23,6 +23,8 @@ describe('pseudo-locale', () => {
   it('keeps text without letters and unparsable input intact', () => {
     expect(pseudoText('123 · ✓')).toBe('123 · ✓');
     expect(pseudoMessage('{broken')).toBe('[{broken]');
+    expect(pseudoMessage(', ')).toBe(', ');
+    expect(pseudoMessage('·')).toBe('·');
   });
   it('turns every English string into a different string with the same shape', () => {
     const out = pseudoCatalog(en) as typeof en;

@@ -12,6 +12,7 @@ import { Field, Select } from '@/components/ui/input';
 import { LanguageSelect } from '@/i18n/language-select';
 import { useFormat } from '@/i18n/use-format';
 import { browserTimezone, isValidTimezone } from '@/lib/time';
+import { nodes } from '@/i18n/rich';
 
 function tzOptions(current: string): string[] {
   let list: string[] = [];
@@ -29,29 +30,30 @@ export function SettingsView() {
   const { timezone, setTimezone, theme, setTheme } = usePrefs();
   const [zones] = useState(() => tzOptions(timezone));
   const tl = useTranslations('language');
+  const t = useTranslations('settings');
   const fmt = useFormat();
 
   return (
     <div className="max-w-xl space-y-10">
-      <Section title="Profile">
+      <Section title={t('profile')}>
         <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
-          <dt className="text-muted-foreground">Name</dt>
+          <dt className="text-muted-foreground">{t('name')}</dt>
           <dd>{user?.display_name}</dd>
-          <dt className="text-muted-foreground">Email</dt>
+          <dt className="text-muted-foreground">{t('email')}</dt>
           <dd>
             {user?.email}
             {user && user.verification_enforced ? (
-              <span className="ml-2 text-xs text-muted-foreground">{user.email_verified ? 'verified' : 'not verified'}</span>
+              <span className="ml-2 text-xs text-muted-foreground">{user.email_verified ? t('verified') : t('notVerified')}</span>
             ) : null}
           </dd>
         </dl>
       </Section>
-      <Section title="Plan & usage">
+      <Section title={t('planUsage')}>
         <UsageCard />
       </Section>
-      <Section title="Preferences">
+      <Section title={t('preferences')}>
         <div className="space-y-4">
-          <Field label="Time zone" hint={`Times you enter and see use this time zone. Now: ${fmt.dateTime(new Date())}.`}>
+          <Field label={t('timeZone')} hint={t('timeZoneHint', { now: fmt.dateTime(new Date()) })}>
             <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
               {zones.map((z) => (
                 <option key={z} value={z}>
@@ -63,32 +65,37 @@ export function SettingsView() {
           <Field label={tl('label')} hint={tl('hint')}>
             <LanguageSelect />
           </Field>
-          <Field label="Theme">
+          <Field label={t('theme')}>
             <Select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+              <option value="system">{t('themeSystem')}</option>
+              <option value="light">{t('themeLight')}</option>
+              <option value="dark">{t('themeDark')}</option>
             </Select>
           </Field>
         </div>
       </Section>
-      <Section title="Password">
+      <Section title={t('password')}>
         <PasswordForm />
       </Section>
-      <Section title="Your data">
+      <Section title={t('yourData')}>
         <DataExportCard />
       </Section>
-      <Section title="Legal">
+      <Section title={t('legal')}>
         <p className="text-sm text-muted-foreground">
-          Read the{' '}
-          <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
-            Terms of Service
-          </Link>{' '}
-          and the{' '}
-          <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
-            Privacy Policy
-          </Link>
-          . The server admin is responsible for both.
+          {nodes(
+            t.rich('legalText', {
+              terms: (c) => (
+                <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
+                  {c}
+                </Link>
+              ),
+              privacy: (c) => (
+                <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
+                  {c}
+                </Link>
+              ),
+            }),
+          )}
         </p>
       </Section>
     </div>

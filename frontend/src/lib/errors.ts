@@ -1,31 +1,33 @@
-/** Plain-English sentences for API error codes. No raw code (`PROVIDER_ERROR`, `access_denied`) should reach the UI. */
-const TEXT: Record<string, string> = {
-  VALIDATION_ERROR: 'Some of the details are not valid. Check them and try again.',
-  UNAUTHENTICATED: 'You are not signed in, or your session has ended. Sign in again.',
-  FORBIDDEN: 'You do not have permission to do this.',
-  INSUFFICIENT_SCOPE: 'This API key does not have the permission for that action.',
-  QUOTA_EXCEEDED: 'You have reached a limit of your plan. See Settings for what you have used.',
-  EMAIL_NOT_VERIFIED: 'Verify your email address first, then try again.',
-  NOT_FOUND: 'This item no longer exists. It may have been deleted.',
-  INVALID_STATE_TRANSITION: "This post's status changed. Reload to see it.",
-  CONFLICT: 'This already exists. Use another name.',
-  RATE_LIMITED: 'Too many requests. Wait a moment and try again.',
-  SOCIAL_ACCOUNT_EXPIRED: 'This account needs reconnecting. Reconnect it in Accounts.',
-  PROVIDER_NOT_AVAILABLE: 'This network is not available yet.',
-  PROVIDER_ERROR: "The network rejected the post. See the reason under the post's attempts.",
-  INTERNAL: 'Steerpost had a problem. Try again in a moment.',
-  NETWORK: 'Cannot reach the server. Check your connection and try again.',
-  UNKNOWN: 'Something went wrong. Try again.',
-  // OAuth `error` values a network can send back to the callback.
-  access_denied: 'The sign-in was canceled, or access was not granted.',
-};
+import type { AppT } from '@/i18n/translate';
+import type en from '../../messages/en.json';
 
-const GENERIC = TEXT.UNKNOWN as string;
+/** Codes with a sentence in the catalog (`errors.<code>`). Anything else gets `errors.UNKNOWN`, never the code itself. */
+const CODES = [
+  'VALIDATION_ERROR',
+  'UNAUTHENTICATED',
+  'FORBIDDEN',
+  'INSUFFICIENT_SCOPE',
+  'QUOTA_EXCEEDED',
+  'EMAIL_NOT_VERIFIED',
+  'NOT_FOUND',
+  'INVALID_STATE_TRANSITION',
+  'CONFLICT',
+  'RATE_LIMITED',
+  'SOCIAL_ACCOUNT_EXPIRED',
+  'PROVIDER_NOT_AVAILABLE',
+  'PROVIDER_ERROR',
+  'INTERNAL',
+  'NETWORK',
+  'UNKNOWN',
+  // OAuth `error` values a network can send back to the callback.
+  'access_denied',
+] as const satisfies readonly (keyof typeof en.errors)[];
+type Code = (typeof CODES)[number];
+const isCode = (code: string): code is Code => (CODES as readonly string[]).includes(code);
 
 /** A sentence for an error code. Unknown codes get a generic sentence, never the code itself. */
-export function describeErrorCode(code: string | null | undefined): string {
-  if (!code) return GENERIC;
-  return TEXT[code] ?? GENERIC;
+export function describeErrorCode(code: string | null | undefined, t: AppT): string {
+  return t(code && isCode(code) ? `errors.${code}` : 'errors.UNKNOWN');
 }
 
 /** True when a server message is a placeholder or a bare code rather than something a person can read. */
@@ -37,7 +39,13 @@ export function isTechnicalMessage(message: string | null | undefined): boolean 
   return /^[{[]/.test(m) || /\n\s+at\s/.test(m) || /\b(?:TypeError|ReferenceError|SyntaxError)\b/.test(m);
 }
 
-/** The message to show: the server's own sentence when it is readable, otherwise the sentence for its code. */
-export function friendlyMessage(code: string | null | undefined, serverMessage?: string | null): string {
-  return isTechnicalMessage(serverMessage) ? describeErrorCode(code) : (serverMessage as string);
+/** True for English and its pseudo-locale: only then is an English server message fit to show. */
+export const isEnglish = (t: AppT): boolean => t.locale === 'en' || t.locale.startsWith('en-');
+
+/**
+ * The message to show. In English: the server's own sentence when it is readable, otherwise the sentence for its code.
+ * In any other language the server text (English) is never shown: the code's sentence is (D-021).
+ */
+export function friendlyMessage(code: string | null | undefined, serverMessage: string | null | undefined, t: AppT): string {
+  return isEnglish(t) && !isTechnicalMessage(serverMessage) ? (serverMessage as string) : describeErrorCode(code, t);
 }

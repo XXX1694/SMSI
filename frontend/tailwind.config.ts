@@ -1,5 +1,11 @@
 import type { Config } from 'tailwindcss';
 
+// Tailwind accepts an array of fallback values at runtime (one declaration each) but its types only allow a string.
+const SCREEN_HEIGHT = [
+  'calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+  'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+] as unknown as string;
+
 const config: Config = {
   darkMode: 'class',
   content: ['./src/**/*.{ts,tsx}'],
@@ -33,6 +39,9 @@ const config: Config = {
         '2xl': ['var(--text-2xl)', 'var(--text-2xl-leading)'],
         '3xl': ['var(--text-3xl)', 'var(--text-3xl-leading)'],
       },
+      // Screen-height layouts: the body is padded by the safe-area insets (globals.css), so subtract them (vh first as a fallback, then dvh for mobile browser bars). Zero insets give plain 100vh/100dvh.
+      height: { screen: SCREEN_HEIGHT },
+      minHeight: { screen: SCREEN_HEIGHT },
       spacing: { gutter: 'var(--space-gutter)', stack: 'var(--space-stack)', section: 'var(--space-section)' },
       borderRadius: { sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)', xl: 'var(--radius-xl)' },
       boxShadow: { md: 'var(--shadow-md)', lg: 'var(--shadow-lg)', pop: 'var(--shadow-pop)' },

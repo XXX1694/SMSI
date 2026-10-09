@@ -1,6 +1,7 @@
 // Progressive enhancement only: the site is fully readable without this file.
 
-// 1. Copy buttons on code blocks.
+// 1. Copy buttons on code blocks. The landing page passes its translated wording as data attributes on <body>.
+const copyText = document.body.dataset.copy ?? 'Copy';
 for (const pre of document.querySelectorAll('.prose pre:not(.mermaid), .copyable pre')) {
   if (pre.parentElement?.classList.contains('code')) continue;
   pre.tabIndex = 0; // a scrollable block must be reachable by keyboard
@@ -11,16 +12,16 @@ for (const pre of document.querySelectorAll('.prose pre:not(.mermaid), .copyable
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'copy';
-  btn.textContent = 'Copy';
-  btn.setAttribute('aria-label', 'Copy code to clipboard');
+  btn.textContent = copyText;
+  btn.setAttribute('aria-label', document.body.dataset.copyLabel ?? 'Copy code to clipboard');
   btn.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(pre.innerText.replace(/\n$/, ''));
-      btn.textContent = 'Copied';
+      btn.textContent = document.body.dataset.copied ?? 'Copied';
     } catch {
-      btn.textContent = 'Press Ctrl+C';
+      btn.textContent = document.body.dataset.copyFail ?? 'Press Ctrl+C';
     }
-    setTimeout(() => (btn.textContent = 'Copy'), 1600);
+    setTimeout(() => (btn.textContent = copyText), 1600);
   });
   wrap.append(btn);
 }

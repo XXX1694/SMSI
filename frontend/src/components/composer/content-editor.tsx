@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/input';
 import { effectiveContent } from '@/lib/composer';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import type { Provider, SocialAccount } from '@/lib/types';
 import { CharCounter } from './char-counter';
+import { useTranslations } from '@/i18n/use-translations';
 
 interface Props {
   content: string;
@@ -17,35 +18,37 @@ interface Props {
 }
 
 export function ContentEditor({ content, overrides, selected, providers, onContent, onOverride }: Props) {
+  const t = useTranslations('composer');
+  const providerName = useProviderName();
   const maxFor = (a: SocialAccount) => providers.find((p) => p.id === a.provider)?.capabilities.maxTextLength ?? 0;
   const strictest = selected.length ? Math.min(...selected.map(maxFor).filter((n) => n > 0), Number.MAX_SAFE_INTEGER) : 0;
   const strictMax = strictest === Number.MAX_SAFE_INTEGER ? 0 : strictest;
 
   return (
     <Tabs defaultValue="all">
-      <TabsList aria-label="Content scope">
-        <TabsTrigger value="all">All networks</TabsTrigger>
+      <TabsList aria-label={t('contentScope')}>
+        <TabsTrigger value="all">{t('allNetworks')}</TabsTrigger>
         {selected.map((a) => (
           <TabsTrigger key={a.id} value={a.id}>
-            {providerLabel(a.provider)}
+            {providerName(a.provider)}
             <span className="ml-1 max-w-[10rem] truncate text-muted-foreground">{a.display_name}</span>
             {overrides[a.id]?.trim() ? ' •' : ''}
-            <span className="sr-only">{overrides[a.id]?.trim() ? ' (custom text)' : ''}</span>
+            <span className="sr-only">{overrides[a.id]?.trim() ? ` ${t('customTextSr')}` : ''}</span>
           </TabsTrigger>
         ))}
       </TabsList>
       <TabsContent value="all" className="space-y-1.5">
         <Textarea
           id="composer-content"
-          aria-label="Post content"
+          aria-label={t('postContent')}
           rows={8}
-          placeholder="What do you want to share?"
+          placeholder={t('placeholder')}
           value={content}
           onChange={(e) => onContent(e.target.value)}
         />
         <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-          <span>Goes to every account without custom text.</span>
-          <CharCounter text={content} max={strictMax} label="Main text" />
+          <span>{t('mainTextNote')}</span>
+          <CharCounter text={content} max={strictMax} label={t('mainText')} />
         </div>
       </TabsContent>
       {selected.map((a) => {
@@ -54,23 +57,23 @@ export function ContentEditor({ content, overrides, selected, providers, onConte
         return (
           <TabsContent key={a.id} value={a.id} className="space-y-1.5">
             <Textarea
-              aria-label={`${providerLabel(a.provider)} content for ${a.display_name}`}
+              aria-label={t('contentFor', { network: providerName(a.provider), account: a.display_name })}
               rows={8}
-              placeholder={content || 'Write custom text for this account'}
+              placeholder={content || t('customPlaceholder')}
               value={overrides[a.id] ?? ''}
               onChange={(e) => onOverride(a.id, e.target.value)}
             />
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
-                {hasCustomText ? 'Custom text for this account.' : 'Empty, so the main text is used.'}
+                {hasCustomText ? t('hasCustom') : t('emptyUsesMain')}
               </span>
               <div className="flex items-center gap-3">
                 {hasCustomText ? (
                   <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onOverride(a.id, '')}>
-                    Reset
+                    {t('reset')}
                   </Button>
                 ) : null}
-                <CharCounter text={text} max={maxFor(a)} label={`${providerLabel(a.provider)} content`} />
+                <CharCounter text={text} max={maxFor(a)} label={t('networkContent', { network: providerName(a.provider) })} />
               </div>
             </div>
           </TabsContent>

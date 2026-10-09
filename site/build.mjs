@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Builds the Steerpost website into site/dist:
- *   /                landing page
+ *   /                landing page (English, the source language)
+ *   /{locale}/       the landing page in each other locale (site/i18n/locales.mjs; catalogs site/i18n/landing.<locale>.json)
  *   /docs/...        documentation rendered from the repo's markdown (README.md, docs/GETTING-STARTED.md,
  *                    docs/integrations/README.md, docs/API.md, docs/ARCHITECTURE.md, mcp/README.md)
  *   /demo/           the browser-only demo (the static export from frontend/, `npm run build:demo`)
@@ -20,6 +21,8 @@ import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import hljs from 'highlight.js';
 import { Marked } from 'marked';
+import IntlMessageFormat from 'intl-messageformat';
+import { LOCALES } from './i18n/locales.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
@@ -229,13 +232,13 @@ const DOCS = [
 
 // ------------------------------------------------------------------ templates
 
-// Docs and the 404 share a calm layout; the landing page has its own (full-bleed hero, floating nav, big footer).
+// Docs and the 404 share a calm layout; the landing page has its own (full-bleed hero, floating nav, big footer) and is built per locale below.
 const layout = read(join(src, 'layout.html'));
 const landingLayout = read(join(src, 'layout-landing.html'));
 
-function page({ path, title, description, content, docs = false, landing = false }) {
+function page({ path, title, description, content, docs = false }) {
   const canonical = `${SITE_URL}${BASE}${path}`;
-  return (landing ? landingLayout : layout)
+  return layout
     .replaceAll('{{title}}', esc(title))
     .replaceAll('{{description}}', esc(description))
     .replaceAll('{{canonical}}', canonical)
@@ -298,9 +301,9 @@ function pngSize(file) {
 
 // ------------------------------------------------------------------ MCP tools table (from the README)
 
-function mcpToolsTable() {
+function mcpToolsTable(loc, t) {
   const section = take(readme, 'Use with your AI agent')[0];
-  const table = section.tokens.find((t) => t.type === 'table');
+  const table = section.tokens.find((x) => x.type === 'table');
   if (!table) fail('README.md "Use with your AI agent" has no tool table');
   const { md } = makeRenderer();
   const renderCell = (c) => md.parseInline(c.text);
@@ -310,13 +313,14 @@ function mcpToolsTable() {
       const [tool, scope, risk] = r;
       count += (tool.text.match(/`/g) ?? []).length / 2;
       const kind = /critical/i.test(risk.text) ? 'critical' : /sensitive/i.test(risk.text) ? 'sensitive' : /medium/i.test(risk.text) ? 'medium' : 'safe';
-      return `<tr><td>${renderCell(tool)}</td><td>${renderCell(scope)}</td><td><span class="risk risk-${kind}">${renderCell(risk)}</span></td></tr>`;
+      // Tool names and scopes are code and stay as they are; only the risk wording and the column heads are translated.
+      return `<tr><td>${renderCell(tool)}</td><td>${renderCell(scope)}</td><td><span class="risk risk-${kind}">${loc.code === 'en' ? renderCell(risk) : t(`mcp.risk.${kind}`)}</span></td></tr>`;
     })
     .join('');
   if (count < 10) fail(`expected at least 10 MCP tools in the README table, found ${count}`);
   return {
     count,
-    html: `<table class="mcp-tools"><thead><tr><th scope="col">Tool</th><th scope="col">Scope</th><th scope="col">Risk</th></tr></thead><tbody>${rows}</tbody></table>`,
+    html: `<table class="mcp-tools"><thead><tr><th scope="col">${t('mcp.thTool')}</th><th scope="col">${t('mcp.thScope')}</th><th scope="col">${t('mcp.thRisk')}</th></tr></thead><tbody>${rows}</tbody></table>`,
   };
 }
 
@@ -338,26 +342,140 @@ cpSync(join(here, 'node_modules/mermaid/dist/mermaid.min.js'), join(dist, 'asset
   write('assets/tokens.css', `${css.slice(0, dark.index)}@media (prefers-color-scheme: dark) {\n  :root {${dark[1].replace(/\n(?=.)/g, '\n  ')}  }\n}\n`);
 }
 
-// Landing page
-{
-  const tools = mcpToolsTable();
-  const content = brands(shots(read(join(src, 'pages/index.html'))))
-    .replace('{{mcpTools}}', () => tools.html)
-    .replaceAll('{{toolCount}}', String(tools.count))
-    .replaceAll('{{liveCount}}', String(liveNetworkCount()))
-    .replaceAll('{{retryCount}}', String(retryLimit()))
-    .replaceAll('{{base}}', BASE);
-  write(
-    'index.html',
-    page({
-      path: '',
-      title: 'Steerpost: publish to social networks, for you and your AI agents',
-      description: 'Connect your social accounts, compose once, schedule per platform, and let AI agents help through a scoped MCP server. Try the demo in your browser.',
-      content,
-      landing: true,
-    }),
-  );
+// ------------------------------------------------------------------ landing page, one per locale
+
+/** Catalogs: site/i18n/landing.<code>.json. A locale without a catalog is not built. */
+const catalogs = {};
+for (const l of LOCALES) {
+  const f = join(here, 'i18n', `landing.${l.code}.json`);
+  if (existsSync(f)) catalogs[l.code] = JSON.parse(read(f));
 }
+if (!catalogs.en) fail('site/i18n/landing.en.json is missing (English is the source catalog)');
+const built = LOCALES.filter((l) => catalogs[l.code]);
+/** Locales a visitor can pick: built and not hidden. */
+const listed = built.filter((l) => !l.hidden);
+const pathOf = (l) => (l.slug ? `${l.slug}/` : '');
+const urlOf = (l) => `${BASE}${pathOf(l)}`;
+
+const GLOBE =
+  '<svg class="lang-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="6.25"/><path d="M1.75 8h12.5M8 1.75c1.8 1.7 2.8 3.8 2.8 6.25S9.8 12.55 8 14.25C6.2 12.55 5.2 10.45 5.2 8S6.2 3.45 8 1.75Z"/></svg>';
+
+/** `t(key)`: a catalog message as HTML (ICU plural/select, rich tags b, em, mcpdocs); `plain(key)`: text only, for <title> and meta. */
+function translator(loc, values) {
+  const cat = catalogs[loc.code];
+  const tags = {
+    b: (c) => `<strong>${c.join('')}</strong>`,
+    em: (c) => `<em>${c.join('')}</em>`,
+    mcpdocs: (c) => `<a href="${BASE}docs/mcp/" hreflang="en">${c.join('')}</a>`,
+  };
+  const raw = (key) => {
+    const v = cat[key];
+    if (v === undefined) fail(`site/i18n/landing.${loc.code}.json has no key "${key}"`);
+    return v;
+  };
+  const run = (key, msg, opts, vals) => {
+    try {
+      const out = new IntlMessageFormat(msg, loc.lang, undefined, opts).format(vals);
+      return Array.isArray(out) ? out.join('') : String(out);
+    } catch (err) {
+      return fail(`landing.${loc.code}.json "${key}": ${err.message}`);
+    }
+  };
+  const t = (key) => run(key, raw(key).replace(/&/g, '&amp;').replace(/"/g, '&quot;'), {}, { ...values, ...tags });
+  const plain = (key) => run(key, raw(key), { ignoreTag: true }, values);
+  /** `{{words:key:start}}`: the hero headline, one masked word (or phrase, for ja and zh) at a time. */
+  const words = (key, from) => {
+    const start = /^\d+$/.test(from) ? Number(from) : (cat[from]?.length ?? fail(`landing.${loc.code}.json "${from}" is not a word list`));
+    const list = cat[key];
+    if (!Array.isArray(list) || list.length === 0) fail(`landing.${loc.code}.json "${key}" must be a non-empty array of words`);
+    return list
+      .map((w, i) => `<span class="wm"><span class="w" style="--i:${start + i}">${esc(w)}</span></span>`)
+      .join(loc.cjk ? '' : ' ');
+  };
+  const fill = (html) =>
+    html
+      .replace(/\{\{words:([\w.]+):([\w.]+)\}\}/g, (_, k, n) => words(k, n))
+      .replace(/\{\{t:([\w.]+)\}\}/g, (_, k) => t(k));
+  return { t, plain, fill };
+}
+
+function langItems(current) {
+  return listed
+    .map(
+      (l) =>
+        `<li><a href="${urlOf(l)}" lang="${l.lang}" hreflang="${l.hreflang}" data-locale="${l.code}"${l === current ? ' aria-current="page"' : ''}>${esc(l.name)}</a></li>`,
+    )
+    .join('');
+}
+
+function landingPage(loc, tools) {
+  const values = { liveCount: liveNetworkCount(), toolCount: tools.count, retryCount: retryLimit() };
+  const tr = translator(loc, values);
+  const isEn = loc.code === 'en';
+  const canonical = `${SITE_URL}${urlOf(loc)}`;
+  const alternates = loc.hidden
+    ? ''
+    : listed.map((l) => `  <link rel="alternate" hreflang="${l.hreflang}" href="${SITE_URL}${urlOf(l)}">\n`).join('') +
+      `  <link rel="alternate" hreflang="x-default" href="${SITE_URL}${BASE}">\n`;
+  const robots = loc.hidden ? '  <meta name="robots" content="noindex,nofollow">\n' : '';
+  const menu = loc.hidden
+    ? ''
+    : `<details class="lang" data-lang><summary class="lang-btn" title="${esc(loc.name)}">${GLOBE}<span class="vh">${esc(tr.plain('lang.button'))}: </span><span class="lang-code">${esc(loc.short)}</span></summary><ul class="lang-list" role="list" aria-label="${esc(tr.plain('lang.menu'))}">${langItems(loc)}</ul></details>`;
+  const list = loc.hidden ? '' : `<nav class="lp-langs" aria-label="${esc(tr.plain('lang.menu'))}"><ul role="list">${langItems(loc)}</ul></nav>`;
+  // The note follows the review state (docs/copy/review/<code>.md), not the language: a signed locale drops it.
+  const beta = loc.review === 'machine-draft' ? `<p class="lp-beta">${tr.t('footer.beta')}</p>` : '';
+  const data = loc.hidden
+    ? ''
+    : JSON.stringify({
+        current: loc.code,
+        locales: Object.fromEntries(
+          listed.map((l) => {
+            const x = translator(l, values);
+            return [l.code, { href: urlOf(l), name: l.name, lang: l.lang, text: x.plain('suggest.text'), dismiss: x.plain('suggest.dismiss') }];
+          }),
+        ),
+      }).replace(/</g, '\\u003c');
+
+  const content = brands(shots(tr.fill(read(join(src, 'pages/index.html')))))
+    .replace('{{mcpTools}}', () => tools.html)
+    .replaceAll('{{toolCount}}', String(values.toolCount))
+    .replaceAll('{{liveCount}}', String(values.liveCount))
+    .replaceAll('{{retryCount}}', String(values.retryCount))
+    .replaceAll('{{base}}', BASE);
+
+  const html = tr
+    .fill(landingLayout)
+    .replaceAll('{{lang}}', loc.lang)
+    .replaceAll('{{dir}}', loc.dir)
+    .replaceAll('{{title}}', esc(tr.plain('meta.title')))
+    .replaceAll('{{description}}', esc(tr.plain('meta.description')))
+    .replaceAll('{{ogAlt}}', esc(tr.plain('meta.ogAlt')))
+    .replaceAll('{{ogLocale}}', loc.og)
+    .replaceAll('{{canonical}}', canonical)
+    .replaceAll('{{robots}}', () => robots)
+    .replaceAll('{{alternates}}', () => alternates)
+    .replaceAll('{{siteUrl}}', SITE_URL)
+    .replaceAll('{{repoUrl}}', REPO_URL)
+    .replaceAll('{{home}}', urlOf(loc))
+    .replaceAll('{{docsSuffix}}', isEn ? '' : ' (EN)')
+    .replaceAll('{{langMenu}}', () => menu)
+    .replaceAll('{{langList}}', () => list)
+    .replaceAll('{{betaNote}}', () => beta)
+    .replaceAll('{{langData}}', () => (data ? `<script type="application/json" id="lang-data">${data}</script>\n  ` : ''))
+    .replace('{{content}}', () => content)
+    .replaceAll('{{base}}', BASE);
+  write(`${pathOf(loc)}index.html`, html);
+}
+
+for (const loc of built) {
+  // The table is built per locale (its heads and risk wording are translated); the tool count is the same for all.
+  landingPage(loc, mcpToolsTable(loc, translator(loc, {}).t));
+}
+// /en/ is not a second copy of the root: it forwards to it, so there is one canonical English page.
+write(
+  'en/index.html',
+  `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>Steerpost</title><link rel="canonical" href="${SITE_URL}${BASE}"><meta http-equiv="refresh" content="0; url=${BASE}"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><p><a href="${BASE}">Steerpost</a></p></body></html>\n`,
+);
 
 // Docs
 const pages = [];
@@ -406,7 +524,7 @@ write('404.html', page({ path: '404.html', title: 'Page not found · Steerpost',
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}${BASE}sitemap.xml\n`);
 write(
   'sitemap.xml',
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['', ...pages.map((p) => p.url), 'demo/']
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...listed.map(pathOf), ...pages.map((p) => p.url), 'demo/']
     .map((u) => `  <url><loc>${SITE_URL}${BASE}${u}</loc></url>`)
     .join('\n')}\n</urlset>\n`,
 );
@@ -426,4 +544,4 @@ if (WITH_DEMO) {
 }
 
 const size = (dir) => readdirSync(dir, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(join(dir, e.name)) : statSync(join(dir, e.name)).size), 0);
-console.log(`site build: ${pages.length + 2} pages${WITH_DEMO ? ' + demo' : ''} -> ${dist} (${(size(dist) / 1024 / 1024).toFixed(1)} MB), base ${BASE}`);
+console.log(`site build: ${pages.length + 1 + built.length} pages${WITH_DEMO ? ' + demo' : ''} -> ${dist} (${(size(dist) / 1024 / 1024).toFixed(1)} MB), base ${BASE}`);

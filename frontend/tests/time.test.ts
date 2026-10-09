@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dayKey, formatRelative, isValidTimezone, utcToZonedInputs, zonedDayRangeIso, zonedToUtcIso } from '@/lib/time';
+import { enT } from '@/i18n/en';
 
 describe('timezone conversion', () => {
   it('converts Almaty wall time (UTC+5) to UTC', () => {
@@ -36,10 +37,10 @@ describe('timezone conversion', () => {
 describe('formatRelative', () => {
   const now = new Date('2026-01-01T12:00:00Z');
   it('handles null, past and future', () => {
-    expect(formatRelative(null, now)).toBe('Never');
-    expect(formatRelative('2026-01-01T10:00:00Z', now)).toBe('2 hours ago');
-    expect(formatRelative('2026-01-03T12:00:00Z', now)).toBe('in 2 days');
-    expect(formatRelative('2026-01-01T12:00:10Z', now)).toBe('just now');
+    expect(formatRelative(null, enT, now)).toBe('Never');
+    expect(formatRelative('2026-01-01T10:00:00Z', enT, now)).toBe('2 hours ago');
+    expect(formatRelative('2026-01-03T12:00:00Z', enT, now)).toBe('in 2 days');
+    expect(formatRelative('2026-01-01T12:00:10Z', enT, now)).toBe('just now');
   });
 });
 

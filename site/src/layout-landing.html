@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{lang}}" dir="{{dir}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -12,15 +12,17 @@
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0d1317" media="(prefers-color-scheme: dark)">
   <link rel="canonical" href="{{canonical}}">
+{{robots}}{{alternates}}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Steerpost">
+  <meta property="og:locale" content="{{ogLocale}}">
   <meta property="og:title" content="{{title}}">
   <meta property="og:description" content="{{description}}">
   <meta property="og:url" content="{{canonical}}">
   <meta property="og:image" content="{{siteUrl}}{{base}}assets/brand/social-preview.png">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
-  <meta property="og:image:alt" content="Steerpost. The human steers. The agent posts.">
+  <meta property="og:image:alt" content="{{ogAlt}}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="{{siteUrl}}{{base}}assets/brand/social-preview.png">
   <link rel="preload" href="{{base}}assets/video/hero-light.jpg" as="image" media="(prefers-color-scheme: light)" fetchpriority="high">
@@ -33,20 +35,21 @@
   <link rel="stylesheet" href="{{base}}assets/route.css">
   <link rel="stylesheet" href="{{base}}assets/scroll.css">
 </head>
-<body class="landing">
-  <a class="skip" href="#main">Skip to content</a>
+<body class="landing" data-copy="{{t:ui.copy}}" data-copied="{{t:ui.copied}}" data-copy-label="{{t:ui.copyLabel}}" data-copy-fail="{{t:ui.copyFail}}">
+  <a class="skip" href="#main">{{t:skip}}</a>
   <header class="site-header lp-nav">
     <div class="lp-nav-bar">
-      <a class="brand" href="{{base}}" aria-label="Steerpost home">
+      <a class="brand" href="{{home}}" aria-label="{{t:nav.home}}">
         <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="mark-path" pathLength="1" d="M7 53.5H19A12 12 0 0 0 31 41.5V33.5A12 12 0 0 1 43 21.5H46" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round"/><path class="mark-tip" d="M42 8.5 59 21.5 42 34.5 46 21.5Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg>
         <span>Steerpost</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="#how" class="hide-sm">How it works</a>
-        <a href="#networks" class="hide-sm">Networks</a>
-        <a href="{{base}}docs/" class="hide-xs">Docs</a>
+      <nav class="nav" aria-label="{{t:nav.aria}}">
+        <a href="#how" class="hide-sm">{{t:nav.how}}</a>
+        <a href="#networks" class="hide-sm">{{t:nav.networks}}</a>
+        <a href="{{base}}docs/" class="hide-xs" hreflang="en">{{t:nav.docs}}</a>
         <a href="{{repoUrl}}" class="hide-sm" rel="noopener">GitHub</a>
-        <a class="btn btn-primary btn-sm" href="{{base}}demo/">Try the demo</a>
+        {{langMenu}}
+        <a class="btn btn-primary btn-sm" href="{{base}}demo/">{{t:nav.demo}}</a>
       </nav>
     </div>
   </header>
@@ -57,19 +60,24 @@
     <div class="lp-wrap">
       <p class="lp-footer-word" aria-hidden="true"></p>
       <div class="lp-footer-row">
-        <p>Self-hosted social publishing for people and their AI agents. The demo runs entirely in your browser; nothing is sent anywhere, and this site has no trackers.</p>
-        <nav aria-label="Footer">
-          <a href="{{base}}docs/">Docs</a>
-          <a href="{{base}}docs/mcp/">MCP</a>
-          <a href="{{base}}docs/api/">API</a>
-          <a href="{{base}}demo/">Demo</a>
-          <a href="{{repoUrl}}" rel="noopener">Source</a>
+        <div class="lp-footer-text">
+          <p>{{t:footer.text}}</p>
+          {{betaNote}}
+        </div>
+        <nav aria-label="{{t:footer.aria}}">
+          <a href="{{base}}docs/" hreflang="en">{{t:footer.docs}}</a>
+          <a href="{{base}}docs/mcp/" hreflang="en">MCP{{docsSuffix}}</a>
+          <a href="{{base}}docs/api/" hreflang="en">API{{docsSuffix}}</a>
+          <a href="{{base}}demo/" hreflang="en">{{t:footer.demo}}</a>
+          <a href="{{repoUrl}}" rel="noopener">{{t:footer.source}}</a>
         </nav>
       </div>
+      {{langList}}
     </div>
   </footer>
-  <script type="module" src="{{base}}assets/site.js"></script>
+  {{langData}}<script type="module" src="{{base}}assets/site.js"></script>
   <script type="module" src="{{base}}assets/landing.js"></script>
   <script type="module" src="{{base}}assets/motion.js"></script>
+  <script type="module" src="{{base}}assets/lang.js"></script>
 </body>
 </html>

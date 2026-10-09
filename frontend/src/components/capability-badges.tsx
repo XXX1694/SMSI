@@ -1,28 +1,30 @@
 import { Badge } from '@/components/ui/badge';
 import type { Capabilities } from '@/lib/types';
+import { useTranslations } from '@/i18n/use-translations';
 
 export function CapabilityBadges({ caps }: { caps: Capabilities }) {
-  const items: [string, boolean][] = [
-    ['Text', caps.canPublishText],
-    ['Image', caps.canPublishImage],
-    ['Video', caps.canPublishVideo],
-    ['Scheduled by network', caps.canSchedule],
-    ['Delete', caps.canDelete],
-    ['Analytics', caps.canAnalytics],
-  ];
+  const t = useTranslations('accounts');
+  const items = [
+    ['text', caps.canPublishText],
+    ['image', caps.canPublishImage],
+    ['video', caps.canPublishVideo],
+    ['schedule', caps.canSchedule],
+    ['delete', caps.canDelete],
+    ['analytics', caps.canAnalytics],
+  ] as const;
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="Capabilities">
-      {items.map(([label, on]) => (
-        <li key={label}>
+    <ul className="flex flex-wrap gap-1.5" aria-label={t('caps.label')}>
+      {items.map(([key, on]) => (
+        <li key={key}>
           <Badge tone={on ? 'neutral' : 'outline'} className={on ? '' : 'line-through'}>
-            <span className="sr-only">{on ? 'Supports ' : 'No '}</span>
-            {label}
+            <span className="sr-only">{t(on ? 'caps.supports' : 'caps.lacks', { capability: key })}</span>
+            <span aria-hidden>{t(`caps.${key}`)}</span>
           </Badge>
         </li>
       ))}
       {caps.maxTextLength > 0 ? (
         <li>
-          <Badge tone="outline">{caps.maxTextLength.toLocaleString()} characters</Badge>
+          <Badge tone="outline">{t('caps.characters', { count: caps.maxTextLength })}</Badge>
         </li>
       ) : null}
     </ul>

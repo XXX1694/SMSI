@@ -2,12 +2,12 @@
 import { Download, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { ErrorState, InlineError, LoadingRows } from '@/components/states';
-import { usePrefs } from '@/components/prefs-provider';
 import { Button } from '@/components/ui/button';
-import { errorMessage, useAsync } from '@/hooks';
+import { useAsync, useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
+import { useFormat } from '@/i18n/use-format';
 import { api } from '@/lib/api';
 import { formatBytes } from '@/lib/media';
-import { formatDateTime } from '@/lib/time';
 import type { DataExport } from '@/lib/types';
 
 const POLL_MS = 3000;
@@ -29,7 +29,9 @@ function save(url: string): void {
 
 /** Export everything the account holds as a ZIP (D-018). Loading, empty, preparing, ready, failed and expired are all shown. */
 export function DataExportCard() {
-  const { timezone } = usePrefs();
+  const t = useTranslations();
+  const fmt = useFormat();
+  const errorText = useErrorText();
   const load = useCallback(() => api.account.exports.list(), []);
   const { data, error, loading, reload } = useAsync(load);
   const [busy, setBusy] = useState(false);
@@ -39,8 +41,8 @@ export function DataExportCard() {
 
   useEffect(() => {
     if (!preparing) return undefined;
-    const t = setInterval(reload, POLL_MS);
-    return () => clearInterval(t);
+    const timer = setInterval(reload, POLL_MS);
+    return () => clearInterval(timer);
   }, [preparing, reload]);
 
   async function start() {
@@ -50,7 +52,7 @@ export function DataExportCard() {
       await api.account.exports.request();
       reload();
     } catch (e) {
-      setProblem(errorMessage(e));
+      setProblem(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -62,47 +64,47 @@ export function DataExportCard() {
     try {
       save((await api.account.exports.link(id)).url);
     } catch (e) {
-      setProblem(errorMessage(e));
+      setProblem(errorText(e));
     } finally {
       setBusy(false);
     }
   }
 
   if (loading && !data) return <LoadingRows rows={1} />;
-  if (error || !data) return <ErrorState error={error} onRetry={reload} title="Could not load your exports" />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} title={t('settings.export.loadFailed')} />;
 
-  const when = (iso: string | null) => (iso ? formatDateTime(iso, timezone) : '');
+  const when = (iso: string | null) => (iso ? fmt.dateTime(iso) : '');
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Download a ZIP with your profile, posts with their targets and publishing attempts, connected accounts (without credentials), API key names, the audit log, approvals and your media files. Passwords, keys and tokens are never included.
+        {t('settings.export.intro')}
       </p>
       {preparing ? (
         <p role="status" className="flex items-center gap-2 text-sm">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Preparing your export. You can leave this page; it is ready when you come back.
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t('settings.export.preparing')}
         </p>
       ) : null}
       {current?.status === 'ready' ? (
         <p className="text-sm">
-          Your export ({formatBytes(current.size_bytes)}) is ready. The download link works for 5 minutes; the file is deleted on {when(current.expires_at)}.
+          {t('settings.export.ready', { size: formatBytes(current.size_bytes, t), date: when(current.expires_at) })}
         </p>
       ) : null}
-      {current?.status === 'failed' ? <InlineError>The last export could not be built. Nothing was kept; try again.</InlineError> : null}
-      {current?.status === 'expired' ? <p className="text-sm text-muted-foreground">Your last export expired and was deleted. Request a new one.</p> : null}
+      {current?.status === 'failed' ? <InlineError>{t('settings.export.failed')}</InlineError> : null}
+      {current?.status === 'expired' ? <p className="text-sm text-muted-foreground">{t('settings.export.expired')}</p> : null}
       {problem ? <InlineError>{problem}</InlineError> : null}
       <div className="flex flex-wrap gap-2">
         {current?.status === 'ready' ? (
           <Button onClick={() => download(current.id)} disabled={busy}>
-            <Download className="mr-2 h-4 w-4" aria-hidden /> Download ZIP
+            <Download className="mr-2 h-4 w-4" aria-hidden /> {t('settings.export.download')}
           </Button>
         ) : null}
         {!preparing ? (
           <Button variant={current?.status === 'ready' ? 'secondary' : 'primary'} onClick={start} disabled={busy}>
-            {current?.status === 'ready' ? 'Request a new export' : 'Request export'}
+            {current?.status === 'ready' ? t('settings.export.requestNew') : t('settings.export.request')}
           </Button>
         ) : null}
       </div>
-      {current?.status === 'ready' ? <p className="text-xs text-muted-foreground">A new export can be requested 24 hours after the last one.</p> : null}
+      {current?.status === 'ready' ? <p className="text-xs text-muted-foreground">{t('settings.export.cooldown')}</p> : null}
     </div>
   );
 }

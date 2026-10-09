@@ -130,8 +130,9 @@ const LABELS: Record<string, string> = {
   bluesky: 'Bluesky',
 };
 
+/** Display name of a network id. An empty id gives an empty string; the caller supplies the "Unknown" text from the catalog. */
 export function providerLabel(id: string): string {
-  return LABELS[id] ?? (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Unknown');
+  return LABELS[id] ?? (id ? id.charAt(0).toUpperCase() + id.slice(1) : '');
 }
 
 export function unwrapList<T>(raw: unknown): T[] {

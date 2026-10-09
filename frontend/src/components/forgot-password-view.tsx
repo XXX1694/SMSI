@@ -5,10 +5,15 @@ import { AuthShell } from '@/components/auth-shell';
 import { InlineError, Notice } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
 import { api } from '@/lib/api';
 
 export function ForgotPasswordView() {
+  const t = useTranslations('auth.forgotPassword');
+  const ta = useTranslations('auth');
+  const tc = useTranslations('common');
+  const errorText = useErrorText();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +26,7 @@ export function ForgotPasswordView() {
     try {
       setSent(await api.auth.forgotPassword(email.trim()));
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -29,31 +34,31 @@ export function ForgotPasswordView() {
 
   if (sent) {
     return (
-      <AuthShell title="Check your inbox" description="If an account exists for that address, Steerpost sent a link to reset the password. It works once and lasts 30 minutes.">
+      <AuthShell title={t('checkTitle')} description={t('checkBody')}>
         {sent.delivery === 'log' ? (
-          <Notice tone="warning">Email delivery is not set up on this server, so no message will arrive. Ask your server admin to set up email.</Notice>
+          <Notice tone="warning">{t('noMail')}</Notice>
         ) : null}
         <Link href="/login" className="mt-6 inline-block text-sm text-accent hover:underline">
-          Back to sign in
+          {ta('backToSignIn')}
         </Link>
       </AuthShell>
     );
   }
   return (
-    <AuthShell title="Reset your password" description="Enter your email and we will send you a link.">
+    <AuthShell title={t('title')} description={t('intro')}>
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <Field label="Email" htmlFor="email">
+        <Field label={ta('email')} htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         {error ? (
           <InlineError>{error}</InlineError>
         ) : null}
         <Button type="submit" className="w-full" disabled={busy || !email.trim()}>
-          {busy ? 'Sending…' : 'Send reset link'}
+          {busy ? tc('sending') : t('send')}
         </Button>
       </form>
       <Link href="/login" className="mt-6 inline-block text-sm text-accent hover:underline">
-        Back to sign in
+        {ta('backToSignIn')}
       </Link>
     </AuthShell>
   );

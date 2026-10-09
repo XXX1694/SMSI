@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { charCount, counterTone, effectiveContent, validateComposer, type ComposerState } from '@/lib/composer';
 import { normalizeProvider } from '@/lib/normalize';
 import type { Media, SocialAccount } from '@/lib/types';
+import { enT } from '@/i18n/en';
 
 const providers = [
   normalizeProvider({ provider: 'mock', configured: true, capabilities: { can_publish_text: true, can_publish_image: true, max_text_length: 10, max_media_count: 1 } }),
@@ -16,45 +17,45 @@ const video: Media = { id: 'v', kind: 'video', mime_type: 'video/mp4', size_byte
 
 describe('validateComposer', () => {
   it('passes for valid content', () => {
-    expect(validateComposer(base, accounts, providers)).toEqual([]);
+    expect(validateComposer(base, accounts, providers, enT)).toEqual([]);
   });
 
   it('requires an account and content', () => {
-    expect(validateComposer({ ...base, accountIds: [] }, accounts, providers)[0]?.message).toMatch(/at least one account/i);
-    expect(validateComposer({ ...base, content: '  ' }, accounts, providers)[0]?.message).toMatch(/add text/i);
+    expect(validateComposer({ ...base, accountIds: [] }, accounts, providers, enT)[0]?.message).toMatch(/at least one account/i);
+    expect(validateComposer({ ...base, content: '  ' }, accounts, providers, enT)[0]?.message).toMatch(/add text/i);
   });
 
   it('flags text over the per-platform limit using overrides', () => {
     const s = { ...base, accountIds: ['a1', 'a2'], content: 'x'.repeat(50) };
-    const issues = validateComposer(s, accounts, providers);
+    const issues = validateComposer(s, accounts, providers, enT);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.accountId).toBe('a1');
     expect(issues[0]?.message).toContain('40 characters over');
-    expect(validateComposer({ ...s, overrides: { a1: 'short' } }, accounts, providers)).toEqual([]);
+    expect(validateComposer({ ...s, overrides: { a1: 'short' } }, accounts, providers, enT)).toEqual([]);
   });
 
   it('counts code points, not UTF-16 units', () => {
     expect(charCount('😀😀')).toBe(2);
-    const issues = validateComposer({ ...base, content: '😀'.repeat(10) }, accounts, providers);
+    const issues = validateComposer({ ...base, content: '😀'.repeat(10) }, accounts, providers, enT);
     expect(issues).toEqual([]);
   });
 
   it('rejects unsupported media and counts', () => {
-    const issues = validateComposer({ ...base, media: [video] }, accounts, providers);
+    const issues = validateComposer({ ...base, media: [video] }, accounts, providers, enT);
     expect(issues.some((i) => /video/i.test(i.message))).toBe(true);
-    const two = validateComposer({ ...base, media: [video, { ...video, id: 'v2' }] }, accounts, providers);
+    const two = validateComposer({ ...base, media: [video, { ...video, id: 'v2' }] }, accounts, providers, enT);
     expect(two.some((i) => /1 attachment at most/.test(i.message))).toBe(true);
   });
 
   it('rejects inactive accounts', () => {
-    expect(validateComposer({ ...base, accountIds: ['a3'] }, accounts, providers).some((i) => /needs reconnecting/.test(i.message))).toBe(true);
+    expect(validateComposer({ ...base, accountIds: ['a3'] }, accounts, providers, enT).some((i) => /needs reconnecting/.test(i.message))).toBe(true);
   });
 
   it('validates schedule time', () => {
     const now = new Date('2026-01-01T00:00:00Z');
-    expect(validateComposer(base, accounts, providers, { requireSchedule: true, now })[0]?.message).toMatch(/valid date/i);
-    expect(validateComposer({ ...base, scheduledAtUtc: '2025-12-31T00:00:00Z' }, accounts, providers, { requireSchedule: true, now })[0]?.message).toMatch(/at least 1 minute from now/i);
-    expect(validateComposer({ ...base, scheduledAtUtc: '2026-01-02T00:00:00Z' }, accounts, providers, { requireSchedule: true, now })).toEqual([]);
+    expect(validateComposer(base, accounts, providers, enT, { requireSchedule: true, now })[0]?.message).toMatch(/valid date/i);
+    expect(validateComposer({ ...base, scheduledAtUtc: '2025-12-31T00:00:00Z' }, accounts, providers, enT, { requireSchedule: true, now })[0]?.message).toMatch(/at least 1 minute from now/i);
+    expect(validateComposer({ ...base, scheduledAtUtc: '2026-01-02T00:00:00Z' }, accounts, providers, enT, { requireSchedule: true, now })).toEqual([]);
   });
 });
 

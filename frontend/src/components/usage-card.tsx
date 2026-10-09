@@ -3,23 +3,25 @@ import { useCallback } from 'react';
 import { ErrorState, LoadingRows } from '@/components/states';
 import { api } from '@/lib/api';
 import { formatBytes } from '@/lib/media';
-import { formatDateTime } from '@/lib/time';
 import type { QuotaLine, UsageReport } from '@/lib/types';
 import { useAsync } from '@/hooks';
-import { usePrefs } from '@/components/prefs-provider';
+import type { AppT } from '@/i18n/translate';
+import { useTranslations } from '@/i18n/use-translations';
+import { nodes } from '@/i18n/rich';
+import { useFormat } from '@/i18n/use-format';
 
 type Row = { key: string; label: string; line: QuotaLine; fmt: (n: number) => string };
 
-function rows(u: UsageReport): Row[] {
-  const n = (v: number) => v.toLocaleString();
+function rows(u: UsageReport, t: AppT, number: (n: number) => string): Row[] {
   return [
-    { key: 'accounts', label: 'Connected accounts', line: u.quotas.connected_accounts, fmt: n },
-    { key: 'posts', label: 'Posts this month', line: u.quotas.scheduled_posts_month, fmt: n },
-    { key: 'media', label: 'Media storage', line: u.quotas.media_bytes, fmt: formatBytes },
+    { key: 'accounts', label: t('settings.usage.accounts'), line: u.quotas.connected_accounts, fmt: number },
+    { key: 'posts', label: t('settings.usage.posts'), line: u.quotas.scheduled_posts_month, fmt: number },
+    { key: 'media', label: t('settings.usage.media'), line: u.quotas.media_bytes, fmt: (n) => formatBytes(n, t) },
   ];
 }
 
 function Meter({ row }: { row: Row }) {
+  const t = useTranslations('settings.usage');
   const { line, fmt, label } = row;
   const used = line.used ?? 0;
   const unlimited = line.limit < 0;
@@ -30,8 +32,9 @@ function Meter({ row }: { row: Row }) {
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span>{label}</span>
         <span className={full ? 'font-medium text-warning' : 'text-muted-foreground'}>
-          {unlimited ? `${fmt(used)} · no limit` : `${fmt(used)} of ${fmt(line.limit)}`}
-          {full ? ' · limit reached' : ''}
+          {unlimited
+            ? t('lineUnlimited', { used: fmt(used) })
+            : t(full ? 'lineFull' : 'line', { used: fmt(used), limit: fmt(line.limit) })}
         </span>
       </div>
       {unlimited ? null : (
@@ -52,23 +55,30 @@ function Meter({ row }: { row: Row }) {
 
 /** "Plan & usage": what the account has used against the limits of its plan (D-014). */
 export function UsageCard() {
-  const { timezone } = usePrefs();
+  const t = useTranslations();
+  const fmt = useFormat();
   const load = useCallback(() => api.account.usage(), []);
   const { data, error, loading, reload } = useAsync(load);
   if (loading && !data) return <LoadingRows rows={3} />;
-  if (error || !data) return <ErrorState error={error} onRetry={reload} title="Could not load your usage" />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} title={t('settings.usage.loadFailed')} />;
   const rpm = data.quotas.agent_requests_per_minute.limit;
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Plan: <span className="font-medium capitalize text-foreground">{data.plan}</span>. Period: {formatDateTime(data.period_start, timezone)} –{' '}
-        {formatDateTime(data.period_end, timezone)}. A post counts once, when it is first scheduled or published.
+        {nodes(
+          t.rich('settings.usage.summary', {
+            plan: data.plan,
+            start: fmt.dateTime(data.period_start),
+            end: fmt.dateTime(data.period_end),
+            b: (c) => <span className="font-medium capitalize text-foreground">{c}</span>,
+          }),
+        )}
       </p>
-      {rows(data).map((r) => (
+      {rows(data, t, fmt.number).map((r) => (
         <Meter key={r.key} row={r} />
       ))}
       <p className="text-sm text-muted-foreground">
-        AI agents: {rpm < 0 ? 'no request limit' : `up to ${rpm.toLocaleString()} requests per minute across all your keys and connections`}.
+        {rpm < 0 ? t('settings.usage.agentsUnlimited') : t('settings.usage.agentsLimit', { rpm })}
       </p>
     </div>
   );

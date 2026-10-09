@@ -16,8 +16,10 @@ import {
   shouldPoll,
 } from '@/lib/telegram-link';
 import type { SocialAccount, TelegramLink, TelegramLinkStatus } from '@/lib/types';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { nodes } from '@/i18n/rich';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/use-translations';
 
 /**
  * Connects a Telegram channel or group. There is no field for a channel name: the
@@ -25,6 +27,9 @@ import { cn } from '@/lib/utils';
  * proves they control it. The screen then polls until the bot has seen the code.
  */
 export function TelegramConnect({ onConnected }: { onConnected: () => void }) {
+  const t = useTranslations('accounts.telegram');
+  const ta = useTranslations('accounts');
+  const errorText = useErrorText();
   const toast = useToast();
   const [link, setLink] = useState<TelegramLink | null>(null);
   const [done, setDone] = useState<{ name: string; handle: string } | null>(null);
@@ -38,17 +43,17 @@ export function TelegramConnect({ onConnected }: { onConnected: () => void }) {
       setLink(await api.social.startTelegramLink());
       setDone(null);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
   }
 
   function connected(account: SocialAccount | null) {
-    const name = account?.display_name || account?.username || 'your chat';
+    const name = account?.display_name || account?.username || t('yourChat');
     setLink(null);
     setDone({ name, handle: account?.display_name ? (account.username ?? '') : '' });
-    toast.success(`Connected ${name}`);
+    toast.success(ta('connected', { name }));
     onConnected();
   }
 
@@ -75,12 +80,19 @@ export function TelegramConnect({ onConnected }: { onConnected: () => void }) {
         <span className="flex min-w-0 items-center gap-2">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden />
           <span className="min-w-0">
-            Connected <strong className="font-medium">{done.name}</strong>
-            {done.handle ? <span className="text-muted-foreground"> · @{done.handle.replace(/^@/, '')}</span> : null}. You can now publish to it.
+            {nodes(
+              t.rich('connectedTo', {
+                name: done.name,
+                hasHandle: String(Boolean(done.handle)),
+                handle: done.handle.replace(/^@/, ''),
+                b: (c) => <strong className="font-medium">{c}</strong>,
+                muted: (c) => <span className="text-muted-foreground">{c}</span>,
+              }),
+            )}
           </span>
         </span>
         <Button variant="secondary" size="sm" onClick={() => void start()} disabled={busy}>
-          {busy ? 'Creating code…' : 'Connect another'}
+          {busy ? t('creatingCode') : ta('connectAnother')}
         </Button>
       </div>
     );
@@ -89,14 +101,14 @@ export function TelegramConnect({ onConnected }: { onConnected: () => void }) {
   return (
     <div className="space-y-3 rounded-md border bg-surface p-4">
       <div>
-        <p className="text-sm font-medium">Connect a channel or group</p>
+        <p className="text-sm font-medium">{t('connectTitle')}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          You prove you control it by posting a one-time code there, so only chats you own can be connected.
+          {t('connectBody')}
         </p>
       </div>
       {error ? <Notice tone="danger">{error}</Notice> : null}
       <Button onClick={() => void start()} disabled={busy}>
-        {busy ? 'Creating code…' : 'Connect channel'}
+        {busy ? t('creatingCode') : t('connectChannel')}
       </Button>
     </div>
   );
@@ -123,6 +135,9 @@ interface LinkStepsProps {
 }
 
 function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: LinkStepsProps) {
+  const t = useTranslations('accounts.telegram');
+  const tc = useTranslations('common');
+  const errorText = useErrorText();
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [server, setServer] = useState<TelegramLinkStatus | null>(null);
   const [account, setAccount] = useState<SocialAccount | null>(null);
@@ -130,14 +145,14 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
   const [fatal, setFatal] = useState<string | null>(null);
   const remaining = secondsLeft(link.expires_at, nowMs);
   const phase = linkPhase(server, remaining);
-  const bot = link.bot_username ? `@${link.bot_username}` : 'the Steerpost bot';
+  const bot = link.bot_username ? `@${link.bot_username}` : t('botFallback');
 
   // Countdown: re-render once a second while waiting.
   useEffect(() => {
     if (phase !== 'waiting') return undefined;
     setNowMs(Date.now());
-    const t = window.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => window.clearInterval(t);
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
   }, [phase]);
 
   // Status: poll every 2 s until the bot has seen the code (or it expired).
@@ -162,7 +177,7 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
           return;
         }
         if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          setFatal(errorMessage(e));
+          setFatal(errorText(e));
           return;
         }
         setRetrying(true); // network blip or 5xx: keep trying
@@ -174,7 +189,7 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [link.id, phase, fatal]);
+  }, [link.id, phase, fatal, errorText]);
 
   // Hand the result to the parent exactly once.
   const reported = useRef(false);
@@ -192,7 +207,7 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
       <div className="space-y-3">
         <Notice tone="danger">{fatal}</Notice>
         <Button variant="secondary" size="sm" onClick={onCancel}>
-          Close
+          {tc('close')}
         </Button>
       </div>
     );
@@ -201,14 +216,14 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
   if (phase === 'expired') {
     return (
       <div className="space-y-3">
-        <Notice tone="warning">This code has expired. Codes work for 15 minutes and only once.</Notice>
+        <Notice tone="warning">{t('expired')}</Notice>
         {error ? <Notice tone="danger">{error}</Notice> : null}
         <div className="flex flex-wrap gap-2">
           <Button onClick={onNewCode} disabled={busy}>
-            {busy ? 'Creating code…' : 'Get a new code'}
+            {busy ? t('creatingCode') : t('newCode')}
           </Button>
           <Button variant="ghost" onClick={onCancel}>
-            Cancel
+            {tc('cancel')}
           </Button>
         </div>
       </div>
@@ -217,36 +232,34 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
 
   return (
     <div className="space-y-4 rounded-md border bg-surface p-4">
-      <ol className="space-y-4" aria-label="Connect a Telegram channel or group">
+      <ol className="space-y-4" aria-label={t('stepsLabel')}>
         <li className="flex gap-3">
           <StepNumber n={1} />
           <div className="min-w-0 space-y-1.5">
             <p className="text-sm">
-              Add <strong className="font-medium">{bot}</strong> as an administrator of your channel or group with the{' '}
-              <strong className="font-medium">&ldquo;Post messages&rdquo;</strong> right.
+              {nodes(t.rich('step1', { bot, b: (c) => <strong className="font-medium">{c}</strong> }))}
             </p>
-            {link.bot_username ? <CopyButton text={`@${link.bot_username}`} label="Copy bot name" /> : null}
+            {link.bot_username ? <CopyButton text={`@${link.bot_username}`} label={t('copyBot')} /> : null}
           </div>
         </li>
         <li className="flex gap-3">
           <StepNumber n={2} />
           <div className="min-w-0 space-y-2">
-            {/* Translator note: "Post" is a verb here (send a chat message), not the noun "post". */}
-            <p className="text-sm">Post this code there as a normal message:</p>
+            <p className="text-sm">{t('step2')}</p>
             <div className="flex flex-wrap items-center gap-2">
               <code
-                aria-label="One-time code"
+                aria-label={t('codeLabel')}
                 className="select-all rounded-md border bg-muted px-3 py-1.5 font-mono text-base font-semibold tracking-wider"
               >
                 {link.code}
               </code>
-              <CopyButton text={link.code} label="Copy code" />
+              <CopyButton text={link.code} label={t('copyCode')} />
             </div>
             <p
               role="timer"
               className={cn('text-xs', isExpiringSoon(remaining) ? 'font-medium text-warning' : 'text-muted-foreground')}
             >
-              Expires in <span className="tabular-nums">{formatCountdown(remaining)}</span>
+              {nodes(t.rich('expiresIn', { remaining: formatCountdown(remaining), time: (c) => <span className="tabular-nums">{c}</span> }))}
             </p>
           </div>
         </li>
@@ -255,23 +268,21 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
           <div className="min-w-0 space-y-1" aria-live="polite">
             <p className="flex items-center gap-2 text-sm">
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent motion-reduce:animate-none" aria-hidden />
-              Waiting for the code to appear in your chat…
+              {t('waiting')}
             </p>
             <p className="text-xs text-muted-foreground">
-              {retrying
-                ? 'Having trouble reaching the server. Retrying…'
-                : 'Steerpost checks every 2 seconds. Keep this page open; the bot deletes the code message once you are connected.'}
+              {retrying ? t('retrying') : t('pollNote')}
             </p>
             {DEMO ? (
               <p className="text-xs text-muted-foreground">
-                Demo: no real Telegram chat is needed. The code is recognized automatically after a few seconds.
+                {t('demoNote')}
               </p>
             ) : null}
           </div>
         </li>
       </ol>
       <Button variant="ghost" size="sm" onClick={onCancel}>
-        Cancel
+        {tc('cancel')}
       </Button>
     </div>
   );
