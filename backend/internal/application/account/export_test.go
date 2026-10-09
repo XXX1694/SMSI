@@ -184,7 +184,7 @@ func TestBuildWritesEveryFileAndMedia(t *testing.T) {
 	}
 	files := readZip(t, b)
 	want := []string{"README.txt", "api_keys.json", "approvals.json", "audit_logs.json", "mcp_connections.json", "media.json",
-		"media/" + m.ID.String() + ".png", "media/MISSING.txt", "posts.json", "profile.json", "social_accounts.json"}
+		"media/" + m.ID.String() + ".png", "media/MISSING.txt", "posts.json", "profile.json", "sign_in_methods.json", "social_accounts.json"}
 	sort.Strings(want)
 	if got := keys(files); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("files %v\nwant %v", got, want)

@@ -1,7 +1,9 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/url"
 	"strings"
 	"testing"
@@ -473,5 +475,35 @@ func TestADisabledProviderIsNotAWayToSignIn(t *testing.T) {
 	c.must("DELETE", identitiesPath+"/google", nil, 204)
 	if got := providersOf(c.must("GET", identitiesPath, nil, 200)); len(got) != 1 || got[0] != "github" {
 		t.Fatalf("identities left: %v", got)
+	}
+}
+
+// The data export lists the provider accounts a user signs in with, and says whether a password is set.
+func TestExportListsSignInMethods(t *testing.T) {
+	r := newSocialRig(t, envOpts{startWorker: true})
+	c := r.githubSignUp(t, 3501, "wes", "wes@example.com")
+	uid := c.must("GET", "/api/v1/me", nil, 200)["user"].(map[string]any)["id"].(string)
+	id := c.must("POST", "/api/v1/account/exports", nil, 202)["id"].(string)
+	c.waitExport(id, "ready")
+	files := r.e.zipOf(uid, id)
+
+	var methods []map[string]any
+	if err := json.Unmarshal(files["sign_in_methods.json"], &methods); err != nil || len(methods) != 1 {
+		t.Fatalf("sign_in_methods.json: %v %s", err, files["sign_in_methods.json"])
+	}
+	if m := methods[0]; m["provider"] != "github" || m["provider_account_id"] != "3501" || m["email"] != "wes@example.com" || m["linked_at"] == nil {
+		t.Fatalf("method: %v", m)
+	}
+	// Another user's archive holds none of it.
+	other := r.githubSignUp(t, 3502, "xan", "xan@example.com")
+	oid := other.must("GET", "/api/v1/me", nil, 200)["user"].(map[string]any)["id"].(string)
+	oexp := other.must("POST", "/api/v1/account/exports", nil, 202)["id"].(string)
+	other.waitExport(oexp, "ready")
+	if theirs := r.e.zipOf(oid, oexp)["sign_in_methods.json"]; !bytes.Contains(theirs, []byte(`"3502"`)) || bytes.Contains(theirs, []byte("3501")) || bytes.Contains(theirs, []byte("wes@")) {
+		t.Fatalf("another user's export lists wes: %s", theirs)
+	}
+	var profile map[string]any
+	if err := json.Unmarshal(files["profile.json"], &profile); err != nil || profile["has_password"] != false {
+		t.Fatalf("profile.json: %v %s", err, files["profile.json"])
 	}
 }
