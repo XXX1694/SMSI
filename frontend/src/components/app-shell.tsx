@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from '@/i18n/use-translations';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
 import { Logo } from '@/components/brand/logo';
@@ -62,7 +62,7 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative z-10 flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
+        'relative z-10 flex items-center gap-2.5 rounded-md px-2.5 py-3 text-sm transition-colors md:py-1.5',
         active ? 'font-medium text-foreground group-data-[indicator=off]/nav:bg-muted' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
       )}
     >
@@ -109,15 +109,65 @@ function useActiveIndicator(pathname: string, open: boolean) {
   return { nav, box, settled };
 }
 
+/** Escape closes the mobile menu and hands focus back to the button that opened it. */
+function useEscapeToClose(open: boolean, setOpen: (v: boolean) => void, returnFocusTo: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      returnFocusTo.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, setOpen, returnFocusTo]);
+}
+
+/** First tab stop: jumps over the sidebar to the page content. */
+function SkipLink() {
+  return (
+    <a
+      href="#main"
+      className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-3 focus-visible:top-10 focus-visible:z-toast focus-visible:rounded-md focus-visible:border focus-visible:bg-background focus-visible:px-4 focus-visible:py-2.5 focus-visible:text-sm focus-visible:font-medium"
+    >
+      Skip to content
+    </a>
+  );
+}
+
+function SidebarFooter({ email, name, onSignOut }: { email?: string; name?: string; onSignOut: () => void }) {
+  const { available } = useLocaleSettings();
+  return (
+    <>
+      <LegalLinks className="mt-3 px-2.5" />
+      {available.length > 1 ? (
+        <div className="mt-3 px-2.5">
+          <LanguageSelect compact />
+        </div>
+      ) : null}
+      <div className="mt-3 flex items-center justify-between gap-2 border-t px-2.5 pt-3">
+        <span className="truncate text-xs text-muted-foreground" title={email}>
+          {name || email}
+        </span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onSignOut} aria-label="Sign out">
+          <LogOut className="h-4 w-4" aria-hidden />
+        </Button>
+      </div>
+    </>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { available } = useLocaleSettings();
   const router = useRouter();
+  const toggle = useRef<HTMLButtonElement>(null);
   const close = () => setOpen(false);
   const pending = usePendingApprovals();
   const pathname = usePathname();
   const { nav, box, settled } = useActiveIndicator(pathname, open);
+
+  useEscapeToClose(open, setOpen, toggle);
 
   async function signOut() {
     await logout();
@@ -126,14 +176,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen md:flex">
-      <header className="flex h-12 items-center justify-between border-b px-4 md:hidden">
+      <SkipLink />
+      <header data-app-header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:hidden">
         <Logo animate />
         {pending ? (
-          <TransitionLink href="/approvals" className="ml-auto mr-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center rounded-full bg-warning-soft px-3 text-xs font-medium text-warning">
             {pending === 1 ? '1 request waits for you' : `${pending} requests wait for you`}
           </TransitionLink>
         ) : null}
-        <Button variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="sidebar">
+        <Button ref={toggle} variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="sidebar">
           {open ? <X className="h-4 w-4" aria-hidden /> : <Menu className="h-4 w-4" aria-hidden />}
         </Button>
       </header>
@@ -167,22 +218,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </div>
         </nav>
-        <LegalLinks className="mt-3 px-2.5" />
-        {available.length > 1 ? (
-          <div className="mt-3 px-2.5">
-            <LanguageSelect compact />
-          </div>
-        ) : null}
-        <div className="mt-3 flex items-center justify-between gap-2 border-t px-2.5 pt-3">
-          <span className="truncate text-xs text-muted-foreground" title={user?.email}>
-            {user?.display_name || user?.email}
-          </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut} aria-label="Sign out">
-            <LogOut className="h-4 w-4" aria-hidden />
-          </Button>
-        </div>
+        <SidebarFooter email={user?.email} name={user?.display_name} onSignOut={signOut} />
       </aside>
-      <main className="min-w-0 flex-1">
+      <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
         <EmailBanner />
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">
           <PageTransition>{children}</PageTransition>

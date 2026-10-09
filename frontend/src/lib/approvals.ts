@@ -1,4 +1,5 @@
 import { providerLabel } from './normalize';
+import { postStatusView } from './status';
 import { formatDateTime } from './time';
 import type { Approval, ApprovalAction } from './types';
 
@@ -110,6 +111,10 @@ export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
     else if (key === 'accounts' && Array.isArray(raw)) add(label, raw.map((x) => named(String(x))).join(', '));
     else add(label, asText(raw));
   }
-  for (const key of Object.keys(a.summary)) if (!KNOWN.some(([k]) => k === key)) add(sentence(key), asText(a.summary[key]));
+  for (const key of Object.keys(a.summary)) {
+    if (KNOWN.some(([k]) => k === key)) continue;
+    // A post status the server sent as a code ("draft") reads as the badge text ("Draft").
+    add(sentence(key), key === 'status' ? postStatusView(asText(a.summary[key])).label : asText(a.summary[key]));
+  }
   return out;
 }

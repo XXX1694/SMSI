@@ -97,3 +97,13 @@ describe('summary shows network names, not ids', () => {
     expect(lines.find((l) => l.label === 'Text on Telegram')?.value).toBe('Hi');
   });
 });
+
+describe('post status in a summary', () => {
+  it('shows a status code as the badge text', () => {
+    const a = { summary: { status: 'draft', provider: 'mock' } } as unknown as Parameters<typeof summaryLines>[0];
+    expect(summaryLines(a, 'UTC')).toEqual([
+      { label: 'Network', value: 'Test network', long: false },
+      { label: 'Status', value: 'Draft', long: false },
+    ]);
+  });
+});

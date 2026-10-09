@@ -73,7 +73,10 @@ describe('OnboardingChecklist', () => {
     apiMock.posts.list.mockResolvedValue({ items: [{ id: 'p1' }], next_cursor: null });
     apiMock.developer.mcpConnections.mockResolvedValue([live]);
     render(<OnboardingChecklist connectedAccounts={1} />);
-    expect(await screen.findByRole('heading', { name: 'You are set up' })).toBeInTheDocument();
+    expect(await screen.findByText('Set up')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'You are set up' })).not.toBeInTheDocument(); // collapsed to one line
+    await userEvent.click(screen.getByRole('button', { name: 'Show steps' }));
+    expect(screen.getByRole('heading', { name: 'You are set up' })).toBeInTheDocument();
   });
 
   it('keeps a next step and logs the cause when the data cannot be read and there is no account', async () => {
@@ -100,7 +103,7 @@ describe('OnboardingChecklist', () => {
     apiMock.posts.list.mockResolvedValue({ items: [{ id: 'p1' }], next_cursor: null });
     apiMock.developer.mcpConnections.mockResolvedValue([live]);
     const { unmount } = render(<OnboardingChecklist connectedAccounts={1} />);
-    await screen.findByRole('heading', { name: 'You are set up' });
+    await screen.findByText('Set up');
     expect(window.localStorage.getItem(ONBOARDING_COMPLETE_KEY)).toBe('1');
     unmount();
     apiMock.posts.list.mockClear();

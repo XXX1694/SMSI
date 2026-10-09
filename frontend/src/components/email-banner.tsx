@@ -63,7 +63,7 @@ export function EmailBanner() {
           variant="ghost"
           size="icon"
           className="h-7 w-7 shrink-0"
-          aria-label="Dismiss"
+          aria-label="Dismiss email notice"
           onClick={() => {
             writeStorage(DISMISS_KEY, '1');
             setDismissed(true);

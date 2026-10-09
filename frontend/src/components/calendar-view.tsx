@@ -33,7 +33,7 @@ function PostChip({ post, timezone }: { post: Post; timezone: string }) {
     <Link
       href={postHref(post.id)}
       title={`${v.label}: ${postLabel(post)}`}
-      className={cn('block truncate rounded-sm border-l-2 px-1.5 py-0.5 text-xs hover:opacity-80', TONE_CLASS[v.tone])}
+      className={cn('relative block min-h-6 truncate rounded-sm border-l-2 px-1.5 py-1 text-xs hover:opacity-80 max-md:py-3.5', TONE_CLASS[v.tone])}
     >
       <span className="tabular-nums text-muted-foreground">{time}</span> {postLabel(post)}
       <span className="sr-only"> ({v.label})</span>
@@ -55,35 +55,44 @@ function Legend() {
   );
 }
 
-function DayCell({ day, month, posts, today, timezone }: { day: string; month: string; posts: Post[]; today: string; timezone: string }) {
+function DayCell({ day, month, posts, today, timezone, onOpenDay }: { day: string; month: string; posts: Post[]; today: string; timezone: string; onOpenDay: (day: string) => void }) {
   return (
     <div className={cn('min-h-[5.5rem] border-b border-r p-1.5', day.slice(0, 7) !== month && 'bg-muted/40 text-muted-foreground')}>
       <p className={cn('mb-1 text-xs tabular-nums', day === today && 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent font-medium text-accent-foreground')}>
         {dayNumber(day)}
       </p>
-      <div className="hidden space-y-0.5 sm:block">
+      <div className="hidden space-y-1 sm:block">
         {posts.slice(0, 3).map((p) => (
           <PostChip key={p.id} post={p} timezone={timezone} />
         ))}
-        {posts.length > 3 ? <p className="px-1 text-xs text-muted-foreground">+{posts.length - 3} more</p> : null}
+        {posts.length > 3 ? (
+          <button type="button" onClick={() => onOpenDay(day)} className="min-h-6 rounded-sm px-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            +{posts.length - 3} more<span className="sr-only"> on {day}, open the day</span>
+          </button>
+        ) : null}
       </div>
-      {posts.length > 0 ? <p className="text-xs text-muted-foreground sm:hidden">{posts.length === 1 ? '1 post' : `${posts.length} posts`}</p> : null}
+      {posts.length > 0 ? (
+        <button type="button" onClick={() => onOpenDay(day)} className="inline-flex min-h-11 items-center text-xs text-muted-foreground sm:hidden">
+          {posts.length === 1 ? '1 post' : `${posts.length} posts`}
+          <span className="sr-only"> on {day}, open the day</span>
+        </button>
+      ) : null}
     </div>
   );
 }
 
-function MonthGrid({ anchor, byDay, today, timezone }: { anchor: string; byDay: Map<string, Post[]>; today: string; timezone: string }) {
+function MonthGrid({ anchor, byDay, today, timezone, onOpenDay }: { anchor: string; byDay: Map<string, Post[]>; today: string; timezone: string; onOpenDay: (day: string) => void }) {
   const weeks = monthGrid(anchor);
   return (
     <div className="overflow-hidden rounded-lg border-l border-t">
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-[repeat(7,minmax(0,1fr))]">
         {(weeks[0] ?? []).map((d) => (
           <div key={d} className="border-b border-r bg-muted/50 px-1.5 py-1 text-xs font-medium text-muted-foreground">
             {weekdayShort(d)}
           </div>
         ))}
         {weeks.flat().map((d) => (
-          <DayCell key={d} day={d} month={anchor.slice(0, 7)} posts={byDay.get(d) ?? []} today={today} timezone={timezone} />
+          <DayCell key={d} day={d} month={anchor.slice(0, 7)} posts={byDay.get(d) ?? []} today={today} timezone={timezone} onOpenDay={onOpenDay} />
         ))}
       </div>
     </div>
@@ -156,6 +165,11 @@ export function CalendarViewPage() {
     return m;
   }, [posts, timezone]);
 
+  const openDay = (day: string) => {
+    setAnchor(day);
+    setView('day');
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -181,7 +195,7 @@ export function CalendarViewPage() {
               type="button"
               aria-pressed={view === v}
               onClick={() => setView(v)}
-              className={cn('px-3 py-1.5 text-sm first:rounded-l-md last:rounded-r-md', view === v ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/60')}
+              className={cn('px-3 py-1.5 text-sm max-md:min-h-11 first:rounded-l-md last:rounded-r-md', view === v ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/60')}
             >
               {VIEW_LABEL[v]}
             </button>
@@ -191,7 +205,7 @@ export function CalendarViewPage() {
       <Legend />
       {error ? <ErrorState error={new Error(error)} onRetry={() => void load()} /> : null}
       {loading && posts.length === 0 ? <LoadingRows rows={3} /> : null}
-      {!error && view === 'month' ? <MonthGrid anchor={current} byDay={byDay} today={todayKey} timezone={timezone} /> : null}
+      {!error && view === 'month' ? <MonthGrid anchor={current} byDay={byDay} today={todayKey} timezone={timezone} onOpenDay={openDay} /> : null}
       {!error && view === 'week' ? (
         <div className="grid gap-4 md:grid-cols-7">
           {weekDays(current).map((d) => (

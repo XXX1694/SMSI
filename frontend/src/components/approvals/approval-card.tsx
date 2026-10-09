@@ -34,7 +34,7 @@ function SummaryRow({ line }: { line: SummaryLine }) {
   const id = useId();
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-      <dt className="w-28 shrink-0 text-muted-foreground">{line.label}</dt>
+      <dt className="shrink-0 text-muted-foreground sm:w-40">{line.label}</dt>
       <dd className="min-w-0 flex-1 break-words">
         <span id={id} className={cn('whitespace-pre-line', line.long && !open && 'line-clamp-4')}>
           {line.value}
@@ -42,7 +42,7 @@ function SummaryRow({ line }: { line: SummaryLine }) {
         {line.long ? (
           <button
             type="button"
-            className="mt-1 block text-xs font-medium text-accent underline-offset-4 hover:underline"
+            className="mt-1 flex min-h-6 items-center text-xs font-medium max-md:min-h-11 text-accent underline-offset-4 hover:underline"
             aria-expanded={open}
             aria-controls={id}
             onClick={() => setOpen((o) => !o)}

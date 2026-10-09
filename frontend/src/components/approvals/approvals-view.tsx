@@ -1,4 +1,5 @@
 'use client';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
 import { useToast } from '@/components/toast';
@@ -40,7 +41,11 @@ function Empty({ tab }: { tab: Tab }) {
 export function ApprovalsView() {
   const toast = useToast();
   const now = useNow();
-  const [tab, setTab] = useState<Tab>('pending');
+  const router = useRouter();
+  const params = useSearchParams();
+  // The tab lives in the URL (?tab=history) so a reload or a shared link opens the same list.
+  const tab: Tab = params.get('tab') === 'history' ? 'all' : 'pending';
+  const setTab = (t: Tab) => router.replace(t === 'all' ? '/approvals?tab=history' : '/approvals');
   const [busyId, setBusyId] = useState<string | null>(null);
   const load = useCallback(() => api.approvals.list(tab, 50), [tab]);
   const { data, error, loading, reload } = useAsync(load);

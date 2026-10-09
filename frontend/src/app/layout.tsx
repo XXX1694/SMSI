@@ -19,6 +19,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Lets env(safe-area-inset-*) report the notch and home-bar insets (toasts use the bottom one).
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: BRAND_HEX.light.background },
     { media: '(prefers-color-scheme: dark)', color: BRAND_HEX.dark.background },

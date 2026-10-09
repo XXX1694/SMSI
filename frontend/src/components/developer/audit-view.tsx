@@ -116,7 +116,7 @@ export function AuditView() {
         <Tbody>
           {items.map((l) => (
             <Tr key={l.id}>
-              <Td label="When" className="whitespace-nowrap text-muted-foreground">{formatDateTime(l.created_at, timezone)}</Td>
+              <Td label="When" className="whitespace-nowrap text-muted-foreground max-md:text-xs">{formatDateTime(l.created_at, timezone)}</Td>
               <Td label="Actor">
                 <span>
                   <Badge tone={l.actor_type === 'api_key' ? 'accent' : 'neutral'}>{l.actor_type === 'api_key' ? 'API key' : l.actor_type === 'user' ? 'You' : l.actor_type.replace('_', ' ')}</Badge> {l.actor_label}
@@ -125,7 +125,7 @@ export function AuditView() {
               <Td label="Action">
                 <ActionCell log={l} />
               </Td>
-              <Td label="Resource" className="text-muted-foreground">{l.resource_type}{l.resource_id ? ` ${l.resource_id.slice(0, 8)}` : ''}</Td>
+              <Td label="Resource" className="text-muted-foreground max-md:text-xs">{l.resource_type}{l.resource_id ? ` ${l.resource_id.slice(0, 8)}` : ''}</Td>
             </Tr>
           ))}
         </Tbody>
