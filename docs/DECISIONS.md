@@ -260,7 +260,7 @@ spent before the live check of a token connect, so a rejected credential needs a
 browser session can approve. `trusted` is visible: the key list shows it as a badge, and choosing it at creation needs a separate explicit
 confirmation under the "Dangerous" heading. Changing the policy of an existing key and an OAuth-grant policy come later.
 
-## D-014: The landing page moves with CSS and a few small scripts, no animation library (2026-10-09)
+## D-017: The landing page moves with CSS and a few small scripts, no animation library (2026-10-09)
 
 **Decision.** The landing page has its own layout (`site/src/layout-landing.html`); docs keep the calm one. Motion is CSS
 (keyframes, CSS scroll-driven animations where supported, cross-document View Transitions) plus about 10 KB of first-party
