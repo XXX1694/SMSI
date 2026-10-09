@@ -168,8 +168,10 @@ func TestQuotaHoldsUnderConcurrency(t *testing.T) {
 		t.Errorf("%d concurrent scheduled posts passed, want exactly 2", got)
 	}
 	png := noisePNG(t, 1)
-	if got := race(8, func(i int) bool { return c.upload("n.png", png).status == 201 }); got != 3 {
-		t.Errorf("%d concurrent uploads passed, want exactly 3", got)
+	// One upload per user runs at a time (D-015), so most of these are refused with 429 before they reach the quota;
+	// what matters is that the limit (3 files) is never exceeded.
+	if got := race(8, func(i int) bool { return c.upload("n.png", png).status == 201 }); got < 1 || got > 3 {
+		t.Errorf("%d concurrent uploads passed, want 1 to 3", got)
 	}
 }
 
@@ -283,4 +285,41 @@ func TestQuotaRefusesAnOAuthStartAtTheLimit(t *testing.T) {
 	c.register("oauth-quota@example.com")
 	c.connectToken(tokenKey(1))
 	requireQuotaExceeded(t, c.do("GET", "/api/v1/social/mock/connect?redirect=/accounts", nil), "connected_accounts")
+}
+
+// The size of a streamed upload is only known after it was read: it is checked in the transaction of the insert, and a
+// refused file leaves no object behind. A file under the limit and an unlimited plan both pass.
+func TestQuotaStreamedUploadOverTheLimit(t *testing.T) {
+	big := func() []byte {
+		rng := rand.New(rand.NewSource(7))
+		img := image.NewNRGBA(image.Rect(0, 0, 560, 560))
+		for i := range img.Pix {
+			img.Pix[i] = byte(rng.Intn(256))
+		}
+		var b bytes.Buffer
+		if err := png.Encode(&b, img); err != nil {
+			t.Fatal(err)
+		}
+		return b.Bytes()
+	}()
+	if len(big) <= 1<<20 {
+		t.Fatalf("test image is only %d bytes", len(big))
+	}
+	e := newEnv(t, withQuota(quotaOf(unlimited, func(q *config.QuotaConfig) { q.QuotaMediaMB = 1 })))
+	c := e.browser()
+	c.register("stream-quota@example.com")
+	requireQuotaExceeded(t, c.upload("big.png", big), "media_bytes")
+	if e.storage.Len() != 0 {
+		t.Fatalf("a refused upload left %d objects behind", e.storage.Len())
+	}
+	if r := c.upload("small.png", noisePNG(t, 1)); r.status != 201 {
+		t.Fatalf("a file under the limit: %d %s", r.status, r.body)
+	}
+
+	u := newEnv(t, withQuota(unlimited))
+	uc := u.browser()
+	uc.register("stream-unlimited@example.com")
+	if r := uc.upload("big.png", big); r.status != 201 {
+		t.Fatalf("unlimited plan: %d %s", r.status, r.body)
+	}
 }

@@ -83,7 +83,7 @@ curl -s localhost:8080/health                       # {"status":"ok"}
 curl -s -i localhost:8080/ready                     # 200 when postgres, redis and storage are ok; 503 + "errors" otherwise
 
 J=$(mktemp); curl -s -c $J -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/json' \
-  -d '{"email":"me@example.com","password":"correct horse battery","display_name":"Me"}'
+  -d '{"email":"me@example.com","password":"correct horse battery","display_name":"Me","accept_terms":true}'
 curl -s -b $J localhost:8080/api/v1/me              # {"user":{...},"scopes":[...],"csrf_token":"...","auth_type":"session","api_key":null,...}
 CSRF=$(curl -s -b $J localhost:8080/api/v1/me | python3 -c 'import sys,json;print(json.load(sys.stdin)["csrf_token"])')
 
