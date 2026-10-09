@@ -1,5 +1,6 @@
 import type {
   Capabilities,
+  ConnectField,
   CreatedApiKey,
   CreatedMcpConnection,
   McpConfigSnippets,
@@ -61,7 +62,37 @@ export function normalizeCapabilities(raw: unknown): Capabilities {
     maxMediaCount: num(pick(r, 'maxMediaCount')),
     requiresApproval: bool(pick(r, 'requiresApproval')),
     notes: str(pick(r, 'notes')),
+    connectMethod: str(pick(r, 'connectMethod')),
+    connectFields: normalizeConnectFields(pick(r, 'connectFields')),
   };
+}
+
+/** The string-valued entries of an object, e.g. the per-field messages of a validation error. */
+export function stringRecord(raw: unknown): Record<string, string> {
+  if (!isRec(raw)) return {};
+  return Object.fromEntries(Object.entries(raw).filter((e): e is [string, string] => typeof e[1] === 'string'));
+}
+
+/** Fields without a name are dropped; an unknown kind is treated as plain text, a `secret` kind always as a secret. */
+export function normalizeConnectFields(raw: unknown): ConnectField[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item): ConnectField[] => {
+    const f = isRec(item) ? item : {};
+    const name = str(f.name);
+    if (!name) return [];
+    const kind = f.kind === 'secret' || f.kind === 'url' ? f.kind : 'text';
+    return [
+      {
+        name,
+        label: str(f.label) || name,
+        help: str(f.help),
+        placeholder: str(f.placeholder),
+        kind,
+        required: f.required === true,
+        secret: f.secret === true || kind === 'secret',
+      },
+    ];
+  });
 }
 
 export function normalizeProvider(raw: unknown): Provider {
@@ -94,6 +125,9 @@ const LABELS: Record<string, string> = {
   x: 'X',
   threads: 'Threads',
   pinterest: 'Pinterest',
+  discord: 'Discord',
+  mastodon: 'Mastodon',
+  bluesky: 'Bluesky',
 };
 
 export function providerLabel(id: string): string {

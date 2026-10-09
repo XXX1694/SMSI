@@ -184,6 +184,13 @@ export const api = {
     async disconnect(id: string): Promise<void> {
       await request(`/social/accounts/${enc(id)}`, { method: 'DELETE' });
     },
+    /**
+     * Connects a network from a pasted credential (Discord webhook, Mastodon token, Bluesky app password).
+     * The values go in the request body only: never in a URL, a log or storage. Needs `social:connect`.
+     */
+    async connectWithToken(provider: string, fields: Record<string, string>): Promise<SocialAccount> {
+      return (await request('/social/accounts/token', { method: 'POST', body: { provider, fields } })) as SocialAccount;
+    },
     /** Demo build only: OAuth cannot run in a static site, so this adds a sample account right away. */
     async connectDemo(provider: string): Promise<SocialAccount> {
       return (await request(`/social/${enc(provider)}/connect`, { method: 'POST' })) as SocialAccount;

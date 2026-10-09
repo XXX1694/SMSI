@@ -70,6 +70,16 @@ export interface DemoResponse {
   body: unknown;
 }
 
+export interface WireConnectField {
+  name: string;
+  label: string;
+  help?: string;
+  placeholder?: string;
+  kind: 'text' | 'secret' | 'url';
+  required: boolean;
+  secret?: boolean;
+}
+
 /** Raw provider as `GET /social/providers` returns it (snake_case, normalised by the client). */
 export interface WireProvider {
   provider: string;
@@ -86,6 +96,8 @@ export interface WireProvider {
     max_media_count: number;
     requires_approval: boolean;
     notes: string;
+    connect_method?: string;
+    connect_fields?: WireConnectField[];
   };
 }
 

@@ -60,6 +60,22 @@ export interface Capabilities {
   maxMediaCount: number;
   requiresApproval: boolean;
   notes: string;
+  /** How an account is connected: "oauth" (a redirect), "telegram_chat", "token" (a pasted credential) or "none". */
+  connectMethod: string;
+  /** The form of a `token` provider, rendered as is. Empty for every other method. */
+  connectFields: ConnectField[];
+}
+
+/** One input of a "Connect with a token" form (`connect_fields` of GET /social/providers). */
+export interface ConnectField {
+  name: string;
+  label: string;
+  help: string;
+  placeholder: string;
+  kind: 'text' | 'secret' | 'url';
+  required: boolean;
+  /** A credential whatever its kind: shown as a password input and never echoed or stored. */
+  secret: boolean;
 }
 
 export interface Provider {

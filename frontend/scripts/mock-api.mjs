@@ -12,6 +12,9 @@
  * it anywhere here, so the mock "sees" the code in a demo channel MOCK_LINK_DELAY_MS (default 5000) after
  * it was created and connects that channel. MOCK_LINK_TTL_SECONDS (default 900) shortens the code lifetime
  * to try the "expired" screen, and a delay of 0 or less never connects (the code just expires).
+ *
+ * Token providers (Discord, Mastodon, Bluesky): POST /social/accounts/token validates like the real API and accepts any
+ * credential, except a secret containing "invalid" (400 "rejected these credentials") or the Mastodon token "rate-limit" (429).
  */
 import { createServer } from 'node:http';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -34,9 +37,22 @@ const caps = (o) => ({
   can_publish_text: false, can_publish_image: false, can_publish_video: false, can_schedule: false,
   can_delete: false, can_analytics: false, max_text_length: 0, max_media_count: 0, requires_approval: false, notes: '', ...o,
 });
+const tokenProvider = (provider, c, connect_fields) => ({ provider, configured: true, status: 'supported', capabilities: caps({ ...c, connect_method: 'token', connect_fields }) });
 const PROVIDERS = [
   { provider: 'linkedin', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, max_text_length: 3000, max_media_count: 9, requires_approval: true, notes: 'Company pages need Marketing Developer Platform approval. Video is not supported yet.' }) },
   { provider: 'telegram', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, can_publish_video: true, can_delete: true, max_text_length: 4096, max_media_count: 10, notes: "Add the SocialOS bot as an admin with 'Post messages' to your channel or group, then post the one-time code SocialOS gives you there to prove you control it." }) },
+  tokenProvider('discord', { can_publish_text: true, can_publish_image: true, can_delete: true, max_text_length: 2000, max_media_count: 10, notes: "Posts into one channel through its webhook, as the webhook's name. Text up to 2000 characters and up to 10 images; mentions are not pinged. No titles, video, threads or scheduling on Discord's side." }, [
+    { name: 'webhook_url', label: 'Webhook URL', kind: 'url', secret: true, required: true, placeholder: 'https://discord.com/api/webhooks/...', help: 'Channel settings > Integrations > Webhooks > New Webhook > Copy Webhook URL. The URL is a password: anyone who has it can post in that channel.' },
+  ]),
+  tokenProvider('mastodon', { can_publish_text: true, can_publish_image: true, max_text_length: 500, max_media_count: 4, notes: 'Mastodon and compatible servers. Posts are public; images only (no video). Limits are read from your instance when you connect.' }, [
+    { name: 'instance_url', label: 'Instance URL', kind: 'url', required: true, placeholder: 'https://mastodon.social', help: 'The https address of your server. Servers on private networks cannot be connected.' },
+    { name: 'access_token', label: 'Access token', kind: 'secret', secret: true, required: true, help: 'On your server: Preferences > Development > New application. Tick write:statuses, write:media and read:accounts, then copy "Your access token".' },
+  ]),
+  tokenProvider('bluesky', { can_publish_text: true, can_publish_image: true, can_delete: true, max_text_length: 300, max_media_count: 4, notes: 'Text up to 300 characters, up to 4 images of 2 MB each without alt text. Links and hashtags become clickable; mentions are not linked. Uses an app password. SocialOS schedules; Bluesky has no native scheduling.' }, [
+    { name: 'handle', label: 'Handle', kind: 'text', required: true, placeholder: 'name.bsky.social', help: 'Your Bluesky handle, for example name.bsky.social.' },
+    { name: 'app_password', label: 'App password', kind: 'secret', secret: true, required: true, placeholder: 'xxxx-xxxx-xxxx-xxxx', help: 'Create one in Settings > Privacy and security > App passwords. Never use your main password.' },
+    { name: 'pds', label: 'Server (optional)', kind: 'url', required: false, placeholder: 'https://bsky.social', help: 'Only if you host your own PDS. Leave empty for bsky.social.' },
+  ]),
   { provider: 'mock', configured: true, status: 'supported', capabilities: caps({ can_publish_text: true, can_publish_image: true, can_publish_video: true, can_schedule: true, can_delete: true, can_analytics: true, max_text_length: 280, max_media_count: 4, notes: 'Deterministic mock provider for testing.' }) },
   ...['instagram', 'facebook', 'tiktok', 'youtube', 'x', 'threads', 'pinterest'].map((p) => ({
     provider: p, configured: false, status: 'unsupported', capabilities: caps({ requires_approval: true, notes: 'Registered stub: returns PROVIDER_NOT_AVAILABLE.' }),
@@ -260,6 +276,33 @@ async function handle(req, res) {
       return send(res, 200, { status: 'connected', account: a ? pub : undefined });
     }
     return send(res, 200, { status: Date.parse(link.expires_at) > Date.now() ? 'pending' : 'expired' });
+  }
+  if (path === '/social/accounts/token' && m === 'POST') {
+    // Same validation and error shapes as the real endpoint. "Verify" accepts anything except a secret containing "invalid".
+    const p = PROVIDERS.find((x) => x.provider === body.provider);
+    const spec = p?.capabilities.connect_fields;
+    if (!spec) return fail(res, 400, 'VALIDATION_ERROR', 'provider cannot be connected with a token');
+    const input = body.fields && typeof body.fields === 'object' ? body.fields : {};
+    const bad = (message, fields) => send(res, 400, { error: { code: 'VALIDATION_ERROR', message, request_id: randomUUID().slice(0, 8), fields } });
+    const values = {};
+    for (const [name, raw] of Object.entries(input)) {
+      const f = spec.find((x) => x.name === name);
+      if (!f || typeof raw !== 'string') return bad('invalid fields', { fields: 'unknown field' });
+      values[name] = raw.trim();
+      if (values[name] && f.kind === 'url' && !/^https:\/\/[^/@\s]+/.test(values[name])) return bad(`${f.label} must be an https URL`, { [name]: 'must be an https URL' });
+    }
+    const missing = spec.find((f) => f.required && !values[f.name]);
+    if (missing) return bad(`${missing.label} is required`, { [missing.name]: 'required' });
+    const name = p.provider.charAt(0).toUpperCase() + p.provider.slice(1);
+    if (spec.some((f) => (f.secret || f.kind === 'secret') && /invalid/i.test(values[f.name] ?? ''))) return fail(res, 400, 'VALIDATION_ERROR', `${name} rejected these credentials`);
+    if (values.access_token === 'rate-limit') return fail(res, 429, 'RATE_LIMITED', 'Too many requests');
+    const who = values.handle || values.instance_url?.replace(/^https:\/\//, '').replace(/\/.*$/, '') || 'webhook';
+    const username = p.provider === 'mastodon' ? `demo@${who}` : p.provider === 'discord' ? '#general' : who;
+    let a = mine(db.accounts).find((x) => x.provider === p.provider && x.username === username);
+    if (a) a.status = 'active';
+    else { a = { id: randomUUID(), user_id: user.id, provider: p.provider, username, display_name: `${name} ${username}`, avatar_url: null, status: 'active', scopes: [], connected_at: now() }; db.accounts.push(a); }
+    const { user_id, ...pub } = a;
+    return send(res, 201, pub);
   }
   if ((r = path.match(/^\/social\/(\w+)\/connect$/)) && m === 'GET') {
     const p = PROVIDERS.find((x) => x.provider === r[1]);

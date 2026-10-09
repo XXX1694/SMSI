@@ -635,3 +635,36 @@ describe('demo: mail-driven account flows', () => {
     expect(r.call('POST', '/auth/verify-email/resend').status).toBe(409);
   });
 });
+
+describe('demo: connect with a token', () => {
+  const connect = (r: Rig, provider: string, fields: Record<string, string>) => r.call('POST', '/social/accounts/token', { provider, fields });
+
+  it('lists connect_fields for Discord, Mastodon and Bluesky', () => {
+    const items = rig().call('GET', '/social/providers').body.items as { provider: string; capabilities: { connect_method?: string; connect_fields?: { name: string; secret?: boolean }[] } }[];
+    for (const id of ['discord', 'mastodon', 'bluesky']) {
+      const p = items.find((x) => x.provider === id);
+      expect(p?.capabilities.connect_method).toBe('token');
+      expect(p?.capabilities.connect_fields?.some((f) => f.secret)).toBe(true);
+    }
+  });
+
+  it('connects an account and answers it in the account list, never storing the secret', () => {
+    const r = rig();
+    const res = connect(r, 'bluesky', { handle: 'me.bsky.social', app_password: 'abcd-efgh-ijkl-mnop' });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ provider: 'bluesky', username: 'me.bsky.social', status: 'active' });
+    expect((r.call('GET', '/social/accounts').body.items as { provider: string }[]).some((a) => a.provider === 'bluesky')).toBe(true);
+    expect(JSON.stringify(r.persisted)).not.toContain('abcd-efgh');
+  });
+
+  it('answers per-field validation errors, unknown fields and rejected credentials like the API', () => {
+    const r = rig();
+    expect(connect(r, 'bluesky', { handle: 'x' }).body.error.fields).toEqual({ app_password: 'required' });
+    expect(connect(r, 'mastodon', { instance_url: 'http://x.example', access_token: 't' }).body.error.fields).toEqual({ instance_url: 'must be an https URL' });
+    expect(connect(r, 'discord', { nope: 'x' }).body.error.fields).toEqual({ fields: 'unknown field' });
+    const bad = connect(r, 'discord', { webhook_url: 'https://discord.com/api/webhooks/1/invalid' });
+    expect(bad.status).toBe(400);
+    expect(bad.body.error.message).toBe('Discord rejected these credentials');
+    expect(connect(r, 'linkedin', {}).status).toBe(400);
+  });
+});

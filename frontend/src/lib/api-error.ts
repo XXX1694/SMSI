@@ -1,14 +1,19 @@
+import { stringRecord } from './normalize';
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly requestId: string | null;
+  /** Per-field messages of a validation error (`error.fields`), keyed by field name. */
+  readonly fields: Record<string, string>;
 
-  constructor(status: number, code: string, message: string, requestId: string | null = null) {
+  constructor(status: number, code: string, message: string, requestId: string | null = null, fields: Record<string, string> = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.requestId = requestId;
+    this.fields = fields;
   }
 }
 
@@ -23,6 +28,7 @@ export function parseErrorBody(status: number, body: unknown): ApiError {
         typeof r.code === 'string' ? r.code : 'UNKNOWN',
         typeof r.message === 'string' ? r.message : `Request failed (${status})`,
         typeof r.request_id === 'string' ? r.request_id : null,
+        stringRecord(r.fields),
       );
     }
   }

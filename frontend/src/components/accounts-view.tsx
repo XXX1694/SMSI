@@ -7,6 +7,7 @@ import { usePrefs } from '@/components/prefs-provider';
 import { ErrorState, LoadingRows, Notice } from '@/components/states';
 import { AccountStatusBadge } from '@/components/status-badge';
 import { TelegramConnect } from '@/components/telegram-connect';
+import { TokenConnectDialog } from '@/components/token-connect-dialog';
 import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,22 +45,25 @@ function AccountItem({ account, onDisconnect }: { account: SocialAccount; onDisc
   );
 }
 
-function ProviderRow({
-  provider,
-  accounts,
-  onDisconnect,
-  onConnected,
-}: {
-  provider: Provider;
-  accounts: SocialAccount[];
-  onDisconnect: (a: SocialAccount) => void;
-  onConnected: () => void;
-}) {
-  const caps = provider.capabilities;
+function DemoNote({ provider }: { provider: Provider }) {
+  if (provider.id === 'telegram') return null;
+  const text = isTokenProvider(provider)
+    ? `Demo: nothing is sent to ${provider.name}. Any details connect a sample account; a secret containing "invalid" is rejected so you can see the error.`
+    : `Demo: the real ${provider.name} sign-in is skipped; Connect adds a sample account.`;
+  return <p className="text-xs text-muted-foreground">{text}</p>;
+}
+
+function isTokenProvider(p: Provider): boolean {
+  return p.capabilities.connectMethod === 'token' && p.capabilities.connectFields.length > 0;
+}
+
+/** The Connect button: a form for token providers, a redirect for OAuth ones, an instant sample account in the demo. Telegram has its own panel. */
+function ConnectAction({ provider, hasAccounts, onConnected }: { provider: Provider; hasAccounts: boolean; onConnected: () => void }) {
   const toast = useToast();
   const [connecting, setConnecting] = useState(false);
+  const [tokenOpen, setTokenOpen] = useState(false);
+  const label = hasAccounts ? 'Connect another' : 'Connect';
 
-  /** Demo only: there is no OAuth server to talk to, so the sample account appears immediately. */
   async function connectDemo() {
     setConnecting(true);
     try {
@@ -73,6 +77,52 @@ function ProviderRow({
     }
   }
 
+  if (isTokenProvider(provider)) {
+    return (
+      <>
+        <Button variant="secondary" size="sm" onClick={() => setTokenOpen(true)} aria-haspopup="dialog">
+          {label}
+        </Button>
+        <TokenConnectDialog
+          provider={provider}
+          open={tokenOpen}
+          onOpenChange={setTokenOpen}
+          onConnected={(account) => {
+            setTokenOpen(false);
+            toast.success(`Connected ${account.display_name || account.username || provider.name}`);
+            onConnected();
+          }}
+        />
+      </>
+    );
+  }
+  if (provider.id === 'telegram') return null;
+  if (DEMO) {
+    return (
+      <Button variant="secondary" size="sm" onClick={() => void connectDemo()} disabled={connecting}>
+        {label}
+      </Button>
+    );
+  }
+  return (
+    <Button asChild variant="secondary" size="sm">
+      <a href={api.social.connectUrl(provider.id)}>{label}</a>
+    </Button>
+  );
+}
+
+function ProviderRow({
+  provider,
+  accounts,
+  onDisconnect,
+  onConnected,
+}: {
+  provider: Provider;
+  accounts: SocialAccount[];
+  onDisconnect: (a: SocialAccount) => void;
+  onConnected: () => void;
+}) {
+  const caps = provider.capabilities;
   if (!provider.available) {
     return (
       <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
@@ -89,23 +139,11 @@ function ProviderRow({
           <h2 className="text-sm font-semibold">{provider.name}</h2>
           {provider.id === 'mock' ? <Badge tone="outline">Mock · for testing</Badge> : null}
         </div>
-        {provider.id !== 'telegram' ? (
-          DEMO ? (
-            <Button variant="secondary" size="sm" onClick={() => void connectDemo()} disabled={connecting}>
-              {accounts.length ? 'Connect another' : 'Connect'}
-            </Button>
-          ) : (
-            <Button asChild variant="secondary" size="sm">
-              <a href={api.social.connectUrl(provider.id)}>{accounts.length ? 'Connect another' : 'Connect'}</a>
-            </Button>
-          )
-        ) : null}
+        <ConnectAction provider={provider} hasAccounts={accounts.length > 0} onConnected={onConnected} />
       </div>
       <CapabilityBadges caps={caps} />
       {caps.notes ? <p className="text-xs text-muted-foreground">{caps.notes}</p> : null}
-      {DEMO && provider.id !== 'telegram' ? (
-        <p className="text-xs text-muted-foreground">Demo: the real {provider.name} sign-in is skipped; Connect adds a sample account.</p>
-      ) : null}
+      {DEMO ? <DemoNote provider={provider} /> : null}
       {caps.requiresApproval ? (
         <p className="text-xs text-muted-foreground">Some features (e.g. company pages) require platform approval.</p>
       ) : null}

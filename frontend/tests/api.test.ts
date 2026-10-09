@@ -183,3 +183,11 @@ describe('approvals endpoints', () => {
     await expect(api.approvals.approve('a1')).rejects.toMatchObject({ code: 'CONFLICT', status: 409 });
   });
 });
+
+describe('parseErrorBody fields', () => {
+  it('keeps per-field messages and ignores non-string values', () => {
+    const e = parseErrorBody(400, { error: { code: 'VALIDATION_ERROR', message: 'm', fields: { a: 'required', b: 3 } } });
+    expect(e.fields).toEqual({ a: 'required' });
+    expect(parseErrorBody(500, null).fields).toEqual({});
+  });
+});

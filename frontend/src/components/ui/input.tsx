@@ -41,9 +41,13 @@ export function Field({
     <div className="space-y-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
-      {hint && !error ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {hint && !error ? (
+        <p id={`${htmlFor}-hint`} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
       {error ? (
-        <p role="alert" className="text-xs text-danger">
+        <p id={`${htmlFor}-error`} role="alert" className="text-xs text-danger">
           {error}
         </p>
       ) : null}
