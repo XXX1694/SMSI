@@ -51,7 +51,6 @@ type meResp struct {
 	ID          string `json:"id"`
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name"`
-	AcceptTerms bool   `json:"accept_terms"`
 }
 
 type keyBrief struct {
