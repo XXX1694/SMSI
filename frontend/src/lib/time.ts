@@ -1,4 +1,5 @@
 /** Timezone helpers built on Intl only (no date library). */
+import { addDays } from '@/lib/calendar';
 
 export function browserTimezone(): string {
   try {
@@ -75,6 +76,20 @@ export function zonedToUtcIso(date: string, time: string, tz: string): string | 
   const result = new Date(utc);
   if (Number.isNaN(result.getTime())) return null;
   return result.toISOString().replace('.000Z', 'Z');
+}
+
+/**
+ * UTC bounds of whole calendar days ("YYYY-MM-DD") in `tz`: the start of `from` and the last second of `to`.
+ * An empty or malformed day gives `undefined` for that bound.
+ */
+export function zonedDayRangeIso(from: string, to: string, tz: string): { from?: string; to?: string } {
+  const start = from ? zonedToUtcIso(from, '00:00', tz) : null;
+  let end: string | null = null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    const nextStart = zonedToUtcIso(addDays(to, 1), '00:00', tz);
+    if (nextStart) end = new Date(new Date(nextStart).getTime() - 1000).toISOString().replace('.000Z', 'Z');
+  }
+  return { from: start ?? undefined, to: end ?? undefined };
 }
 
 export function utcToZonedInputs(iso: string, tz: string): { date: string; time: string } {
