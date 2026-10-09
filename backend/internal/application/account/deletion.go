@@ -77,7 +77,7 @@ func (s *DeletionService) Request(ctx context.Context, a actor.Actor, password, 
 	if u.DeletionScheduledAt != nil {
 		return nil, errs.New(errs.Conflict, "deletion of this account is already scheduled")
 	}
-	if err := s.reauthenticate(ctx, u, password, confirmEmail); err != nil {
+	if err := s.reauthenticate(ctx, a, u, password, confirmEmail); err != nil {
 		return nil, err
 	}
 	now := s.d.Clock.Now()
@@ -111,9 +111,21 @@ func (s *DeletionService) Request(ctx context.Context, a actor.Actor, password, 
 	return &Schedule{PurgeAt: purgeAt}, nil
 }
 
+// FreshSessionWindow is how recently a user without a password must have signed in to delete the account: they have
+// no password to type, so a sign-in a moment ago stands in for it (D-023).
+const FreshSessionWindow = 10 * time.Minute
+
 // reauthenticate checks the password and the typed confirmation. Both failures are field errors, so the form can say
-// which one is wrong; a rate-limited hasher passes through unchanged.
-func (s *DeletionService) reauthenticate(ctx context.Context, u *user.User, password, confirmEmail string) error {
+// which one is wrong; a rate-limited hasher passes through unchanged. A user without a password (social sign-up) proves
+// it is them with a session signed in within FreshSessionWindow; an older one gets REAUTH_REQUIRED, so deletion stays
+// available (AGENTS section 7) by signing in again with the provider.
+func (s *DeletionService) reauthenticate(ctx context.Context, a actor.Actor, u *user.User, password, confirmEmail string) error {
+	if !u.HasPassword() {
+		if age := s.d.Clock.Now().Sub(a.SessionCreatedAt); a.SessionCreatedAt.IsZero() || age > FreshSessionWindow {
+			return errs.New(errs.ReauthRequired, "sign in again to delete your account")
+		}
+		return confirmTyped(u, confirmEmail)
+	}
 	ok, err := s.d.Passwords.Verify(ctx, password, u.PasswordHash)
 	if errs.CodeOf(err) == errs.RateLimited {
 		return err
@@ -126,6 +138,10 @@ func (s *DeletionService) reauthenticate(ctx context.Context, u *user.User, pass
 	if !ok {
 		return errs.Validationf("the password is incorrect").WithField("password", "incorrect")
 	}
+	return confirmTyped(u, confirmEmail)
+}
+
+func confirmTyped(u *user.User, confirmEmail string) error {
 	if !strings.EqualFold(strings.TrimSpace(confirmEmail), u.Email) {
 		return errs.Validationf("type your email address exactly to confirm").WithField("confirm", "does not match your email")
 	}

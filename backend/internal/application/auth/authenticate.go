@@ -36,7 +36,7 @@ func (s *Service) AuthenticateSession(ctx context.Context, rawToken string, ci C
 	}
 	a := actor.Actor{
 		UserID: u.ID, Type: actor.TypeUser, ID: u.ID.String(), Label: u.Email,
-		SessionID: sess.ID, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u), DeletionScheduled: u.DeletionScheduledAt != nil,
+		SessionID: sess.ID, SessionCreatedAt: sess.CreatedAt, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u), DeletionScheduled: u.DeletionScheduledAt != nil,
 	}
 	return a, sess.CSRFToken, nil
 }

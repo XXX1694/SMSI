@@ -120,6 +120,9 @@ func NewRouter(svc Services, opt Options) http.Handler {
 				r.Use(middleware.RateLimit(opt.AuthLimiter, a.trusted, opt.Metrics, "auth:"))
 				r.Post("/auth/register", a.register)
 				r.Post("/auth/login", a.login)
+				r.Get("/auth/oauth/{provider}/start", a.oauthStart)
+				r.Get("/auth/oauth/{provider}/callback", a.oauthCallback)
+				r.Post("/auth/oauth/complete", a.oauthComplete)
 				r.Group(func(r chi.Router) {
 					r.Use(middleware.RateLimit(opt.MailLimiter, a.trusted, opt.Metrics, "mail:"))
 					r.Post("/auth/verify-email", a.verifyEmail)
@@ -128,6 +131,8 @@ func NewRouter(svc Services, opt Options) http.Handler {
 				})
 			})
 			r.Get("/social/{provider}/callback", a.callback)
+			r.Get("/auth/providers", a.authProviders)
+			r.Get("/auth/oauth/pending", a.oauthPending)
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireAuth)
 				a.mountAuthenticated(r)

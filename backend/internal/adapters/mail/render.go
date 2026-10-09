@@ -22,6 +22,8 @@ const (
 	// AccountDeletionScheduled tells the owner that deletion was requested and how to cancel it.
 	AccountDeletionScheduled = "account_deletion_scheduled"
 	ExportReady              = "export_ready"
+	// IdentityLinked tells the owner that a sign-in provider was linked to the account automatically.
+	IdentityLinked = "identity_linked"
 )
 
 //go:embed templates/*.tmpl
@@ -37,6 +39,8 @@ type Data struct {
 	KeysRevoked bool
 	// Date is when a scheduled account deletion happens (account_deletion_scheduled), already formatted.
 	Date string
+	// Provider is the display name of a linked sign-in provider (identity_linked).
+	Provider string
 }
 
 var subjects = map[string]string{
@@ -45,6 +49,7 @@ var subjects = map[string]string{
 	PasswordChanged:          "Your " + ProductName + " password was changed",
 	AccountDeleted:           "Your " + ProductName + " account was deleted",
 	AccountDeletionScheduled: "Your " + ProductName + " account will be deleted",
+	IdentityLinked:           "A sign-in method was added to your " + ProductName + " account",
 	ExportReady:              "Your " + ProductName + " data export is ready",
 }
 

@@ -84,6 +84,7 @@ erDiagram
   users ||--o{ mcp_connections : owns
   users ||--o{ telegram_link_codes : requests
   users ||--o{ email_tokens : "is mailed"
+  users ||--o{ user_identities : "signs in with"
   users ||--o{ data_exports : requests
   telegram_link_codes }o--o| social_accounts : "connected"
   users ||--o{ audit_logs : generates
@@ -100,13 +101,17 @@ erDiagram
 ```
 
 ```sql
-users(id, email citext unique, password_hash, display_name, status ['active','disabled','deleted'],
+users(id, email citext unique, password_hash null (null = signed up with a provider, see user_identities), display_name, status ['active','disabled','deleted'],
       email_verified_at null, terms_accepted_at null, terms_version, plan default 'free', deleted_at null,
       deletion_scheduled_at null)   -- migration 00003 and 00006
 email_tokens(id, user_id FK, purpose ['verify_email','reset_password'], token_hash unique, email citext, expires_at, used_at null)   -- migration 00003; only the SHA-256 of the token is stored; a newer token of the same purpose retires older ones
 data_exports(id, user_id FK, status ['pending','running','ready','failed','expired'], storage_key, size_bytes, error_code, expires_at null)   -- migration 00003; one active export per user; see Account data export (D-018)
 account_deletions(id, user_id (no FK, unique), requested_at, purged_at null, counts jsonb)   -- migration 00003 and 00006; no PII on purpose; see Account deletion (D-019)
 sessions(id, user_id, token_hash unique, csrf_token, expires_at, user_agent, ip)
+user_identities(id, user_id FK cascade, provider ['google','github'], subject, email citext, email_verified, linked_at, last_login_at null,
+                unique(provider, subject), unique(user_id, provider))   -- migration 00008, D-023; subject is the provider's stable id, never an email
+auth_oauth_flows(id, provider, intent ['login','link'], link_user_id null FK, state_hash unique, nonce_hash, code_verifier_enc, redirect_after,
+                 expires_at, used_at null, ticket_hash unique null, ticket_expires_at null, pending jsonb null)   -- migration 00008; only hashes; the ticket is the pending sign-up
 oauth_states(id, user_id, provider, state_hash unique, code_verifier, redirect_after, expires_at, used_at)
 social_accounts(id, user_id, provider, provider_account_id, username, display_name, avatar_url,
                 scopes text[], metadata jsonb, status ['active','expired','revoked','error'], connected_at,
@@ -127,7 +132,7 @@ mcp_connections(id, user_id, api_key_id, name, client_name, last_seen_at, revoke
 audit_logs(id, user_id, actor_type ['user','api_key','scheduler','system'], actor_id, actor_label, action, resource_type, resource_id, metadata jsonb, request_id, ip)
 analytics(id, user_id, social_account_id, post_target_id null, metric, value bigint, captured_at)   -- MVP: table + endpoint, filled by adapters that CanAnalytics (none yet) and by internal counters
 ```
-Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `action_approvals(user_id, status, created_at desc)`, `action_approvals(expires_at)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`, `email_tokens(user_id, purpose, created_at desc)`, `email_tokens(expires_at)`.
+Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `action_approvals(user_id, status, created_at desc)`, `action_approvals(expires_at)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`, `email_tokens(user_id, purpose, created_at desc)`, `email_tokens(expires_at)`, `auth_oauth_flows(expires_at)`, `auth_oauth_flows(link_user_id) where link_user_id is not null`.
 
 ## 4. REST API (`/api/v1`)
 
@@ -135,7 +140,7 @@ Error format everywhere:
 ```json
 {"error":{"code":"SOCIAL_ACCOUNT_EXPIRED","message":"LinkedIn authorization has expired","request_id":"…"}}
 ```
-Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`; also `EMAIL_NOT_VERIFIED` when the server enforces email verification and the owner has not verified, see Auth; also `QUOTA_EXCEEDED` when a plan limit is reached, see "Plan limits"), `APPROVAL_REQUIRED 428` (an API key attempted a dangerous action; see "Approvals"), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
+Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`; also `EMAIL_NOT_VERIFIED` when the server enforces email verification and the owner has not verified, see Auth; also `QUOTA_EXCEEDED` when a plan limit is reached, see "Plan limits"; also `REAUTH_REQUIRED` when a user without a password must sign in again first, see "Account deletion"), `APPROVAL_REQUIRED 428` (an API key attempted a dangerous action; see "Approvals"), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
 Pagination: `?limit=&cursor=` → `{"items":[…],"next_cursor":null|"…"}`. Times are RFC 3339 UTC.
 
 ### Auth
@@ -154,6 +159,20 @@ Email verification and password recovery (mail goes through the queued mail port
 Tokens: 32 random bytes, stored as SHA-256, single use (atomic consume), TTL 48 h for verification and 30 min for reset; a new token retires the older ones of the same purpose, and at most 10 are issued per user and purpose per rolling 24 h (extra requests get the same response and no mail). If the last delivery retry fails, the token behind the mail is retired. Public endpoints sit behind the auth limiter plus a mail limiter (1 per minute, burst 3, per client). Audit actions: `user.email_verified`, `user.password_reset`, `user.password_changed` (metadata never contains tokens). A `password_changed` notice mail follows both password changes.
 
 **Gating.** Verification is enforced only when `MAIL_PROVIDER=smtp` (otherwise nobody could receive the link). An unverified owner then gets `403 EMAIL_NOT_VERIFIED` on: starting an OAuth or Telegram connection, completing an OAuth or Telegram connection (the owner is checked at that moment), creating a scheduled post, scheduling, publishing or retrying a post, editing a post that is already scheduled, and creating API keys or MCP connections (sessions and API keys alike). Drafts, reading and everything else stay available. The scheduler and system actors are never blocked, so work a verified user already queued still publishes. Existing users start unverified (`email_verified_at` NULL); with `MAIL_PROVIDER=log` nothing is gated.
+
+**Sign in with Google or GitHub (D-023).** Authorization Code with PKCE; a provider is on only when its client id and secret are configured (`GOOGLE_*`, `GITHUB_*`). The browser only ever navigates; the callback never renders an error, it always answers `302` to the web app.
+
+| Endpoint | Auth | Result |
+|---|---|---|
+| `GET /auth/providers` | public | `200 {providers:[{id,name}]}`, only the enabled ones, in button order (`google`, `github`) |
+| `GET /auth/oauth/{p}/start?next=` | public, `auth:` limiter | sets the state cookie and answers `302` to the provider; an unknown or disabled provider is `404`; `next` is allow-listed (`domain/redirect`: same-site relative paths only, else `/dashboard`) |
+| `GET /auth/oauth/{p}/callback` | public, `auth:` limiter | `302` to `{WEB_BASE_URL}` + `next` (signed in), `/signup/complete` (new user, ticket cookie set) or `/login?error=<code>` with `oauth_cancelled`, `oauth_state_invalid`, `oauth_provider_error`, `email_unverified`, `account_exists` or `account_unavailable` |
+| `GET /auth/oauth/pending` | ticket cookie | `200 {provider,email,display_name,next}`; `404` when there is no live ticket |
+| `POST /auth/oauth/complete {display_name,accept_terms}` | ticket cookie, `auth:` limiter | `201` with the `/me` body and session cookies; `accept_terms` is required as at register (D-016), else `400 fields.accept_terms` and the ticket survives; unknown, used or expired ticket `404`; the email or provider account was taken meanwhile `409` |
+
+Cookies (HttpOnly, SameSite=Lax, `Secure` as `COOKIE_SECURE`, path `/api/v1/auth/oauth`, 10 min): `socialos_oauth` holds the raw state from `/start`; `socialos_oauth_ticket` holds the sign-up ticket. The callback needs query state = state cookie = an unused, unexpired `auth_oauth_flows` row of **that provider**, checked in one atomic update before anything is asked of the provider, so a replayed state, a state from another browser and a state from another provider all end in `oauth_state_invalid`; the cookie is cleared only once the state is spent. State, nonce and ticket are stored as SHA-256; the PKCE verifier is stored with the same AES-GCM cipher as provider credentials (`ENCRYPTION_KEY`). The redirect URI is always `{API_PUBLIC_URL}/api/v1/auth/oauth/{p}/callback`, never built from `Host`. Provider access tokens are discarded after the exchange; logs and audit metadata hold neither tokens nor addresses.
+
+The linking rules are `domain/identity.Decide` (D-023). A known identity signs in unless its account is not `active` (`account_unavailable`); an account waiting for deletion can still sign in, so the owner can reach the cancel banner (its session can do nothing else, D-019). An email match never links to a disabled or deletion-scheduled account (`account_unavailable`). A new user gets a ticket valid 10 minutes and **no user row** until `/complete`, which redeems the ticket in the same transaction that creates the user, after the Terms are checked, so a refused or failed completion does not burn it. Unique constraints settle races (two completions of one ticket: one `201`; the same address or provider account taken: `409`). Audit: `user.registered` and `user.login` with `{method:"github"|"google"}`, and `user.identity_linked` with `{provider, via:"email_match"}` for an automatic link. A mail (`identity_linked`) follows an automatic link, as the alarm if someone else did it. The worker deletes expired flows hourly.
 
 `GET /me` (also the body of register and login) adds `user.email_verified` (bool), `user.plan`, `user.deletion_scheduled_at` (null unless the owner asked for deletion), and top level `verification_enforced` (bool), `mail_delivery` (`"log"` or `"smtp"`) and `deletion_grace_days`.
 
@@ -239,7 +258,7 @@ Session only; an API key gets `403`.
 
 | Endpoint | Result |
 |---|---|
-| `POST /account/delete {password, confirm}` | `202 {status:"scheduled", scheduled_for}` and the session cookies are cleared. `confirm` is the account's email typed by the owner. Wrong password: `400 fields.password`; wrong confirmation: `400 fields.confirm`; already scheduled: `409`. Rate-limited like password change |
+| `POST /account/delete {password, confirm}` | `202 {status:"scheduled", scheduled_for}` and the session cookies are cleared. `confirm` is the account's email typed by the owner. Wrong password: `400 fields.password`; wrong confirmation: `400 fields.confirm`; already scheduled: `409`. Rate-limited like password change. A user **without a password** (social sign-up) sends no password: a session created within the last 10 minutes is accepted, an older one gets `403 REAUTH_REQUIRED` (sign in again with the provider, then retry) |
 | `POST /account/delete/cancel` | `204`; `409` when no deletion is scheduled |
 
 At request time every session is deleted, every API key and MCP connection revoked, scheduled posts go back to drafts and the owner is mailed. The account stays `active` and can sign in (the web app shows a cancel banner). `ACCOUNT_DELETION_GRACE_DAYS` (default 7, 1 to 30) later, the worker (`account:purge` task, queued by an hourly sweep) claims the account (`status='deleted'`), waits for running publishes and exports, deletes posts, audit log, analytics, approvals and media (S3 objects first) in batches of 200, then the user row (cascading to the rest), stamps `account_deletions.purged_at` and mails the owner. Audit actions: `account.deletion_scheduled|deletion_cancelled`.
@@ -319,6 +338,15 @@ API: lookup state hash, ensure unused+unexpired AND belongs to the session user,
      → upsert social_account(user_id, provider, provider_account_id) → encrypt+store tokens → audit → 302 {WEB_BASE_URL}/accounts?connected=linkedin
 ```
 Errors redirect to `/accounts?error=<code>`; tokens never logged; provider id (not token) identifies the account.
+
+**Sign-in flow (D-023)** is a second flow with the same shape but no session to bind to, so the binding is a cookie:
+```
+Browser ─GET /auth/oauth/github/start?next=─► API: state, nonce, PKCE verifier random; store sha256(state), sha256(nonce), encrypted verifier (10 min)
+        ◄─302 provider authorize?state&code_challenge(S256)&nonce&redirect_uri={API_PUBLIC_URL}…  + Set-Cookie socialos_oauth=state
+User consents → provider ─302 /api/v1/auth/oauth/github/callback?code&state─► API
+API: state == cookie, then atomically consume the row of this provider → exchange code (verifier decrypted) → verified claims (ID token, or GET /user + /user/emails)
+     → identity.Decide → sign in (new session, audit) │ link + sign in │ ticket cookie + 302 /signup/complete │ 302 /login?error=<code>
+```
 
 ## 8. Backend layout (hexagonal, differences from the brief explained)
 ```

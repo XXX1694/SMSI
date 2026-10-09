@@ -54,6 +54,34 @@ cd /opt/socialos && sudo ./deploy.sh "$(sudo cat .deploy/current_tag)" --no-migr
 
 ## 2. Platforms
 
+### 2.0 Sign in with GitHub and Google (D-023)
+
+Optional. A provider shows up on the sign-in screen only when its client id **and** secret are set; setting just one of the two stops the API from starting. The secrets live only in `/opt/socialos/.env` (see "How to change server settings" above), never in chat, git or screenshots. Both compose files already pass the four variables through.
+
+**GitHub (works on the sslip.io hosts).**
+
+1. GitHub > Settings > Developer settings > OAuth Apps > **New OAuth App**.
+2. Application name `Steerpost`. Homepage URL `https://app.194-238-43-194.sslip.io`. Authorization callback URL, exactly:
+   ```
+   https://api.194-238-43-194.sslip.io/api/v1/auth/oauth/github/callback
+   ```
+   GitHub matches the callback exactly. Leave **Enable Device Flow** off.
+3. **Register application**, then **Generate a new client secret**. Copy it once.
+4. On the server set `GITHUB_CLIENT_ID=` and `GITHUB_CLIENT_SECRET=` in `/opt/socialos/.env` and run `cd /opt/socialos && sudo docker compose up -d --wait`.
+5. Check: `GET https://api.194-238-43-194.sslip.io/api/v1/auth/providers` lists `github`. Steerpost asks only for the `user:email` scope and reads the primary verified address; the token is thrown away right after sign-in.
+
+**Google (needs a domain you own: do not start before you have one).** Google requires HTTPS redirect URIs on a verified domain, and `sslip.io` is not yours, so it cannot be verified (the app could only ever run in Testing mode for a short list of test users). Once the domain exists (say `example.com`, with the API on `api.example.com`):
+
+1. Google Cloud console > create a project > **Google Auth Platform** > Branding: app name, support email, and homepage and privacy-policy links on your domain. Verify the domain in Search Console and add it under Authorized domains.
+2. Audience: External. Data access: the scopes `openid`, `email`, `profile` only.
+3. Clients > **Create client** > Web application. Authorized redirect URI, exactly:
+   ```
+   https://api.example.com/api/v1/auth/oauth/google/callback
+   ```
+4. Put `GOOGLE_CLIENT_ID=` and `GOOGLE_CLIENT_SECRET=` into `/opt/socialos/.env`, recreate the containers as above, and check `/auth/providers` lists `google`.
+
+Until `MAIL_PROVIDER=smtp` is on (section 4), no password account has a verified email, so someone who already registered with a password and then signs in with GitHub on the same address sees "an account with this email already exists": that is intended (it stops account pre-hijacking). They sign in with the password; connecting the provider from Settings arrives in a later change.
+
 ### 2.1 Telegram (live)
 
 **Platform-level setup (once, by the owner).** Already done: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_UPDATES_MODE=webhook` and
