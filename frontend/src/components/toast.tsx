@@ -7,6 +7,7 @@ interface ToastItem {
   id: number;
   kind: ToastKind;
   text: string;
+  leaving?: boolean;
 }
 interface ToastApi {
   success: (text: string) => void;
@@ -21,7 +22,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback((kind: ToastKind, text: string) => {
     const id = ++counter;
     setItems((cur) => [...cur, { id, kind, text }]);
-    window.setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), kind === 'error' ? 7000 : 4000);
+    // Mark as leaving first so the exit animation can play, then drop it.
+    const life = kind === 'error' ? 7000 : 4000;
+    window.setTimeout(() => setItems((cur) => cur.map((t) => (t.id === id ? { ...t, leaving: true } : t))), life);
+    window.setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), life + 200);
   }, []);
   const api = useMemo<ToastApi>(
     () => ({ success: (t) => push('success', t), error: (t) => push('error', t) }),
@@ -40,6 +44,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={t.kind === 'error' ? 'alert' : 'status'}
             className={cn(
               'pointer-events-auto rounded-md border bg-background px-4 py-3 text-sm shadow-md',
+              t.leaving ? 'animate-toast-out' : 'animate-toast-in',
               t.kind === 'error' ? 'border-danger/40 text-danger' : 'text-foreground',
             )}
           >

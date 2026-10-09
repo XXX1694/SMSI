@@ -14,12 +14,13 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, type ComponentType, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
 import { EmailBanner } from '@/components/email-banner';
+import { PageTransition } from '@/components/page-transition';
+import { TransitionLink } from '@/components/transition-link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -49,13 +50,13 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
   return (
-    <Link
+    <TransitionLink
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm',
-        active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        'relative z-10 flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
+        active ? 'font-medium text-foreground' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
       )}
     >
       <Icon className="h-4 w-4" aria-hidden />
@@ -66,8 +67,26 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
           <span className="sr-only"> waiting</span>
         </span>
       ) : null}
-    </Link>
+    </TransitionLink>
   );
+}
+
+/** The highlight behind the active item. It is measured from the DOM and slides with a transform. */
+function useActiveIndicator(pathname: string, open: boolean) {
+  const nav = useRef<HTMLElement>(null);
+  const [box, setBox] = useState<{ y: number; h: number } | null>(null);
+  const [settled, setSettled] = useState(false);
+  useLayoutEffect(() => {
+    const el = nav.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    // A hidden sidebar (mobile, closed) measures 0; show nothing until it is open.
+    if (!el || el.offsetHeight === 0) return setBox(null);
+    setBox({ y: el.offsetTop, h: el.offsetHeight });
+  }, [pathname, open]);
+  // No slide on the very first placement, only on later moves.
+  useLayoutEffect(() => {
+    if (box) setSettled(true);
+  }, [box]);
+  return { nav, box, settled };
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -76,6 +95,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const close = () => setOpen(false);
   const pending = usePendingApprovals();
+  const pathname = usePathname();
+  const { nav, box, settled } = useActiveIndicator(pathname, open);
 
   async function signOut() {
     await logout();
@@ -87,9 +108,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="flex h-12 items-center justify-between border-b px-4 md:hidden">
         <span className="text-sm font-semibold">SocialOS</span>
         {pending ? (
-          <Link href="/approvals" className="ml-auto mr-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+          <TransitionLink href="/approvals" className="ml-auto mr-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
             {pending} waiting for approval
-          </Link>
+          </TransitionLink>
         ) : null}
         <Button variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="sidebar">
           {open ? <X className="h-4 w-4" aria-hidden /> : <Menu className="h-4 w-4" aria-hidden />}
@@ -103,7 +124,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       >
         <div className="mb-4 hidden px-2.5 pt-1 text-sm font-semibold md:block">SocialOS</div>
-        <nav aria-label="Main" className="flex flex-1 flex-col gap-0.5">
+        <nav ref={nav} aria-label="Main" className="relative flex flex-1 flex-col gap-0.5">
+          <span
+            aria-hidden
+            data-testid="nav-indicator"
+            className={cn(
+              'pointer-events-none absolute inset-x-0 top-0 rounded-md bg-muted before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent',
+              settled && 'transition-transform duration-base ease-out',
+              !box && 'hidden',
+            )}
+            style={box ? { height: box.h, transform: `translateY(${box.y}px)` } : undefined}
+          />
           {NAV.map((i) => (
             <NavLink key={i.href} item={i} onNavigate={close} badge={i.href === '/approvals' ? pending : null} />
           ))}
@@ -124,7 +155,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
       <main className="min-w-0 flex-1">
         <EmailBanner />
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">{children}</div>
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">
+          <PageTransition>{children}</PageTransition>
+        </div>
       </main>
     </div>
   );

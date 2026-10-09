@@ -12,6 +12,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Added
 
+- Dashboard motion: route transitions through the View Transitions API (with a CSS fade-and-rise fallback), a sidebar highlight that slides between items, dialog and toast enter/exit, staggered lists on first load, skeleton shimmer, button press feedback and card hover lift. All motion uses transform and opacity with tokens from `tokens.css` and is disabled under `prefers-reduced-motion`. Empty states gained an icon and page headers a clearer hierarchy.
+
 - Email verification, password reset and password change. Mailed links carry a single-use token in the URL fragment (48 h to verify, 30 min to reset). A reset signs out every session; a change keeps the current one. API keys and MCP connections are revoked only if you tick "Also revoke all API keys and MCP connections".
 - When `MAIL_PROVIDER=smtp`, unverified accounts get `403 EMAIL_NOT_VERIFIED` on connecting networks, scheduling, publishing, editing scheduled posts and creating API keys. With the log provider nothing is restricted and the dashboard says mail is off. Existing accounts start unverified.
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.

@@ -21,3 +21,54 @@ html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
 @media (min-width: 768px) {
   html[data-demo] #sidebar { top: 1.75rem; height: calc(100vh - 1.75rem); }
 }
+
+@layer components {
+  /* First-load list stagger: children rise in one after another (capped, so long lists do not crawl). */
+  .stagger > * { animation: rise-in var(--duration-slow) var(--ease-out) both; }
+  .stagger > :nth-child(2) { animation-delay: calc(var(--stagger-step) * 1); }
+  .stagger > :nth-child(3) { animation-delay: calc(var(--stagger-step) * 2); }
+  .stagger > :nth-child(4) { animation-delay: calc(var(--stagger-step) * 3); }
+  .stagger > :nth-child(5) { animation-delay: calc(var(--stagger-step) * 4); }
+  .stagger > :nth-child(n + 6) { animation-delay: calc(var(--stagger-step) * 5); }
+
+  /* Card hover lift: transform for the move, an opacity-faded shadow layer for the elevation. */
+  .card-lift { position: relative; transition: transform var(--duration-base) var(--ease-out); }
+  .card-lift::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: var(--shadow-pop); opacity: 0; transition: opacity var(--duration-base) var(--ease-out);
+  }
+  .card-lift:hover { transform: translateY(-2px); }
+  .card-lift:hover::after { opacity: 1; }
+
+  /* Skeleton shimmer: a highlight sweeps across; the sweep is a transform, so it stays on the compositor. */
+  .shimmer { position: relative; overflow: hidden; }
+  .shimmer::after {
+    content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
+    animation: shimmer 1.4s var(--ease-standard) infinite;
+  }
+}
+
+/* Page enter: the fallback for browsers without the View Transitions API (and for navigations that skip it). */
+.page-enter { animation: rise-in var(--duration-slow) var(--ease-out) both; }
+html[data-vt] .page-enter { animation: none; }
+
+/* View Transitions: the page content fades and slides a little; the title and the sidebar stay put. */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--duration-base); animation-timing-function: var(--ease-out); }
+::view-transition-old(page-main) { animation: fade-out var(--duration-fast) var(--ease-in) both; }
+::view-transition-new(page-main) { animation: rise-in var(--duration-slow) var(--ease-out) both; }
+::view-transition-group(sidebar) { animation-duration: 0s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .shimmer::after { display: none; }
+  .card-lift:hover { transform: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

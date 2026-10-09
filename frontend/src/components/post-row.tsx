@@ -13,7 +13,7 @@ export function PostRow({ post }: { post: Post }) {
     <li>
       <Link
         href={postHref(post.id)}
-        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 py-3 hover:bg-muted/60 sm:px-3"
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 py-3 transition-colors hover:bg-muted/60 sm:px-3"
       >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{postLabel(post)}</p>
@@ -28,5 +28,5 @@ export function PostRow({ post }: { post: Post }) {
 }
 
 export function PostList({ posts }: { posts: Post[] }) {
-  return <ul className="divide-y rounded-lg border">{posts.map((p) => <PostRow key={p.id} post={p} />)}</ul>;
+  return <ul className="stagger divide-y overflow-hidden rounded-lg border">{posts.map((p) => <PostRow key={p.id} post={p} />)}</ul>;
 }
