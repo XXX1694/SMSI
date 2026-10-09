@@ -19,6 +19,8 @@ type ServerConfig struct {
 	Concurrency int
 	// DelayedCheck is how often scheduled tasks are promoted (default 1s, so a post goes out within ~1s of its time).
 	DelayedCheck time.Duration
+	// ShutdownTimeout is how long Shutdown waits for in-flight tasks before aborting them (default 40s).
+	ShutdownTimeout time.Duration
 	// RetryDelay overrides the retry backoff (default scheduler.RetryDelay: 30s·2^n ±20%). Tests only.
 	RetryDelay func(n int, err error) time.Duration
 	// Mailer, when set, makes this worker deliver mail:send tasks.
@@ -47,6 +49,9 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	if cfg.DelayedCheck <= 0 {
 		cfg.DelayedCheck = time.Second
 	}
+	if cfg.ShutdownTimeout <= 0 {
+		cfg.ShutdownTimeout = 40 * time.Second
+	}
 	retryDelay := cfg.RetryDelay
 	if retryDelay == nil {
 		retryDelay = scheduler.RetryDelay
@@ -55,7 +60,7 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 		Concurrency:              cfg.Concurrency,
 		Queues:                   map[string]int{cfg.Queue: 1},
 		RetryDelayFunc:           func(n int, err error, _ *asynq.Task) time.Duration { return retryDelay(n, err) },
-		ShutdownTimeout:          30 * time.Second,
+		ShutdownTimeout:          cfg.ShutdownTimeout,
 		DelayedTaskCheckInterval: cfg.DelayedCheck,
 		Logger:                   asynqLogger{log: log},
 		ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, t *asynq.Task, err error) {
@@ -97,7 +102,8 @@ func Handler(pub *scheduler.Publisher) func(context.Context, *asynq.Task) error 
 // Start begins processing in the background.
 func (s *Server) Start() error { return s.srv.Start(s.mux) }
 
-// Shutdown stops gracefully, waiting for in-flight tasks.
+// Shutdown stops taking new tasks and waits for in-flight ones, up to ShutdownTimeout; after that the unfinished
+// tasks are aborted and returned to the queue.
 func (s *Server) Shutdown() { s.srv.Shutdown() }
 
 type asynqLogger struct{ log *slog.Logger }

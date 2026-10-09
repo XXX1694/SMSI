@@ -111,6 +111,7 @@ services:
     build: ./backend
     command: ["/app/worker"]
     environment: *backend-env
+    stop_grace_period: 45s # above WORKER_SHUTDOWN_TIMEOUT (40s): in-flight publishes finish before Docker kills the worker
     healthcheck:
       test: ["CMD", "/app/api", "healthcheck", "http://127.0.0.1:8081/health"]
       interval: 15s

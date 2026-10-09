@@ -43,18 +43,25 @@ func run() error {
 	}
 	defer a.Close()
 
-	srv := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: cfg.WorkerConc, Mailer: a.Mailer, Auth: a.Services.Auth}, a.Publisher, log)
+	srv := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: cfg.WorkerConc,
+		ShutdownTimeout: cfg.WorkerShutdownTimeout, Mailer: a.Mailer, Auth: a.Services.Auth}, a.Publisher, log)
 	if err := srv.Start(); err != nil {
 		return err
 	}
-	go a.Reconciler.Loop(ctx, cfg.ReconcileEvery)
-	go serveHealth(ctx, a, log)
-	go purgeApprovals(ctx, a, cfg.ApprovalRetention, log)
-	startTelegramIntake(ctx, a, cfg, log)
+	bg := &background{log: log}
+	bg.Go(func() { a.Reconciler.Loop(ctx, cfg.ReconcileEvery) })
+	bg.Go(func() { serveHealth(ctx, a, cfg.WorkerHTTPAddr, log) })
+	bg.Go(func() { purgeApprovals(ctx, a, cfg.ApprovalRetention, log) })
+	startTelegramIntake(ctx, bg, a, cfg, log)
 	log.Info("worker started", slog.String("queue", cfg.QueueName), slog.Int("concurrency", cfg.WorkerConc))
 	<-ctx.Done()
-	log.Info("shutting down worker")
+	// Order matters: ctx is already cancelled, so the background jobs are winding down and nothing new is scheduled.
+	// Shutdown then stops taking tasks and lets in-flight publishes finish (up to WORKER_SHUTDOWN_TIMEOUT) before the
+	// database and Redis are closed by the deferred a.Close().
+	log.Info("shutting down worker", slog.Duration("timeout", cfg.WorkerShutdownTimeout))
 	srv.Shutdown()
+	bg.Wait(10 * time.Second)
+	log.Info("worker stopped")
 	return nil
 }
 
@@ -79,7 +86,7 @@ func purgeApprovals(ctx context.Context, a *app.App, retention time.Duration, lo
 // startTelegramIntake long-polls the Bot API for the messages that prove chat
 // ownership. In webhook mode the API receives them instead and nothing runs here.
 // Several workers may run this: a Redis lease lets exactly one of them poll.
-func startTelegramIntake(ctx context.Context, a *app.App, cfg *config.Config, log *slog.Logger) {
+func startTelegramIntake(ctx context.Context, bg *background, a *app.App, cfg *config.Config, log *slog.Logger) {
 	if cfg.TelegramUpdatesMode != config.TelegramModePolling {
 		log.Info("telegram updates arrive by webhook; polling is off", slog.String("mode", cfg.TelegramUpdatesMode))
 		return
@@ -89,15 +96,11 @@ func startTelegramIntake(ctx context.Context, a *app.App, cfg *config.Config, lo
 		log.Info("telegram is not configured (TELEGRAM_BOT_TOKEN is empty); not polling for updates")
 		return
 	}
-	go poller.Run(ctx)
+	bg.Go(func() { poller.Run(ctx) })
 }
 
 // serveHealth exposes /health and /metrics for the worker on WORKER_HTTP_ADDR (default :8081).
-func serveHealth(ctx context.Context, a *app.App, log *slog.Logger) {
-	addr := os.Getenv("WORKER_HTTP_ADDR")
-	if addr == "" {
-		addr = ":8081"
-	}
+func serveHealth(ctx context.Context, a *app.App, addr string, log *slog.Logger) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := a.DB.Ping(r.Context()); err != nil {

@@ -81,6 +81,7 @@ services:
 
   worker:
     <<: *host-guard
+    stop_grace_period: 45s # above WORKER_SHUTDOWN_TIMEOUT (40s): in-flight publishes finish before Docker kills the worker
     mem_limit: ${WORKER_MEM_LIMIT:-160m}
     memswap_limit: ${WORKER_MEM_LIMIT:-160m}
     environment:
