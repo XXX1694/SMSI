@@ -94,6 +94,7 @@
   "net.off": "Not available yet",
   "net.planned": "Planned",
   "net.review": "Need app review or a paid API",
+  "net.reviewList": "X, LinkedIn company pages, YouTube, TikTok, Reddit, Pinterest, Hashnode, Max.",
   "net.noapi": "No official API",
   "net.link": "Setup and reasons per network",
   "run.title": "Run it yourself",

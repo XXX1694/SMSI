@@ -1,14 +1,19 @@
-# Review: landing page, Қазақша (kk)
+# Review: Қазақша (kk)
+
+One section per surface. The app's catalog state is `REVIEW` in `frontend/src/i18n/locales.ts`; the landing's is `review` in
+`site/i18n/locales.mjs`.
+
+## Landing
 
 Status: `machine-draft` (shown as "Beta translation" in the page footer). Hidden: built at `/kk/` with `noindex`, not linked, not in the switcher or the sitemap.
 Reviewer: none yet. Date: none yet. Catalog: `site/i18n/landing.kk.json`, first drafted with the PR that added it.
 
 Register: сіз; hidden and noindex until a native reviewer signs this file.
 
-To mark the review done, change the status to `native-reviewed`, add the reviewer and date, and drop the beta note from the
-page (`footer.beta` in the catalog and `isEn` in `site/build.mjs`).
+To mark the review done, set `review: 'native-reviewed'` for this locale in `site/i18n/locales.mjs` (the page then drops the
+"Beta translation" note), and record the reviewer, date and catalog commit above.
 
-## Strings that need a native look
+### Strings that need a native look
 
 - Every string. The glossary rows marked "confirm" (нобай for draft, кері қайтарып алу for revoke, болдырмау for cancel) are used as written.
 - `rel.2.text` «ретке дейін» with a number: check suffix harmony.

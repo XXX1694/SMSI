@@ -91,6 +91,7 @@
   "net.off": "未対応",
   "net.planned": "対応予定",
   "net.review": "アプリの審査または有料APIが必要",
+  "net.reviewList": "X、LinkedInの企業ページ、YouTube、TikTok、Reddit、Pinterest、Hashnode、Max。",
   "net.noapi": "公式APIなし",
   "net.link": "SNSごとの設定と理由（EN）",
   "run.title": "自分で動かす",

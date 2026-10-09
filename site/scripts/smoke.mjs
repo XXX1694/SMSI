@@ -261,7 +261,9 @@ await step('every landing locale: lang and dir, no overflow, one-line nav, motio
         // The motion switch behaves the same in every language: label, toggle, remembered, and gone with reduced motion.
         const btn = p.locator('[data-motion]');
         expect((await btn.getAttribute('aria-pressed')) === 'false', `${tag}: motion switch should start unpressed`);
-        await btn.click();
+        // Keyboard, not a pointer click: the hero is still animating and Playwright waits for a stable box.
+        await btn.focus();
+        await p.keyboard.press('Enter');
         expect((await btn.getAttribute('aria-pressed')) === 'true', `${tag}: motion switch should toggle`);
         expect(await p.evaluate(() => document.documentElement.classList.contains('motion-off') && localStorage.getItem('socialos_landing_motion') === 'off'), `${tag}: motion-off class and saved preference`);
         if (!loc.hidden) await p.screenshot({ path: join(out, `locale-${loc.code}.png`) });
@@ -295,6 +297,7 @@ await step('first-visit suggestion: offered, never redirects, remembered', async
   await p.reload();
   await p.waitForTimeout(600);
   expect((await p.locator('.lang-suggest').count()) === 0, 'a dismissed suggestion does not come back');
+  expect(await p.evaluate(() => localStorage.getItem('steerpost_lang_suggest') === 'dismissed' && localStorage.getItem('steerpost_locale') === null), 'dismissing uses its own key and leaves the app locale alone');
   // Following the link goes to the German page and is remembered for the next visit to the root.
   await p.evaluate(() => localStorage.clear());
   await p.reload();

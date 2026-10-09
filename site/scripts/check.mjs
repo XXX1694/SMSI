@@ -100,9 +100,9 @@ for (const must of ['index.html', 'docs/index.html', 'docs/mcp/index.html', 'doc
       continue;
     }
     const html = read(file);
-    if (/\{\{[\w:.]+\}\}|\{[a-zA-Z]+Count[,}]/.test(html.replace(/<script[\s\S]*?<\/script>/g, ''))) problems.push(`i18n ${l.code}: a template token or ICU placeholder is left in the page`);
+    if (/\{\{[\w:.]+\}\}|\{[a-zA-Z]+Count[,}]/.test(html)) problems.push(`i18n ${l.code}: a template token or ICU placeholder is left in the page`);
     if (!html.includes(`<html lang="${l.lang}" dir="${l.dir}">`)) problems.push(`i18n ${l.code}: <html> must be lang="${l.lang}" dir="${l.dir}"`);
-    if (!html.includes(`<link rel="canonical" href="`) || !new RegExp(`rel="canonical" href="[^"]*${slugPath(l)}"`).test(html)) problems.push(`i18n ${l.code}: canonical must point to ${slugPath(l)}`);
+    if (!html.includes(`<link rel="canonical" href="`) || !html.match(/rel="canonical" href="([^"]+)"/)?.[1]?.endsWith(slugPath(l))) problems.push(`i18n ${l.code}: canonical must point to ${slugPath(l)}`);
     const alternates = [...html.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)">/g)].map((m) => [m[1], m[2]]);
     if (l.hidden) {
       if (!/<meta name="robots" content="noindex/.test(html)) problems.push(`i18n ${l.code}: hidden locale must be noindex`);

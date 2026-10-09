@@ -90,6 +90,7 @@
   "net.off": "暂不可用",
   "net.planned": "计划中",
   "net.review": "需要应用审核或付费 API",
+  "net.reviewList": "X、LinkedIn公司主页、YouTube、TikTok、Reddit、Pinterest、Hashnode、Max。",
   "net.noapi": "没有官方 API",
   "net.link": "各网络的设置与原因（EN）",
   "run.title": "自己运行",

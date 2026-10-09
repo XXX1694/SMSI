@@ -420,9 +420,10 @@ function landingPage(loc, tools) {
   const robots = loc.hidden ? '  <meta name="robots" content="noindex,nofollow">\n' : '';
   const menu = loc.hidden
     ? ''
-    : `<details class="lang" data-lang><summary class="lang-btn" aria-label="${esc(tr.plain('lang.button'))}: ${esc(loc.name)}">${GLOBE}<span class="lang-code" aria-hidden="true">${esc(loc.short)}</span></summary><ul class="lang-list" role="list" aria-label="${esc(tr.plain('lang.menu'))}">${langItems(loc)}</ul></details>`;
+    : `<details class="lang" data-lang><summary class="lang-btn" title="${esc(loc.name)}">${GLOBE}<span class="vh">${esc(tr.plain('lang.button'))}: </span><span class="lang-code">${esc(loc.short)}</span></summary><ul class="lang-list" role="list" aria-label="${esc(tr.plain('lang.menu'))}">${langItems(loc)}</ul></details>`;
   const list = loc.hidden ? '' : `<nav class="lp-langs" aria-label="${esc(tr.plain('lang.menu'))}"><ul role="list">${langItems(loc)}</ul></nav>`;
-  const beta = isEn ? '' : `<p class="lp-beta">${tr.t('footer.beta')}</p>`;
+  // The note follows the review state (docs/copy/review/<code>.md), not the language: a signed locale drops it.
+  const beta = loc.review === 'machine-draft' ? `<p class="lp-beta">${tr.t('footer.beta')}</p>` : '';
   const data = loc.hidden
     ? ''
     : JSON.stringify({
@@ -473,7 +474,7 @@ for (const loc of built) {
 // /en/ is not a second copy of the root: it forwards to it, so there is one canonical English page.
 write(
   'en/index.html',
-  `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>Steerpost</title><meta name="robots" content="noindex"><link rel="canonical" href="${SITE_URL}${BASE}"><meta http-equiv="refresh" content="0; url=${BASE}"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><p><a href="${BASE}">Steerpost</a></p></body></html>\n`,
+  `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>Steerpost</title><link rel="canonical" href="${SITE_URL}${BASE}"><meta http-equiv="refresh" content="0; url=${BASE}"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><p><a href="${BASE}">Steerpost</a></p></body></html>\n`,
 );
 
 // Docs

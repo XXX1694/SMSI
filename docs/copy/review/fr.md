@@ -1,14 +1,19 @@
-# Review: landing page, Français (fr)
+# Review: Français (fr)
+
+One section per surface. The app's catalog state is `REVIEW` in `frontend/src/i18n/locales.ts`; the landing's is `review` in
+`site/i18n/locales.mjs`.
+
+## Landing
 
 Status: `machine-draft` (shown as "Beta translation" in the page footer).
 Reviewer: none yet. Date: none yet. Catalog: `site/i18n/landing.fr.json`, first drafted with the PR that added it.
 
 Register: vous; narrow no-break spaces (U+202F) before : ; ? !.
 
-To mark the review done, change the status to `native-reviewed`, add the reviewer and date, and drop the beta note from the
-page (`footer.beta` in the catalog and `isEn` in `site/build.mjs`).
+To mark the review done, set `review: 'native-reviewed'` for this locale in `site/i18n/locales.mjs` (the page then drops the
+"Beta translation" note), and record the reviewer, date and catalog commit above.
 
-## Strings that need a native look
+### Strings that need a native look
 
 - Check every U+202F placement, including inside « … » in `mcp.ask`.
 - `hero.l1` «Les agents IA rédigent les posts» (post kept; alternative: publication).

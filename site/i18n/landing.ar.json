@@ -93,6 +93,7 @@
   "net.off": "غير متاحة بعد",
   "net.planned": "مخطَّط لها",
   "net.review": "تتطلب مراجعة التطبيق أو واجهة API مدفوعة",
+  "net.reviewList": "X، صفحات شركات LinkedIn، YouTube، TikTok، Reddit، Pinterest، Hashnode، Max.",
   "net.noapi": "بلا واجهة API رسمية",
   "net.link": "الإعداد والأسباب لكل شبكة (EN)",
   "run.title": "شغّله بنفسك",

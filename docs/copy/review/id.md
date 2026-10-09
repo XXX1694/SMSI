@@ -1,14 +1,19 @@
-# Review: landing page, Bahasa Indonesia (id)
+# Review: Bahasa Indonesia (id)
+
+One section per surface. The app's catalog state is `REVIEW` in `frontend/src/i18n/locales.ts`; the landing's is `review` in
+`site/i18n/locales.mjs`.
+
+## Landing
 
 Status: `machine-draft` (shown as "Beta translation" in the page footer).
 Reviewer: none yet. Date: none yet. Catalog: `site/i18n/landing.id.json`, first drafted with the PR that added it.
 
 Register: Anda; established loans (akun, unggah, pos).
 
-To mark the review done, change the status to `native-reviewed`, add the reviewer and date, and drop the beta note from the
-page (`footer.beta` in the catalog and `isEn` in `site/build.mjs`).
+To mark the review done, set `review: 'native-reviewed'` for this locale in `site/i18n/locales.mjs` (the page then drops the
+"Beta translation" note), and record the reviewer, date and catalog commit above.
 
-## Strings that need a native look
+### Strings that need a native look
 
 - `hero.l1` «Agen AI menyusun pos»; `mcp.f1` «cakupan» for scope.
 - `facts.retries` «Percobaan ulang, lalu galat yang jelas»: «galat» vs «error» (developers often write error).

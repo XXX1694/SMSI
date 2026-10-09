@@ -1,14 +1,19 @@
-# Review: landing page, العربية (ar)
+# Review: العربية (ar)
+
+One section per surface. The app's catalog state is `REVIEW` in `frontend/src/i18n/locales.ts`; the landing's is `review` in
+`site/i18n/locales.mjs`.
+
+## Landing
 
 Status: `machine-draft` (shown as "Beta translation" in the page footer).
 Reviewer: none yet. Date: none yet. Catalog: `site/i18n/landing.ar.json`, first drafted with the PR that added it.
 
 Register: Modern Standard Arabic; Latin digits; layout is right-to-left.
 
-To mark the review done, change the status to `native-reviewed`, add the reviewer and date, and drop the beta note from the
-page (`footer.beta` in the catalog and `isEn` in `site/build.mjs`).
+To mark the review done, set `review: 'native-reviewed'` for this locale in `site/i18n/locales.mjs` (the page then drops the
+"Beta translation" note), and record the reviewer, date and catalog commit above.
 
-## Strings that need a native look
+### Strings that need a native look
 
 - RTL: check the mirrored hero, the sticky story column, the footer language list and the arrow icons on a real device.
 - `hero.lead` and `rel.2.text` use all six plural categories (zero, one, two, few, many, other).

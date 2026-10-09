@@ -4,6 +4,8 @@
 // The choice is remembered under the same key the app uses (frontend/src/i18n/resolve.ts), because the site and the
 // demo share one origin. The tag matching mirrors frontend/src/i18n/match.ts.
 const KEY = 'steerpost_locale';
+// Dismissing the suggestion is not choosing English: it has its own key and leaves the app's locale alone.
+const DISMISS_KEY = 'steerpost_lang_suggest';
 const guard = (fn, fallback) => {
   try {
     return fn();
@@ -13,6 +15,13 @@ const guard = (fn, fallback) => {
 };
 const read = () => guard(() => localStorage.getItem(KEY), null);
 const write = (v) => guard(() => localStorage.setItem(KEY, v));
+const dismissed = () => guard(() => localStorage.getItem(DISMISS_KEY) === 'dismissed', false);
+// Carry the in-page anchor over only when it names an element that exists, re-encoded as a fragment.
+const hashSuffix = () =>
+  guard(() => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    return id && document.getElementById(id) ? `#${encodeURIComponent(id)}` : '';
+  }, '');
 
 const data = guard(() => JSON.parse(document.getElementById('lang-data')?.textContent ?? 'null'), null);
 
@@ -32,7 +41,7 @@ for (const a of document.querySelectorAll('[data-locale]')) {
   a.addEventListener('click', () => {
     write(a.dataset.locale);
     // Stay on the same section when the visitor switches language.
-    if (location.hash) a.href = `${a.getAttribute('href')}${location.hash}`;
+    a.href = `${a.getAttribute('href').split('#')[0]}${hashSuffix()}`;
   });
 }
 
@@ -62,7 +71,7 @@ const preferred = () => {
 };
 
 guard(() => {
-  if (!data || data.current !== 'en') return;
+  if (!data || data.current !== 'en' || dismissed()) return;
   const saved = read();
   const want = saved && data.locales[saved] ? saved : preferred();
   const target = data.locales[want];
@@ -77,7 +86,7 @@ guard(() => {
   const text = document.createElement('p');
   text.textContent = target.text;
   const go = document.createElement('a');
-  go.href = target.href + location.hash;
+  go.href = target.href + hashSuffix();
   go.textContent = target.name;
   go.hreflang = target.lang;
   go.addEventListener('click', () => write(want));
@@ -86,7 +95,7 @@ guard(() => {
   no.setAttribute('aria-label', target.dismiss);
   no.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>';
   no.addEventListener('click', () => {
-    write('en'); // remembered: do not ask again
+    guard(() => localStorage.setItem(DISMISS_KEY, 'dismissed')); // remembered: do not ask again
     bar.remove();
   });
   bar.append(text, go, no);

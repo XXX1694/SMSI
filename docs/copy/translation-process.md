@@ -14,7 +14,7 @@ steps; the schema and API changes below need a plan under AGENTS.md section 2.
     `{ "composer.publishNow": { "type": "button", "description": "Publishes immediately; opens a confirmation", "maxLength": 18 } }`.
     `type` is one of `button | tab | badge | nav | title | body | error | toast | aria`.
   - `site/i18n/landing.{locale}.json` for the landing page (rendered by `site/build.mjs`; the locale registry is
-    `site/i18n/locales.mjs`). Its review notes live in `docs/copy/REVIEW-{locale}.md`.
+    `site/i18n/locales.mjs`). Its review notes live in `docs/copy/review/{locale}.md`.
   - `backend/internal/adapters/mail/messages/{locale}.json` for email subjects and bodies.
 - Keys name a purpose, not the English text: `posts.detail.cancelPost.confirmButton`, not `"Cancel post"`. Never reuse a key
   in two contexts. "Cancel" (dismiss) and "Cancel post" are different keys, even when a language translates them the same.
