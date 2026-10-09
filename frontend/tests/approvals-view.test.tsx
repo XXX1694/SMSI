@@ -21,6 +21,8 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 vi.mock('@/components/prefs-provider', () => ({ usePrefs: () => ({ timezone: 'UTC' }) }));
+const nav = vi.hoisted(() => ({ query: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: nav.replace }), useSearchParams: () => new URLSearchParams(nav.query) }));
 vi.mock('@/components/toast', () => ({ useToast: () => toast }));
 
 const soon = () => new Date(Date.now() + 8 * 60_000).toISOString();
@@ -38,6 +40,8 @@ const disconnect: Approval = {
 const page = (items: Approval[]) => ({ items, next_cursor: null });
 
 beforeEach(() => {
+  nav.query = '';
+  nav.replace.mockReset();
   apiMock.approvals.list.mockReset();
   apiMock.approvals.approve.mockReset().mockResolvedValue({});
   apiMock.approvals.deny.mockReset().mockResolvedValue({});
@@ -112,15 +116,25 @@ describe('ApprovalsView', () => {
   it('History lists decided and expired requests without buttons', async () => {
     const denied: Approval = { ...disconnect, id: 'ap-3', status: 'denied', decided_at: ago(5) };
     const expired: Approval = { ...publish, id: 'ap-4', status: 'pending', expires_at: ago(1) };
-    apiMock.approvals.list.mockResolvedValueOnce(page([publish])).mockResolvedValueOnce(page([denied, expired]));
+    nav.query = 'tab=history';
+    apiMock.approvals.list.mockResolvedValue(page([denied, expired]));
     render(<ApprovalsView />);
-    await screen.findByText('Publish now');
-    await userEvent.click(screen.getByRole('button', { name: 'History' }));
     expect(await screen.findByText('Denied')).toBeInTheDocument();
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^(Approve|Deny):/ })).not.toBeInTheDocument();
     expect(apiMock.approvals.list).toHaveBeenLastCalledWith('all', 50);
     expect(within(screen.getByRole('group', { name: 'Show approvals' })).getByRole('button', { name: 'History' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps the tab in the URL', async () => {
+    nav.query = '';
+    apiMock.approvals.list.mockResolvedValue(page([publish]));
+    render(<ApprovalsView />);
+    await screen.findByText('Publish now');
+    await userEvent.click(screen.getByRole('button', { name: 'History' }));
+    expect(nav.replace).toHaveBeenLastCalledWith('/approvals?tab=history');
+    await userEvent.click(screen.getByRole('button', { name: 'Waiting for you' }));
+    expect(nav.replace).toHaveBeenLastCalledWith('/approvals');
   });
 
   it('shows two per-account texts of the same network as two distinct rows', async () => {
