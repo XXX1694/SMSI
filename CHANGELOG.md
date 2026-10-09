@@ -6,11 +6,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
-### Changed
-
-- Rename shims for Steerpost (D-020). The MCP server reads `STEERPOST_API_URL`, `STEERPOST_API_KEY` and `STEERPOST_TIMEOUT_MS` first and falls back to the `SOCIALOS_*` names; both compose files set both URL variables. Releases publish the images under `steerpost-{backend,mcp,frontend}` as well as `socialos-*` (same digest and tags). `deploy/README.md` lists the legacy identifiers that keep the `socialos` name and the steps to make the new GHCR packages public.
-- `autoupdate.sh` follows redirects when it asks GitHub for the latest release (a renamed repository answers 301), reads `GITHUB_REPO` from the environment as well as `.env`, and logs a warning for any answer other than 200 instead of an info line.
-- Renamed to Steerpost (formerly SocialOS). Product copy, the MCP server name and the generated client config key (`steerpost`) changed. Stored and host identifiers keep the `socialos` name (cookies, headers, Redis keys, `/opt/socialos`, systemd units); see "Legacy identifiers" in `deploy/README.md`. Generated stdio configs keep the `SOCIALOS_AUTH_HEADER` variable so configs users already pasted keep working.
+## [0.3.0] - 2026-10-09
 
 ### Added
 
@@ -18,6 +14,12 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Edit drafts and scheduled posts in the web UI. "Edit" on the Posts list and on the post page opens the composer (`/compose?post=<id>`) prefilled with the title, text, per-network overrides, media and schedule (shown in the Settings timezone); saving calls `PATCH /posts/{id}`. A scheduled post keeps its time unless you change it; a draft can be saved and scheduled in one step. Other statuses show why they cannot be edited. Unsaved edits are guarded (browser prompt on reload or close, a dialog on in-app links). The API has no ETag or `If-Match`, so before saving the UI re-reads the post and, if its `updated_at` or status moved, shows a conflict message with "Load the latest version" and "Save mine anyway" (best effort: the check and the write are not atomic).
 - The demo engine and `mock-api` answer `PATCH /posts/{id}` (text, per-network text, accounts, media, time), so the Pages demo supports editing.
 - Dashboard "Get started" checklist for new users: connect a network, write a first post, connect an AI agent (an MCP connection or an API key) and, optionally, review an approval. Each step ticks off from existing data (accounts, posts, keys, connections, approvals), has a one-line explanation and a direct link, and the list can be dismissed (remembered in this browser). The empty Accounts, Posts and Developer screens link back to the setup steps. The demo reflects its own state.
+
+### Changed
+
+- Rename shims for Steerpost (D-020). The MCP server reads `STEERPOST_API_URL`, `STEERPOST_API_KEY` and `STEERPOST_TIMEOUT_MS` first and falls back to the `SOCIALOS_*` names; both compose files set both URL variables. Releases publish the images under `steerpost-{backend,mcp,frontend}` as well as `socialos-*` (same digest and tags). `deploy/README.md` lists the legacy identifiers that keep the `socialos` name and the steps to make the new GHCR packages public.
+- `autoupdate.sh` follows redirects when it asks GitHub for the latest release (a renamed repository answers 301), reads `GITHUB_REPO` from the environment as well as `.env`, and logs a warning for any answer other than 200 instead of an info line.
+- Renamed to Steerpost (formerly SocialOS). Product copy, the MCP server name and the generated client config key (`steerpost`) changed. Stored and host identifiers keep the `socialos` name (cookies, headers, Redis keys, `/opt/socialos`, systemd units); see "Legacy identifiers" in `deploy/README.md`. Generated stdio configs keep the `SOCIALOS_AUTH_HEADER` variable so configs users already pasted keep working.
 
 ## [0.2.1] - 2026-10-09
 
@@ -118,7 +120,8 @@ First release: the MVP, ready to self-host on one server.
 - A Telegram channel can only be connected by proving ownership with a one-time link code.
 - CI scans every change: govulncheck, npm audit, gitleaks over the history, Trivy on the images and CodeQL; the runtime images no longer ship npm.
 
-[Unreleased]: https://github.com/XXX1694/steerpost/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/XXX1694/steerpost/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/XXX1694/steerpost/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/XXX1694/SMSI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/XXX1694/SMSI/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/XXX1694/SMSI/releases/tag/v0.1.0
