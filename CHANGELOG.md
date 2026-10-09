@@ -17,6 +17,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.
 - Database migration `00003` also prepares plans, quotas, data export and account deletion; it needs no manual step.
 - Connect a network with a pasted credential: `POST /api/v1/social/accounts/token` and the provider capability fields `connect_fields`, `max_image_bytes` and `requires_title`. It needs the new critical API-key scope `social:connect`, which is never in a default set (D-009).
+- "Connect with a token" on the Accounts page: Discord, Mastodon and Bluesky open a form built from the provider's `connect_fields` (secrets as password inputs with show/hide, never stored or put in a URL), with the how-to linked and plain-English errors per field. The demo and mock API answer the same fields and the token endpoint.
 - Posts are checked against the stricter of the network limits and the account's own limits, and networks that need a title reject posts without one.
 - SSRF-safe HTTP client for hosts users supply (D-010).
 - Discord: connect a channel with its webhook URL and publish text and up to 10 images, or delete a post. The URL is stored encrypted and never returned; a timeout after sending goes to review instead of risking a duplicate. See [`docs/integrations/discord.md`](docs/integrations/discord.md).

@@ -74,6 +74,11 @@ const fail = (status: number, code: string, message: string): DemoResponse => ({
   body: { error: { code, message, request_id: hexOf(randomBytes(4)) } },
 });
 
+const failFields = (message: string, fields: Record<string, string>): DemoResponse => ({
+  status: 400,
+  body: { error: { code: 'VALIDATION_ERROR', message, request_id: hexOf(randomBytes(4)), fields } },
+});
+
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const strList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
@@ -299,6 +304,7 @@ export class DemoEngine {
     if (path === '/social/accounts' && m === 'GET') return ok(200, { items: s.accounts, next_cursor: null });
     if (path === '/social/telegram/connect' && m === 'POST') return this.startTelegramLink();
     if ((r = path.match(/^\/social\/telegram\/connect\/([^/]+)$/)) && m === 'GET') return this.telegramLinkStatus(r[1] ?? '');
+    if (path === '/social/accounts/token' && m === 'POST') return this.connectWithToken(body);
     if ((r = path.match(/^\/social\/(\w+)\/connect$/)) && (m === 'POST' || m === 'GET')) return this.instantConnect(r[1] ?? '');
     if ((r = path.match(/^\/social\/accounts\/([^/]+)$/))) {
       const acc = s.accounts.find((a) => a.id === r?.[1]);
@@ -426,6 +432,41 @@ export class DemoEngine {
     this.state.accounts.push(acc);
     this.audit(this.user, 'social_account.connected', 'social_account', acc.id);
     return ok(201, acc);
+  }
+
+  /** Mirrors `POST /social/accounts/token`: same validation and error shapes; the "verify" step accepts anything but a secret containing "invalid". */
+  private connectWithToken(body: unknown): DemoResponse {
+    const b = (typeof body === 'object' && body !== null ? body : {}) as { provider?: unknown; fields?: unknown };
+    const p = typeof b.provider === 'string' ? this.provider(b.provider) : undefined;
+    const spec = p?.capabilities.connect_fields;
+    if (!p || p.capabilities.connect_method !== 'token' || !spec) return fail(400, 'VALIDATION_ERROR', 'provider cannot be connected with a token');
+    const input = (typeof b.fields === 'object' && b.fields !== null ? b.fields : {}) as Record<string, unknown>;
+    const values: Record<string, string> = {};
+    for (const [name, raw] of Object.entries(input)) {
+      const f = spec.find((x) => x.name === name);
+      if (!f || typeof raw !== 'string') return failFields('invalid fields', { fields: 'unknown field' });
+      values[name] = raw.trim();
+      if (values[name] && f.kind === 'url' && !/^https:\/\/[^/@\s]+/.test(values[name])) return failFields(`${f.label} must be an https URL`, { [name]: 'must be an https URL' });
+    }
+    const missing = spec.find((f) => f.required && !values[f.name]);
+    if (missing) return failFields(`${missing.label} is required`, { [missing.name]: 'required' });
+    if (spec.some((f) => (f.secret || f.kind === 'secret') && /invalid/i.test(values[f.name] ?? ''))) {
+      return fail(400, 'VALIDATION_ERROR', `${this.providerName(p)} rejected these credentials`);
+    }
+    const who = values.handle || values.instance_url?.replace(/^https:\/\//, '').replace(/\/.*$/, '') || 'webhook';
+    const username = p.provider === 'mastodon' ? `demo@${who}` : p.provider === 'discord' ? '#general' : who;
+    let acc = this.state.accounts.find((a) => a.provider === p.provider && a.username === username);
+    if (acc) acc.status = 'active';
+    else {
+      acc = { id: newUuid(), provider: p.provider, username, display_name: `${this.providerName(p)} ${username}`, avatar_url: null, status: 'active', scopes: [], connected_at: this.iso() };
+      this.state.accounts.push(acc);
+    }
+    this.audit(this.user, 'social_account.connected', 'social_account', acc.id);
+    return ok(201, acc);
+  }
+
+  private providerName(p: WireProvider): string {
+    return p.provider.charAt(0).toUpperCase() + p.provider.slice(1);
   }
 
   private disconnect(acc: SocialAccount): DemoResponse {

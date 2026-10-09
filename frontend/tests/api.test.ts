@@ -157,3 +157,11 @@ describe('auth recovery endpoints', () => {
     await expect(api.posts.publish('p1')).rejects.toMatchObject({ status: 403, code: 'EMAIL_NOT_VERIFIED' });
   });
 });
+
+describe('parseErrorBody fields', () => {
+  it('keeps per-field messages and ignores non-string values', () => {
+    const e = parseErrorBody(400, { error: { code: 'VALIDATION_ERROR', message: 'm', fields: { a: 'required', b: 3 } } });
+    expect(e.fields).toEqual({ a: 'required' });
+    expect(parseErrorBody(500, null).fields).toEqual({});
+  });
+});

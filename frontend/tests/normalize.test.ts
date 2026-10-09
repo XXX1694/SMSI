@@ -22,3 +22,26 @@ describe('normalizeProvider', () => {
     expect(unwrapList(null)).toEqual([]);
   });
 });
+
+describe('normalizeProvider connect fields', () => {
+  it('reads connect_method and connect_fields, treating kind secret as a secret and dropping nameless fields', () => {
+    const p = normalizeProvider({
+      provider: 'mastodon',
+      capabilities: {
+        can_publish_text: true,
+        connect_method: 'token',
+        connect_fields: [{ name: 'access_token', label: 'Access token', kind: 'secret', required: true }, { label: 'no name' }, { name: 'u', kind: 'weird' }],
+      },
+    });
+    expect(p.capabilities.connectMethod).toBe('token');
+    expect(p.capabilities.connectFields).toEqual([
+      { name: 'access_token', label: 'Access token', help: '', placeholder: '', kind: 'secret', required: true, secret: true },
+      { name: 'u', label: 'u', help: '', placeholder: '', kind: 'text', required: false, secret: false },
+    ]);
+  });
+
+  it('has no fields for providers that do not use a token', () => {
+    const p = normalizeProvider({ provider: 'linkedin', capabilities: { can_publish_text: true, connect_method: 'oauth' } });
+    expect(p.capabilities).toMatchObject({ connectMethod: 'oauth', connectFields: [] });
+  });
+});
