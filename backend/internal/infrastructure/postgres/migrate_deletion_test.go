@@ -32,11 +32,11 @@ func TestMigration00006AddsTheDeletionScheduleAndRollsBack(t *testing.T) {
 		t.Fatal("a second deletion record for one user must be refused")
 	}
 	// 00007 owns the two foreign-key indexes (built concurrently); 00006 owns the column and the other two.
-	rollBack(t, url, 1)
+	downTo(t, url, 6)
 	if col, idx := has(); !col || idx != 2 {
 		t.Fatalf("down 00007: column=%v indexes=%d, want the column and 2 indexes left", col, idx)
 	}
-	rollBack(t, url, 1)
+	downTo(t, url, 5)
 	if col, idx := has(); col || idx != 0 {
 		t.Fatalf("down: column=%v indexes=%d", col, idx)
 	}

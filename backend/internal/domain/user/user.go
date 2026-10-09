@@ -26,8 +26,9 @@ const DefaultPlan = "free"
 
 // User is an account owner (tenant).
 type User struct {
-	ID           uuid.UUID
-	Email        string
+	ID    uuid.UUID
+	Email string
+	// PasswordHash is empty for users without a password (see HasPassword).
 	PasswordHash string
 	DisplayName  string
 	Status       Status
@@ -43,6 +44,12 @@ type User struct {
 	// Accounts created before the Terms existed have a nil time and an empty version.
 	TermsAcceptedAt *time.Time
 	TermsVersion    string
+}
+
+// HasPassword reports whether the user can sign in with a password. Social sign-up users have none until they set one;
+// the repository returns their NULL hash as "".
+func (u *User) HasPassword() bool {
+	return u.PasswordHash != ""
 }
 
 // EmailVerified reports whether the address was verified.

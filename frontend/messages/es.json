@@ -128,6 +128,12 @@
       "resetTitle": "¿Restablecer la demo?",
       "resetBody": "Se elimina todo lo que cambiaste en esta demo y vuelven los datos de ejemplo.",
       "resetConfirm": "Restablecer demo"
+    },
+    "deletionBanner": {
+      "heading": "Tu cuenta se eliminará el {date}.",
+      "body": "Entonces se borrarán todos tus datos y no se podrán recuperar. Tus claves de API ya se revocaron y las publicaciones programadas pasaron a borradores. Aún puedes descargar tus datos en Configuración.",
+      "cancel": "Cancelar eliminación",
+      "cancelling": "Cancelando…"
     }
   },
   "legal": {
@@ -190,7 +196,8 @@
       "failTitle": "No se pudo verificar tu correo electrónico",
       "invalidBody": "Puede que haya caducado o que ya se haya usado. Los enlaces funcionan una sola vez y duran 48 horas.",
       "signInToRequest": "Inicia sesión para pedir un enlace nuevo"
-    }
+    },
+    "deletedNotice": "La eliminación de tu cuenta está programada. Se cerraron todas las sesiones y se revocaron las claves de API. Inicia sesión antes de que termine el plazo para ver la fecha y cancelarla."
   },
   "posts": {
     "editBlockedPublishing": "Esta publicación se está publicando ahora mismo, así que no se puede cambiar.",
@@ -297,6 +304,21 @@
       "requestNew": "Solicitar otra exportación",
       "request": "Solicitar exportación",
       "cooldown": "Puedes solicitar una nueva exportación 24 horas después de la última."
+    },
+    "exportHeading": "Exportación",
+    "deleteAccount": {
+      "heading": "Eliminar cuenta",
+      "intro": "Elimina tu cuenta, publicaciones, archivos multimedia, cuentas conectadas, claves de API y registro de auditoría. Ocurre {days, plural, one {# día} many {# de días} other {# días}} después de confirmar. Hasta entonces puedes iniciar sesión y cancelar; las publicaciones programadas vuelven a borradores y todas las sesiones y claves de API se cierran de inmediato. Descarga antes tus datos si quieres una copia.",
+      "open": "Eliminar cuenta…",
+      "dialogTitle": "¿Eliminar tu cuenta?",
+      "dialogBody": "Todo lo que tienes en Steerpost se eliminará al terminar el plazo. No se puede deshacer.",
+      "formLabel": "Eliminar cuenta",
+      "password": "Tu contraseña",
+      "confirmLabel": "Escribe {email} para confirmar",
+      "yourEmail": "tu correo electrónico",
+      "wrongPassword": "Esa no es tu contraseña actual.",
+      "wrongConfirm": "Escribe tu correo electrónico exactamente como se muestra.",
+      "submit": "Eliminar mi cuenta"
     }
   },
   "dashboard": {

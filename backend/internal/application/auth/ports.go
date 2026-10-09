@@ -18,6 +18,8 @@ type Session struct {
 	TokenHash string
 	CSRFToken string
 	ExpiresAt time.Time
+	// CreatedAt is when the owner signed in, which "sign in again" checks for users without a password.
+	CreatedAt time.Time
 	UserAgent string
 	IP        string
 }

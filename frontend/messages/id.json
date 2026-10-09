@@ -128,6 +128,12 @@
       "resetTitle": "Reset demo?",
       "resetBody": "Semua yang Anda ubah di demo ini dihapus dan data contoh kembali seperti semula.",
       "resetConfirm": "Reset demo"
+    },
+    "deletionBanner": {
+      "heading": "Akun Anda akan dihapus pada {date}.",
+      "body": "Saat itu semua data Anda hilang dan tidak dapat dipulihkan. Kunci API Anda sudah dicabut dan pos terjadwal menjadi draf. Anda masih dapat mengunduh data Anda di Pengaturan.",
+      "cancel": "Batalkan penghapusan",
+      "cancelling": "Membatalkan…"
     }
   },
   "legal": {
@@ -190,7 +196,8 @@
       "failTitle": "Email tidak dapat diverifikasi",
       "invalidBody": "Tautan mungkin sudah kedaluwarsa atau pernah dipakai. Tautan hanya berlaku sekali dan selama 48 jam.",
       "signInToRequest": "Masuk untuk meminta tautan baru"
-    }
+    },
+    "deletedNotice": "Penghapusan akun Anda sudah dijadwalkan. Semua sesi telah dikeluarkan dan kunci API dicabut. Masuk sebelum masa tenggang berakhir untuk melihat tanggalnya dan membatalkannya."
   },
   "posts": {
     "editBlockedPublishing": "Pos ini sedang diterbitkan, jadi tidak dapat diubah.",
@@ -297,6 +304,21 @@
       "requestNew": "Minta ekspor baru",
       "request": "Minta ekspor",
       "cooldown": "Ekspor baru dapat diminta 24 jam setelah ekspor terakhir."
+    },
+    "exportHeading": "Ekspor",
+    "deleteAccount": {
+      "heading": "Hapus akun",
+      "intro": "Menghapus akun, pos, media, akun yang terhubung, kunci API, dan log audit Anda. Penghapusan terjadi {days, plural, other {# hari}} setelah Anda mengonfirmasi. Sebelum itu Anda dapat masuk dan membatalkan; pos terjadwal dikembalikan menjadi draf, dan semua sesi serta kunci API langsung dikeluarkan. Unduh data Anda lebih dulu jika ingin salinannya.",
+      "open": "Hapus akun…",
+      "dialogTitle": "Hapus akun Anda?",
+      "dialogBody": "Semua milik Anda di Steerpost akan dihapus setelah masa tenggang. Tindakan ini tidak dapat dibatalkan.",
+      "formLabel": "Hapus akun",
+      "password": "Kata sandi Anda",
+      "confirmLabel": "Ketik {email} untuk mengonfirmasi",
+      "yourEmail": "email Anda",
+      "wrongPassword": "Itu bukan kata sandi Anda saat ini.",
+      "wrongConfirm": "Ketik alamat email Anda persis seperti yang ditampilkan.",
+      "submit": "Hapus akun saya"
     }
   },
   "dashboard": {
