@@ -73,14 +73,17 @@ describe('OnboardingChecklist', () => {
     apiMock.posts.list.mockResolvedValue({ items: [{ id: 'p1' }], next_cursor: null });
     apiMock.developer.mcpConnections.mockResolvedValue([live]);
     render(<OnboardingChecklist connectedAccounts={1} />);
-    expect(await screen.findByRole('heading', { name: 'You are set up' })).toBeInTheDocument();
+    expect(await screen.findByText('Set up')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'You are set up' })).not.toBeInTheDocument(); // collapsed to one line
+    await userEvent.click(screen.getByRole('button', { name: 'Show steps' }));
+    expect(screen.getByRole('heading', { name: 'You are set up' })).toBeInTheDocument();
   });
 
   it('keeps a next step and logs the cause when the data cannot be read and there is no account', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     apiMock.developer.apiKeys.mockRejectedValue(new Error('down'));
     render(<OnboardingChecklist connectedAccounts={0} />);
-    expect(await screen.findByRole('link', { name: 'Go to accounts' })).toHaveAttribute('href', '/accounts');
+    expect(await screen.findByRole('link', { name: 'Connect account' })).toHaveAttribute('href', '/accounts');
     expect(screen.queryByRole('heading', { name: 'Get started' })).not.toBeInTheDocument();
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
@@ -92,7 +95,7 @@ describe('OnboardingChecklist', () => {
     render(<OnboardingChecklist connectedAccounts={1} />);
     await waitFor(() => expect(spy).toHaveBeenCalled());
     expect(screen.queryByRole('heading', { name: 'Get started' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Go to accounts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Connect account' })).not.toBeInTheDocument();
     spy.mockRestore();
   });
 
@@ -100,7 +103,7 @@ describe('OnboardingChecklist', () => {
     apiMock.posts.list.mockResolvedValue({ items: [{ id: 'p1' }], next_cursor: null });
     apiMock.developer.mcpConnections.mockResolvedValue([live]);
     const { unmount } = render(<OnboardingChecklist connectedAccounts={1} />);
-    await screen.findByRole('heading', { name: 'You are set up' });
+    await screen.findByText('Set up');
     expect(window.localStorage.getItem(ONBOARDING_COMPLETE_KEY)).toBe('1');
     unmount();
     apiMock.posts.list.mockClear();
@@ -134,6 +137,6 @@ describe('OnboardingChecklist', () => {
   it('keeps a next step for an account without networks after dismissal', async () => {
     window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, '1');
     render(<OnboardingChecklist connectedAccounts={0} />);
-    expect(await screen.findByRole('link', { name: 'Go to accounts' })).toHaveAttribute('href', '/accounts');
+    expect(await screen.findByRole('link', { name: 'Connect account' })).toHaveAttribute('href', '/accounts');
   });
 });

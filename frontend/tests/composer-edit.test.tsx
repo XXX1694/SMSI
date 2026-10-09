@@ -90,7 +90,7 @@ describe('ComposerView in edit mode', () => {
     await open();
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2020-01-01' } });
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText(/at least one minute in the future/)).toBeInTheDocument();
+    expect(await screen.findByText(/at least 1 minute from now/)).toBeInTheDocument();
     expect(apiMock.posts.update).not.toHaveBeenCalled();
   });
 
@@ -145,7 +145,7 @@ describe('ComposerView conflicts', () => {
     type('Mine');
     apiMock.posts.get.mockResolvedValue(scheduled({ status: 'publishing' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText(/can no longer be edited/)).toBeInTheDocument();
+    expect(await screen.findByText(/cannot be edited/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save mine anyway' })).not.toBeInTheDocument();
   });
 });
@@ -221,12 +221,12 @@ describe('ComposerView unsaved changes guard', () => {
 
 describe('ComposerView review fixes', () => {
   it('Discard hands the router a path without the deploy base path', async () => {
-    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/SMSI/demo');
+    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/steerpost/demo');
     try {
       await open();
       type('Half written');
       const a = document.createElement('a');
-      a.href = '/SMSI/demo/posts/view?id=p1';
+      a.href = '/steerpost/demo/posts/view?id=p1';
       a.textContent = 'Back to post';
       document.body.appendChild(a);
       await userEvent.click(a);
@@ -246,7 +246,7 @@ describe('ComposerView review fixes', () => {
     type('Edited draft');
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-12-05' } });
     await userEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
-    expect(await screen.findByText('Changes saved; the post is still a draft and was not scheduled: Monthly limit reached.')).toBeInTheDocument();
+    expect(await screen.findByText('Changes saved, but the post was not scheduled: Monthly limit reached.')).toBeInTheDocument();
     expect(nav.push).not.toHaveBeenCalled();
     const ev = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(ev);

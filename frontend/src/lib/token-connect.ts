@@ -2,7 +2,7 @@ import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/hooks';
 import type { ConnectField } from '@/lib/types';
 
-const DOCS_BASE = 'https://github.com/XXX1694/SMSI/blob/main/docs/integrations';
+const DOCS_BASE = 'https://github.com/XXX1694/steerpost/blob/main/docs/integrations';
 
 /** The how-to for a provider (docs/integrations/<provider>.md). */
 export function integrationDocsUrl(provider: string): string {
@@ -66,7 +66,7 @@ function describeStatus(e: ApiError, providerName: string): string {
   if (e.code === 'INSUFFICIENT_SCOPE') return 'This sign-in is not allowed to connect accounts. Use a key with the social:connect permission.';
   if (e.status === 403 && e.code !== 'EMAIL_NOT_VERIFIED') return 'You do not have permission to connect accounts.';
   if (e.status === 400 && e.code === 'VALIDATION_ERROR') {
-    return `${providerName} did not accept these details. Check them against the how-to and try again. Nothing was saved.`;
+    return `${providerName} did not accept these details. Check them with “How to connect ${providerName}” and try again. Nothing was saved.`;
   }
   if (e.status === 502 || e.code === 'PROVIDER_ERROR') {
     return `${providerName} could not be reached to check these details. Try again in a moment.`;

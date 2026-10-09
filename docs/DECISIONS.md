@@ -396,6 +396,8 @@ numbers the build derives from the README.
 generated video: not real UI, and the page would claim things the product does not do. A WebGL background: weight and battery
 for decoration.
 
+**Amendment (landing v2).** Scroll-driven animations (`animation-timeline`) now also drive the hero exit, the clip-path screen reveals and the "how it works" route, with the active-step state (IntersectionObserver) as the fallback. First-party JS grew to `landing.js`, `hero-flow.js` and `motion.js` (pointer effects, mouse only); still no library. The route line animates `stroke-dashoffset` and the reveals animate `clip-path`; both are paint-only on small areas. Pause motion (`html.motion-off`) disables every one of them.
+
 **Consequences.** Safari and Firefox without scroll-driven animations show the parallax and hero exit still, which is fine.
 The hero video must be re-recorded (`npm run record`) when the compose or approvals screens change.
 
@@ -494,6 +496,14 @@ it is still personal data about the user's actions and an agent's, and an anonym
 operator keeps them (the Privacy Policy says so). The email address is unavailable for registration until the purge ends.
 Counts are those of the first purge attempt. A post stuck `publishing` delays a purge until the reconciler settles it.
 
+Addendum (review): the legal version is bumped to 2026-10-10 because the Privacy Policy now describes export and
+deletion, which changes its meaning. As D-016 says, a bump only affects new accounts; existing users are not asked to
+accept again. While a deletion is scheduled the account refuses scheduling and publishing (`409`, `RequireNotDeleting`,
+set at authentication), the publisher skips due jobs of such accounts (the post goes back to a draft, audited as
+`post.unscheduled` with reason `account_deletion`), access is revoked in the same transaction that sets the schedule
+(posts are unscheduled right after, and again by the purge after it claims the account), and the purge removes every
+object under `users/<uid>/` (S3 listing) after the keys it knows, so failed-export leftovers go too.
+
 ## D-020: The product is renamed Steerpost; stored and host identifiers keep the `socialos` name (2026-10-09)
 
 **Decision.** The product, the MCP server, the generated client configs, the images, the npm packages and the Go module are
@@ -511,10 +521,57 @@ redirect). Never create a repo named SMSI again. Dual-publish and the env fallba
 The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*` GHCR packages start private; the owner makes them public
 (deploy/README.md, section 15.1). The shims (env fallback, dual publish, `curl -L` in `autoupdate.sh`) land and are deployed before the repository is renamed.
 
-Addendum (review): the legal version is bumped to 2026-10-10 because the Privacy Policy now describes export and
-deletion, which changes its meaning. As D-016 says, a bump only affects new accounts; existing users are not asked to
-accept again. While a deletion is scheduled the account refuses scheduling and publishing (`409`, `RequireNotDeleting`,
-set at authentication), the publisher skips due jobs of such accounts (the post goes back to a draft, audited as
-`post.unscheduled` with reason `account_deletion`), access is revoked in the same transaction that sets the schedule
-(posts are unscheduled right after, and again by the purge after it claims the account), and the purge removes every
-object under `users/<uid>/` (S3 listing) after the keys it knows, so failed-export leftovers go too.
+## D-021: The UI is localized with next-intl on the client; locales ship when complete, beta until a native review (2026-10-09)
+
+**Decision.** The dashboard and the demo use a client-side provider (`frontend/src/i18n/`) with ICU catalogs in
+`frontend/messages/{locale}.json` (typed from `en.json`) and a `useTranslations(ns)` hook with the same shape as next-intl's.
+The runtime is a small in-house ICU subset (`src/i18n/icu.ts`: arguments, number/date/time, plural, selectordinal, select,
+`#`, rich tags), not next-intl itself: next-intl 4.14 supports Next 15 but measured +14 kB gzipped on every route (see the
+CHANGELOG), this is about 2 kB. A test asserts that it prints the same text as FormatJS `intl-messageformat`, and
+`npm run i18n:check` validates every catalog with the official FormatJS parser. Switching to next-intl later means changing
+the import of `useTranslations`. The locale is resolved in the browser, the same way in the
+standalone and the static-export build: `users.locale` → `localStorage steerpost_locale` → `navigator.languages` → `en`.
+There are no `/[locale]/` routes in the app; the landing page gets `/{locale}/` pages with hreflang. Locales: `en` (source),
+then `ru`; `es`, `pt-BR`, `de`, `fr`, `id`; `ja`, `zh-CN`; `kk` (hidden until a native review); `ar` last, after logical CSS.
+This supersedes the wave table in docs/copy/languages.md: `uk` waits, `zh-CN` is in. `uk` and `zh-Hant` fall back to `en`.
+Dates and numbers come from `lib/time`/`lib/calendar` with an explicit locale and the user's timezone. CJK and Arabic use
+system fonts. API error codes, API messages, emails, MCP text and docs stay English; the UI maps error codes to text.
+Translations are machine-drafted with the glossary, back-translated on a sample and labelled "Beta translation" until a
+native speaker signs `docs/copy/review/{locale}.md`. CI blocks missing keys in every enabled locale.
+
+**First paint.** English is a static import of the provider module (a cached JS chunk), not a prop, so it is not
+serialised into every document. Other catalogs are lazy chunks. Routes stay static in both builds: the HTML is English, the
+stored (or detected) locale is applied after mount, and a head script hides the shell (`data-i18n-pending`, at most 1.5 s)
+only when the stored locale is not English, so English users are unaffected and others see no flash. The head script
+accepts only locales the build offers. The `steerpost_locale` cookie is still written by the switcher for future server use.
+Measured trade-off (server build, 12 sidebar navigations): reading the cookie in the root layout made every route dynamic;
+with a `loading.tsx` the click feedback was fast (p50 144 to 14 ms at +100 ms latency) but content-ready p95 went from
+49 ms to 330 ms (React holds the reveal about 300 ms after a fallback), and without it each navigation waited for a server
+round trip. Static routes avoid both. Runtime formatting supports named number/date/time styles only (FormatJS presets);
+`i18n:check` rejects skeletons and custom patterns, and a test compares every catalog message with FormatJS.
+
+**Alternatives.** `[locale]` prefix routes with `generateStaticParams`: the app renders in the browser behind login, so no
+SEO gain, 11× the exported pages and every link rewritten. Server negotiation by cookie: impossible in the static export
+and makes every prod route dynamic. next-intl and react-intl: the same FormatJS engine, about 14 kB gzipped on every route. i18next, Lingui, Paraglide: a second
+message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for glyphs every OS ships.
+
+**Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
+hint outside `en` until field codes exist. A release is blocked by missing keys or failed checks, not by draft status.
+Localized emails need a later decision built on `users.locale`.
+
+## D-022: Steerpost is licensed under the AGPL-3.0 (2026-10-09)
+
+**Context.** The repository was public but had no licence, so no one could legally use, modify or self-host the code, and
+copy that called the product "open-source" was not true. The owner chose a licence.
+
+**Decision.** AGPL-3.0-only, in `LICENSE` (the unmodified text from gnu.org), with `"license": "AGPL-3.0-only"` in every
+`package.json`. Anyone may use, modify and self-host Steerpost; whoever runs a modified version as a network service must
+offer its source to that service's users. This matches comparable self-hosted social schedulers (Postiz, TryPost).
+
+**Alternatives.** MIT or Apache-2.0 (more permissive: a hosted fork could stay closed, which works against a small
+open-source project). No licence (source-available only; rejected because the product is meant to be self-hosted by
+others).
+
+**Consequences.** Product copy may say "open-source (AGPL-3.0)". Contributions are accepted under the same licence. The
+owner, as the sole author so far, could still dual-license later; once outside contributions land, that would need their
+agreement or a CLA.

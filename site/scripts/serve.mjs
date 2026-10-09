@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Minimal static server that mimics GitHub Pages for a project site: files under `dir` are
- * served below `base` (default /SMSI/), directories fall back to index.html and unknown paths
+ * served below `base` (default /steerpost/), directories fall back to index.html and unknown paths
  * return 404.html with status 404.
  *
- *   node scripts/serve.mjs [dir=dist] [port=4173] [base=/SMSI/]
+ *   node scripts/serve.mjs [dir=dist] [port=4173] [base=/steerpost/]
  */
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -26,7 +26,7 @@ const TYPES = {
   '.map': 'application/json',
 };
 
-export function startServer({ dir = 'dist', port = 4173, base = '/SMSI/' } = {}) {
+export function startServer({ dir = 'dist', port = 4173, base = '/steerpost/' } = {}) {
   const root = resolve(dir);
   const prefix = base.endsWith('/') ? base : `${base}/`;
   const server = createServer((req, res) => {
@@ -65,7 +65,7 @@ export function startServer({ dir = 'dist', port = 4173, base = '/SMSI/' } = {})
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const [dir = 'dist', port = '4173', base = '/SMSI/'] = process.argv.slice(2);
+  const [dir = 'dist', port = '4173', base = '/steerpost/'] = process.argv.slice(2);
   await startServer({ dir, port: Number(port), base });
   console.log(`serving ${resolve(dir)} at http://127.0.0.1:${port}${base}`);
 }

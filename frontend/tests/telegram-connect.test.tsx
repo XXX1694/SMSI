@@ -79,7 +79,7 @@ describe('TelegramConnect', () => {
     expect(steps[0]).toHaveTextContent('Add @socialos_bot as an administrator');
     expect(steps[0]).toHaveTextContent('Post messages');
     expect(steps[1]).toHaveTextContent('Post this code there');
-    expect(screen.getByLabelText('Link code')).toHaveTextContent('SOS-CODEA001');
+    expect(screen.getByLabelText('One-time code')).toHaveTextContent('SOS-CODEA001');
     expect(screen.getByRole('timer')).toHaveTextContent('Expires in 15:00');
     expect(steps[2]).toHaveTextContent('Waiting for the code to appear');
     expect(steps[2]).toHaveTextContent('every 2 seconds');
@@ -129,14 +129,14 @@ describe('TelegramConnect', () => {
     await start();
     await advance(2000);
     expect(onConnected).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Link code')).toBeInTheDocument();
+    expect(screen.getByLabelText('One-time code')).toBeInTheDocument();
 
     await advance(2000);
     expect(onConnected).toHaveBeenCalledTimes(1);
     expect(screen.getByText('E2E Channel')).toBeInTheDocument();
     expect(screen.getByText(/You can now publish to it/)).toBeInTheDocument();
     expect(screen.getByText('@e2e_channel', { exact: false })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Link code')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('One-time code')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect another' })).toBeInTheDocument();
 
     await advance(20_000);
@@ -151,13 +151,13 @@ describe('TelegramConnect', () => {
     await start();
     await advance(2000);
     expect(screen.getByText(/This code has expired/)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Link code')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('One-time code')).not.toBeInTheDocument();
     await advance(10_000);
     expect(apiMock.social.telegramLinkStatus).toHaveBeenCalledTimes(1); // no polling once expired
 
     await click('Get a new code');
     expect(apiMock.social.startTelegramLink).toHaveBeenCalledTimes(2);
-    expect(screen.getByLabelText('Link code')).toHaveTextContent('SOS-CODEA002');
+    expect(screen.getByLabelText('One-time code')).toHaveTextContent('SOS-CODEA002');
     await advance(2000);
     expect(apiMock.social.telegramLinkStatus).toHaveBeenLastCalledWith('link-2');
   });
@@ -214,9 +214,9 @@ describe('TelegramConnect', () => {
     setup();
     await start();
     expect(screen.getByRole('alert')).toHaveTextContent('Telegram is not configured on this server');
-    expect(screen.queryByLabelText('Link code')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('One-time code')).not.toBeInTheDocument();
     await start();
-    expect(screen.getByLabelText('Link code')).toBeInTheDocument();
+    expect(screen.getByLabelText('One-time code')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 

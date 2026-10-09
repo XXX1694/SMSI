@@ -72,3 +72,22 @@ func TestPasswordChangedSaysWhatHappenedToKeys(t *testing.T) {
 		t.Fatalf("keys-revoked notice: %s", gone.Text)
 	}
 }
+
+func TestMailsUseServerAdminAndNeverPromiseAnExportPage(t *testing.T) {
+	for _, name := range []string{PasswordChanged, AccountDeleted} {
+		m, err := Render(name, "a@b.c", Data{Link: "https://x.test/", ExpiresIn: "1h"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(m.Text, "tell your server admin") || strings.Contains(m.Text, "operator") || strings.Contains(m.HTML, "operator") {
+			t.Errorf("%s must say server admin: %s", name, m.Text)
+		}
+	}
+	m, err := Render(ExportReady, "a@b.c", Data{Link: "https://x.test/", ExpiresIn: "1h"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(m.Text, "settings") || strings.Contains(m.HTML, "settings") {
+		t.Errorf("settings has no export page: %s", m.Text)
+	}
+}

@@ -36,7 +36,7 @@ export function EmailBanner() {
       <div role="alert" className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-warning/30 bg-warning-soft px-4 py-2.5 text-sm md:px-10">
         <MailWarning className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden />
         <p className="min-w-0 flex-1 basis-64">
-          <span className="font-medium">Verify your email.</span> We sent a link to <span className="break-words">{user.email}</span>. Until you open it you
+          <span className="font-medium">Verify your email.</span> Steerpost sent a link to <span className="break-words">{user.email}</span>. Until you open it you
           cannot connect accounts, schedule or publish posts, or create API keys.
         </p>
         {resend.state === 'sent' ? (
@@ -57,14 +57,13 @@ export function EmailBanner() {
     return (
       <div role="note" className="flex items-center gap-3 border-b bg-muted px-4 py-2.5 text-sm md:px-10">
         <p className="min-w-0 flex-1">
-          <span className="font-medium">Email delivery is not configured on this server.</span> Verification and password-reset emails are not sent, so
-          nothing is restricted for now.
+          <span className="font-medium">Email delivery is not configured on this server.</span> Verification and password-reset emails are not sent. Your server admin can set up email.
         </p>
         <Button
           variant="ghost"
           size="icon"
           className="h-7 w-7 shrink-0"
-          aria-label="Dismiss"
+          aria-label="Dismiss email notice"
           onClick={() => {
             writeStorage(DISMISS_KEY, '1');
             setDismissed(true);

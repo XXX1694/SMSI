@@ -30,7 +30,7 @@ describe('PostDetail failed target', () => {
     const { container } = render(<PostDetail id="p1" />);
     expect(await screen.findByText(/chat not found/)).toBeInTheDocument();
     expect(container.textContent).not.toContain('PROVIDER_ERROR');
-    expect(container.textContent).toContain('The network could not publish the post.');
+    expect(container.textContent).toContain('The network rejected the post.');
   });
 });
 

@@ -14,9 +14,11 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/input';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { SCHEDULE_TOO_SOON } from '@/lib/composer';
 import { describeErrorCode, friendlyMessage, isTechnicalMessage } from '@/lib/errors';
 import { editHref } from '@/lib/demo/config';
 import { postLabel } from '@/lib/format';
+import { RetryPostDialog } from '@/components/posts/retry-post-dialog';
 import { providerLabel } from '@/lib/normalize';
 import { editBlockedReason, postActions } from '@/lib/status';
 import { formatDateTime, zonedToUtcIso } from '@/lib/time';
@@ -41,16 +43,16 @@ function Targets({ post }: { post: Post }) {
             </Notice>
           ) : null}
           {t.status === 'needs_review' ? (
-            <Notice>The outcome is unknown. Check the platform before retrying to avoid a duplicate.</Notice>
+            <Notice>Steerpost cannot confirm this went out. Check {providerLabel(t.platform)} before you retry, or it may post twice.</Notice>
           ) : null}
           <p className="text-xs text-muted-foreground">
             {t.published_at ? `Published ${formatDateTime(t.published_at, timezone)} · ` : ''}
-            {t.attempt_count} attempt{t.attempt_count === 1 ? '' : 's'}
+            {t.attempt_count === 1 ? '1 attempt' : `${t.attempt_count} attempts`}
             {t.external_url ? (
               <>
                 {' · '}
                 <a href={t.external_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
-                  View on platform <ExternalLink className="h-3 w-3" aria-hidden />
+                  View on {providerLabel(t.platform)} <ExternalLink className="h-3 w-3" aria-hidden />
                 </a>
               </>
             ) : null}
@@ -64,12 +66,12 @@ function Targets({ post }: { post: Post }) {
 function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Post }) {
   const { timezone } = usePrefs();
   const platformOf = (id: string) => providerLabel(post.targets.find((t) => t.id === id)?.platform ?? '');
-  if (attempts.length === 0) return <p className="text-sm text-muted-foreground">No publication attempts yet.</p>;
+  if (attempts.length === 0) return <p className="text-sm text-muted-foreground">No publishing attempts yet.</p>;
   return (
-    <Table label="Publication attempts">
+    <Table label="Publishing attempts">
       <Thead>
         <Tr>
-          <Th>Target</Th>
+          <Th>Account</Th>
           <Th>#</Th>
           <Th>Started</Th>
           <Th>Result</Th>
@@ -79,7 +81,7 @@ function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Po
       <Tbody>
         {attempts.map((a) => (
           <Tr key={a.id}>
-            <Td label="Target">{platformOf(a.post_target_id)}</Td>
+            <Td label="Account">{platformOf(a.post_target_id)}</Td>
             <Td label="Attempt" className="tabular-nums">{a.attempt_no}</Td>
             <Td label="Started" className="whitespace-nowrap">{formatDateTime(a.started_at, timezone)}</Td>
             <Td label="Result">
@@ -103,7 +105,7 @@ function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpe
   async function go() {
     const iso = date ? zonedToUtcIso(date, time, timezone) : null;
     if (!iso || new Date(iso).getTime() < Date.now() + 60_000) {
-      setError('Pick a date and time at least a minute in the future.');
+      setError(SCHEDULE_TOO_SOON);
       return;
     }
     setBusy(true);
@@ -173,7 +175,7 @@ export function PostDetail({ id }: { id: string }) {
         description={
           post.scheduled_at && post.status === 'scheduled'
             ? `Scheduled for ${formatDateTime(post.scheduled_at, timezone)}`
-            : `Created ${formatDateTime(post.created_at, timezone)}${post.created_by === 'api_key' ? ' via API key' : ''}`
+            : `Created ${formatDateTime(post.created_at, timezone)}${post.created_by === 'api_key' ? ' by an API key' : ''}`
         }
         actions={
           <>
@@ -189,8 +191,8 @@ export function PostDetail({ id }: { id: string }) {
             )}
             {can.publish ? <Button size="sm" onClick={() => setDlg('publish')}>Publish now</Button> : null}
             {can.schedule ? <Button size="sm" variant="secondary" onClick={() => setDlg('schedule')}>Schedule</Button> : null}
-            {can.retry ? <Button size="sm" variant="secondary" onClick={() => setDlg('retry')}>Retry failed</Button> : null}
-            {can.cancel ? <Button size="sm" variant="secondary" onClick={() => setDlg('cancel')}>Cancel</Button> : null}
+            {can.retry ? <Button size="sm" variant="secondary" onClick={() => setDlg('retry')}>Retry</Button> : null}
+            {can.cancel ? <Button size="sm" variant="secondary" onClick={() => setDlg('cancel')}>Cancel post</Button> : null}
             {can.del ? <Button size="sm" variant="ghost" onClick={() => setDlg('delete')}>Delete</Button> : null}
           </>
         }
@@ -201,7 +203,7 @@ export function PostDetail({ id }: { id: string }) {
         </p>
       )}
       <div className="space-y-10">
-        <Section title="Targets">
+        <Section title="Accounts">
           <Targets post={post} />
         </Section>
         {post.media && post.media.length > 0 ? (
@@ -219,14 +221,14 @@ export function PostDetail({ id }: { id: string }) {
           <Attempts attempts={post.attempts ?? []} post={post} />
         </Section>
       </div>
-      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title="Publish now?" description="This posts immediately to every target." confirmLabel="Publish now" onConfirm={act(() => api.posts.publish(id), 'Publishing started')} />
-      <ConfirmDialog open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} title="Retry failed targets?" description="Only targets that failed are retried. Targets already published are left alone." confirmLabel="Retry" onConfirm={act(() => api.posts.retry(id), 'Retry started')} />
-      <ConfirmDialog open={dlg === 'cancel'} onOpenChange={(o) => !o && setDlg(null)} title="Cancel this post?" description="It will not be published. Cancelled posts cannot be revived." confirmLabel="Cancel post" destructive onConfirm={act(() => api.posts.cancel(id), 'Post cancelled')} />
+      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title="Publish now?" description={`This posts to ${[...new Set(post.targets.map((t) => providerLabel(t.platform)))].join(', ')} now. Steerpost cannot undo it.`} confirmLabel="Publish now" onConfirm={act(() => api.posts.publish(id), 'Publishing started')} />
+      <RetryPostDialog postId={id} open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} onRetried={() => { toast.success('Retry started'); reload(); }} />
+      <ConfirmDialog open={dlg === 'cancel'} onOpenChange={(o) => !o && setDlg(null)} title="Cancel this post?" description="It will never publish, and this cannot be undone. To reuse the text, write a new post." confirmLabel="Cancel post" dismissLabel="Keep post" destructive onConfirm={act(() => api.posts.cancel(id), 'Post canceled')} />
       <ConfirmDialog
         open={dlg === 'delete'}
         onOpenChange={(o) => !o && setDlg(null)}
         title="Delete this post?"
-        description="It is removed from Steerpost. Content already published on a platform stays there."
+        description="It is removed from Steerpost. Copies already published on the networks stay there."
         confirmLabel="Delete"
         destructive
         onConfirm={async () => {
@@ -237,7 +239,7 @@ export function PostDetail({ id }: { id: string }) {
       />
       <ScheduleDialog open={dlg === 'schedule'} onOpenChange={(o) => !o && setDlg(null)} onSubmit={async (iso) => {
           await api.posts.schedule(id, iso);
-          toast.success('Scheduled');
+          toast.success('Post scheduled');
           reload();
         }}
       />

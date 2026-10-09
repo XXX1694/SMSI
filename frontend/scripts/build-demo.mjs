@@ -2,7 +2,7 @@
 /**
  * Builds the browser-only demo: a static export of the real app wired to the in-memory mock API.
  *
- *   npm run build:demo                                   # -> out/, for https://<user>.github.io/SMSI/demo/
+ *   npm run build:demo                                   # -> out/, for https://<user>.github.io/steerpost/demo/
  *   NEXT_PUBLIC_BASE_PATH= npm run build:demo            # -> out/, for the domain root (local `npx serve out`)
  *   NEXT_PUBLIC_BASE_PATH=/preview npm run build:demo    # any other sub-path
  *
@@ -27,4 +27,4 @@ if (!existsSync(join(out, 'index.html'))) {
   console.error('build:demo: expected a static export in out/ but found none');
   process.exit(1);
 }
-console.log(`build:demo: static demo written to ${out} (base path "${process.env.NEXT_PUBLIC_BASE_PATH ?? '/SMSI/demo'}")`);
+console.log(`build:demo: static demo written to ${out} (base path "${process.env.NEXT_PUBLIC_BASE_PATH ?? '/steerpost/demo'}")`);

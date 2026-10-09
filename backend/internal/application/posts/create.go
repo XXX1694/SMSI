@@ -121,7 +121,7 @@ func (s *Service) Update(ctx context.Context, a actor.Actor, id uuid.UUID, in Up
 			return nil, err
 		}
 		if !p.Status.Editable() {
-			return nil, errs.Newf(errs.InvalidStateTransition, "post in status %s cannot be edited", p.Status)
+			return nil, errs.New(errs.InvalidStateTransition, "Only drafts and scheduled posts can be edited.")
 		}
 		if p.Status == post.StatusScheduled {
 			if err := a.RequireVerified(); err != nil {

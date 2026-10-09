@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { useTranslations } from '@/i18n/use-translations';
 import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
@@ -8,8 +9,10 @@ import { DeleteAccount } from '@/components/delete-account';
 import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
 import { UsageCard } from '@/components/usage-card';
-import { Field, Input, Select } from '@/components/ui/input';
-import { browserTimezone, formatDateTime, isValidTimezone } from '@/lib/time';
+import { Field, Select } from '@/components/ui/input';
+import { LanguageSelect } from '@/i18n/language-select';
+import { useFormat } from '@/i18n/use-format';
+import { browserTimezone, isValidTimezone } from '@/lib/time';
 
 function tzOptions(current: string): string[] {
   let list: string[] = [];
@@ -26,6 +29,8 @@ export function SettingsView() {
   const { user } = useAuth();
   const { timezone, setTimezone, theme, setTheme } = usePrefs();
   const [zones] = useState(() => tzOptions(timezone));
+  const tl = useTranslations('language');
+  const fmt = useFormat();
 
   return (
     <div className="max-w-xl space-y-10">
@@ -47,7 +52,7 @@ export function SettingsView() {
       </Section>
       <Section title="Preferences">
         <div className="space-y-4">
-          <Field label="Timezone" hint={`Scheduled times are entered in this zone and stored as UTC. Now: ${formatDateTime(new Date().toISOString(), timezone)}.`}>
+          <Field label="Time zone" hint={`Times you enter and see use this time zone. Now: ${fmt.dateTime(new Date())}.`}>
             <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
               {zones.map((z) => (
                 <option key={z} value={z}>
@@ -55,6 +60,9 @@ export function SettingsView() {
                 </option>
               ))}
             </Select>
+          </Field>
+          <Field label={tl('label')} hint={tl('hint')}>
+            <LanguageSelect />
           </Field>
           <Field label="Theme">
             <Select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
@@ -64,11 +72,6 @@ export function SettingsView() {
             </Select>
           </Field>
         </div>
-      </Section>
-      <Section title="Security">
-        <Field label="Session" hint="You are signed in with a secure session cookie. Sign out from the sidebar.">
-          <Input value="Active" readOnly disabled />
-        </Field>
       </Section>
       <Section title="Password">
         <PasswordForm />
@@ -88,14 +91,14 @@ export function SettingsView() {
       <Section title="Legal">
         <p className="text-sm text-muted-foreground">
           Read the{' '}
-          <Link href="/terms" className="text-accent hover:underline">
+          <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
             Terms of Service
           </Link>{' '}
           and the{' '}
-          <Link href="/privacy" className="text-accent hover:underline">
+          <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
             Privacy Policy
           </Link>
-          . The operator of this instance is responsible for both.
+          . The server admin is responsible for both.
         </p>
       </Section>
     </div>

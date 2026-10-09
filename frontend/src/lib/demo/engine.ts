@@ -909,7 +909,7 @@ export class DemoEngine {
   }
 }
 
-const LABELS: Record<string, string> = { linkedin: 'LinkedIn', telegram: 'Telegram', mock: 'Mock' };
+const LABELS: Record<string, string> = { linkedin: 'LinkedIn', telegram: 'Telegram', mock: 'Test network' };
 function labelOf(platform: string): string {
   return LABELS[platform] ?? platform;
 }

@@ -15,8 +15,8 @@ describe('describeErrorCode', () => {
   });
 
   it('never echoes an unknown code', () => {
-    expect(describeErrorCode('SOMETHING_NEW')).toBe('Something went wrong. Please try again.');
-    expect(describeErrorCode(null)).toBe('Something went wrong. Please try again.');
+    expect(describeErrorCode('SOMETHING_NEW')).toBe('Something went wrong. Try again.');
+    expect(describeErrorCode(null)).toBe('Something went wrong. Try again.');
   });
 });
 
@@ -25,7 +25,7 @@ describe('friendlyMessage', () => {
     expect(friendlyMessage('UNAUTHENTICATED', 'Invalid email or password.')).toBe('Invalid email or password.');
   });
   it('replaces placeholders and bare codes with the sentence for the code', () => {
-    expect(friendlyMessage('INTERNAL', 'Request failed (500).')).toContain('our side');
+    expect(friendlyMessage('INTERNAL', 'Request failed (500).')).toContain('Steerpost had a problem');
     expect(friendlyMessage('PROVIDER_ERROR', 'PROVIDER_ERROR')).not.toContain('PROVIDER_ERROR');
     expect(friendlyMessage('RATE_LIMITED', '')).toContain('Too many requests');
   });
@@ -33,11 +33,11 @@ describe('friendlyMessage', () => {
 
 describe('technical messages', () => {
   it('hides raw JSON and stack traces behind the sentence for the code', () => {
-    expect(friendlyMessage('PROVIDER_ERROR', '{"ok":false,"error_code":400}')).toBe('The network could not publish the post.');
-    expect(friendlyMessage('INTERNAL', 'Error: boom\n    at run (/app/x.js:1:1)')).toContain('our side');
+    expect(friendlyMessage('PROVIDER_ERROR', '{"ok":false,"error_code":400}')).toBe('The network rejected the post. See the reason under the post\'s attempts.');
+    expect(friendlyMessage('INTERNAL', 'Error: boom\n    at run (/app/x.js:1:1)')).toContain('Steerpost had a problem');
   });
   it('no longer carries a catch-all "failed" OAuth entry', () => {
-    expect(describeErrorCode('failed')).toBe('Something went wrong. Please try again.');
+    expect(describeErrorCode('failed')).toBe('Something went wrong. Try again.');
   });
 });
 

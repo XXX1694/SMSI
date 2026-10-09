@@ -50,7 +50,7 @@ export function onboardingSteps(f: OnboardingFacts, now: Date = new Date()): Onb
     {
       id: 'agent',
       title: 'Connect an AI agent',
-      hint: 'Create an MCP connection or an API key so Claude or your own scripts can draft and schedule for you.',
+      hint: 'Create an MCP connection or an API key so Claude or your own scripts can draft posts for you.',
       href: '/developer/mcp',
       action: 'Connect agent',
       done: live(f.mcpConnections) || live(f.apiKeys),
@@ -59,7 +59,7 @@ export function onboardingSteps(f: OnboardingFacts, now: Date = new Date()): Onb
     {
       id: 'approval',
       title: 'Review an approval',
-      hint: 'When an agent wants to publish or delete, it waits here for your yes. Optional until an agent asks.',
+      hint: 'When an agent asks to publish, delete or disconnect, the request waits here.',
       href: '/approvals',
       action: 'Open approvals',
       done: f.hasApproval,

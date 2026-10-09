@@ -30,7 +30,7 @@ func (s *Service) PublishNow(ctx context.Context, a actor.Actor, id uuid.UUID) (
 			return nil, err
 		}
 		if p.Status.Retryable() {
-			return nil, errs.Newf(errs.InvalidStateTransition, "post is %s; use retry", p.Status)
+			return nil, errs.New(errs.InvalidStateTransition, "This post failed. Retry it instead of publishing again.")
 		}
 		if err := s.requireQuota(ctx, p); err != nil {
 			return nil, err

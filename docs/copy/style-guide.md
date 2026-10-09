@@ -33,7 +33,7 @@ Steerpost sounds like a careful senior engineer who respects your time.
 | Error the user cannot fix | own it, then give a next step | "Steerpost could not reach LinkedIn. It will retry in 2 minutes." |
 | Dangerous action | precise about consequences | "This posts to LinkedIn and Telegram now. Steerpost cannot undo it." |
 | Empty | helpful, one next step | "No drafts yet. Write a post" |
-| Agent activity | factual and attributable | "Claude Desktop called `publish_post` (confirmed)" |
+| Agent activity | factual and attributable | "Claude Desktop called `publish_post` (approved)" |
 
 ## 3. Mechanics (English source)
 
@@ -110,10 +110,11 @@ permission**.
 3. **Confirm button**: the same verb, in danger style. **Dismiss**: "Cancel" (or "Keep …").
 4. Irreversible and wide in scope (deleting the Steerpost account, revoking a key that agents use) → the user types the
    name or email to confirm.
-5. For agents: MCP tools require `confirm: true`, and tool descriptions say "only after the user approved this exact
-   action". Until server-side approval ships (ROADMAP goal 5), UI copy must not imply that Steerpost checks the human's
-   answer. Write "The agent must send a confirmation flag", not "You will be asked to approve".
-6. Approval copy for later: "{agent} wants to publish “{post}” to {accounts} now." [Approve] [Reject]
+5. For agents: dangerous actions need the owner's approval, and the server checks it (D-013). There is no `confirm`
+   flag any more. Say "wait for your approval in Approvals", and name the exception: a key created as trusted skips
+   approval. Use "dangerous actions" in general text, and the full list (see the glossary) where a list is needed.
+6. Approval copy: "Requested by {agent}" with the action and its details. The buttons are [Approve] and [Deny]. A
+   dangerous action that cannot be undone (publish now, delete, disconnect) gets a danger-style Approve button.
 
 ## 8. Numbers
 
@@ -177,7 +178,7 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 | target (in UI) | account | user term (target stays in the API) |
 | universal content | main text | jargon |
 | native scheduling | scheduled by the network | reads as "no scheduling" |
-| needs review (post status) | unconfirmed | clashes with approvals |
+| needs review (post status), unknown outcome (attempt) | unconfirmed | clashes with approvals |
 | stub, mock (in UI) | not available yet / test network | internal |
 | leash, revive, on the fly, out of the box | plain words | idioms do not translate |
 | invalid, illegal, fatal, abort, kill, execute | say the rule; stop; run | harsh or vague |
@@ -191,7 +192,7 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 - Design for +35 % text length (de, ru, es) and for CJK width. Buttons never truncate, and labels wrap rather than clip.
 - Never put text in images. Screenshots on the landing page are per-locale assets or keep English UI with a caption.
 
-## 13. Per-language decisions (wave 1)
+## 13. Per-language decisions
 
 | | Address | Buttons | Body text | Quotes | Notes |
 |---|---|---|---|---|---|
@@ -202,6 +203,10 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 | **pt-BR** | **você** | infinitive: «Salvar», «Agendar» | «Conecte uma conta.» | “…” | Brazilian forms only: tela, arquivo, usuário (not ecrã, ficheiro, utilizador). "post" is the accepted term. |
 | **de** | **du**, lowercase (the norm for developer and SaaS tools in German) | infinitive: «Speichern», «Planen» | «Verbinde ein Konto.» | „…“ | Nouns capitalized by grammar. Address the reader as "du" to avoid gendered nouns like "Nutzer". Prefer short verbs to keep within the length budget. |
 | **ja** | no pronoun (never あなた); です/ます sentences | noun or short verb: 「保存」「今すぐ投稿」「削除」 | 「アカウントを連携してください。」 | 「…」 | Full-width 。、, half-width letters and digits, no space between ja and Latin (JTF style). Katakana long-vowel mark: サーバー, ユーザー. Error pattern: 〜できませんでした。〜してください。 |
+| **fr** | **vous** | infinitive: «Enregistrer», «Programmer» | «Connectez un compte.» | « … » with narrow no-break spaces | Space before `:`, `;`, `?`, `!` is a narrow no-break space (U+202F), never `!` in UI copy. Long words: check the length budget. Draft: needs a native pass. |
+| **id** | **Anda**, capitalized | base verb: «Simpan», «Jadwalkan» | «Hubungkan akun.» | “…” | No plurals; repeat the noun for emphasis only when needed. Use «akun», «unggah», «pos» (established loans). Draft: needs a native pass. |
+| **zh-CN** | no pronoun; 你 only when unavoidable | verb or short verb-object: 「保存」「立即发布」 | 请连接账号。 | 「」 not used; use “…” | Simplified Chinese only. Full-width punctuation, no spaces between Chinese and Latin or digits is acceptable but be consistent. No `!`. Do not claim "works with Claude". Draft: needs a native pass. |
+| **ar** | formal second person, gender-neutral where possible | verbal noun: «حفظ», «جدولة» | «اربط حسابًا.» | «…» | Modern Standard Arabic. Latin digits (`ar-u-nu-latn`). All six plural categories. Wrap placeholders in bidi isolation. Draft: needs a native pass, last in the rollout. |
 
 ## 14. Do not translate
 

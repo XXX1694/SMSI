@@ -118,7 +118,7 @@ describe('TokenConnectDialog', () => {
     [new ApiError(403, 'INSUFFICIENT_SCOPE', 'missing scope'), /social:connect/],
     [new ApiError(429, 'RATE_LIMITED', 'slow down'), /Too many attempts/],
     [new ApiError(502, 'PROVIDER_ERROR', 'boom'), /could not be reached/],
-    [new ApiError(500, 'INTERNAL', 'INTERNAL'), /Something went wrong on our side/],
+    [new ApiError(500, 'INTERNAL', 'INTERNAL'), /Steerpost had a problem/],
   ])('maps %# to a plain sentence without leaking input', async (error, expected) => {
     apiMock.social.connectWithToken.mockRejectedValue(error);
     render(<Harness />);
@@ -145,5 +145,25 @@ describe('TokenConnectDialog', () => {
     expect(again).toHaveAttribute('type', 'password');
     expect(window.localStorage.length).toBe(0);
     expect(window.location.href).not.toContain(SECRET);
+  });
+});
+
+describe('TokenConnectDialog storage note', () => {
+  it('does not promise HTTPS on a plain http page (local installs)', () => {
+    render(<TokenConnectDialog provider={discord} open onOpenChange={() => {}} onConnected={() => {}} />);
+    const text = screen.getByRole('dialog').textContent ?? '';
+    expect(text).toContain('Steerpost stores these details encrypted and never shows them again.');
+    expect(text).not.toContain('HTTPS');
+  });
+
+  it('mentions HTTPS only when the page is served over HTTPS', () => {
+    const original = window.location;
+    Object.defineProperty(window, 'location', { value: { ...original, protocol: 'https:' }, configurable: true });
+    try {
+      render(<TokenConnectDialog provider={discord} open onOpenChange={() => {}} onConnected={() => {}} />);
+      expect(screen.getByRole('dialog').textContent).toContain('over HTTPS');
+    } finally {
+      Object.defineProperty(window, 'location', { value: original, configurable: true });
+    }
   });
 });

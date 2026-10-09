@@ -551,7 +551,7 @@ The server polls GitHub and deploys by itself; nothing can reach the server from
 timer runs `autoupdate.sh` every 5 minutes (plus up to a minute of random delay; a run missed while the machine was off happens at
 boot). Each run:
 
-1. asks `https://api.github.com/repos/<repo>/releases/latest` (public API, no token; `GITHUB_REPO` in `.env` or the environment, default `XXX1694/SMSI`). Redirects are followed (`curl -L`, https only, at most 3), so a renamed repository keeps working. Anything but HTTP 200 at the end is logged as a warning in the journal and the run ends cleanly, to try again at the next tick;
+1. asks `https://api.github.com/repos/<repo>/releases/latest` (public API, no token; `GITHUB_REPO` in `.env` or the environment, default `XXX1694/steerpost`). Redirects are followed (`curl -L`, https only, at most 3), so a renamed repository keeps working. Anything but HTTP 200 at the end is logged as a warning in the journal and the run ends cleanly, to try again at the next tick;
 2. accepts only a tag shaped `vX.Y.Z` (pre-releases and drafts are never "latest"; anything else is logged and ignored);
 3. compares it with the tag `deploy.sh` recorded in `.deploy/current_tag` (the image tag is the release tag without the `v`, as
    `release.yml` names the images) and goes on only for a **strictly newer** version, compared as numbers (`1.10.0` is newer than

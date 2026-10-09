@@ -8,19 +8,41 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Added
 
+- Internationalization infrastructure (D-021; no translated copy yet). A client-side locale provider that works the same in the server build and the static demo (no middleware, no locale routes): the locale is resolved as user setting (later `users.locale`) → `localStorage` (`steerpost_locale`) → `navigator.languages` → English, `<html lang>` and `dir` follow it (right-to-left only for `ar`), and `uk`, `zh-TW`, `zh-HK` and `zh-Hant` browsers get English. Message catalogs live in `frontend/messages/<locale>.json` with `en` as the source and empty files for the target locales; a missing key falls back to English. ICU MessageFormat comes from a small in-house runtime (`src/i18n/icu.ts`, plural, select, ordinal, rich tags) with typed keys; it is checked against FormatJS in tests. next-intl 4.14 supports Next 15 but added about 14 kB gzipped to every route (measured: first-load JS of `/` 114.8 kB → 128.7 kB), so it was not used; the runtime adds about 2 kB (114.8 kB → 116.9 kB, the Next build table stays at 103 kB shared).
+- Language switcher in Settings → Preferences and a compact one in the sidebar. It lists only enabled locales by their own name and marks machine-drafted ones "Beta translation". Only English is enabled so far; the pseudo-locale `en-XA` (accented, about 35 % longer) is listed in dev builds and the demo, to find hard-coded strings and overflow.
+- `Intl` formatting helpers for numbers, dates, times and relative times that honour the locale and the Settings timezone (`src/i18n/format.ts`, `useFormat()`). Arabic keeps Latin digits and the Gregorian calendar.
+- `npm run i18n:check` (part of `npm run lint`): every catalog key must exist in English, every message must be valid ICU with the same placeholders and tags, enabled locales must be complete with all plural categories, code may only use keys English defines; unused keys and missing `meta.json` descriptions are warnings.
+- The sidebar navigation labels are the first strings read from the catalog.
+- Reconnect button on accounts that need reconnecting (OAuth and token networks).
+- Glossary: approvals, deny, trusted key, main text, operator, open-source and the approval statuses; `docs/copy/style-guide.md` section 7 describes server-side approval.
+- App: a "Skip to content" link as the first tab stop and a focusable `main` landmark; failed posts on the dashboard get a Retry button; the calendar "+N more" and the mobile post count open that day.
 - Data export (D-018): Settings, "Your data", builds a ZIP with your profile, posts with targets and attempts, connected accounts (no credentials), API key names, approvals, the audit log and your media files. The worker streams it to storage within its memory cap; the download link works for 5 minutes, the file is deleted after `EXPORT_RETENTION_DAYS` (default 7). One export at a time, one per 24 hours. New endpoints `POST/GET /account/exports` and `GET /account/exports/{id}` (browser session only), migration 00005 (indexes).
 - Account deletion (D-019): Settings, "Your data", "Delete account". It asks for your password and your email typed out, signs out every session and revokes every API key and MCP connection at once, sets scheduled posts back to drafts, and deletes everything after `ACCOUNT_DELETION_GRACE_DAYS` (default 7). Until then you can sign in, see a banner and cancel. The worker removes posts, media (S3 objects too), connected accounts and their stored credentials, keys, approvals and the audit log in batches; only a record of counts without personal data stays. New endpoints `POST /account/delete` and `POST /account/delete/cancel` (browser session only), `user.deletion_scheduled_at` and `deletion_grace_days` in `/me`, an email when deletion is scheduled, migration 00006.
 - `429 RATE_LIMITED` answers can carry a specific `Retry-After`.
 
+### Fixed
+
+- The completed setup checklist collapses to a "Set up" line with a "Show steps" button; the Approvals tab is kept in the URL (`?tab=history`); stacked table rows (Developer on phones) are more compact.
+- Calendar month view no longer scrolls sideways at 768 to 1280 px; event chips are at least 24 px tall with a gap between them.
+- Approval cards no longer break labels on phones and show network and status names (LinkedIn, Telegram, Draft) instead of codes.
+- Settings Terms and Privacy links are underlined, not only coloured. The Escape key closes the mobile menu and returns focus to its button; the mobile header stays visible while scrolling.
+- Touch targets: buttons, nav links, pending pill, legal links, "View all" and the demo Reset reach 44 px (24 px for Reset) on phones while desktop stays compact. Toasts respect the bottom safe-area inset.
+- Demo banner is a labelled landmark, and Reset asks before wiping demo data. Loading states carry visible-to-screen-reader text, the email notice close button and the dashboard "View all" links have specific names, and the dashboard stats row has a heading.
+
 ### Changed
 
 - The Privacy Policy describes self-service export and account deletion, and how long data stays.
+- Landing page v2: about half the words (hero: "AI agents draft posts. You stay in control."), a scroll-driven "how it works" route (the line draws as you scroll, the approval gate locks, posts fan out to the networks), word-by-word headline reveals, clip-path screen reveals, magnetic buttons, tilting screens and a cursor light (mouse only), and a slimmer mobile hero and story with 44 px tap targets and safe-area insets. Pause motion now stops scroll animations and reveals too and exposes `aria-pressed`. Fixes: the nav logo no longer shrinks at 320 px, the hero flow no longer runs under the text, smooth anchor scrolling.
+- Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).
+- App copy follows the copy review (`docs/copy`): shorter and plainer text, one term per concept, no idioms, translator notes next to the 14 ambiguous strings. No API values changed.
+- Honesty fixes: the MCP panel and the "I understand" checkbox on API keys describe approvals (D-013), not a confirm flag; Publish now and Retry now count as irreversible in Approvals (danger-style Approve); each unavailable network shows its own reason from the capabilities (X, Medium and Hashnode no longer say "Requires platform approval"); the token form promises HTTPS only when the page is served over HTTPS; the media delete warning matches the backend (a file used in a post cannot be deleted); the Terms say API-key dangerous actions need approval unless the key is trusted, and name the AGPL-3.0.
+- Status names: the target status "Needs review" and the attempt status "Unknown outcome" are now "Unconfirmed" in the UI (API values `needs_review` and `unknown` are unchanged). "Cancelled" is "Canceled", "Expired" on an account is "Needs reconnecting" (with a Reconnect button), the test network is no longer called "Mock", and the post page says "Accounts" instead of "Targets".
+- Backend messages that reach the UI or agents are plain sentences with a next step (no raw ids, statuses or byte counts). Provider notes drop internal words; unavailable networks say "Not available yet: <reason>".
+- Mail templates: one verb ("Verify"), "server admin" instead of "operator", and the export mail no longer points to a settings page that has no export.
+- MCP tool descriptions and error hints: no duplicate SENSITIVE/CRITICAL prefix, correct reconnect and scope guidance, `needs_review` explained, agents are told to show the final text, accounts and time before `schedule_post`.
+- Docs: D-021 (locale set and rollout order, `uk` waits, `zh-CN` joins), `docs/copy/languages.md` and `translation-process.md` updated, a release is no longer blocked by a locale's review status (machine-drafted locales ship as "Beta translation"), and the copy glossary has `zh-CN`, `ar`, `fr` and `id` columns.
 
-### Changed
-
-- Rename shims for Steerpost (D-020). The MCP server reads `STEERPOST_API_URL`, `STEERPOST_API_KEY` and `STEERPOST_TIMEOUT_MS` first and falls back to the `SOCIALOS_*` names; both compose files set both URL variables. Releases publish the images under `steerpost-{backend,mcp,frontend}` as well as `socialos-*` (same digest and tags). `deploy/README.md` lists the legacy identifiers that keep the `socialos` name and the steps to make the new GHCR packages public.
-- `autoupdate.sh` follows redirects when it asks GitHub for the latest release (a renamed repository answers 301), reads `GITHUB_REPO` from the environment as well as `.env`, and logs a warning for any answer other than 200 instead of an info line.
-- Renamed to Steerpost (formerly SocialOS). Product copy, the MCP server name and the generated client config key (`steerpost`) changed. Stored and host identifiers keep the `socialos` name (cookies, headers, Redis keys, `/opt/socialos`, systemd units); see "Legacy identifiers" in `deploy/README.md`. Generated stdio configs keep the `SOCIALOS_AUTH_HEADER` variable so configs users already pasted keep working.
+## [0.3.0] - 2026-10-09
 
 ### Added
 
@@ -28,6 +50,12 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Edit drafts and scheduled posts in the web UI. "Edit" on the Posts list and on the post page opens the composer (`/compose?post=<id>`) prefilled with the title, text, per-network overrides, media and schedule (shown in the Settings timezone); saving calls `PATCH /posts/{id}`. A scheduled post keeps its time unless you change it; a draft can be saved and scheduled in one step. Other statuses show why they cannot be edited. Unsaved edits are guarded (browser prompt on reload or close, a dialog on in-app links). The API has no ETag or `If-Match`, so before saving the UI re-reads the post and, if its `updated_at` or status moved, shows a conflict message with "Load the latest version" and "Save mine anyway" (best effort: the check and the write are not atomic).
 - The demo engine and `mock-api` answer `PATCH /posts/{id}` (text, per-network text, accounts, media, time), so the Pages demo supports editing.
 - Dashboard "Get started" checklist for new users: connect a network, write a first post, connect an AI agent (an MCP connection or an API key) and, optionally, review an approval. Each step ticks off from existing data (accounts, posts, keys, connections, approvals), has a one-line explanation and a direct link, and the list can be dismissed (remembered in this browser). The empty Accounts, Posts and Developer screens link back to the setup steps. The demo reflects its own state.
+
+### Changed
+
+- Rename shims for Steerpost (D-020). The MCP server reads `STEERPOST_API_URL`, `STEERPOST_API_KEY` and `STEERPOST_TIMEOUT_MS` first and falls back to the `SOCIALOS_*` names; both compose files set both URL variables. Releases publish the images under `steerpost-{backend,mcp,frontend}` as well as `socialos-*` (same digest and tags). `deploy/README.md` lists the legacy identifiers that keep the `socialos` name and the steps to make the new GHCR packages public.
+- `autoupdate.sh` follows redirects when it asks GitHub for the latest release (a renamed repository answers 301), reads `GITHUB_REPO` from the environment as well as `.env`, and logs a warning for any answer other than 200 instead of an info line.
+- Renamed to Steerpost (formerly SocialOS). Product copy, the MCP server name and the generated client config key (`steerpost`) changed. Stored and host identifiers keep the `socialos` name (cookies, headers, Redis keys, `/opt/socialos`, systemd units); see "Legacy identifiers" in `deploy/README.md`. Generated stdio configs keep the `SOCIALOS_AUTH_HEADER` variable so configs users already pasted keep working.
 
 ## [0.2.1] - 2026-10-09
 
@@ -128,7 +156,8 @@ First release: the MVP, ready to self-host on one server.
 - A Telegram channel can only be connected by proving ownership with a one-time link code.
 - CI scans every change: govulncheck, npm audit, gitleaks over the history, Trivy on the images and CodeQL; the runtime images no longer ship npm.
 
-[Unreleased]: https://github.com/XXX1694/SMSI/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/XXX1694/steerpost/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/XXX1694/steerpost/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/XXX1694/SMSI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/XXX1694/SMSI/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/XXX1694/SMSI/releases/tag/v0.1.0

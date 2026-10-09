@@ -31,16 +31,15 @@ function CreatedPanel({ created, onDone }: { created: CreatedMcpConnection; onDo
         <TabsContent value="http">
           <p className="mb-2 text-sm text-muted-foreground">
             Native HTTP with an Authorization header. In Claude Code run the one-liner below; in Cursor put the JSON into <code>mcp.json</code> and
-            replace the key with <code>{'${env:SOCIALOS_API_KEY}'}</code> if you keep it in an environment variable.
+            replace the key with <code>{'${env:STEERPOST_API_KEY}'}</code> if you keep it in an environment variable.
           </p>
           <CodeBlock title="HTTP config" code={created.config.http} />
         </TabsContent>
         <TabsContent value="stdio">
           <div className="mb-2 space-y-2 text-sm text-muted-foreground">
             <p>
-              <strong>Connector (no install):</strong> Settings, Customize, Connectors, Add custom connector, enter the MCP URL, choose “No sign-in” and add{' '}
-              <code>Authorization: Bearer &lt;key&gt;</code> under Request headers. Request headers are a beta that not every plan has yet, and the URL must be
-              reachable from the internet over HTTPS. OAuth sign-in is not available for Steerpost yet.
+              <strong>Connector (no install):</strong> add a custom connector with your MCP URL and the header{' '}
+              <code>Authorization: Bearer &lt;key&gt;</code>. The URL must be reachable over HTTPS. Steps: <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/XXX1694/steerpost/blob/main/mcp/README.md" target="_blank" rel="noreferrer">MCP docs</a>.
             </p>
             <p>
               <strong>Bridge:</strong> paste this into <code>claude_desktop_config.json</code> and restart Claude Desktop. It runs the community package{' '}
@@ -93,7 +92,7 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
       }}
       className="max-w-xl space-y-5"
     >
-      <Field label="Connection name" htmlFor="mcp-name" hint="Shown in the list of connected agents.">
+      <Field label="Connection name" htmlFor="mcp-name" hint="Shown in your MCP connections.">
         <Input id="mcp-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Claude Desktop" />
       </Field>
       <fieldset className="space-y-3">
@@ -114,7 +113,7 @@ function CreateForm({ onCreated }: { onCreated: (c: CreatedMcpConnection) => voi
       </fieldset>
       {risky ? (
         <>
-          <Notice>Dangerous tools still require the agent to pass an explicit confirm flag, but they can act on live accounts.</Notice>
+          <Notice>Publishing, deleting and disconnecting wait for your approval in Approvals, every time.</Notice>
           <div className="flex items-start gap-2.5">
             <Checkbox id="mcp-ack" checked={ack} onCheckedChange={(c) => setAck(c === true)} />
             <label htmlFor="mcp-ack" className="text-sm">I understand and want to grant these permissions.</label>
@@ -174,7 +173,7 @@ export function McpView() {
           />
         )}
       </Section>
-      <Section title="Connected agents">
+      <Section title="MCP connections">
         {loading && !data ? <LoadingRows rows={2} /> : error || !data ? <ErrorState error={error} onRetry={reload} /> : <ConnectionList items={data} onRevoke={setRevoking} />}
       </Section>
       <ConfirmDialog

@@ -75,7 +75,7 @@ run
 assert_eq "new release: exit" 0 "$rc"
 assert_eq "new release: deploy.sh gets 1.2.3" "1.2.3" "$(calls)"
 assert_has "new release: logged" "$out" "deployed v1.2.3"
-assert_has "default repo is queried" "$(cat "$SB/curl.calls")" "/repos/XXX1694/SMSI/releases/latest"
+assert_has "default repo is queried" "$(cat "$SB/curl.calls")" "/repos/XXX1694/steerpost/releases/latest"
 
 # 2. nothing to do when the deployed tag is current
 setup
@@ -184,7 +184,7 @@ for code in 404 301 500; do
   out=$(cd "$SB/app" && STUB_DIR="$SB" PATH="$SB/bin:$PATH" bash ./autoupdate.sh 2>&1 >/dev/null) && rc=0 || rc=$?
   assert_eq "HTTP $code: warning exit" 0 "$rc"
   assert_has "HTTP $code: warning on stderr" "$out" "autoupdate: "
-  assert_has "HTTP $code: names the repo" "$out" "XXX1694/SMSI"
+  assert_has "HTTP $code: names the repo" "$out" "XXX1694/steerpost"
 done
 
 # 8d. GITHUB_REPO from the process environment wins over the default

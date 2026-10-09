@@ -1,20 +1,55 @@
-/* Scroll-driven motion. Reveals use IntersectionObserver (landing.js), so they work everywhere; parallax and the hero
-   exit use CSS scroll-driven animations where the browser has them and simply stay still where it does not.
-   Only transform and opacity are animated. */
+/* Scroll-driven motion. Two layers, both limited to transform, opacity, clip-path and the stroke of one drawn line:
+   1. Reveals (landing.js, motion.js) use IntersectionObserver, so they work in every browser. A class flips once, CSS moves it.
+   2. Where the browser has CSS scroll-driven animations (animation-timeline), parallax, the hero exit, the clip reveals and
+      the route in route.css follow the scroll position itself. Elsewhere they simply stay still, or use the class-based version.
+   "Pause motion" (html.motion-off) and prefers-reduced-motion switch all of it off: the page then shows its final state. */
+
 @media (prefers-reduced-motion: no-preference) {
-  .js .reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.9s var(--lp-ease), transform 1s var(--lp-ease); }
-  .js .reveal.in { opacity: 1; transform: none; }
+  html.js:not(.motion-off) .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.9s var(--lp-ease), transform 1s var(--lp-ease); }
+  html.js:not(.motion-off) .reveal.in { opacity: 1; transform: none; }
+  html.js:not(.motion-off) .rel-list .reveal:not(.in)::before { transform: scaleX(0); }
+  html:not(.motion-off) .rel-list article + article::before { transition: transform 1.3s var(--lp-ease) 0.1s; }
+
+  /* Headlines: words rise out of their own masks, line by line (motion.js splits the text). */
+  .sw { display: inline-block; overflow: clip; vertical-align: top; padding: 0 0.04em 0.16em; margin: 0 -0.04em -0.16em; }
+  .sw-i { display: inline-block; transform-origin: 0 100%; }
+  html.js:not(.motion-off) .split.is-split .sw-i { transition: transform 1.05s var(--lp-ease) calc(var(--i) * 55ms); }
+  html.js:not(.motion-off) .split.is-split:not(.in) .sw-i { transform: translateY(112%) rotate(5deg); }
+
+  /* Without scroll timelines the clip reveals run on the same class as the other reveals. */
+  html.js:not(.motion-off) .clip picture { transition: clip-path 1.3s var(--ease-steer), transform 1.6s var(--lp-ease); }
+  html.js:not(.motion-off) .clip:not(.in) picture { clip-path: inset(0 0 100% 0); transform: scale(1.08); }
+  html.js:not(.motion-off) .final-card.reveal { transition: opacity 0.9s var(--lp-ease), transform 1s var(--lp-ease), clip-path 1.3s var(--ease-steer); }
+  html.js:not(.motion-off) .final-card.reveal:not(.in) { clip-path: inset(8% 5% 8% 5% round 40px); }
+  html.js:not(.motion-off) .final-card.reveal.in { clip-path: inset(0 round 28px); }
 }
 
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    .px { animation: px linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; will-change: transform; }
+    /* the shots drift at different speeds */
+    html:not(.motion-off) .px { animation: px linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; will-change: transform; }
     @keyframes px { from { transform: translateY(var(--from)); } to { transform: translateY(var(--to)); } }
 
-    /* The hero lets go as you scroll: copy drifts up slower than the page, the frame straightens and sinks a little. */
-    .hero-grid { animation: hero-exit linear both; animation-timeline: view(); animation-range: exit 10% exit 90%; }
-    @keyframes hero-exit { to { transform: translateY(8vh); opacity: 0.15; } }
-    .steps-list::after { transition: none; animation: rail linear both; animation-timeline: view(); animation-range: entry 30% exit 70%; }
+    /* The hero lets go as you scroll: copy lifts away, the footage sinks and shrinks a little. */
+    html:not(.motion-off) .hero-copy { animation: hero-copy-out linear both; animation-timeline: view(); animation-range: exit 0% exit 80%; }
+    @keyframes hero-copy-out { to { translate: 0 -8vh; opacity: 0.05; } }
+    html:not(.motion-off) .stage .frame { animation: hero-frame-out linear both; animation-timeline: view(); animation-range: exit 0% exit 90%; }
+    @keyframes hero-frame-out { to { translate: 0 7vh; scale: 0.92; opacity: 0.2; } }
+
+    /* The story rail fills with the scroll. */
+    html:not(.motion-off) .steps-list::after { transition: none; animation: rail linear both; animation-timeline: view(); animation-range: entry 30% exit 70%; }
     @keyframes rail { from { transform: scaleY(0.05); } to { transform: scaleY(1); } }
+
+    /* Screens are unveiled by the scroll: a curtain falls open and the picture settles. */
+    html:not(.motion-off) .clip picture { transition: none; clip-path: none; animation: unveil linear both; animation-timeline: view(); animation-range: entry 4% entry 78%; }
+    @keyframes unveil { from { clip-path: inset(0 0 100% 0); transform: scale(1.1); } to { clip-path: inset(0 0 0 0); transform: scale(1); } }
+
+    /* The closing card opens like a window. */
+    html:not(.motion-off) .final-card.reveal { transition: none; opacity: 1; transform: none; clip-path: none; animation: card-open linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
+    @keyframes card-open { from { clip-path: inset(10% 6% 10% 6% round 44px); opacity: 0.4; } to { clip-path: inset(0 0 0 0 round 28px); opacity: 1; } }
+
+    /* The footer word rises into place. */
+    html:not(.motion-off) .lp-footer-word { animation: word-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 100%; }
+    @keyframes word-rise { from { transform: translateY(40%); opacity: 0; } to { transform: none; opacity: 1; } }
   }
 }

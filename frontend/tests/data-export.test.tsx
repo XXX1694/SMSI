@@ -41,7 +41,7 @@ describe('DataExportCard', () => {
   it('shows a loading state, then the empty state with the request button', async () => {
     apiMock.account.exports.list.mockResolvedValue([]);
     render(<DataExportCard />);
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
     expect(await screen.findByRole('button', { name: 'Request export' })).toBeEnabled();
     expect(screen.getByText(/Passwords, keys and tokens are never included/)).toBeInTheDocument();
   });
@@ -91,7 +91,7 @@ describe('DataExportCard', () => {
     apiMock.account.exports.list.mockRejectedValueOnce(new ApiError(500, 'INTERNAL', 'x')).mockResolvedValue([]);
     render(<DataExportCard />);
     expect(await screen.findByText('Could not load your exports')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('button', { name: 'Request export' })).toBeInTheDocument();
   });
 });

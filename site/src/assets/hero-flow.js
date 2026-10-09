@@ -1,4 +1,5 @@
-// The hero background: drafts leave an agent on the left, steer toward one approval gate, then fan out to networks on the right.
+// The hero flow: drafts leave an agent on the left, steer toward one approval gate, then fan out to networks on the right.
+// It lives behind the product footage (and, on phones, as a slim band above it), never under the text.
 // The lanes are the Steerpost mark in motion (a path that bends and lands), and the gate is where the human decides.
 // It is decoration (aria-hidden) and it explains the product in one glance. Canvas 2D, paused off screen and when the tab
 // is hidden, one static frame under prefers-reduced-motion.
@@ -13,7 +14,8 @@ export function startFlow(canvas, { reduced }) {
   if (!ctx) return { setPaused() {}, stop() {} };
   const root = getComputedStyle(document.documentElement);
   let w = 0, h = 0, dpr = 1, colors, lanes = [], packets = [], rings = [], gate = [0, 0];
-  let raf = 0, last = 0, visible = true, paused = reduced;
+  let raf = 0, last = 0, visible = true, paused = reduced, compact = false, minDt = 0;
+  const narrow = matchMedia('(max-width: 61.99rem)');
   let accentChannel = '';
 
   // Theme colours are read once per theme change, never inside the frame loop.
@@ -26,12 +28,15 @@ export function startFlow(canvas, { reduced }) {
 
   const resize = () => {
     const r = canvas.getBoundingClientRect();
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    compact = narrow.matches;
+    // Phones: a lighter canvas (1.5x pixels, 30 frames a second, three lanes) in a slim band.
+    dpr = Math.min(window.devicePixelRatio || 1, compact ? 1.5 : 2);
+    minDt = compact ? 1 / 31 : 0;
     w = r.width; h = r.height;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const n = w < 700 ? 3 : LANES;
-    gate = [w * (w < 700 ? 0.5 : 0.375), h * (w < 700 ? 0.56 : 0.6)];
+    const n = compact ? 3 : LANES;
+    gate = compact ? [w * 0.5, h * 0.5] : [w * 0.14, h * 0.58];
     const pick = (list) => (n === 3 ? [list[0], list[2], list[5]] : list);
     const from = pick([0.12, 0.26, 0.42, 0.6, 0.76, 0.9]), to = pick([0.08, 0.28, 0.5, 0.62, 0.8, 0.94]);
     lanes = from.map((f, i) => ({ y0: h * f, y1: h * to[i] }));
@@ -106,6 +111,7 @@ export function startFlow(canvas, { reduced }) {
     raf = 0;
     if (!visible || document.hidden || paused) return;
     const dt = Math.min((now - last) / 1000, 0.05);
+    if (dt < minDt) { raf = requestAnimationFrame(tick); return; }
     last = now;
     frame(dt);
     raf = requestAnimationFrame(tick);
@@ -120,6 +126,7 @@ export function startFlow(canvas, { reduced }) {
   if (paused) still(); else run();
 
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) run(); });
+  narrow.addEventListener('change', () => { resize(); if (paused) still(); });
   io.observe(canvas);
   const ro = new ResizeObserver(() => { resize(); if (paused) still(); });
   ro.observe(canvas);

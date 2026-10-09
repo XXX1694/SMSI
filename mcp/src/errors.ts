@@ -18,9 +18,9 @@ export function redact(s: string): string {
 }
 
 const HINTS: Record<string, string> = {
-  INSUFFICIENT_SCOPE: "The API key lacks the scope this action needs. Ask the user to grant it in the Steerpost developer portal.",
+  INSUFFICIENT_SCOPE: "The API key lacks the scope this action needs. Keys cannot gain scopes. Ask the user to create a new MCP connection with this permission under Developer > MCP connections.",
   EMAIL_NOT_VERIFIED: "The Steerpost account has not verified its email address, so this action is blocked. Ask the user to open the verification link in their email (it can be resent from the Steerpost banner).",
-  QUOTA_EXCEEDED: "The Steerpost plan limit for this resource is reached and the action was NOT performed. If your key has the analytics:read scope, get_usage shows the limits; otherwise ask the user. Do not retry in a loop: tell the user which limit it is (the message says), and that they must free space (disconnect an account, delete media) or wait for the new month.",
+  QUOTA_EXCEEDED: "The plan limit is reached and nothing was done. Tell the user which limit it is (see the message). Do not retry in a loop. get_usage shows the limits if your key has the analytics:read scope.",
   APPROVAL_REQUIRED: "This action needs the owner's approval and was NOT performed. Ask the owner to approve it in Steerpost, wait until they confirm, then repeat the identical call with the approval_id below. An approval works once and only for that exact call.",
   FORBIDDEN: "The API key is not allowed to do this.",
   UNAUTHENTICATED: "The API key is invalid, expired or revoked.",
@@ -29,7 +29,7 @@ const HINTS: Record<string, string> = {
   NOT_FOUND: "The resource does not exist or belongs to another user.",
   VALIDATION_ERROR: "The request was rejected as invalid; fix the arguments and retry.",
   RATE_LIMITED: "Rate limited; wait for the Retry-After pause before retrying.",
-  PROVIDER_NOT_AVAILABLE: "This social network is not supported yet.",
+  PROVIDER_NOT_AVAILABLE: "This social network is not available yet.",
   PROVIDER_ERROR: "The social network returned an error. It may be temporary.",
   CONFLICT: "The action conflicts with the current state of the resource.",
 };

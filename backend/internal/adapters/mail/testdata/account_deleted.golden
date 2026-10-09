@@ -3,7 +3,7 @@ Subject: Your Steerpost account was deleted
 --- text ---
 Your Steerpost account and its data were deleted, as you requested. This cannot be undone.
 
-If you did not request this, contact the operator of this server.
+If you did not request this, tell your server admin.
 
 Steerpost
 
@@ -11,6 +11,6 @@ Steerpost
 <!doctype html>
 <html><body style="font-family:sans-serif;line-height:1.5;color:#111">
 <p>Your Steerpost account and its data were deleted, as you requested. This cannot be undone.</p>
-<p>If you did not request this, contact the operator of this server.</p>
+<p>If you did not request this, tell your server admin.</p>
 <p style="color:#666;font-size:13px">Steerpost</p>
 </body></html>

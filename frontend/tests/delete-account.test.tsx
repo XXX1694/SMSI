@@ -90,7 +90,7 @@ describe('DeleteAccount', () => {
     await userEvent.type(screen.getByLabelText('Your password'), 'pw');
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@example.com');
     await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/went wrong/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/had a problem/i);
     expect(screen.getByRole('button', { name: 'Delete my account' })).toBeEnabled();
   });
 });
