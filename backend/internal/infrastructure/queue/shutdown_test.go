@@ -29,7 +29,7 @@ func TestShutdownWaitsForBothServersConcurrently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const timeout = 1500 * time.Millisecond
+	const timeout = 2 * time.Second
 	q := "shutdown-test-" + uuid.NewString()
 	ex := stuckExports{started: make(chan struct{}, 1), release: make(chan struct{})}
 	srv := NewServer(opt, ServerConfig{Queue: q, ShutdownTimeout: timeout, ExportShutdownTimeout: timeout, Exports: exportBuilder(ex.Build)}, nil, testutil.Logger())
@@ -67,7 +67,7 @@ func TestShutdownWaitsForBothServersConcurrently(t *testing.T) {
 	if got < timeout-200*time.Millisecond {
 		t.Fatalf("Shutdown returned after %v, before the in-flight tasks' %v budget", got, timeout)
 	}
-	if got > timeout+800*time.Millisecond { // sequential would be 2*timeout = 3s
+	if got > timeout*7/4 { // asynq adds up to ~1s of its own; sequential would be at least 2*timeout
 		t.Fatalf("Shutdown took %v, want about %v: the two servers must drain together", got, timeout)
 	}
 }
