@@ -1,103 +1,140 @@
-    <div class="wrap">
-      <section class="hero" aria-labelledby="hero-title">
-        <p class="eyebrow">Social publishing with a built-in MCP server</p>
-        <h1 id="hero-title">One place to publish, for you and your AI agents.</h1>
-        <p class="lead">SocialOS connects your social accounts, lets you write a post once, tailor it per platform and schedule it. The same abilities are available to AI agents through an MCP server, with scoped, revocable keys.</p>
-        <div class="cta">
-          <a class="btn btn-primary" href="{{base}}demo/">Try the demo</a>
-          <a class="btn btn-secondary" href="{{base}}docs/">Read the docs</a>
-        </div>
-        <p class="fine">The demo is the real app running in your browser. No sign-up, and your data stays on your device.</p>
-        <figure class="shot">
-          <div class="frame">
-            {{shot:dashboard:The SocialOS dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures.}}
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-bg" aria-hidden="true">
+        <i class="blob blob-a"></i><i class="blob blob-b"></i><i class="blob blob-c"></i>
+        <canvas class="hero-flow" data-flow></canvas>
+      </div>
+      <div class="lp-wrap hero-grid">
+        <div class="hero-copy">
+          <p class="hero-tag">Social publishing with a built-in MCP server</p>
+          <h1 id="hero-title" class="hero-title">
+            <span class="ln"><span class="w" style="--i:0">AI</span> <span class="w" style="--i:1">agents</span> <span class="w" style="--i:2">draft</span> <span class="w" style="--i:3">and</span></span>
+            <span class="ln"><span class="w" style="--i:4">schedule</span> <span class="w" style="--i:5">your</span> <span class="w" style="--i:6">posts.</span></span>
+            <span class="ln soft"><span class="w" style="--i:7">You</span> <span class="w" style="--i:8">stay</span> <span class="w" style="--i:9">in</span> <span class="w" style="--i:10">control.</span></span>
+          </h1>
+          <div class="hero-side">
+          <p class="lead">Write a post once, adjust it per network and schedule it. Claude Desktop, Claude Code or any MCP client can do the same, with keys you scope and can revoke.</p>
+          <div class="cta">
+            <a class="btn-pill btn-pill-primary" href="{{base}}demo/"><span>Try the demo</span><i class="btn-ico" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></i></a>
+            <a class="btn-pill btn-pill-ghost" href="{{base}}docs/">Read the docs</a>
           </div>
-        </figure>
-      </section>
-
-      <section class="block" id="how" aria-labelledby="how-title">
-        <h2 id="how-title">How it works</h2>
-        <p class="sub">Three steps from a blank screen to a post going out on schedule.</p>
-        <ol class="steps">
-          <li>
-            <h3>Connect your accounts</h3>
-            <p>LinkedIn through OAuth. Telegram channels and groups by posting a one-time code in the chat, which proves you control it. Tokens are encrypted at rest.</p>
-          </li>
-          <li>
-            <h3>Compose once, schedule per platform</h3>
-            <p>Write the post, tailor the text for each network, check the previews, then publish or schedule. A worker publishes on time and retries transient failures without ever posting twice.</p>
-          </li>
-          <li>
-            <h3>Let agents help, within limits</h3>
-            <p>Create an MCP connection, tick the permissions you are comfortable with and paste the config into your agent. It can draft and schedule; anything risky waits for your approval.</p>
-          </li>
-        </ol>
-      </section>
-
-      <section class="block" id="product" aria-labelledby="product-title">
-        <h2 id="product-title">A look inside</h2>
-        <p class="sub">Screenshots of the demo build. Everything on screen is clickable in the live demo.</p>
-        <div class="shots">
-          <figure class="shot">
-            <div class="frame">{{shot:compose:The composer with account chips, per-platform text and live previews.}}</div>
-            <figcaption><strong>Compose.</strong> One draft, per-platform text and previews with each network's limits.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="frame">{{shot:calendar:The calendar in month view with draft, scheduled, published and failed posts.}}</div>
-            <figcaption><strong>Calendar.</strong> Everything scheduled, published or failed, in your timezone.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="frame">{{shot:accounts:The accounts page with LinkedIn and Telegram connected and the other networks marked as not available.}}</div>
-            <figcaption><strong>Accounts.</strong> Capabilities are reported honestly, including what is not available yet.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="frame">{{shot:mcp:The MCP connections page with a permission picker and a ready-to-paste client config.}}</div>
-            <figcaption><strong>MCP connections.</strong> Pick permissions, get a one-time key and a ready-to-paste config.</figcaption>
-          </figure>
+          </div>
         </div>
-      </section>
-
-      <section class="block" id="networks" aria-labelledby="networks-title">
-        <h2 id="networks-title">Supported networks</h2>
-        <p class="sub">Two networks work today. The rest are registered but disabled, because each needs platform approval or a business account.</p>
-        <div class="table-wrap">
-          <table class="networks">
-            <thead><tr><th scope="col">Network</th><th scope="col">Status</th><th scope="col">What works</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>LinkedIn</td>
-                <td><span class="badge badge-live">Live</span></td>
-                <td>Personal profiles through OAuth 2.0. Text and images. Company pages need Marketing Developer Platform approval from LinkedIn; video is not supported yet.</td>
-              </tr>
-              <tr>
-                <td>Telegram</td>
-                <td><span class="badge badge-live">Live</span></td>
-                <td>Channels and groups through the Bot API. Text, images, video and delete. Connected by posting a one-time code, never by typing a channel name.</td>
-              </tr>
-              <tr>
-                <td>Instagram, Facebook, TikTok, YouTube, X, Threads, Pinterest</td>
-                <td><span class="badge badge-off">Not available yet</span></td>
-                <td>Registered as stubs that answer <code>PROVIDER_NOT_AVAILABLE</code>. They are not pretended to work.</td>
-              </tr>
-              <tr>
-                <td>Mock network</td>
-                <td><span class="badge badge-dev">Development only</span></td>
-                <td>A deterministic provider for tests and the demo. Refused when the server runs in production mode.</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="stage" data-hero-video>
+          <div class="frame">
+            <picture class="poster">
+              <source media="(prefers-color-scheme: dark)" srcset="{{base}}assets/video/hero-dark.jpg">
+              <img src="{{base}}assets/video/hero-light.jpg" width="1280" height="800" alt="The SocialOS composer with a post about Release 2.5 written for LinkedIn and Telegram." fetchpriority="high" decoding="async">
+            </picture>
+            <video muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" width="1280" height="800" data-video="{{base}}assets/video/hero-"></video>
+          </div>
+          <p class="stage-cap">
+            <span>Real footage of the demo: write, schedule, approve. Nothing here is staged.</span>
+            <button type="button" class="pause" data-pause hidden aria-pressed="false">Pause video</button>
+          </p>
         </div>
-        <p class="note">"Live" means the adapter talks to the real API and is tested against fakes of it. You bring your own LinkedIn app and Telegram bot; see <a href="{{base}}docs/providers/">provider setup</a>.</p>
-      </section>
+      </div>
+    </section>
 
-      <section class="block" id="mcp" aria-labelledby="mcp-title">
-        <h2 id="mcp-title">An MCP server with a leash</h2>
-        <p class="sub">Agents such as Claude Desktop connect through the Model Context Protocol and use the same REST API as the app, with the caller's own key. The MCP server holds no state and no social credentials, so it can never bypass authorization.</p>
-        <div class="two">
+    <section class="strip" aria-labelledby="strip-title">
+      <div class="lp-wrap strip-head">
+        <h2 id="strip-title">Publishes today to</h2>
+        <a href="#networks">What each network supports</a>
+      </div>
+      <div class="marquee">
+        <ul class="marquee-track" role="list">
+          <li>{{brand:linkedin}}<span>LinkedIn</span></li>
+          <li>{{brand:telegram}}<span>Telegram</span></li>
+          <li>{{brand:discord}}<span>Discord</span></li>
+          <li>{{brand:mastodon}}<span>Mastodon</span></li>
+          <li>{{brand:bluesky}}<span>Bluesky</span></li>
+          <li aria-hidden="true">{{brand:linkedin}}<span>LinkedIn</span></li>
+          <li aria-hidden="true">{{brand:telegram}}<span>Telegram</span></li>
+          <li aria-hidden="true">{{brand:discord}}<span>Discord</span></li>
+          <li aria-hidden="true">{{brand:mastodon}}<span>Mastodon</span></li>
+          <li aria-hidden="true">{{brand:bluesky}}<span>Bluesky</span></li>
+          <li aria-hidden="true">{{brand:linkedin}}<span>LinkedIn</span></li>
+          <li aria-hidden="true">{{brand:telegram}}<span>Telegram</span></li>
+          <li aria-hidden="true">{{brand:discord}}<span>Discord</span></li>
+          <li aria-hidden="true">{{brand:mastodon}}<span>Mastodon</span></li>
+          <li aria-hidden="true">{{brand:bluesky}}<span>Bluesky</span></li>
+          <li aria-hidden="true">{{brand:linkedin}}<span>LinkedIn</span></li>
+          <li aria-hidden="true">{{brand:telegram}}<span>Telegram</span></li>
+          <li aria-hidden="true">{{brand:discord}}<span>Discord</span></li>
+          <li aria-hidden="true">{{brand:mastodon}}<span>Mastodon</span></li>
+          <li aria-hidden="true">{{brand:bluesky}}<span>Bluesky</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="lp-section story" id="how" aria-labelledby="how-title" data-story>
+      <div class="lp-wrap">
+        <h2 id="how-title" class="lp-h2 reveal">Your agent drafts. You decide. SocialOS posts once.</h2>
+        <div class="story-grid">
+        <div class="story-steps">
+          <ol class="steps-list">
+            <li class="step is-active" data-step="0">
+              <h3>Your agent drafts</h3>
+              <p>Create an MCP connection, tick the permissions you are comfortable with and paste the config into your agent. By default it can only read and draft. Scheduling, publishing and deleting stay off until you allow them.</p>
+              <figure class="step-shot">{{shot:mcp:The MCP connections page with a permission picker and a ready-to-paste client config.}}</figure>
+            </li>
+            <li class="step" data-step="1">
+              <h3>You approve the risky part</h3>
+              <p>Publishing now, deleting, disconnecting and scheduling within minutes wait on the Approvals page. You read what the agent wants to post, then approve or deny. An approval works once.</p>
+              <figure class="step-shot">{{shot:approvals:The Approvals page listing a request from an MCP agent to publish a post now, with Deny and Approve buttons.}}</figure>
+            </li>
+            <li class="step" data-step="2">
+              <h3>SocialOS posts it once</h3>
+              <p>A worker publishes at the scheduled time and retries failures that are safe to retry. If it cannot tell whether a post went out, it stops and asks you.</p>
+              <figure class="step-shot">{{shot:calendar:The calendar in month view with draft, scheduled, published and failed posts.}}</figure>
+            </li>
+          </ol>
+        </div>
+        <div class="story-stage" data-active="0" aria-hidden="true">
+          <div class="story-frame">
+            <div class="story-shot s0">{{shot:mcp:}}</div>
+            <div class="story-shot s1">{{shot:approvals:}}</div>
+            <div class="story-shot s2">{{shot:calendar:}}</div>
+          </div>
+          <div class="story-flow">
+            <span class="f0">Agent</span><i></i><span class="f1">Approval</span><i></i><span class="f2">Network</span>
+          </div>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-section look" aria-labelledby="look-title">
+      <div class="lp-wrap">
+        <h2 id="look-title" class="lp-h2 reveal">Prefer to do it yourself? The same app is right there.</h2>
+        <p class="lp-sub reveal">Screenshots of the demo build. Everything on screen is clickable in the live demo.</p>
+        <div class="look-grid">
+          <figure class="look-shot ls-a"><div class="px" style="--from:70px;--to:-40px"><div class="frame">{{shot:compose:The composer with account chips, per-platform text and live previews.}}</div></div><figcaption><strong>Compose.</strong> One draft, per-platform text and previews with each network's limits.</figcaption></figure>
+          <figure class="look-shot ls-b"><div class="px" style="--from:120px;--to:-70px"><div class="frame">{{shot:dashboard:The SocialOS dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures.}}</div></div><figcaption><strong>Dashboard.</strong> What is going out, and what needs attention.</figcaption></figure>
+          <figure class="look-shot ls-c"><div class="px" style="--from:40px;--to:-60px"><div class="frame">{{shot:accounts:The accounts page with connected networks and the others marked as not available.}}</div></div><figcaption><strong>Accounts.</strong> Capabilities are reported honestly, including what is not available yet.</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-section facts-band" aria-label="Facts">
+      <div class="lp-wrap">
+        <dl class="facts-row">
+          <div class="reveal"><dt>MCP tools, each tied to one scope</dt><dd><span class="num" data-count="{{toolCount}}">{{toolCount}}</span></dd></div>
+          <div class="reveal"><dt>Networks that publish today</dt><dd><span class="num" data-count="{{liveCount}}">{{liveCount}}</span></dd></div>
+          <div class="reveal"><dt>Attempts at most, then the failure is shown with its reason</dt><dd><span class="num" data-count="5">5</span></dd></div>
+          <div class="reveal"><dt>Third-party trackers in the app or on this site</dt><dd><span class="num">0</span></dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="lp-section" id="mcp" aria-labelledby="mcp-title">
+      <div class="lp-wrap">
+        <h2 id="mcp-title" class="lp-h2 reveal">Agents work within limits you set</h2>
+        <p class="lp-sub reveal">Agents such as Claude Desktop connect through the Model Context Protocol and use the same REST API as the app, with the caller's own key. The MCP server holds no state and no social credentials, so it can never bypass authorization.</p>
+        <div class="two reveal">
           <div>
             <h3>Permission model</h3>
             <ul class="facts">
-              <li><strong>Scoped keys.</strong> Nine scopes. Tools a key has no scope for are not even listed, and the REST API checks the scope again on every call.</li>
+              <li><strong>Scoped keys.</strong> Tools a key has no scope for are not even listed, and the REST API checks the scope again on every call.</li>
               <li><strong>Dangerous actions are opt-in.</strong> <code>publish_post</code>, <code>delete_post</code> and <code>disconnect_account</code> are off by default, and every call needs your approval in SocialOS before it runs.</li>
               <li><strong>Revocable and expiring.</strong> Keys are stored as SHA-256 hashes and shown once. Revoking a connection invalidates its key immediately.</li>
               <li><strong>Audited.</strong> Every agent action lands in the audit log as <code>api_key:&lt;name&gt;</code>. Keys can never create keys or change account security.</li>
@@ -118,53 +155,93 @@
             <p class="note">Then ask: <em>"Write a post about my new Flutter project and schedule it for tomorrow 12:00 on LinkedIn and Telegram."</em></p>
           </div>
         </div>
-        <h3 style="margin:3rem 0 0;font-size:1.0625rem;font-weight:600">{{toolCount}} tools, each tied to one scope</h3>
-        <div class="table-wrap">
-          {{mcpTools}}
-        </div>
-        <p class="note">Full reference, client configuration for Claude Desktop, Claude Code and <code>mcp-remote</code>: <a href="{{base}}docs/mcp/">MCP documentation</a>.</p>
-      </section>
-
-      <section class="block" id="reliability" aria-labelledby="rel-title">
-        <h2 id="rel-title">Built so a post goes out once</h2>
-        <div class="grid-2">
-          <div>
-            <h3>At most one publish per target</h3>
-            <p>Each target carries an idempotency key. If a worker crashes between the network call and the database write, the target becomes <code>needs_review</code> instead of being posted again. A visible miss beats a duplicate.</p>
+        <details class="tools reveal">
+          <summary>All {{toolCount}} tools, each tied to one scope</summary>
+          <div class="table-wrap">
+            {{mcpTools}}
           </div>
-          <div>
+        </details>
+        <p class="note">Full reference, client configuration for Claude Desktop, Claude Code and <code>mcp-remote</code>: <a href="{{base}}docs/mcp/">MCP documentation</a>.</p>
+      </div>
+    </section>
+
+    <section class="lp-section reliability" id="reliability" aria-labelledby="rel-title">
+      <div class="lp-wrap rel-grid">
+        <div class="rel-head">
+          <h2 id="rel-title" class="lp-h2 reveal">Built so a post goes out once</h2>
+          <p class="lp-sub reveal">A visible miss beats a duplicate. These are the rules the publisher follows.</p>
+        </div>
+        <div class="rel-list">
+          <article class="reveal">
+            <h3>At most one publish per target</h3>
+            <p>Each target carries an idempotency key. If a worker crashes between the network call and the database write, the target becomes <code>needs_review</code> instead of being posted again.</p>
+          </article>
+          <article class="reveal">
             <h3>Retries only where they are safe</h3>
             <p>Network errors, 5xx responses and rate limits back off exponentially, up to five attempts. Permanent and authorization errors fail visibly, with the reason attached to the attempt.</p>
-          </div>
-          <div>
+          </article>
+          <article class="reveal">
             <h3>Secrets stay secret</h3>
             <p>OAuth tokens are encrypted with AES-256-GCM and never logged. Browser sessions are opaque server-side sessions with CSRF protection. Every query is scoped to its owner.</p>
-          </div>
-          <div>
+          </article>
+          <article class="reveal">
             <h3>A scheduler you can reason about</h3>
             <p>The database is the source of truth and Redis only carries jobs. A reconciler re-enqueues anything that is due but missing, so a Redis flush does not lose scheduled posts.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-section" id="networks" aria-labelledby="networks-title">
+      <div class="lp-wrap">
+        <h2 id="networks-title" class="lp-h2 reveal">Where it publishes, and where it does not</h2>
+        <p class="lp-sub reveal">{{liveCount}} networks work today. The others are listed so you know why they are off. Each live adapter talks to the real API and is tested against fakes of it.</p>
+        <div class="net-grid">
+          <div class="net-live reveal">
+            <h3><span class="badge badge-live">Live</span></h3>
+            <ul class="net-rows">
+              <li>{{brand:linkedin}}<div><strong>LinkedIn</strong><span>Personal profile through OAuth 2.0. Text, up to 20 images, delete. Video is not supported yet.</span></div></li>
+              <li>{{brand:telegram}}<div><strong>Telegram</strong><span>Channels and groups through the Bot API. Text, images, video, delete. Connected by posting a one-time code.</span></div></li>
+              <li>{{brand:discord}}<div><strong>Discord</strong><span>A channel webhook URL. Text, up to 10 images, delete.</span></div></li>
+              <li>{{brand:mastodon}}<div><strong>Mastodon</strong><span>And compatible servers, with an access token from your instance. Text, images, delete.</span></div></li>
+              <li>{{brand:bluesky}}<div><strong>Bluesky</strong><span>Handle and app password. Text with links and hashtags, up to 4 images, delete.</span></div></li>
+            </ul>
+          </div>
+          <div class="net-off reveal">
+            <h3><span class="badge badge-off">Not available yet</span></h3>
+            <dl>
+              <div><dt>Planned, no dates</dt><dd>Slack, Misskey, Dev.to, WordPress, Ghost, VK, Tumblr, Threads, Instagram and Facebook Pages (your own accounts), Nostr.</dd></div>
+              <div><dt>Needs platform review or a paid API</dt><dd>X (paid API, charged per post), LinkedIn company pages (Community Management API approval), YouTube and TikTok (private posts only until verified), Reddit, Pinterest, Hashnode.</dd></div>
+              <div><dt>No usable official API</dt><dd>Medium, WhatsApp Channels.</dd></div>
+            </dl>
+            <p class="note">These are registered as stubs that answer <code>PROVIDER_NOT_AVAILABLE</code>. They are not pretended to work. You bring your own apps and bots; see <a href="{{base}}docs/providers/">provider setup</a>.</p>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="block" id="run" aria-labelledby="run-title">
-        <h2 id="run-title">Run it yourself</h2>
-        <p class="sub">SocialOS is self-hosted. One command starts Postgres, Redis, MinIO, the API, the worker, the MCP server and the web app. With the mock network enabled you can try the whole flow without any credentials.</p>
-        <div class="copyable" style="max-width:40rem">
+    <section class="lp-section run" id="run" aria-labelledby="run-title">
+      <div class="lp-wrap run-grid">
+        <div>
+          <h2 id="run-title" class="lp-h2 reveal">Run it yourself</h2>
+          <p class="lp-sub reveal">SocialOS is self-hosted. One command starts Postgres, Redis, MinIO, the API, the worker, the MCP server and the web app. With the mock network enabled you can try the whole flow without any credentials.</p>
+          <p class="note reveal">Local setup, environment variables, OAuth setup and the full API are in the <a href="{{base}}docs/getting-started/">documentation</a>.</p>
+        </div>
+        <div class="copyable reveal">
 <pre><code class="hljs language-bash">make up        # generates .env, then docker compose up
 open http://localhost:3000</code></pre>
         </div>
-        <p class="note">Local setup, environment variables, OAuth setup and the full API are in the <a href="{{base}}docs/getting-started/">documentation</a>.</p>
-      </section>
+      </div>
+    </section>
 
-      <div class="cta-band">
-        <div>
-          <h2>See it work before you read about it.</h2>
-          <p>The demo is pre-filled with posts, accounts, agents and an audit log. Reset it any time.</p>
-        </div>
-        <div class="cta" style="margin:0">
-          <a class="btn btn-primary" href="{{base}}demo/">Try the demo</a>
-          <a class="btn btn-secondary" href="{{base}}docs/">Docs</a>
+    <section class="lp-section final" aria-labelledby="final-title">
+      <div class="lp-wrap final-card reveal">
+        <div class="final-bg" aria-hidden="true"><i class="blob blob-a"></i><i class="blob blob-b"></i></div>
+        <h2 id="final-title">See it work before you read about it.</h2>
+        <p>The demo is pre-filled with posts, accounts, agents and an audit log. Reset it any time.</p>
+        <div class="cta">
+          <a class="btn-pill btn-pill-primary" href="{{base}}demo/"><span>Try the demo</span><i class="btn-ico" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></i></a>
+          <a class="btn-pill btn-pill-ghost" href="{{base}}docs/">Read the docs</a>
         </div>
       </div>
-    </div>
+    </section>

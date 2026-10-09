@@ -115,3 +115,13 @@ if (diagrams.length > 0) {
     for (const d of diagrams) d.setAttribute('title', 'Diagram source (the renderer could not be loaded)');
   }
 }
+
+// Page transitions (style.css) only make sense between the landing page and the docs. The demo is a separate app that
+// does not opt in, so leaving for it skips the transition instead of letting the browser abort it with an error.
+addEventListener('pageswap', (e) => {
+  const vt = e.viewTransition;
+  if (!vt) return;
+  for (const p of [vt.ready, vt.finished, vt.updateCallbackDone]) p.catch(() => {});
+  const to = e.activation?.entry?.url;
+  if (to && new URL(to).pathname.includes('/demo/')) vt.skipTransition();
+});

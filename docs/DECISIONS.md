@@ -259,3 +259,20 @@ publishing needs a `trusted` key (opt-in, shown as such) or a scheduled post at 
 spent before the live check of a token connect, so a rejected credential needs a new approval. Whoever holds the owner's
 browser session can approve. `trusted` is visible: the key list shows it as a badge, and choosing it at creation needs a separate explicit
 confirmation under the "Dangerous" heading. Changing the policy of an existing key and an OAuth-grant policy come later.
+
+## D-014: The landing page moves with CSS and a few small scripts, no animation library (2026-10-09)
+
+**Decision.** The landing page has its own layout (`site/src/layout-landing.html`); docs keep the calm one. Motion is CSS
+(keyframes, CSS scroll-driven animations where supported, cross-document View Transitions) plus about 10 KB of first-party
+JavaScript (`landing.js`, `hero-flow.js`): IntersectionObserver reveals, counters, the sticky "how it works" picture and a canvas
+background. Only `transform` and `opacity` animate. Everything honours `prefers-reduced-motion`: no video, no loops, a static
+frame of the background, nothing hidden until revealed. The hero video is real footage of the demo, recorded by
+`site/scripts/record-hero.mjs`, and phones get its poster. Network marks are Simple Icons (CC0), inlined; counters show only
+numbers the build derives from the README.
+
+**Alternatives.** GSAP or Motion: 25 to 60 KB for effects CSS already does, and a dependency to vendor and audit. Lottie or a
+generated video: not real UI, and the page would claim things the product does not do. A WebGL background: weight and battery
+for decoration.
+
+**Consequences.** Safari and Firefox without scroll-driven animations show the parallax and hero exit still, which is fine.
+The hero video must be re-recorded (`npm run record`) when the compose or approvals screens change.

@@ -12,6 +12,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Added
 
+- A new landing page: full-viewport hero with an animated flow of posts from agent to approval to networks, a real recorded video of the demo (WebM and MP4, light and dark, poster only on phones and with reduced motion), a sticky "agent, approval, network" walkthrough, parallax screenshots, true-fact counters, a marquee of the networks that publish today and an honest list of those that do not. Cross-document View Transitions between the landing page and the docs. Docs keep their own calm layout. See D-014.
 - Email verification, password reset and password change. Mailed links carry a single-use token in the URL fragment (48 h to verify, 30 min to reset). A reset signs out every session; a change keeps the current one. API keys and MCP connections are revoked only if you tick "Also revoke all API keys and MCP connections".
 - When `MAIL_PROVIDER=smtp`, unverified accounts get `403 EMAIL_NOT_VERIFIED` on connecting networks, scheduling, publishing, editing scheduled posts and creating API keys. With the log provider nothing is restricted and the dashboard says mail is off. Existing accounts start unverified.
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.

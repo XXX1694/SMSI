@@ -229,11 +229,13 @@ const DOCS = [
 
 // ------------------------------------------------------------------ templates
 
+// Docs and the 404 share a calm layout; the landing page has its own (full-bleed hero, floating nav, big footer).
 const layout = read(join(src, 'layout.html'));
+const landingLayout = read(join(src, 'layout-landing.html'));
 
-function page({ path, title, description, content, docs = false }) {
+function page({ path, title, description, content, docs = false, landing = false }) {
   const canonical = `${SITE_URL}${BASE}${path}`;
-  return layout
+  return (landing ? landingLayout : layout)
     .replaceAll('{{title}}', esc(title))
     .replaceAll('{{description}}', esc(description))
     .replaceAll('{{canonical}}', canonical)
@@ -259,9 +261,27 @@ function shots(html) {
     const [w, h] = pngSize(join(dir, `${name}-light.png`));
     return (
       `<picture>${dark ? `<source media="(prefers-color-scheme: dark)" srcset="${BASE}assets/screens/${name}-dark.png">` : ''}` +
-      `<img src="${BASE}assets/screens/${name}-light.png" width="${w}" height="${h}" alt="${esc(alt)}" loading="${name === 'dashboard' ? 'eager' : 'lazy'}" decoding="async"></picture>`
+      `<img src="${BASE}assets/screens/${name}-light.png" width="${w}" height="${h}" alt="${esc(alt)}" loading="lazy" decoding="async"></picture>`
     );
   });
+}
+
+/** `{{brand:name}}` -> the network's monochrome mark (Simple Icons, CC0), inlined so it takes the text colour. */
+function brands(html) {
+  return html.replace(/\{\{brand:(\w+)\}\}/g, (_, name) => {
+    const file = join(src, `assets/brands/${name}.svg`);
+    if (!existsSync(file)) fail(`missing brand mark assets/brands/${name}.svg`);
+    const d = read(file).match(/ d="([^"]+)"/)?.[1];
+    return `<svg class="brand-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="${d}"/></svg>`;
+  });
+}
+
+/** How many networks the README marks as live, so the page never claims a number the docs do not. */
+function liveNetworkCount() {
+  const table = take(readme, 'Supported networks')[0].tokens.find((t) => t.type === 'table');
+  const n = table ? table.rows.filter((r) => /\bLive\b/.test(r[1].text)).length : 0;
+  if (n < 2) fail('README.md "Supported networks" has no rows marked Live');
+  return n;
 }
 
 function pngSize(file) {
@@ -311,9 +331,10 @@ cpSync(join(src, 'assets'), join(dist, 'assets'), { recursive: true });
 // Landing page
 {
   const tools = mcpToolsTable();
-  const content = shots(read(join(src, 'pages/index.html')))
+  const content = brands(shots(read(join(src, 'pages/index.html'))))
     .replace('{{mcpTools}}', () => tools.html)
     .replaceAll('{{toolCount}}', String(tools.count))
+    .replaceAll('{{liveCount}}', String(liveNetworkCount()))
     .replaceAll('{{base}}', BASE);
   write(
     'index.html',
@@ -322,6 +343,7 @@ cpSync(join(src, 'assets'), join(dist, 'assets'), { recursive: true });
       title: 'SocialOS: publish to social networks, for you and your AI agents',
       description: 'Connect your social accounts, compose once, schedule per platform, and let AI agents help through a scoped MCP server. Try the demo in your browser.',
       content,
+      landing: true,
     }),
   );
 }

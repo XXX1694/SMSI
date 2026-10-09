@@ -5,7 +5,7 @@
  *
  *   npm run build && npm run smoke
  *
- * Checks the landing page, the docs, and the browser-only demo: seeded dashboard, compose -> schedule,
+ * Checks the landing page (hero video, honest network list, scroll story, reduced motion, phone), the docs, and the browser-only demo: seeded dashboard, compose -> schedule,
  * the calendar, an MCP connection on the Developer page and the banner's Reset. Fails on any console
  * error, page error or failed local request. Screenshots go to SMOKE_OUT (default: a temp folder).
  */
@@ -79,18 +79,57 @@ console.log(`site smoke: ${dist} at ${SITE}/`);
 
 await step('landing page', async () => {
   await page.goto(`${SITE}/`);
-  await visible(page.getByRole('heading', { level: 1, name: /One place to publish/ }));
+  await visible(page.getByRole('heading', { level: 1, name: /AI agents draft and schedule your posts/ }));
   const demo = page.getByRole('link', { name: 'Try the demo' }).first();
   expect((await demo.getAttribute('href')) === `${BASE}demo/`, `Try the demo should link to ${BASE}demo/`);
   const docs = page.getByRole('link', { name: /docs/i }).first();
   expect((await docs.getAttribute('href'))?.startsWith(`${BASE}docs`), `Docs link should point into ${BASE}docs/`);
-  const rows = await page.locator('table.networks tbody tr').allInnerTexts();
-  expect(/LinkedIn[\s\S]*Live/.test(rows[0]) && /Telegram[\s\S]*Live/.test(rows[1]), 'LinkedIn and Telegram should be Live');
-  expect(rows.some((r) => /Not available yet/.test(r)), 'other networks should say "Not available yet"');
-  await visible(page.getByRole('heading', { name: /tools, each tied to one scope/ }));
+  // Honest network list: exactly the five live networks, and the rest labelled as not available.
+  const live = (await page.locator('.net-live .net-rows li strong').allInnerTexts()).join(',');
+  expect(live === 'LinkedIn,Telegram,Discord,Mastodon,Bluesky', `live networks should be the five documented ones, got ${live}`);
+  expect((await page.locator('.net-off').innerText()).includes('Not available yet'), 'other networks should say "Not available yet"');
+  expect((await page.locator('.marquee li:not([aria-hidden]) span').allInnerTexts()).length === 5, 'the marquee names only the five live networks');
+  await visible(page.locator('details.tools summary'));
+  expect(/All \d+ tools/.test(await page.locator('details.tools summary').innerText()), 'the tools list should be reachable');
+  await page.waitForSelector('.stage.is-playing', { timeout: 10_000 });
+  await page.waitForTimeout(600);
+  expect(await page.evaluate(() => document.querySelector('.stage video').currentTime > 0), 'the hero video should be playing');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow <= 0, `horizontal overflow of ${overflow}px`);
   await shot('01-landing');
+});
+
+await step('landing scroll motion and story', async () => {
+  await page.goto(`${SITE}/`);
+  await page.locator('.facts-band').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1500);
+  expect((await page.locator('.num').first().innerText()).trim() === (await page.locator('.num').first().getAttribute('data-count')), 'counters should end on the true value');
+  await page.locator('.step[data-step="2"]').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(600);
+  expect((await page.locator('.story-stage').getAttribute('data-active')) === '2', 'the sticky picture should follow the active step');
+  const revealed = await page.evaluate(() => [...document.querySelectorAll('.reveal')].filter((e) => getComputedStyle(e).opacity === '0' && e.getBoundingClientRect().top > 0 && e.getBoundingClientRect().top < innerHeight * 0.5).length);
+  expect(revealed === 0, `${revealed} reveal element(s) in view are still hidden`);
+});
+
+await step('landing respects reduced motion and phones', async () => {
+  const calm = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  const p = await calm.newPage();
+  await p.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+  await p.goto(`${SITE}/`);
+  await p.waitForTimeout(1200);
+  const state = await p.evaluate(() => ({ src: document.querySelector('.stage video').getAttribute('src'), playing: !!document.querySelector('.stage.is-playing'), hidden: [...document.querySelectorAll('.reveal')].filter((e) => getComputedStyle(e).opacity === '0').length }));
+  expect(!state.src && !state.playing, 'reduced motion must not load or play the video (the poster stays)');
+  expect(state.hidden === 0, 'reduced motion must show every section without a reveal');
+  await calm.close();
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const q = await phone.newPage();
+  await q.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort());
+  await q.goto(`${SITE}/`);
+  await q.waitForTimeout(800);
+  const m = await q.evaluate(() => ({ src: document.querySelector('.stage video').getAttribute('src'), over: document.documentElement.scrollWidth - innerWidth }));
+  expect(!m.src, 'phones get the poster, not the video');
+  expect(m.over <= 0, `horizontal overflow of ${m.over}px at 390px`);
+  await phone.close();
 });
 
 await step('docs pages render', async () => {
