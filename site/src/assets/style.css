@@ -31,6 +31,7 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: 5rem; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 body {
   margin: 0;
   background: hsl(var(--background));
@@ -55,9 +56,9 @@ code, pre, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, mon
 .site-header { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, hsl(var(--background)) 92%, transparent); backdrop-filter: saturate(1.4) blur(8px); border-bottom: 1px solid hsl(var(--border)); }
 .bar { display: flex; align-items: center; justify-content: space-between; height: 3.5rem; gap: 1rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: hsl(var(--foreground)); font-weight: 600; text-decoration: none; letter-spacing: -0.01em; }
-.brand .mark { width: 1.625rem; height: 1.625rem; color: hsl(var(--accent)); }
+.brand .mark { flex: none; width: 1.625rem; height: 1.625rem; color: hsl(var(--accent)); }
 .nav { display: flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; }
-.nav a:not(.btn) { color: hsl(var(--muted-foreground)); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; }
+.nav a:not(.btn) { white-space: nowrap; color: hsl(var(--muted-foreground)); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; }
 .nav a:not(.btn):hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
 .nav a[aria-current="page"] { color: hsl(var(--foreground)); font-weight: 500; }
 .nav .btn { margin-left: 0.5rem; }
