@@ -66,7 +66,7 @@ export function ApprovalsView() {
   else if (!data || data.items.length === 0) body = <Empty tab={tab} />;
   else {
     body = (
-      <ul className="space-y-3">
+      <ul className="stagger space-y-3">
         {data.items.map((a) => (
           <ApprovalCard key={a.id} approval={a} now={now} busy={busyId === a.id} onApprove={(x) => void decide(x, true)} onDeny={(x) => void decide(x, false)} />
         ))}

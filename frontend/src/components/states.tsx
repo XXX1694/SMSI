@@ -1,5 +1,5 @@
-import { AlertCircle } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { AlertCircle, Inbox } from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,7 +7,7 @@ import { errorMessage } from '@/hooks';
 
 export function LoadingRows({ rows = 3 }: { rows?: number }) {
   return (
-    <div role="status" aria-label="Loading" className="space-y-3">
+    <div role="status" aria-label="Loading" className="space-y-3 animate-fade-in">
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
@@ -46,9 +46,12 @@ export function InlineError({ children, onRetry, retryLabel = 'Try again', retry
   );
 }
 
-export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+export function EmptyState({ title, children, action, icon: Icon = Inbox }: { title: string; children?: ReactNode; action?: ReactNode; icon?: ComponentType<{ className?: string }> }) {
   return (
-    <div className="rounded-lg border border-dashed px-6 py-10 text-center">
+    <div className="animate-fade-in rounded-lg border border-dashed px-6 py-12 text-center">
+      <span aria-hidden className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <Icon className="h-5 w-5" />
+      </span>
       <p className="text-sm font-medium">{title}</p>
       {children ? <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{children}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
@@ -72,9 +75,9 @@ export function Notice({ tone = 'warning', children }: { tone?: 'warning' | 'dan
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
     <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+      <div className="min-w-0">
+        <h1 className="text-balance text-2xl font-semibold tracking-tight [view-transition-name:page-title]">{title}</h1>
+        {description ? <p className="mt-1.5 max-w-prose text-pretty text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>

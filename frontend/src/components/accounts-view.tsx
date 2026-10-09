@@ -205,7 +205,7 @@ export function AccountsView() {
   return (
     <div className="space-y-4">
       {result ? <Notice tone={result.tone}>{result.text}</Notice> : null}
-      <ul className="divide-y border-y">
+      <ul className="stagger divide-y border-y">
         {providers.map((p) => (
           <ProviderRow
             key={p.id}

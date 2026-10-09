@@ -76,9 +76,9 @@ export function MediaView() {
       ) : data.length === 0 ? (
         <EmptyState title="No media yet">Upload images or videos to reuse them across posts.</EmptyState>
       ) : (
-        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {data.map((m) => (
-            <li key={m.id} className="overflow-hidden rounded-lg border">
+            <li key={m.id} className="card-lift overflow-hidden rounded-lg border bg-background">
               <Thumb m={m} />
               <div className="space-y-1 p-3">
                 <p className="truncate text-sm font-medium" title={m.original_name}>{m.original_name}</p>
