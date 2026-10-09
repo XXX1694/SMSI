@@ -49,6 +49,7 @@ export function ApprovalsView() {
     setBusyId(a.id);
     try {
       await (approve ? api.approvals.approve(a.id) : api.approvals.deny(a.id));
+      // Translator note: "Approved: {action}": {action} is a label such as "Publish now" or "Delete post", shown as a name.
       toast.success(approve ? `Approved: ${actionLabel(a.action)}. ${a.actor_label} can go ahead now.` : `Denied: ${actionLabel(a.action)}.`);
     } catch (e) {
       toast.error(errorMessage(e));

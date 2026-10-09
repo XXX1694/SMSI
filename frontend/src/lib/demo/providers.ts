@@ -48,7 +48,7 @@ export const PROVIDERS: readonly WireProvider[] = [
       max_text_length: 3000,
       max_media_count: 9,
       requires_approval: true,
-      notes: 'Company pages need Marketing Developer Platform approval. Video is not supported yet.',
+      notes: "Personal profile only. No video yet. Company pages need LinkedIn's Community Management API approval.",
     }),
   },
   {
@@ -79,7 +79,7 @@ export const PROVIDERS: readonly WireProvider[] = [
       can_analytics: true,
       max_text_length: 280,
       max_media_count: 4,
-      notes: 'Deterministic mock provider for testing. In this demo, any post containing FAIL fails to publish, on every network.',
+      notes: 'Test network. Nothing is posted anywhere. In this demo, a post containing FAIL fails to publish.',
     }),
   },
   tokenProvider('discord', {
@@ -88,8 +88,7 @@ export const PROVIDERS: readonly WireProvider[] = [
     can_delete: true,
     max_text_length: 2000,
     max_media_count: 10,
-    notes:
-      "Posts into one channel through its webhook, as the webhook's name. Text up to 2000 characters and up to 10 images; mentions are not pinged. No titles, video, threads or scheduling on Discord's side.",
+    notes: "Posts to one channel as the webhook's name. Text up to 2,000 characters, up to 10 images of 10 MB. No video. If a send times out, the post is marked unconfirmed.",
   }, [
     {
       name: 'webhook_url', label: 'Webhook URL', kind: 'url', secret: true, required: true,
@@ -119,7 +118,7 @@ export const PROVIDERS: readonly WireProvider[] = [
     can_delete: true,
     max_text_length: 300,
     max_media_count: 4,
-    notes: 'Text up to 300 characters, up to 4 images of 2 MB each without alt text. Links and hashtags become clickable; mentions are not linked. Uses an app password. Steerpost schedules; Bluesky has no native scheduling.',
+    notes: 'Text up to 300 characters, up to 4 images of 2 MB. Links and hashtags are clickable; mentions are not.',
   }, [
     { name: 'handle', label: 'Handle', kind: 'text', required: true, placeholder: 'name.bsky.social', help: 'Your Bluesky handle, for example name.bsky.social.' },
     {

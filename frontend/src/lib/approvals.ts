@@ -30,6 +30,7 @@ export function timeLeft(expiresAt: string, now: Date = new Date()): string {
   if (Number.isNaN(ms) || ms <= 0) return 'Expired';
   const min = Math.ceil(ms / 60_000);
   if (ms < 60_000) return 'Under a minute left';
+  // Translator note: "{n} min left" is the time until an approval request expires. Needs an ICU plural.
   return min === 1 ? '1 min left' : `${min} min left`;
 }
 

@@ -15,6 +15,7 @@ const STATUS: Record<ApprovalStatus, { label: string; tone: 'success' | 'danger'
   approved: { label: 'Approved, waiting for the agent', tone: 'success' },
   consumed: { label: 'Approved and done', tone: 'success' },
   denied: { label: 'Denied', tone: 'danger' },
+  // Translator note: "Expired" here is an approval request that ran out of time. API keys have their own "Expired"; accounts use "Needs reconnecting". Keep separate keys.
   expired: { label: 'Expired', tone: 'neutral' },
 };
 
@@ -78,6 +79,7 @@ export function ApprovalCard({ approval, now, busy, onApprove, onDeny }: Props) 
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={isIrreversible(approval.action) ? 'danger' : 'accent'}>{label}</Badge>
           <span className="text-sm text-muted-foreground">
+            {/* Translator note: "Requested by {agent}": {agent} is a name (Claude Desktop, a key name). Do not inflect it (ru: «Запрос: {agent}»). */}
             Requested by <span className="font-medium text-foreground">{approval.actor_label}</span>
           </span>
         </div>

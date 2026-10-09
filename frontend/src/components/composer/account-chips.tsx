@@ -12,6 +12,7 @@ export function AccountChips({
   selected: string[];
   onToggle: (id: string) => void;
 }) {
+  // Translator note: label above the account chips; the accounts follow it as the object ("Publish to LinkedIn").
   return (
     <div role="group" aria-label="Publish to" className="flex flex-wrap gap-2">
       {accounts.map((a) => {

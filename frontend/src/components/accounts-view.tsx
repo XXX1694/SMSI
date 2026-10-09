@@ -65,6 +65,7 @@ function ConnectAction({ provider, hasAccounts, label: forced, onConnected }: { 
   const toast = useToast();
   const [connecting, setConnecting] = useState(false);
   const [tokenOpen, setTokenOpen] = useState(false);
+  // Translator note: "Connect" and "Connect another" sit next to a network name; the object is that network's account. "Reconnect" is its own key.
   const label = forced ?? (hasAccounts ? 'Connect another' : 'Connect');
 
   async function connectDemo() {
@@ -140,7 +141,6 @@ function ProviderRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold">{provider.name}</h2>
-          {provider.id === 'mock' ? <Badge tone="outline">Test network</Badge> : null}
         </div>
         <ConnectAction provider={provider} hasAccounts={accounts.length > 0} onConnected={onConnected} />
       </div>

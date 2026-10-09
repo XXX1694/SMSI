@@ -231,6 +231,7 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
         <li className="flex gap-3">
           <StepNumber n={2} />
           <div className="min-w-0 space-y-2">
+            {/* Translator note: "Post" is a verb here (send a chat message), not the noun "post". */}
             <p className="text-sm">Post this code there as a normal message:</p>
             <div className="flex flex-wrap items-center gap-2">
               <code

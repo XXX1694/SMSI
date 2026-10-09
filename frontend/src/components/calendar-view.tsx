@@ -160,6 +160,7 @@ export function CalendarViewPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
+          {/* Translator note: "Previous" and "Next" move the calendar by one date period (month, week or day); "Today" jumps to the current date. */}
           <Button variant="secondary" size="icon" aria-label="Previous" onClick={() => setAnchor(shift(view, current, -1))}>
             <ChevronLeft className="h-4 w-4" aria-hidden />
           </Button>

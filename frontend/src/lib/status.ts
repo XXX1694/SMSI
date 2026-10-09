@@ -8,6 +8,7 @@ export interface StatusView {
 }
 
 const POST: Record<PostStatus, StatusView> = {
+  // Translator note: "Draft" is a noun (a post status and a filter). The verb ("Agents draft posts") needs its own key.
   draft: { label: 'Draft', tone: 'neutral' },
   scheduled: { label: 'Scheduled', tone: 'accent' },
   publishing: { label: 'Publishing', tone: 'info' },
@@ -29,6 +30,7 @@ const TARGET: Record<TargetStatus, StatusView> = {
 const ACCOUNT: Record<AccountStatus, StatusView> = {
   active: { label: 'Active', tone: 'success' },
   expired: { label: 'Needs reconnecting', tone: 'warning' },
+  // Translator note: "Revoked" is the status of an API key, an MCP connection or an account whose access was removed.
   revoked: { label: 'Revoked', tone: 'neutral' },
   error: { label: 'Error', tone: 'danger' },
 };

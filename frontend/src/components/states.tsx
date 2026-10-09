@@ -25,6 +25,7 @@ export function ErrorState({ error, onRetry, title = 'Loading failed', showRef =
       </div>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
+          {/* Translator note: "Try again" reloads data after a failed load. "Retry" publishes a post again. Never merge the two keys. */}
           Try again
         </Button>
       ) : null}

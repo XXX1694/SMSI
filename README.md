@@ -36,8 +36,8 @@
 
 ## Why Steerpost
 
-- **Built for agents, with a leash.** Claude, Cursor and other MCP clients can draft and schedule posts. Each agent gets a
-  scoped, revocable key, risky actions need an explicit confirmation, and every call lands in the audit log.
+- **Built for agents, with limits you set.** Claude, Cursor and other MCP clients can draft and schedule posts. Each agent gets a
+  scoped, revocable key, risky actions wait for your approval, and every call lands in the audit log.
 - **Yours to run.** One `make up` starts the whole stack. Your accounts, tokens and posts stay in your own database, with
   tokens encrypted at rest and no third-party trackers.
 - **Honest about networks.** Each network reports what it really supports. An unsupported feature fails with a clear
@@ -59,7 +59,7 @@
 
 - An MCP server with 14 tools, over Streamable HTTP or stdio.
 - Keys carry only the scopes you tick. Tools outside a key's scope are not even listed, and the API checks every call again.
-- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in Steerpost before it runs.
+- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in Steerpost before it runs, unless you mark the key as trusted.
 - Every agent action is in the audit log, with an "Agent actions" filter.
 
 **Self-hosting**
@@ -68,7 +68,7 @@
   updates from GitHub Releases, and a mode for servers that already run a reverse proxy.
 - Multi-arch images (amd64, arm64) on GHCR.
 
-**Not there yet:** a drag-and-drop calendar, a posting queue with time slots, threads, first comments, team workspaces and
+**Not there yet:** a drag-and-drop calendar, a posting queue with time slots, threads, first comments, team workspaces with shared
 approvals, and OAuth for MCP clients. The analytics page exists, but no connected network reports metrics yet. The
 prioritised backlog is in [PRODUCT](docs/PRODUCT.md).
 
@@ -145,13 +145,13 @@ claude mcp add --transport http steerpost https://mcp.example.com/mcp \
   "mcpServers": {
     "steerpost": {
       "url": "https://mcp.example.com/mcp",
-      "headers": { "Authorization": "Bearer ${env:SOCIALOS_API_KEY}" }
+      "headers": { "Authorization": "Bearer ${env:STEERPOST_API_KEY}" }
     }
   }
 }
 ```
 
-Set `SOCIALOS_API_KEY` in the environment Cursor starts from, or paste the key in place of the variable.
+Set `STEERPOST_API_KEY` in the environment Cursor starts from, or paste the key in place of the variable.
 
 </details>
 
@@ -184,8 +184,8 @@ Or run the Steerpost MCP server itself in stdio mode from a checkout (`cd mcp &&
       "command": "node",
       "args": ["/path/to/steerpost/mcp/dist/index.js", "--stdio"],
       "env": {
-        "SOCIALOS_API_URL": "https://api.example.com",
-        "SOCIALOS_API_KEY": "sk_live_..."
+        "STEERPOST_API_URL": "https://api.example.com",
+        "STEERPOST_API_KEY": "sk_live_..."
       }
     }
   }

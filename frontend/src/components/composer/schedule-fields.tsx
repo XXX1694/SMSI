@@ -14,6 +14,7 @@ interface Props {
 export function ScheduleFields({ date, time, timezone, onDate, onTime, note }: Props) {
   return (
     <fieldset className="space-y-2">
+      {/* Translator note: "Schedule" here is a noun (section title). The button "Schedule" is a verb: use two keys. */}
       <legend className="text-sm font-semibold">Schedule</legend>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Date" htmlFor="sched-date">

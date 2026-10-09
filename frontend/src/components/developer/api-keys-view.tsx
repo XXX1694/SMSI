@@ -39,6 +39,7 @@ function RawKeyDialog({ created, onClose }: { created: CreatedApiKey | null; onC
 }
 
 const EXPIRY: { label: string; days: number | null }[] = [
+  // Translator note: "Never" is the option "Expires: Never" for an API key.
   { label: 'Never', days: null },
   { label: '30 days', days: 30 },
   { label: '90 days', days: 90 },

@@ -52,6 +52,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
         ) : null}
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
+            {/* Translator note: "Cancel" closes the dialog. "Cancel post" (the post action) and "Keep post" (its dismiss button) are different keys. */}
             {dismissLabel ?? 'Cancel'}
           </Button>
           <Button variant={destructive ? 'danger' : 'primary'} onClick={run} disabled={busy}>
