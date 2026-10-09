@@ -7,45 +7,47 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { actionLabel } from '@/lib/approvals';
 import type { Approval } from '@/lib/types';
-import { errorMessage, useAsync } from '@/hooks';
+import { useAsync, useErrorText } from '@/hooks';
 import { ApprovalCard } from './approval-card';
 import { notifyApprovalsChanged } from './use-pending-approvals';
+import { useTranslations } from '@/i18n/use-translations';
 
 type Tab = 'pending' | 'all';
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'pending', label: 'Waiting for you' },
-  { id: 'all', label: 'History' },
-];
+const TABS = [
+  { id: 'pending', labelKey: 'tabWaiting' },
+  { id: 'all', labelKey: 'tabHistory' },
+] as const;
 const CLOCK_MS = 30_000;
 
 /** Re-renders every 30 s so "9 min left" counts down and an expired card loses its buttons. */
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), CLOCK_MS);
-    return () => window.clearInterval(t);
+    const timer = window.setInterval(() => setNow(new Date()), CLOCK_MS);
+    return () => window.clearInterval(timer);
   }, []);
   return now;
 }
 
 function Empty({ tab }: { tab: Tab }) {
+  const t = useTranslations('approvals');
   return tab === 'pending' ? (
-    <EmptyState title="Nothing is waiting for you">
-      Requests from agents appear here.
-    </EmptyState>
+    <EmptyState title={t('emptyPendingTitle')}>{t('emptyPendingBody')}</EmptyState>
   ) : (
-    <EmptyState title="No decisions yet">Approved and denied requests are listed here.</EmptyState>
+    <EmptyState title={t('emptyHistoryTitle')}>{t('emptyHistoryBody')}</EmptyState>
   );
 }
 
 export function ApprovalsView() {
+  const t = useTranslations();
+  const errorText = useErrorText();
   const toast = useToast();
   const now = useNow();
   const router = useRouter();
   const params = useSearchParams();
   // The tab lives in the URL (?tab=history) so a reload or a shared link opens the same list.
   const tab: Tab = params.get('tab') === 'history' ? 'all' : 'pending';
-  const setTab = (t: Tab) => router.replace(t === 'all' ? '/approvals?tab=history' : '/approvals');
+  const setTab = (next: Tab) => router.replace(next === 'all' ? '/approvals?tab=history' : '/approvals');
   const [busyId, setBusyId] = useState<string | null>(null);
   const load = useCallback(() => api.approvals.list(tab, 50), [tab]);
   const { data, error, loading, reload } = useAsync(load);
@@ -54,10 +56,10 @@ export function ApprovalsView() {
     setBusyId(a.id);
     try {
       await (approve ? api.approvals.approve(a.id) : api.approvals.deny(a.id));
-      // Translator note: "Approved: {action}": {action} is a label such as "Publish now" or "Delete post", shown as a name.
-      toast.success(approve ? `Approved: ${actionLabel(a.action)}. ${a.actor_label} can go ahead now.` : `Denied: ${actionLabel(a.action)}.`);
+      const action = actionLabel(a.action, t);
+      toast.success(approve ? t('approvals.approvedToast', { action, agent: a.actor_label }) : t('approvals.deniedToast', { action }));
     } catch (e) {
-      toast.error(errorMessage(e));
+      toast.error(errorText(e));
     } finally {
       setBusyId(null);
       reload();
@@ -80,10 +82,10 @@ export function ApprovalsView() {
   }
   return (
     <div className="space-y-4">
-      <div role="group" aria-label="Show approvals" className="flex gap-2">
-        {TABS.map((t) => (
-          <Button key={t.id} size="sm" variant={tab === t.id ? 'primary' : 'secondary'} aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>
-            {t.label}
+      <div role="group" aria-label={t('approvals.showLabel')} className="flex gap-2">
+        {TABS.map((x) => (
+          <Button key={x.id} size="sm" variant={tab === x.id ? 'primary' : 'secondary'} aria-pressed={tab === x.id} onClick={() => setTab(x.id)}>
+            {t(`approvals.${x.labelKey}`)}
           </Button>
         ))}
       </div>
