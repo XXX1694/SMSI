@@ -480,3 +480,49 @@ others).
 **Consequences.** Product copy may say "open-source (AGPL-3.0)". Contributions are accepted under the same licence. The
 owner, as the sole author so far, could still dual-license later; once outside contributions land, that would need their
 agreement or a CLA.
+
+## D-024: Glass surfaces over a teal mesh, a lagoon secondary colour, Onest with per-script Noto, and rare hero transitions (2026-10-09)
+
+D-023 is reserved for social sign-in.
+
+**Context.** The owner asked for a glassmorphism style, deliberately chosen brand colours applied by a 60-30-10 rule,
+status chips that do not read as generic AI UI, a typeface with more character than Inter that covers all eleven locales
+(D-021, including Kazakh Cyrillic, Arabic, Japanese and Chinese), and expressive transitions for the moments that matter.
+BRAND.md had ruled out decorative gradients beyond the hero glow, set Inter as the only face, and the landing used system
+fonts for Japanese, Chinese and Arabic. The design proposal (palette with computed contrast, glass tokens, a motion audit
+and a preview) was approved.
+
+**Decision.**
+- **Colour.** Harbour teal stays the only accent. A quieter teal, **lagoon** (`secondary`), takes the structural 20 to 30 %:
+  the chrome tint, the active nav row, selected rows, secondary buttons, chart series 2 and 3. `info` (blue) and `canvas`
+  are added. The app spends colour 70 / 20 / 10 by area (a dense dashboard needs neutrals to dominate); the landing uses the
+  classic 60 / 30 / 10.
+- **Glass.** Real backdrop blur only on chrome (sidebar, header, landing nav) and floating layers (popovers, menus,
+  toasts); cards are translucent without blur over one fixed mesh layer; tables, inputs, the composer and long text stay
+  solid. At most two blurred layers on screen. Fallbacks for missing `backdrop-filter`, `prefers-reduced-transparency`
+  and `forced-colors`. Text contrast is checked against the glass composited over the mesh's strongest point.
+- **Status tags.** Square-ish 5 px tags with a hairline border, the label in the text colour and a status glyph that alone
+  carries the colour (each status a different shape), replacing the rounded pastel pills.
+- **Type.** Onest Variable for Latin and Cyrillic; Noto Sans Arabic, Noto Sans JP and Noto Sans SC (variable) only for their
+  own locale, scoped with `html:lang()`. Everything is self-hosted from `@fontsource-variable` packages. This supersedes the
+  "system fonts for CJK and Arabic" part of D-021's landing work: the system faces differed by platform and Windows' Arabic
+  and Chinese fallbacks did not match the product.
+- **Motion.** Frequent navigation becomes instant or a 150 ms fade; lists stop staggering except the dashboard's first load;
+  the app gets the Pause motion setting the landing has. Three rare moments get a hero transition of at most 520 ms through
+  the View Transitions API (accent circle fill on sign-in and onboarding complete, accent wipe on publish now, a
+  shared-element move from the composer to the calendar), with a plain fallback and a cross-fade under reduced motion.
+
+**Alternatives.** Keep Inter (cheapest, but generic, and the owner asked for character). Geologica (distinctive but wide,
+costly in dense tables and 35 % longer translations), Golos Text (close to Inter, no weights under 400), Rubik (rounded,
+reads playful), IBM Plex Sans (good and has script siblings, but 126 KB for Latin and Cyrillic and closely tied to IBM's
+Carbon look), Manrope and Unbounded (both miss Kazakh letters). For Japanese and Chinese, keeping system fonts (no download)
+was weighed against a consistent face; the slices loaded per page keep the cost to the characters actually shown. For
+glass, blurring every card was rejected: it repaints on scroll and costs low-end phones frames for no visible gain over a
+soft mesh. A single 60-30-10 rule for both surfaces was rejected because a dashboard at 30 % secondary looks tinted.
+
+**Consequences.** BRAND.md sections 4 to 7 describe the system; tokens live in `frontend/src/styles/tokens.css`, and the
+landing derives them as before. The change lands in steps: tokens and fonts first, then the glass utilities, then the app
+shell and status tags, then cards, motion and the landing. Product screenshots and the hero video are re-recorded after the
+app screens change. Japanese and Chinese pages now download a few hundred kilobytes of font slices on first visit (measured
+in the font PR); English and Cyrillic pages get lighter. The wordmark keeps its Inter outlines until it is redrawn
+separately.
