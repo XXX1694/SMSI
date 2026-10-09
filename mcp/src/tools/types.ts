@@ -10,6 +10,7 @@ export type Scope =
   | "posts:publish"
   | "posts:delete"
   | "social:disconnect"
+  | "social:connect"
   | "media:write"
   | "analytics:read";
 

@@ -53,7 +53,7 @@ func (s *Service) Create(ctx context.Context, a actor.Actor, in CreateInput) (*p
 	if err != nil {
 		return nil, err
 	}
-	targets, err := s.buildTargets(ctx, a.UserID, accountIDs, overrides, in.Content, mediaList, requireActive(schedule))
+	targets, err := s.buildTargets(ctx, a.UserID, accountIDs, overrides, title, in.Content, mediaList, requireActive(schedule))
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (s *Service) applyUpdate(ctx context.Context, p *post.Post, in UpdateInput)
 	if err != nil {
 		return err
 	}
-	built, err := s.buildTargets(ctx, p.UserID, accountIDs, overrides, p.Content, mediaList, requireActive(p.Status == post.StatusScheduled))
+	built, err := s.buildTargets(ctx, p.UserID, accountIDs, overrides, p.Title, p.Content, mediaList, requireActive(p.Status == post.StatusScheduled))
 	if err != nil {
 		return err
 	}

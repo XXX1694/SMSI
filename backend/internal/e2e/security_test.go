@@ -447,3 +447,51 @@ func TestEmailTokensAreBoundToOwnerAndPurpose(t *testing.T) {
 		t.Fatalf("A's reset failed: %d", r.status)
 	}
 }
+
+// A token-connected account is as private as any other: user B cannot see, use
+// or remove it, and the credential never appears in any response, for anyone.
+func TestTokenAccountIsolation(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice@token.test")
+	bob.register("bob@token.test")
+	const secret = "mt_isolation_secret_0123456789" // gitleaks:allow (fake test value)
+	acc := alice.connectToken(secret)
+
+	for _, tc := range []struct{ method, path string }{
+		{"GET", "/api/v1/social/accounts/" + acc}, {"DELETE", "/api/v1/social/accounts/" + acc},
+	} {
+		if r := bob.do(tc.method, tc.path, nil); r.status != 404 {
+			t.Errorf("bob %s %s: want 404, got %d %s", tc.method, tc.path, r.status, r.body)
+		}
+	}
+	if r := bob.do("POST", "/api/v1/posts", map[string]any{"title": "T", "content": "x", "social_account_ids": []string{acc}}); r.status != 400 {
+		t.Fatalf("bob used alice's token account: %d %s", r.status, r.body)
+	}
+	if n := len(bob.must("GET", "/api/v1/social/accounts", nil, 200)["items"].([]any)); n != 0 {
+		t.Fatalf("bob sees %d accounts", n)
+	}
+	// Connecting the same credential as bob creates bob's own account, never alice's.
+	bobAcc := bob.connectToken(secret)
+	if bobAcc == acc {
+		t.Fatal("two users share one account row")
+	}
+	if got := alice.must("GET", "/api/v1/social/accounts/"+acc, nil, 200); got["status"] != "active" {
+		t.Fatalf("alice's account changed: %v", got)
+	}
+
+	// The secret is in no response of either user: accounts, audit trail, providers.
+	for _, c := range []*client{alice, bob} {
+		for _, path := range []string{"/api/v1/social/accounts", "/api/v1/audit-logs?limit=100", "/api/v1/social/providers", "/api/v1/me", "/api/v1/dashboard/summary"} {
+			if r := c.do("GET", path, nil); strings.Contains(string(r.body), secret) {
+				t.Errorf("GET %s leaks the credential", path)
+			}
+		}
+	}
+	// And it is not stored in clear text.
+	var plain int
+	if err := e.app.DB.Pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM oauth_credentials WHERE access_token_enc LIKE '%' || $1 || '%'`, secret).Scan(&plain); err != nil || plain != 0 {
+		t.Fatalf("clear-text credentials in the database: %d %v", plain, err)
+	}
+}

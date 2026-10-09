@@ -127,6 +127,7 @@ func TestUnverifiedOwnerIsGatedWhereMailWorks(t *testing.T) {
 	someID := uuid.NewString()
 	forbidden("GET", "/api/v1/social/mock/connect?format=json", nil)
 	forbidden("POST", "/api/v1/social/telegram/connect", nil)
+	forbidden("POST", tokenPath, tokenBody(goodKey))
 	forbidden("POST", "/api/v1/developer/api-keys", map[string]any{"name": "k", "scopes": []string{"posts:read"}})
 	forbidden("POST", "/api/v1/developer/mcp-connections", map[string]any{"name": "m"})
 	forbidden("POST", "/api/v1/posts", map[string]any{"content": "x", "schedule": true, "scheduled_at": fmtTime(time.Now().Add(time.Hour))})
@@ -150,6 +151,7 @@ func TestUnverifiedOwnerIsGatedWhereMailWorks(t *testing.T) {
 		t.Fatalf("email_verified after verify: %v", got)
 	}
 	c.connectMock()
+	c.connectToken(goodKey)
 	c.createKey("agent", "posts:read")
 	if r := c.do("POST", "/api/v1/auth/verify-email/resend", nil); r.status != http.StatusConflict {
 		t.Fatalf("resend when verified: %d %s", r.status, r.body)
