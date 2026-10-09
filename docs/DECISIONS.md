@@ -281,3 +281,27 @@ step for two short pages. Operator values in the backend config: an extra API ca
 **Consequences.** Breaking for API clients that register users (the MCP server never does). Existing accounts have an empty
 `terms_version` and carry on; when the texts change in meaning, bumping the version only affects new accounts. Re-acceptance
 for existing users is a later decision. The texts are a template: the operator must review them.
+
+## D-017: The landing page moves with CSS and a few small scripts, no animation library (2026-10-09)
+
+**Decision.** The landing page has its own layout (`site/src/layout-landing.html`); docs keep the calm one. Motion is CSS
+(keyframes, CSS scroll-driven animations where supported, cross-document View Transitions) plus about 10 KB of first-party
+JavaScript (`landing.js`, `hero-flow.js`): IntersectionObserver reveals, counters, the sticky "how it works" picture and a canvas
+background. Only `transform` and `opacity` animate. Everything honours `prefers-reduced-motion`: no video, no loops, a static
+frame of the background, nothing hidden until revealed. The hero video is real footage of the demo, recorded by
+`site/scripts/record-hero.mjs`, and phones get its poster. Network marks are Simple Icons (CC0), inlined; counters show only
+numbers the build derives from the README.
+
+**Alternatives.** GSAP or Motion: 25 to 60 KB for effects CSS already does, and a dependency to vendor and audit. Lottie or a
+generated video: not real UI, and the page would claim things the product does not do. A WebGL background: weight and battery
+for decoration.
+
+**Consequences.** Safari and Firefox without scroll-driven animations show the parallax and hero exit still, which is fine.
+The hero video must be re-recorded (`npm run record`) when the compose or approvals screens change.
+
+Addendum (review): a visible "Pause motion" switch (remembered in `localStorage`) stops the video, canvas, glow blobs, marquee
+and story sweep (WCAG 2.2.2); it is not offered under reduced motion, where nothing moves. Each script block is guarded and the
+`js` class that hides unrevealed sections is set only after the reveal setup works. The retry counter is read from
+`MaxRetry` in `backend/internal/application/scheduler/backoff.go` at build time. The docs' Mermaid renderer is now vendored
+from the `mermaid` npm package (MIT, 3.5 MB, loaded only on pages with diagrams) instead of jsDelivr, so the site makes no
+third-party request.
