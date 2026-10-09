@@ -17,13 +17,11 @@ const (
 )
 
 // PendingSignup is what a provider vouched for, kept until the new user accepts the Terms.
+// Only authoritative emails reach this point (see Decide), so the account is created with a verified email.
 type PendingSignup struct {
-	Subject       string `json:"subject"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	// EmailAuthoritative is Claims.AuthoritativeEmail at callback time: the only moment the hd claim is known.
-	EmailAuthoritative bool   `json:"email_authoritative"`
-	DisplayName        string `json:"name"`
+	Subject     string `json:"subject"`
+	Email       string `json:"email"`
+	DisplayName string `json:"name"`
 }
 
 // Flow is one sign-in or link round trip. State, nonce and ticket are stored as hashes only.

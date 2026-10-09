@@ -32,10 +32,16 @@ type Identity struct {
 	LastLoginAt   *time.Time
 }
 
+// GoogleIssuer is the only issuer whose gmail.com and hd rules we trust. Any other OIDC issuer (Keycloak, Authentik)
+// must get its own Provider id and is never authoritative.
+const GoogleIssuer = "https://accounts.google.com"
+
 // Claims is what a provider vouches for after a successful sign-in, already reduced to the facts the linking rules need.
 type Claims struct {
 	Provider Provider
-	Subject  string
+	// Issuer is the ID token issuer (OIDC providers); empty for GitHub.
+	Issuer  string
+	Subject string
 	// Email is lower-cased; empty when the provider gave none.
 	Email string
 	// EmailVerified is the provider's own statement that the user controls Email.
@@ -51,7 +57,7 @@ type Claims struct {
 // proves the same person owns both. A merely verified address is not enough: an address on a custom domain can
 // change hands while the old Google account still carries a verified flag.
 //
-//   - Google: a gmail.com address (Google is the only one who can issue it), or a verified address inside a
+//   - Google (issuer accounts.google.com only): a gmail.com address (Google is the only one who can issue it), or a verified address inside a
 //     Workspace domain (the "hd" claim), per Google's own guidance for ID tokens.
 //   - GitHub: the primary address, and verified.
 func (c Claims) AuthoritativeEmail() bool {
@@ -60,7 +66,7 @@ func (c Claims) AuthoritativeEmail() bool {
 	}
 	switch c.Provider {
 	case Google:
-		return strings.HasSuffix(strings.ToLower(c.Email), "@gmail.com") || c.HostedDomain != ""
+		return c.Issuer == GoogleIssuer && (strings.HasSuffix(strings.ToLower(c.Email), "@gmail.com") || c.HostedDomain != "")
 	case GitHub:
 		return c.EmailPrimary
 	default:

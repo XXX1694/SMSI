@@ -226,8 +226,7 @@ func (s *Service) ChangePassword(ctx context.Context, a actor.Actor, current, ne
 		return err
 	}
 	if !u.HasPassword() {
-		return errs.New(errs.Conflict, "this account has no password yet; set one instead of changing it").
-			WithField("current_password", "no password set")
+		return errs.New(errs.Conflict, `this account has no password yet; use "Forgot password?" on the sign-in page to set one`)
 	}
 	ok, err := s.hasher.Verify(ctx, current, u.PasswordHash)
 	if errs.CodeOf(err) == errs.RateLimited {

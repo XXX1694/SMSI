@@ -27,9 +27,9 @@ type Identities interface {
 // OAuthFlows persists sign-in and link attempts, then the pending sign-up tickets that follow them.
 type OAuthFlows interface {
 	Create(ctx context.Context, f *identity.Flow) error
-	// ConsumeState atomically marks an unused, unexpired flow as used and returns it. Anything else (unknown, replayed,
-	// expired) is NOT_FOUND, so a state works exactly once.
-	ConsumeState(ctx context.Context, stateHash string, now time.Time) (*identity.Flow, error)
+	// ConsumeState atomically marks an unused, unexpired flow of the provider as used and returns it. Anything else
+	// (unknown, replayed, expired, started for another provider) is NOT_FOUND, so a state works exactly once.
+	ConsumeState(ctx context.Context, p identity.Provider, stateHash string, now time.Time) (*identity.Flow, error)
 	// SetPending attaches a sign-up ticket to a consumed flow. NOT_FOUND when the flow is unknown or already has one.
 	SetPending(ctx context.Context, id uuid.UUID, ticketHash string, expiresAt time.Time, p identity.PendingSignup) error
 	// GetByTicket reads a live ticket without using it (the sign-up form shows what will be created).

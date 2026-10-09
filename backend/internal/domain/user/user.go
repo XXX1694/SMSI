@@ -43,14 +43,10 @@ type User struct {
 	TermsVersion    string
 }
 
-// UnusablePasswordHash is stored by the down migration of 00008 for users without a password. It is not a valid
-// encoding, so it never verifies.
-const UnusablePasswordHash = "!"
-
 // HasPassword reports whether the user can sign in with a password. Social sign-up users have none until they set one;
 // the repository returns their NULL hash as "".
 func (u *User) HasPassword() bool {
-	return u.PasswordHash != "" && u.PasswordHash != UnusablePasswordHash
+	return u.PasswordHash != ""
 }
 
 // EmailVerified reports whether the address was verified.

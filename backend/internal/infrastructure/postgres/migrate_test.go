@@ -61,11 +61,9 @@ func TestMigration00003UpAndDown(t *testing.T) {
 		t.Fatalf("plan default %q", got)
 	}
 
-	// 00004 and 00008 sit on top of 00003; roll them back first so "down" below undoes 00003 (they have their own tests).
-	for _, n := range []string{"00008", "00004"} {
-		if err := postgres.Migrate(ctx, url, "down", testutil.Logger()); err != nil {
-			t.Fatalf("down %s: %v", n, err)
-		}
+	// Everything above 00003 has its own test; roll it back so "down" below undoes exactly 00003.
+	if err := postgres.MigrateDownTo(ctx, url, 3, testutil.Logger()); err != nil {
+		t.Fatalf("down to 00003: %v", err)
 	}
 	// A deleted user must not block the rollback.
 	if _, err := db.Pool.Exec(ctx, `INSERT INTO users (email, password_hash, status) VALUES ('gone@example.com','x','deleted')`); err != nil {

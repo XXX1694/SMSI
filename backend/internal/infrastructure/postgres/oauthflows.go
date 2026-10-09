@@ -50,11 +50,12 @@ func (r *OAuthFlows) Create(ctx context.Context, f *identity.Flow) error {
 	return nil
 }
 
-// ConsumeState marks the flow used in one statement, so a replayed or concurrent callback finds nothing.
-func (r *OAuthFlows) ConsumeState(ctx context.Context, stateHash string, now time.Time) (*identity.Flow, error) {
+// ConsumeState marks the flow used in one statement, so a replayed or concurrent callback finds nothing. The provider
+// must be the one the flow was started for: a state from the GitHub start is useless at the Google callback.
+func (r *OAuthFlows) ConsumeState(ctx context.Context, p identity.Provider, stateHash string, now time.Time) (*identity.Flow, error) {
 	f, err := scanFlow(r.db.q(ctx).QueryRow(ctx,
-		`UPDATE auth_oauth_flows SET used_at = $2 WHERE state_hash = $1 AND used_at IS NULL AND expires_at > $2
-		 RETURNING `+flowCols, stateHash, now))
+		`UPDATE auth_oauth_flows SET used_at = $2 WHERE state_hash = $1 AND used_at IS NULL AND expires_at > $2 AND provider = $3
+		 RETURNING `+flowCols, stateHash, now, p))
 	return f, mapErr(err, "oauth flow")
 }
 
