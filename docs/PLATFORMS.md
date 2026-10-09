@@ -6,7 +6,7 @@ Legend: **[V]** means checked in the vendor's own docs today. **[U]** comes from
 
 | Platform | Auth: what the user creates | Gate for own account | Cost | Post types | Hard limits | Token life | Tier |
 |---|---|---|---|---|---|---|---|
-| Discord | Webhook URL (channel → Integrations → Webhooks) | none | free | text, ≤10 embeds, files, threads (`thread_id`/`thread_name`), delete via `?wait=true` id [V] | 2000 chars [V]; ~5 req/2 s, file cap 8–10 MB [U] | until the webhook is deleted | 1 |
+| Discord | Webhook URL (channel → Integrations → Webhooks) | none | free | text, ≤10 embeds, files, threads (`thread_id`/`thread_name`), delete via `?wait=true` id [V] | 2000 chars [V]; ≤10 embeds [V]; ~5 req/2 s [U]; files: the reference states 20 MiB per file [V] but older docs said 8–10 MB, so we cap at 10 MiB and ≤10 files [U] | until the webhook is deleted | **live** ([setup](integrations/discord.md)) |
 | Slack | Incoming-webhook URL (a Slack app with Incoming Webhooks) | none | free | text and Block Kit; no delete, no `ts` returned [V]; no files | ~1 msg/s per channel [V]; ~40k chars / 50 blocks [U] | until revoked | 1 |
 | Mastodon (+ Pixelfed, GoToSocial [U]) | Personal token: Preferences → Development → New application (`write:statuses write:media read:accounts`) | none | free | text, media, replies, delete, `Idempotency-Key` kept 1 h [V] | per instance via `/api/v2/instance` (default 500 chars, 4 media) [U] | until revoked | 1 |
 | Bluesky | Handle + app password | none | free | text, ≤4 images, replies, delete | 300 graphemes; `createSession` 30/5 min and 300/day; 5000 write points/h [U] | session JWTs are short-lived, the app password lasts until revoked | 1 |
@@ -117,7 +117,7 @@ Each live test publishes something publicly, so it needs the owner's "yes" and a
 
 - **PR0a (backend):** port, registry, use case, scope, route, safehttp, worker change, `CheckContent`, providertest, a mock token provider. Add the next free `docs/DECISIONS.md` entries: token connect with the critical `social:connect` scope, and the SSRF guard. Update the stub notes in `adapters/stubs/stubs.go:29-37` (X is now pay-per-use; add Reddit, Medium, Hashnode). Acceptance: connect → publish with the mock works end to end; the scope tests pass.
 - **PR0b (frontend):** `components/accounts-view.tsx:90` branches on `capabilities.connect_method`. A new `token-connect.tsx` renders `connect_fields` (secret fields use `type=password` and `autocomplete=off`). The composer shows a title field when `requires_title` is set. Attach Playwright screenshots.
-- **PR1 Discord:** fixed host; `?wait=true` returns the id needed for delete.
+- **PR1 Discord (live):** fixed host (`discord.com`, `discordapp.com`); `?wait=true` returns the id needed for delete. `webhook_url` is a `Secret` url field. Text and images only (no embeds, threads or video yet). A timeout after send is Unknown, not retried: Discord has no idempotency key and no message listing for a webhook, so no `Lookuper` is possible and `needs_review` is the honest outcome.
 - **PR2 Mastodon:** the first user-supplied host, so the SSRF guard runs live; also idempotency.
 - **PR3 Bluesky:** link facets (byte offsets), blob upload, `Lookuper`.
 - **PR4 Slack:** text only, `CanDelete=false`. To validate, POST `{}` and expect `400 no_text` [U].
