@@ -93,7 +93,7 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 			{Name: "instance_url", Label: "Instance URL", Kind: provider.FieldURL, Required: true,
 				Placeholder: "https://mastodon.social",
 				Help:        "The https address of your server. Servers on private networks cannot be connected."},
-			{Name: "access_token", Label: "Access token", Kind: provider.FieldSecret, Required: true,
+			{Name: "access_token", Label: "Access token", Kind: provider.FieldSecret, Secret: true, Required: true,
 				Help: "On your server: Preferences > Development > New application. Tick write:statuses, write:media and read:accounts, then copy \"Your access token\"."},
 		},
 		Notes: "Mastodon and compatible servers. Posts are public; images only (no video). Limits (characters, images, image size) " +

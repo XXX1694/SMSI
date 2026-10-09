@@ -123,7 +123,7 @@ func checkHTTPS(raw string) error {
 func secretValues(spec []provider.ConnectField, fields map[string]string) []string {
 	var out []string
 	for _, f := range spec {
-		if v := fields[f.Name]; f.Kind == provider.FieldSecret && len(v) >= minLeakCheckLen {
+		if v := fields[f.Name]; (f.Secret || f.Kind == provider.FieldSecret) && len(v) >= minLeakCheckLen {
 			out = append(out, v)
 		}
 	}
