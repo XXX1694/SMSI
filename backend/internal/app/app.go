@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/socialos/backend/internal/adapters/bluesky"
+	"github.com/socialos/backend/internal/adapters/discord"
 	"github.com/socialos/backend/internal/adapters/linkedin"
 	"github.com/socialos/backend/internal/adapters/mail"
 	"github.com/socialos/backend/internal/adapters/mock"
@@ -134,6 +135,7 @@ func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Regi
 	reg.Register(linkedin.New(linkedin.Config{ClientID: cfg.LinkedInID, ClientSecret: cfg.LinkedInSecret,
 		APIVersion: cfg.LinkedInVersion, UsePKCE: cfg.LinkedInPKCE}))
 	reg.Register(telegram.New(telegram.Config{BotToken: cfg.TelegramToken}))
+	reg.Register(discord.New(discord.Config{}))
 	reg.Register(bluesky.New(bluesky.Config{}))
 	if cfg.MockProviders {
 		reg.Register(mock.New())

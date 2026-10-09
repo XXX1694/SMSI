@@ -93,7 +93,7 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 		ConnectMethod:   provider.ConnectToken,
 		ConnectFields: []provider.ConnectField{
 			{Name: "handle", Label: "Handle", Help: "Your Bluesky handle, for example name.bsky.social.", Placeholder: "name.bsky.social", Kind: provider.FieldText, Required: true},
-			{Name: "app_password", Label: "App password", Help: "Create one in Settings > Privacy and security > App passwords. Never use your main password.", Placeholder: "xxxx-xxxx-xxxx-xxxx", Kind: provider.FieldSecret, Required: true},
+			{Name: "app_password", Label: "App password", Help: "Create one in Settings > Privacy and security > App passwords. Never use your main password.", Placeholder: "xxxx-xxxx-xxxx-xxxx", Kind: provider.FieldSecret, Secret: true, Required: true},
 			{Name: "pds", Label: "Server (optional)", Help: "Only if you host your own PDS. Leave empty for bsky.social.", Placeholder: "https://bsky.social", Kind: provider.FieldURL},
 		},
 		Notes: "Text up to 300 graphemes (SocialOS checks 300 characters, which is stricter for emoji), up to 4 images of 2 MB each without alt text, " +

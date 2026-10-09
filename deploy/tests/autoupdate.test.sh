@@ -104,6 +104,18 @@ setup "AUTOUPDATE=true"
 run
 assert_eq "AUTOUPDATE=true deploys" "1.2.3" "$(calls)"
 
+# 4b. the host guard has shed load (host under pressure): no deploy, GitHub not even asked; deploys again once it is gone
+setup
+mkdir -p "$SB/app/.deploy/guard" && echo 2 >"$SB/app/.deploy/guard/shed"
+run
+assert_eq "guard shed: exit" 0 "$rc"
+assert_eq "guard shed: no deploy" "" "$(calls)"
+assert_no_file "guard shed: GitHub not asked" "$SB/curl.calls"
+assert_has "guard shed: explained" "$out" "host guard has shed SocialOS load (level 2)"
+rm "$SB/app/.deploy/guard/shed"
+run
+assert_eq "guard resumed: deploys" "1.2.3" "$(calls)"
+
 # 5. GITHUB_REPO from .env; a malformed one is refused
 setup 'GITHUB_REPO="acme/widgets"'
 run
