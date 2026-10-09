@@ -234,6 +234,97 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
   # ---------------------------------------------------------------------------
+  # Website and demo: build the in-browser demo of the real app and the site, check links, drive the built site in a real
+  # browser (the runner's preinstalled Chrome). On main the result is uploaded for the pages job.
+  # ---------------------------------------------------------------------------
+  site:
+    name: Site and demo
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write # configure-pages reads the Pages settings (what GitHub's own starter workflows grant)
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Configure Pages
+        id: pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            site/package-lock.json
+
+      # The base path follows the repository (https://<owner>.github.io/<repo>/), so forks and renamed repositories
+      # work; a custom domain gives an empty one. Pull requests build with the default project-site path.
+      - name: Work out the base path
+        id: base
+        env:
+          EVENT: ${{ github.event_name }}
+          PAGES_BASE: ${{ steps.pages.outputs.base_path }}
+          PAGES_ORIGIN: ${{ steps.pages.outputs.origin }}
+          REPO: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            base="/${REPO}"; origin="https://${OWNER}.github.io"
+          else
+            base="${PAGES_BASE%/}"; origin="$PAGES_ORIGIN"
+          fi
+          {
+            echo "site=${base}/"
+            echo "demo=${base}/demo"
+            echo "origin=${origin}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+      - name: Build the demo (static export of the real app)
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.base.outputs.demo }}
+        run: npm run build:demo
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci --no-audit --no-fund
+      # Reads package-lock.json; devDependencies are out of scope on purpose.
+      - name: npm audit (production dependencies, high and above)
+        working-directory: site
+        run: npm audit --omit=dev --audit-level=high
+      - name: Build the site
+        working-directory: site
+        env:
+          SITE_BASE: ${{ steps.base.outputs.site }}
+          SITE_URL: ${{ steps.base.outputs.origin }}
+          SITE_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: npm run build
+      - name: Check links
+        working-directory: site
+        env:
+          SITE_BASE: ${{ steps.base.outputs.site }}
+        run: node scripts/check.mjs dist "$SITE_BASE"
+      - name: Smoke test
+        working-directory: site
+        env:
+          SITE_BASE: ${{ steps.base.outputs.site }}
+        run: npm run smoke
+
+      - name: Upload the site
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/dist
+
+  # ---------------------------------------------------------------------------
   # End to end: build the three images once (layers go to the Actions cache that release.yml reuses), run the real
   # compose stack with the MVP acceptance flow (register -> connect -> MCP agent drafts and schedules -> worker
   # publishes) and a smoke test of the frontend, then scan the same images with Trivy.
@@ -402,7 +493,6 @@ jobs:
   # ---------------------------------------------------------------------------
   repo-lint:
     name: Lint workflows & deploy files
-    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -442,12 +532,6 @@ jobs:
             range="--all"                      # whole history (push to main, weekly schedule)
           fi
           "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --log-opts="$range" .
-
-      # Reads package-lock.json, so no install is needed.
-      - name: npm audit (site, production dependencies, high and above)
-        if: github.event_name != 'pull_request' || needs.changes.outputs.site == 'true'
-        working-directory: site
-        run: npm audit --omit=dev --audit-level=high
 
       - name: Uptime script tests (stubbed gh, local HTTP server)
         run: bash .github/scripts/uptime.test.sh
@@ -583,7 +667,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, backend, mcp, frontend, e2e, repo-lint, codeql]
+    needs: [changes, backend, mcp, frontend, site, e2e, repo-lint, codeql]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions: {}
@@ -593,3 +677,27 @@ jobs:
           echo "::error title=CI::a required job failed or was cancelled"
           exit 1
       - run: echo "All jobs passed or were skipped because nothing relevant changed."
+
+  # ---------------------------------------------------------------------------
+  # Publish to GitHub Pages: only after a push to main, with the artifact the site job just built.
+  # ---------------------------------------------------------------------------
+  pages:
+    name: Deploy to GitHub Pages
+    needs: site
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Let a running deployment finish; keep only the newest queued one.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

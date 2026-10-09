@@ -9,6 +9,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 ### Changed
 
 - CI is one workflow: `security.yml` is merged into `ci.yml`. A pull request that touches everything runs 10 jobs instead of 19; the scanners (govulncheck, `npm audit`, gitleaks, Trivy, CodeQL) keep their checks and SARIF categories. The new aggregator job **CI ok** is the single check a branch ruleset needs to require; jobs skipped because their paths did not change count as passed. The weekly scan now runs from `ci.yml`.
+- GitHub Pages moved into `ci.yml`: a `site` job builds the demo and the site, checks links and runs the browser smoke test on every pull request that touches `frontend/`, `site/`, `docs/` or the READMEs, so breakage no longer reaches `main`; a `pages` job deploys only after a push to `main`. `pages.yml` and its "is Pages enabled?" gate are gone.
 
 ## [0.4.0] - 2026-10-09
 
