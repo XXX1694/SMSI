@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { providerLabel } from '@/lib/normalize';
 import type { SocialAccount } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/use-translations';
 
 export function AccountChips({
   accounts,
@@ -12,9 +13,9 @@ export function AccountChips({
   selected: string[];
   onToggle: (id: string) => void;
 }) {
-  // Translator note: label above the account chips; the accounts follow it as the object ("Publish to LinkedIn").
+  const t = useTranslations();
   return (
-    <div role="group" aria-label="Publish to" className="flex flex-wrap gap-2">
+    <div role="group" aria-label={t('composer.publishTo')} className="flex flex-wrap gap-2">
       {accounts.map((a) => {
         const on = selected.includes(a.id);
         const usable = a.status === 'active';
@@ -25,7 +26,7 @@ export function AccountChips({
             aria-pressed={on}
             disabled={!usable}
             onClick={() => onToggle(a.id)}
-            title={usable ? undefined : 'Needs reconnecting'}
+            title={usable ? undefined : t('common.status.account.expired')}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm max-md:min-h-11 disabled:cursor-not-allowed disabled:opacity-50',
               on ? 'border-accent bg-accent-soft text-accent' : 'hover:bg-muted',

@@ -7,7 +7,7 @@ export function Card({ as: Tag = 'div', className, ...props }: React.HTMLAttribu
 }
 
 /** A titled group on a page, with an optional action next to the heading. */
-export function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+export function Section({ title, action, children }: { title: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">

@@ -1,3 +1,5 @@
+import { formatTag } from '@/i18n/locales';
+
 /** Pure date-key ("YYYY-MM-DD") arithmetic for the calendar. No timezone logic here. */
 export type CalendarView = 'month' | 'week' | 'day';
 
@@ -68,8 +70,8 @@ export function shift(view: CalendarView, key: string, dir: 1 | -1): string {
   return addMonths(key, dir);
 }
 
-export function titleFor(view: CalendarView, key: string): string {
-  const fmt = (k: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', ...o }).format(toDate(k));
+export function titleFor(view: CalendarView, key: string, locale: string): string {
+  const fmt = (k: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(formatTag(locale), { timeZone: 'UTC', ...o }).format(toDate(k));
   if (view === 'month') return fmt(key, { month: 'long', year: 'numeric' });
   if (view === 'day') return fmt(key, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const days = weekDays(key);
@@ -80,6 +82,6 @@ export function dayNumber(key: string): number {
   return Number(key.slice(8, 10));
 }
 
-export function weekdayShort(key: string): string {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', weekday: 'short' }).format(toDate(key));
+export function weekdayShort(key: string, locale: string): string {
+  return new Intl.DateTimeFormat(formatTag(locale), { timeZone: 'UTC', weekday: 'short' }).format(toDate(key));
 }

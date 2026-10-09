@@ -2,17 +2,18 @@ import { ApiKeysView } from '@/components/developer/api-keys-view';
 import { AuditView } from '@/components/developer/audit-view';
 import { UsageView } from '@/components/developer/usage-view';
 import { Section } from '@/components/ui/card';
+import { T } from '@/i18n/t';
 
 export default function Page() {
   return (
     <div className="space-y-12">
-      <Section title="API keys">
+      <Section title={<T k="developer.keysSection" />}>
         <ApiKeysView />
       </Section>
-      <Section title="Usage">
+      <Section title={<T k="developer.usageSection" />}>
         <UsageView />
       </Section>
-      <Section title="Audit log">
+      <Section title={<T k="developer.auditSection" />}>
         <AuditView />
       </Section>
     </div>

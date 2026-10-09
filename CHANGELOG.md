@@ -16,6 +16,9 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Language switcher in Settings → Preferences and a compact one in the sidebar. It lists only enabled locales by their own name and marks machine-drafted ones "Beta translation". Only English is enabled so far; the pseudo-locale `en-XA` (accented, about 35 % longer) is listed in dev builds and the demo, to find hard-coded strings and overflow.
 - `Intl` formatting helpers for numbers, dates, times and relative times that honour the locale and the Settings timezone (`src/i18n/format.ts`, `useFormat()`). Arabic keeps Latin digits and the Gregorian calendar.
 - `npm run i18n:check` (part of `npm run lint`): every catalog key must exist in English, every message must be valid ICU with the same placeholders and tags, enabled locales must be complete with all plural categories, code may only use keys English defines; unused keys and missing `meta.json` descriptions are warnings.
+- Every user-visible string of the dashboard and the demo now comes from the English catalog (`frontend/messages/en.json`, 674 keys in 17 namespaces (`nav`, `common`, `errors`, `shell`, `auth`, `dashboard`, `posts`, `composer`, `calendar`, `accounts`, `approvals`, `settings`, `developer`, `media`, `analytics`, `legal` and `language`). The English text is unchanged. Counts and states are ICU `plural` and `select` messages (no more string concatenation or hand-made "s"), dates, numbers, sizes and relative times follow the locale and the Settings time zone, and every key has a note for translators in `messages/meta.json`, including the ambiguous ones (Draft, Schedule, Expired, Never, Cancel vs Cancel post vs Keep post, Retry vs Try again, Connect, Requested by, Approved: action, "Post this code there", "{n} min left" and others).
+- `npm run i18n:literals` (part of `npm run lint`, and `tests/i18n-literals.test.ts`) fails on hard-coded English in JSX text, in `aria-label`, `title`, `placeholder`, `alt` and the copy props of components, and in string literals that read like UI sentences. The allow-list (`frontend/scripts/i18n-literals.allow.json`) names a reason for every exception: the Terms and Privacy text, static metadata and the web manifest, the demo seed and engine, API fallback messages. `tests/i18n-extract.test.tsx` renders screens in `en-XA` and fails if plain English is left on screen.
+- `<T k="..." />` for server components, `useErrorText()` and `nodes()` (rich messages with links) in `src/i18n`; `lib/*` functions take the translator as a parameter and stay pure.
 - The sidebar navigation labels are the first strings read from the catalog.
 - Reconnect button on accounts that need reconnecting (OAuth and token networks).
 - Glossary: approvals, deny, trusted key, main text, operator, open-source and the approval statuses; `docs/copy/style-guide.md` section 7 describes server-side approval.
@@ -23,6 +26,9 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- Plural forms in the UI come from ICU messages: "1 requests per minute" for agents is now "1 request per minute", and the same rule covers attempts, accounts, attachments and characters.
+- A failed publishing attempt whose server message is only a code shows the sentence for the attempt's error code (before: the generic "Something went wrong").
+- Outside English the UI never shows the server's English error text; it shows the sentence for the error code from the catalog (field-level messages of the token form are mapped to catalog keys).
 - The site smoke test confirms the demo's Reset dialog (it had been failing since the reset confirmation landed).
 - Pages no longer scroll slightly on notched iPhones: the safe-area body padding is now subtracted from the `min-h-screen` and `md:h-screen` heights (dynamic viewport units, so the mobile browser bars are accounted for); desktop and Android, with zero insets, are unchanged.
 - The completed setup checklist collapses to a "Set up" line with a "Show steps" button; the Approvals tab is kept in the URL (`?tab=history`); stacked table rows (Developer on phones) are more compact.
@@ -31,6 +37,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Settings Terms and Privacy links are underlined, not only coloured. The Escape key closes the mobile menu and returns focus to its button; the mobile header stays visible while scrolling.
 - Touch targets: buttons, nav links, pending pill, legal links, "View all" and the demo Reset reach 44 px (24 px for Reset) on phones while desktop stays compact. Toasts respect the bottom safe-area inset.
 - Demo banner is a labelled landmark, and Reset asks before wiping demo data. Loading states carry visible-to-screen-reader text, the email notice close button and the dashboard "View all" links have specific names, and the dashboard stats row has a heading.
+- "Canceled" is spelled the American way in the message about a post that cannot be edited (it said "cancelled"), matching the status name.
+- The "requests waiting" pill in the mobile header no longer wraps: on phones it shows only the count (screen readers still hear "N requests wait for you"), and the full text appears from 640 px.
 
 ### Changed
 
@@ -43,6 +51,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Mail templates: one verb ("Verify"), "server admin" instead of "operator", and the export mail no longer points to a settings page that has no export.
 - MCP tool descriptions and error hints: no duplicate SENSITIVE/CRITICAL prefix, correct reconnect and scope guidance, `needs_review` explained, agents are told to show the final text, accounts and time before `schedule_post`.
 - Docs: D-021 (locale set and rollout order, `uk` waits, `zh-CN` joins), `docs/copy/languages.md` and `translation-process.md` updated, a release is no longer blocked by a locale's review status (machine-drafted locales ship as "Beta translation"), and the copy glossary has `zh-CN`, `ar`, `fr` and `id` columns.
+- All user-visible app strings now come from the message catalog, so the JavaScript that ships with the app grows: the English catalog (about 10.5 kB gzipped) lands in a shared chunk, so first-load JS on `/login` goes from 131 to 147 kB, `/verify-email` 125 to 140, `/compose` 155 to 168 and `/accounts` 149 to 162 (the shared baseline stays 103 kB). Splitting the catalog by namespace is a follow-up (D-021).
+- File sizes above 999 KB group thousands in English ("1,024 MB" instead of "1024 MB"), as the number follows the locale.
 
 ## [0.3.0] - 2026-10-09
 

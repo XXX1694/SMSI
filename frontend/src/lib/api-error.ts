@@ -1,3 +1,4 @@
+import { enT } from '@/i18n/en';
 import { describeErrorCode } from './errors';
 import { stringRecord } from './normalize';
 
@@ -34,10 +35,10 @@ export function parseErrorBody(status: number, body: unknown): ApiError {
     }
   }
   const fallback: Record<number, [string, string]> = {
-    401: ['UNAUTHENTICATED', describeErrorCode('UNAUTHENTICATED')],
-    403: ['FORBIDDEN', describeErrorCode('FORBIDDEN')],
-    404: ['NOT_FOUND', describeErrorCode('NOT_FOUND')],
-    429: ['RATE_LIMITED', describeErrorCode('RATE_LIMITED')],
+    401: ['UNAUTHENTICATED', describeErrorCode('UNAUTHENTICATED', enT)],
+    403: ['FORBIDDEN', describeErrorCode('FORBIDDEN', enT)],
+    404: ['NOT_FOUND', describeErrorCode('NOT_FOUND', enT)],
+    429: ['RATE_LIMITED', describeErrorCode('RATE_LIMITED', enT)],
   };
   const [code, message] = fallback[status] ?? [status >= 500 ? 'INTERNAL' : 'UNKNOWN', `Request failed (${status}).`];
   return new ApiError(status, code, message);

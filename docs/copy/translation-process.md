@@ -61,8 +61,19 @@ the rule.
 Also:
 
 - **Types.** The `Messages` type is generated from `en.json`, so using a missing key fails `tsc`.
-- **No literals.** After a screen is migrated, an ESLint rule (`react/jsx-no-literals` with an allow list) forbids raw JSX
-  strings in it.
+- **No literals.** `npm run i18n:literals` (part of `npm run lint`, and `tests/i18n-literals.test.ts`) parses every file in
+  `src/components`, `src/app` and `src/lib` and fails on JSX text, on `aria-label`, `title`, `placeholder`, `alt` and the copy
+  props of our components (`label`, `description`, `hint`, `note`, `confirmLabel`, `dismissLabel`, `retryLabel`), and on
+  string literals that read like UI sentences. `react/jsx-no-literals` was not usable: it cannot see attributes without
+  also flagging every `className`. The allow-list is `frontend/scripts/i18n-literals.allow.json`: each entry has a reason.
+  Strings that stay English by decision: the Terms and Privacy text, static `metadata`, the web manifest, the demo seed and
+  engine, and API error messages. `tests/i18n-extract.test.tsx` renders screens in `en-XA` and fails on any plain English
+  that is left on screen.
+- **How code asks for text.** Components call `useTranslations('ns')` (or the root `useTranslations()`). Server components
+  that cannot call hooks use `<T k="ns.key" />`. Functions in `src/lib` stay pure: they take the root translator as a
+  parameter (`postStatusView(status, t)`, `validateComposer(state, accounts, providers, t)`) and tests pass `enT` from
+  `@/i18n/en`. Errors: `useErrorText()` / `errorMessage(e, t)` map the API `code` to a catalog sentence and show the server
+  message only in English.
 - **Pseudo-locales in dev.** `en-XA` (accented, 40 % longer, wrapped in [ ]) and `ar-XB` (RTL pseudo) expose hardcoded
   strings, clipping and RTL bugs before any translator starts.
 

@@ -2,21 +2,22 @@
 import { Check, X } from 'lucide-react';
 import { useId, useState } from 'react';
 import { usePrefs } from '@/components/prefs-provider';
+import { nodes } from '@/i18n/rich';
+import { useFormat } from '@/i18n/use-format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { actionLabel, isIrreversible, isOpen, summaryLines, timeLeft, type SummaryLine } from '@/lib/approvals';
-import { formatDateTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import type { Approval, ApprovalStatus } from '@/lib/types';
+import { useTranslations } from '@/i18n/use-translations';
 
-const STATUS: Record<ApprovalStatus, { label: string; tone: 'success' | 'danger' | 'neutral' | 'warning' }> = {
-  pending: { label: 'Waiting', tone: 'warning' },
-  approved: { label: 'Approved, waiting for the agent', tone: 'success' },
-  consumed: { label: 'Approved and done', tone: 'success' },
-  denied: { label: 'Denied', tone: 'danger' },
-  // Translator note: "Expired" here is an approval request that ran out of time. API keys have their own "Expired"; accounts use "Needs reconnecting". Keep separate keys.
-  expired: { label: 'Expired', tone: 'neutral' },
+const STATUS_TONE: Record<ApprovalStatus, 'success' | 'danger' | 'neutral' | 'warning'> = {
+  pending: 'warning',
+  approved: 'success',
+  consumed: 'success',
+  denied: 'danger',
+  expired: 'neutral',
 };
 
 interface Props {
@@ -30,6 +31,7 @@ interface Props {
 
 /** One line of the summary. Long text is clamped; "Show full text" reveals all of it, as plain text. */
 function SummaryRow({ line }: { line: SummaryLine }) {
+  const t = useTranslations('approvals');
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
@@ -47,7 +49,7 @@ function SummaryRow({ line }: { line: SummaryLine }) {
             aria-controls={id}
             onClick={() => setOpen((o) => !o)}
           >
-            {open ? 'Show less' : 'Show full text'}
+            {open ? t('showLess') : t('showFull')}
           </button>
         ) : null}
       </dd>
@@ -56,8 +58,9 @@ function SummaryRow({ line }: { line: SummaryLine }) {
 }
 
 function Summary({ approval }: { approval: Approval }) {
+  const t = useTranslations();
   const { timezone } = usePrefs();
-  const lines = summaryLines(approval, timezone);
+  const lines = summaryLines(approval, timezone, t);
   if (lines.length === 0) return null;
   return (
     <dl className="mt-3 space-y-2 text-sm">
@@ -69,37 +72,38 @@ function Summary({ approval }: { approval: Approval }) {
 }
 
 export function ApprovalCard({ approval, now, busy, onApprove, onDeny }: Props) {
-  const { timezone } = usePrefs();
+  const t = useTranslations('approvals');
+  const tr = useTranslations();
+  const fmt = useFormat();
   const open = isOpen(approval, now);
-  const label = actionLabel(approval.action);
-  const state = STATUS[approval.status === 'pending' && !open ? 'expired' : approval.status];
+  const label = actionLabel(approval.action, tr);
+  const status = approval.status === 'pending' && !open ? 'expired' : approval.status;
   return (
     <Card as="li" className="card-lift">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={isIrreversible(approval.action) ? 'danger' : 'accent'}>{label}</Badge>
           <span className="text-sm text-muted-foreground">
-            {/* Translator note: "Requested by {agent}": {agent} is a name (Claude Desktop, a key name). Do not inflect it (ru: «Запрос: {agent}»). */}
-            Requested by <span className="font-medium text-foreground">{approval.actor_label}</span>
+            {nodes(t.rich('requestedBy', { agent: approval.actor_label, b: (c) => <span className="font-medium text-foreground">{c}</span> }))}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {open ? timeLeft(approval.expires_at, now) : approval.decided_at ? formatDateTime(approval.decided_at, timezone) : formatDateTime(approval.created_at, timezone)}
+          {open ? timeLeft(approval.expires_at, tr, now) : approval.decided_at ? fmt.dateTime(approval.decided_at) : fmt.dateTime(approval.created_at)}
         </span>
       </div>
       <Summary approval={approval} />
       {open ? (
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-          <Button variant="secondary" size="sm" disabled={busy} onClick={() => onDeny(approval)} aria-label={`Deny: ${label}`}>
-            <X className="h-4 w-4" aria-hidden /> Deny
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => onDeny(approval)} aria-label={t('denyLabel', { action: label })}>
+            <X className="h-4 w-4" aria-hidden /> {t('deny')}
           </Button>
-          <Button variant={isIrreversible(approval.action) ? 'danger' : 'primary'} size="sm" disabled={busy} onClick={() => onApprove(approval)} aria-label={`Approve: ${label}`}>
-            <Check className="h-4 w-4" aria-hidden /> {busy ? 'Approving…' : 'Approve'}
+          <Button variant={isIrreversible(approval.action) ? 'danger' : 'primary'} size="sm" disabled={busy} onClick={() => onApprove(approval)} aria-label={t('approveLabel', { action: label })}>
+            <Check className="h-4 w-4" aria-hidden /> {busy ? t('approving') : t('approve')}
           </Button>
         </div>
       ) : (
         <div className="mt-3">
-          <Badge tone={state.tone}>{state.label}</Badge>
+          <Badge tone={STATUS_TONE[status]}>{t(`status.${status}`)}</Badge>
         </div>
       )}
     </Card>

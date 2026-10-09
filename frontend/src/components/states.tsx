@@ -1,33 +1,37 @@
+'use client';
 import { AlertCircle, Inbox } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
 
 export function LoadingRows({ rows = 3 }: { rows?: number }) {
+  const t = useTranslations('common');
   return (
     <div role="status" className="space-y-3 animate-fade-in">
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t('loading')}</span>
     </div>
   );
 }
 
-export function ErrorState({ error, onRetry, title = 'Loading failed', showRef = true }: { error: unknown; onRetry?: () => void; title?: string; showRef?: boolean }) {
+export function ErrorState({ error, onRetry, title, showRef = true }: { error: unknown; onRetry?: () => void; title?: string; showRef?: boolean }) {
+  const t = useTranslations('common');
+  const errorText = useErrorText();
   return (
     <div role="alert" className="flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-sm">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
       <div className="flex-1">
-        <p className="font-medium text-danger">{title}</p>
-        <p className="text-muted-foreground">{errorMessage(error, showRef)}</p>
+        <p className="font-medium text-danger">{title ?? t('loadingFailed')}</p>
+        <p className="text-muted-foreground">{errorText(error, showRef)}</p>
       </div>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
-          {/* Translator note: "Try again" reloads data after a failed load. "Retry" publishes a post again. Never merge the two keys. */}
-          Try again
+          {t('tryAgain')}
         </Button>
       ) : null}
     </div>
@@ -35,13 +39,14 @@ export function ErrorState({ error, onRetry, title = 'Loading failed', showRef =
 }
 
 /** A compact error line for forms, dialogs and "load more" failures. Optional retry button. */
-export function InlineError({ children, onRetry, retryLabel = 'Try again', retryDisabled, className }: { children: ReactNode; onRetry?: () => void; retryLabel?: string; retryDisabled?: boolean; className?: string }) {
+export function InlineError({ children, onRetry, retryLabel, retryDisabled, className }: { children: ReactNode; onRetry?: () => void; retryLabel?: string; retryDisabled?: boolean; className?: string }) {
+  const t = useTranslations('common');
   return (
     <div role="alert" className={cn('flex flex-wrap items-center justify-between gap-3 text-sm text-danger', className)}>
       <span>{children}</span>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry} disabled={retryDisabled}>
-          {retryLabel}
+          {retryLabel ?? t('tryAgain')}
         </Button>
       ) : null}
     </div>
@@ -74,7 +79,7 @@ export function Notice({ tone = 'warning', children }: { tone?: 'warning' | 'dan
   );
 }
 
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+export function PageHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">

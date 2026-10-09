@@ -84,6 +84,13 @@ function sampleValues(msg: string, n: number): V[] {
   return out;
 }
 
+/** Rich tag names anywhere in a message, including inside plural and select options. */
+function tagNames(el: MessageFormatElement): string[] {
+  if (el.type === TYPE.tag) return [el.value, ...el.children.flatMap(tagNames)];
+  if (el.type === TYPE.plural || el.type === TYPE.select) return Object.values(el.options).flatMap((o) => o.value.flatMap(tagNames));
+  return [];
+}
+
 function catalogMessages(): [string, string][] {
   const out: [string, string][] = [];
   const dir = join(__dirname, '..', 'messages');
@@ -103,9 +110,7 @@ describe('every catalog message formats exactly like FormatJS', () => {
       for (const [id, msg] of messages) {
         for (const n of [0, 1, 2, 5, 1.5, 21]) {
           for (const values of sampleValues(msg, n)) {
-            const handlers = Object.fromEntries(
-              [...parse(msg).flatMap(function tags(el): string[] { return el.type === TYPE.tag ? [el.value, ...el.children.flatMap(tags)] : []; })].map((t) => [t, (c: string[]) => c.join('')]),
-            );
+            const handlers = Object.fromEntries([...parse(msg).flatMap(tagNames)].map((t) => [t, (c: string[]) => c.join('')]));
             const want = [new IntlMessageFormat(msg, formatTag(locale)).format({ ...values, ...handlers })].flat().join('');
             expect(formatIcu(msg, locale, values, TZ), `${id} ${JSON.stringify(values)}`).toBe(want);
           }
