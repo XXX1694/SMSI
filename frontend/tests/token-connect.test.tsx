@@ -72,7 +72,7 @@ describe('TokenConnectDialog', () => {
     render(<Harness provider={discord} />);
     const input = screen.getByLabelText('Webhook URL');
     expect(input).toHaveAttribute('type', 'password');
-    expect(input).toHaveAttribute('autocomplete', 'new-password');
+    expect(input).toHaveAttribute('autocomplete', 'off');
     await userEvent.click(screen.getByRole('button', { name: 'Show Webhook URL' }));
     expect(input).toHaveAttribute('type', 'text');
     await userEvent.click(screen.getByRole('button', { name: 'Hide Webhook URL' }));

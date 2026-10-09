@@ -21,7 +21,7 @@ export const SecretInput = React.forwardRef<HTMLInputElement, Props>(({ classNam
         ref={ref}
         {...props}
         type={shown ? 'text' : 'password'}
-        autoComplete="new-password"
+        autoComplete="off"
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
