@@ -102,7 +102,7 @@ func Load() (*Config, error) {
 		Env:                     env("APP_ENV", "development"),
 		HTTPAddr:                env("HTTP_ADDR", ":8080"),
 		DatabaseURL:             env("DATABASE_URL", ""),
-		DBMaxConns:              int32(envInt("DB_MAX_CONNS", 20)),
+		DBMaxConns:              envInt32("DB_MAX_CONNS", 20),
 		RedisURL:                env("REDIS_URL", "redis://localhost:6379/0"),
 		QueueName:               env("QUEUE_NAME", "publish"),
 		EncryptionKey:           env("ENCRYPTION_KEY", ""),
@@ -292,6 +292,15 @@ func envInt(key string, def int) int {
 		return def
 	}
 	return v
+}
+
+// envInt32 parses a 32-bit integer so an out-of-range value falls back to the default instead of wrapping.
+func envInt32(key string, def int32) int32 {
+	v, err := strconv.ParseInt(env(key, strconv.Itoa(int(def))), 10, 32)
+	if err != nil {
+		return def
+	}
+	return int32(v)
 }
 
 func envFloat(key string, def float64) float64 {
