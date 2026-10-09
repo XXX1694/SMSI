@@ -223,6 +223,18 @@ of the CPU. A shed stops publishing (posts go out late) and, at level 2, the UI 
 10 minutes or more; autoupdate pauses meanwhile. The read cap is a placeholder until the disk is measured. Standalone mode
 is unchanged. Not solved here (the other service's owner): `caddy.service` has `Restart=no`, and journald has no size cap.
 
+**Incident 2026-10-09 (06:41-07:50 UTC).** The 80m cap of MinIO was too small for its working set: it thrashed its own page
+cache (`memory.current` pinned at `memory.max`, `memory.events` `max` 1.3M, `workingset_refault_file` 80M) and read 327 GB from
+disk in about 3 hours (about 56 MB/s, the 60 MB/s slice read cap). Health checks timed out, host IO pressure was some 87% /
+full 80% and memory stall about 35%. The guard counted SocialOS as a contributor (IO) and shed worker, mcp and frontend for
+about 70 minutes, which could never help because MinIO was the cause and kept running; the API answered 503 meanwhile. Fixed
+live with `MINIO_MEM_LIMIT=192m` and `MINIO_GOMEMLIMIT=144MiB`; the pressure was gone. Consequences: the defaults are now
+192m / 144MiB, so the per-container caps add up to 896m (960m during a deploy) against the 664M slice, an overcommit of
+about 35%: it only matters if everything peaks at once, and then the slice hard cap (OOM inside the slice) still protects
+the host. The guard now detects a thrashing container (memory at 95% of its cap and `workingset_refault_file` above 20 MB/s),
+names it in an alert and restarts it once per cooldown (non-essential ones are stopped) instead of shedding others, and its
+pressure alert says when the top IO container is one that shedding does not stop.
+
 ## D-013: Dangerous actions by API keys need the owner's approval, enforced in the API (2026-10-09)
 
 **Context.** Until now an agent was asked to pass `confirm: true` for publish, delete and disconnect. The flag is an

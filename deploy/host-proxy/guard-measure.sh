@@ -54,6 +54,10 @@ load_settings() {
   SLICE_CPU_PCT=$(cfg_int GUARD_SLICE_CPU_PCT 40)     # ... or this % of one CPU since the last run ...
   SLICE_IO_MBPS=$(cfg_int GUARD_SLICE_IO_MBPS 10)     # ... or this many MB/s of disk IO since the last run
   CRIT_RUNS=$(cfg_int GUARD_CRIT_RUNS 2)              # consecutive critical runs before containers are stopped
+  THRASH_MEM_PCT=$(cfg_int GUARD_THRASH_MEM_PCT 95)   # a container is thrashing at this % of its memory.max ...
+  THRASH_REFAULT_MBPS=$(cfg_int GUARD_THRASH_REFAULT_MBPS 20) # ... and this many MB/s of page-cache refaults (reads of pages it just lost)
+  THRASH_COOLDOWN=$(cfg_int GUARD_THRASH_COOLDOWN 3600) # seconds between two automatic actions on the same container
+  THRASH_ESSENTIAL=$(cfg GUARD_THRASH_ESSENTIAL "postgres redis minio backend") # restarted; the others are stopped
   RESUME_AFTER=$(cfg_int GUARD_RESUME_AFTER 3)        # consecutive calm runs before a level 1 is undone
   RESUME_AFTER_CRIT=$(cfg_int GUARD_RESUME_AFTER_CRIT 5) # ... a level 2; doubled for each level 2 within a day
   RESUME_AFTER_MAX=$(cfg_int GUARD_RESUME_AFTER_MAX 60)  # ... but never more than this (60 runs = 2 hours)
@@ -178,6 +182,42 @@ assess_socialos() {
   SOCIALOS_USAGE="SocialOS uses ${mem} MB anon, ${cpu}% CPU, ${io} MB/s IO"
   CONTRIBUTES=false
   if ((mem >= SLICE_MEM_MB || cpu >= SLICE_CPU_PCT || io >= SLICE_IO_MBPS)); then CONTRIBUTES=true; fi
+}
+
+# assess_containers: finds a SocialOS container that thrashes its own page cache: memory.current at THRASH_MEM_PCT of
+# memory.max AND workingset_refault_file growing faster than THRASH_REFAULT_MBPS (pages of getconf PAGESIZE, since the last
+# run). That is a cap too small for the working set: it reads the same files from disk again and again. Shedding other
+# containers cannot help, only that container can. Sets THRASHING (entries "service|id|mem%|refault MB/s") and
+# TOP_IO ("service MB/s": the container with the highest disk read+write rate, empty when below SLICE_IO_MBPS).
+# Needs the first run to have a previous reading, so it detects from the second run on.
+assess_containers() {
+  local id svc cg cur max pct pages rate mbps io top_mbps=0 page
+  page=$(getconf PAGESIZE 2>/dev/null || echo 4096)
+  THRASHING=()
+  TOP_IO=""
+  while read -r id svc; do
+    [ -n "$id" ] || continue
+    cg=$CGROUP_ROOT/socialos.slice/docker-$id.scope
+    [ -r "$cg/memory.current" ] || continue
+    io=$(awk '{ for (i = 2; i <= NF; i++) if ($i ~ /^[rw]bytes=/) { split($i, a, "="); s += a[2] } } END { print s + 0 }' \
+      "$cg/io.stat" 2>/dev/null || true)
+    rate=$(counter_rate "io-$svc" "${io:-0}")
+    mbps=$((${rate:-0} / 1048576))
+    if ((mbps >= SLICE_IO_MBPS && mbps > top_mbps)); then
+      top_mbps=$mbps
+      TOP_IO="$svc $mbps"
+    fi
+    cur=$(cat "$cg/memory.current" 2>/dev/null || true)
+    max=$(cat "$cg/memory.max" 2>/dev/null || true)
+    pages=$(awk '$1 == "workingset_refault_file" { print $2 }' "$cg/memory.stat" 2>/dev/null || true)
+    [[ "$cur" =~ ^[0-9]+$ && "$max" =~ ^[0-9]+$ && "$pages" =~ ^[0-9]+$ ]] || continue
+    ((max > 0)) || continue
+    rate=$(counter_rate "refault-$svc" "$pages")
+    pct=$((cur * 100 / max))
+    mbps=$((${rate:-0} * page / 1048576))
+    if ((pct >= THRASH_MEM_PCT && mbps >= THRASH_REFAULT_MBPS)); then THRASHING+=("$svc|$id|$pct|$mbps"); fi
+  done < <(dk ps --no-trunc --filter "label=com.docker.compose.project=$PROJECT" --filter status=running \
+    --format '{{.ID}} {{.Label "com.docker.compose.service"}}' 2>/dev/null || true)
 }
 
 # data_used_gb: SocialOS data on disk (images, volumes, logs, backups, /opt/socialos), whole GB. -x: stays on the

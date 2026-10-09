@@ -354,7 +354,12 @@ certificate expires in under 14 days.
   `/login`) and `${MCP_PUBLIC_URL%/mcp}/health`, all from repository variables (section 3). To watch other URLs set the
   repository variable `UPTIME_URLS` to a space-separated list; it replaces the defaults. With neither variable set the run
   is skipped with a notice.
-- **Delays**: GitHub may delay or drop scheduled runs under load, so 15 minutes is a target, not a guarantee. Run the
+- **Delays**: GitHub may delay or drop scheduled runs under load, so 15 minutes is a target, not a guarantee. On
+  2026-10-09 the cron stopped running after 02:30 UTC, so an outage that night would have gone unnoticed. Scheduled
+  workflows are best-effort; treat this one as a convenience and add an **external monitor** that does not depend on GitHub.
+  Free options (an owner decision; this repository creates no accounts): UptimeRobot (free plan, 5-minute checks),
+  Better Stack uptime (free plan), Healthchecks.io (dead-man's switch: a cron on the server pings it, so it also catches a
+  dead server), Uptime Kuma (self-hosted, but not on the host it watches). Point it at `${API_PUBLIC_URL}/ready`. Run the
   workflow by hand from the Actions tab (`workflow_dispatch`) for an immediate check.
 
 ## 12. Troubleshooting
@@ -400,7 +405,7 @@ any failure puts the previous state back (13.5).
 |---|---|---|
 | Bundled Caddy | runs on 80/443 | not started |
 | Published ports | Caddy only | `127.0.0.1:13000` frontend, `:18080` backend, `:13333` mcp, `:19000` minio (`FRONTEND_HOST_PORT`, `BACKEND_HOST_PORT`, `MCP_HOST_PORT`, `MINIO_HOST_PORT`) |
-| Memory limit (hard cap, override with `<SERVICE>_MEM_LIMIT`) | postgres 768m, redis 192m, minio 512m, backend 384m, worker 384m, mcp 192m, frontend 512m, caddy 192m | postgres 128m, redis 32m, minio 80m, backend 160m, worker 160m, mcp 64m, frontend 160m, migrate 64m; no swap, 128 processes each; the whole stack also inside `socialos.slice` (664M, 1 CPU, section 16); about 0.3 GB in use when idle |
+| Memory limit (hard cap, override with `<SERVICE>_MEM_LIMIT`) | postgres 768m, redis 192m, minio 512m, backend 384m, worker 384m, mcp 192m, frontend 512m, caddy 192m | postgres 128m, redis 32m, minio 192m, backend 160m, worker 160m, mcp 64m, frontend 160m, migrate 64m; no swap, 128 processes each; the whole stack also inside `socialos.slice` (664M, 1 CPU, section 16); about 0.3 GB in use when idle |
 | PostgreSQL | image defaults | `shared_buffers=64MB`, `max_connections=40`, `work_mem=4MB` (`POSTGRES_SHARED_BUFFERS`, `POSTGRES_MAX_CONNECTIONS`, `POSTGRES_WORK_MEM`), pools of 10 (`DB_MAX_CONNS`) |
 
 All variables are documented in `.env.prod.example`. A container above its cap is OOM-killed and restarted by Docker; it never
@@ -653,9 +658,9 @@ of SocialOS data. Docker needs no `daemon.json` change and no restart: the cgrou
 (`docker info -f '{{.CgroupDriver}} {{.CgroupVersion}}'` says `systemd 2`); with the `cgroupfs` driver `cgroup_parent`
 would not name a systemd slice, so set `SOCIALOS_CGROUP_PARENT=` (empty) there.
 
-**The trade-off.** The per-container caps add up to 784m (848m while `migrate` runs during a deploy), more than the 664M
-slice. About 0.3 GB is in use, so the slice only binds when several containers peak at once; then the OOM kill happens
-inside the slice, never to the other service. Making the caps fit the slice would leave the backend too little room for
+**The trade-off.** The per-container caps add up to 896m (960m while `migrate` runs during a deploy), more than the 664M
+slice (overcommit of about 35%). About 0.3 GB is in use, so the slice only binds when several containers peak at once; then the OOM kill happens
+inside the slice, never to the other service (the slice hard cap still protects the host). MinIO is 192m, not 80m: at 80m it thrashed its own page cache (D-012, incident 2026-10-09). Making the caps fit the slice would leave the backend too little room for
 uploads (it needs about 60 MiB outside the Go heap for multipart and upload buffers); raising the slice to 848M would put
 SocialOS at about 56% of the RAM. Raising a container's cap does not raise the slice. After a deploy and after a load
 test, check `systemctl show socialos.slice docker containerd -p MemoryPeak` and
@@ -680,7 +685,7 @@ URLs whose failure is reported. Tune a slice value with a drop-in (`systemctl ed
 unit, so that a refresh of `/opt/socialos` does not undo it.
 
 **What the guard does, and does not do.** Each run measures the host (RAM available, swap, memory stall time, and the
-protected services' own CPU, IO and memory stall times from their PSI files) and SocialOS's share (Xits CPU and disk IO since the last run). It acts only when both say so; the thresholds are `GUARD_*` in `.env`:
+protected services' own CPU, IO and memory stall times from their PSI files) and SocialOS's share (its CPU and disk IO since the last run). It acts only when both say so; the thresholds are `GUARD_*` in `.env`:
 
 | Level | When (defaults) | Action |
 |---|---|---|
@@ -712,6 +717,16 @@ the other site as well: add its URL to `UPTIME_URLS`.
 | disk fills up | alert at 80% and at 15 GB of SocialOS data. There is no hard filesystem quota on ext4 without remounting; a separate volume or loop file for the Docker data is the next step if the data grows |
 | Let's Encrypt or sslip.io outage | only SocialOS hostnames lack certificates; limits are per hostname, so the other site's renewals are unaffected |
 | port conflict | SocialOS binds only `127.0.0.1:13000/13333/18080/19000` |
+
+**A container that thrashes its page cache.** When a container sits at 95% of its `memory.max` (`GUARD_THRASH_MEM_PCT`)
+and re-reads the pages it just lost faster than 20 MB/s (`workingset_refault_file`, `GUARD_THRASH_REFAULT_MBPS`), its cap is
+too small for its working set and shedding other containers cannot help. The guard raises `thrash-<service>` (naming the
+container and the `<SERVICE>_MEM_LIMIT` to raise). It acts only after two consecutive thrash readings, only while the host
+is under pressure (on a calm host it only alerts) and not while `deploy.sh` holds `.deploy/lock`: it restarts the container
+once per episode if it is `postgres redis minio backend` (`GUARD_THRASH_ESSENTIAL`), or stops it otherwise (shed level 1,
+started again after the usual calm runs), and does not shed that run. If it thrashes again a restart cannot help, so it
+stays an alert until the container has been quiet for `GUARD_THRASH_COOLDOWN` (3600 s). The `pressure` alert also names the
+container with the most disk IO and says when shedding does not stop it.
 
 IO is the one budget without a proof: the host disk uses the `none` scheduler without `io.cost`, so `IOWeight` has no
 effect. The slice caps reads at 60 MB/s and deliberately has **no write cap** until the disk has been measured in a

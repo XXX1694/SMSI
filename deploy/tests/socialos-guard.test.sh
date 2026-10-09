@@ -33,16 +33,17 @@ cmd=\$1
 shift
 case \$cmd in
   ps)
-    svc="" status=""
+    svc="" status="" fmt=""
     for arg in "\$@"; do
-      case \$arg in label=com.docker.compose.service=*) svc=\${arg##*=} ;; status=*) status=\${arg#status=} ;; esac
+      case \$arg in label=com.docker.compose.service=*) svc=\${arg##*=} ;; status=*) status=\${arg#status=} ;; '{{.ID}}'*) fmt=1 ;; esac
     done
     for f in "$SB"/docker/*; do
       n=\${f##*/}
       st=\$(cat "\$f")
-      if { [ -z "\$svc" ] || [ "\$svc" = "\$n" ]; } && { [ -z "\$status" ] || [ "\$status" = "\$st" ]; }; then echo "id-\$n"; fi
+      if { [ -z "\$svc" ] || [ "\$svc" = "\$n" ]; } && { [ -z "\$status" ] || [ "\$status" = "\$st" ]; }; then if [ -n "\$fmt" ]; then echo "id-\$n \$n"; else echo "id-\$n"; fi; fi
     done
     ;;
+  restart) echo running >"$SB/docker/\${1#id-}" ;;
   stop) echo exited >"$SB/docker/\${1#id-}" ;;
   start) [ ! -e "$SB/gone.\${1#id-}" ] || exit 1; echo running >"$SB/docker/\${1#id-}" ;;
   inspect) cat "$SB/cgparent.\${3#id-}" 2>/dev/null || echo socialos.slice ;;
@@ -317,5 +318,117 @@ assert_eq "every docker ps is scoped to the socialos project" 0 \
 guard --status
 assert_has "--status: level" "$out" "shed level: 2"
 assert_has "--status: alerts" "$out" "pressure: since"
+
+# 14. a container that thrashes its page cache (MinIO at its cap, refaults 56 MB/s): named in an alert; on a stressed host,
+# after two consecutive readings and outside a deploy it is restarted once per episode; nothing is shed that run
+ctr() { # ctr SERVICE MEM_PCT REFAULT_PAGES [IO_BYTES]: the container's cgroup files (cap 192 MiB)
+  local d="$SB/cg/socialos.slice/docker-id-$1.scope"
+  mkdir -p "$d"
+  echo $((192 * 1048576)) >"$d/memory.max"
+  echo $((192 * 1048576 * $2 / 100)) >"$d/memory.current"
+  printf 'anon 1000\nworkingset_refault_file %s\n' "$3" >"$d/memory.stat"
+  echo "8:0 rbytes=${4:-0} wbytes=0" >"$d/io.stat"
+}
+STEP=0
+tick() { # tick SERVICE: one guard run 120 s later in which SERVICE thrashes harder (56 MB/s) and SocialOS reads 57 MB/s
+  STEP=$((STEP + 1))
+  NOW=$((NOW + 120))
+  ctr "$1" 100 $((56 * 256 * 120 * STEP)) $((56 * 120 * 1048576 * STEP))
+  echo "8:0 rbytes=$((1000 + 6840 * 1048576 * STEP)) wbytes=1000" >"$SB/cg/socialos.slice/io.stat"
+  guard
+}
+thrash_setup() { # IO pressure caused by SocialOS; the first run only records counters
+  setup
+  STEP=0
+  psi "$SB/cg/system.slice/irbisa.service/io.pressure" 60
+  ctr "$1" 100 0 0
+  guard
+  assert_eq "thrash: first run has no rate yet, nothing done" 0 "$(actions)"
+}
+restarts() { grep -c '^docker restart' "$SB/docker.calls" || true; }
+thrash_setup minio
+tick minio
+assert_eq "thrash: one reading is not enough" 0 "$(restarts)"
+assert_has "thrash: first reading alerts" "$(cat "$SB/$G/alerts/thrash-minio.last")" "waiting for a second reading"
+tick minio
+assert_eq "thrash: exit" 0 "$rc"
+assert_has "thrash: minio restarted" "$(cat "$SB/docker.calls")" "docker restart id-minio"
+assert_eq "thrash: the restarted minio runs, mcp and frontend are not shed" "running running running" "$(cat "$SB/docker/minio" "$SB/docker/mcp" "$SB/docker/frontend" | paste -sd' ')"
+assert_has "thrash: alert names the container" "$(cat "$SB/$G/alerts/thrash-minio.last")" "minio is thrashing its page cache (memory at 100% of its cap, 56 MB/s of refaults)"
+assert_has "thrash: alert says what to raise" "$(cat "$SB/$G/alerts/thrash-minio.last")" "MINIO_MEM_LIMIT"
+assert_has "thrash: pressure says shedding does not help" "$(pressure_last)" "no shedding this run"
+assert_has "thrash: pressure names the IO container" "$(pressure_last)" "top IO: 56 MB/s from minio, which shedding does not stop"
+# it comes back: no second restart, not even after the cooldown; the usual shedding applies
+tick minio
+tick minio
+tick minio
+assert_eq "repeat thrash: still one restart" 1 "$(restarts)"
+assert_has "repeat thrash: alert only" "$(cat "$SB/$G/alerts/thrash-minio.last")" "already acted"
+assert_eq "repeat thrash: the usual shedding applies" exited "$(cat "$SB/docker/worker")"
+# it stops thrashing: the alert clears, and after the cooldown a new episode may be acted on again
+ctr minio 50 0 0
+NOW=$((NOW + 7200))
+guard
+assert_no_file "thrash: recovered, alert cleared" "$SB/$G/alerts/thrash-minio"
+assert_no_file "thrash: episode ended after the cooldown" "$SB/$G/thrash-minio.at"
+
+# 14b. a non-essential container is stopped instead; it starts again by itself after the calm runs
+thrash_setup frontend
+tick frontend
+tick frontend
+assert_eq "thrash, frontend: stopped, not restarted" exited "$(cat "$SB/docker/frontend")"
+assert_eq "thrash, frontend: no restart" 0 "$(restarts)"
+assert_has "thrash, frontend: alert" "$(cat "$SB/$G/alerts/thrash-frontend.last")" "starts again after 3 calm runs"
+assert_eq "thrash, frontend: shed level 1 recorded" 1 "$(cat "$SB/$G/shed")"
+psi "$SB/cg/system.slice/irbisa.service/io.pressure" 0
+ctr frontend 30 0 0
+calm_runs 3
+assert_eq "thrash, frontend: started again by the normal resume" running "$(cat "$SB/docker/frontend")"
+
+# 14c. a calm host: the same thrash is an alert only; and full memory without refaults is left alone
+thrash_setup postgres
+psi "$SB/cg/system.slice/irbisa.service/io.pressure" 0
+tick postgres
+tick postgres
+tick postgres
+assert_eq "calm host: no restart" 0 "$(restarts)"
+assert_eq "calm host: no docker action" 0 "$(actions)"
+assert_has "calm host: alert only" "$(cat "$SB/$G/alerts/thrash-postgres.last")" "host is calm"
+setup
+ctr minio 100 1000 0
+ctr backend 50 1000 0
+guard
+ctr minio 100 1000 0
+ctr backend 50 $((500 * 256 * 120)) 0
+NOW=$((NOW + 120))
+guard
+assert_eq "normal: no docker action" 0 "$(actions)"
+assert_eq "normal: no restart" 0 "$(restarts)"
+assert_no_file "normal: no thrash alert" "$SB/$G/alerts/thrash-minio"
+assert_no_file "normal: no thrash alert (backend)" "$SB/$G/alerts/thrash-backend"
+
+# 14d. a deploy holds its lock: alert only; once the lock is free the guard acts
+thrash_setup minio
+mkdir -p "$SB/opt/.deploy"
+: >"$SB/opt/.deploy/lock"
+( exec 9>"$SB/opt/.deploy/lock"; flock -n 9 && exec sleep 30 ) &
+holder=$!
+sleep 1
+tick minio
+tick minio
+assert_eq "deploy running: no restart" 0 "$(restarts)"
+assert_has "deploy running: alert says so" "$(cat "$SB/$G/alerts/thrash-minio.last")" "a deploy is running"
+kill "$holder" 2>/dev/null || true
+wait "$holder" 2>/dev/null || true
+tick minio
+assert_eq "deploy finished: restarted" 1 "$(restarts)"
+
+# 14e. dry run names the thrashing container and changes nothing
+thrash_setup minio
+ctr minio 100 $((56 * 256 * 120)) 0
+NOW=$((NOW + 120))
+guard --dry-run
+assert_has "dry run: thrashing shown" "$out" "thrashing: minio|id-minio|100|56"
+assert_lacks "dry run: no restart" "$(cat "$SB/docker.calls")" "restart"
 
 finish
