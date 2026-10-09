@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth-shell';
 import { Button } from '@/components/ui/button';
+import { InlineError } from '@/components/states';
 import { errorMessage } from '@/hooks';
 import { ApiError, api } from '@/lib/api';
 import { forgetHashToken, takeHashToken } from '@/lib/hash-token';
@@ -70,9 +71,7 @@ export function VerifyEmailView() {
   if (state === 'error') {
     return (
       <AuthShell title="Could not verify your email">
-        <p role="alert" className="text-sm text-danger">
-          {message}
-        </p>
+        <InlineError>{message}</InlineError>
         <Button className="mt-4 w-full" onClick={() => void run()}>
           Try again
         </Button>

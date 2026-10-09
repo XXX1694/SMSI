@@ -1,6 +1,6 @@
 'use client';
-import { useSearchParams } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { CapabilityBadges } from '@/components/capability-badges';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { usePrefs } from '@/components/prefs-provider';
@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { DEMO } from '@/lib/demo/config';
+import { describeErrorCode } from '@/lib/errors';
+import { providerLabel } from '@/lib/normalize';
 import { formatDateTime } from '@/lib/time';
 import type { Provider, SocialAccount } from '@/lib/types';
 import { errorMessage, useAsync } from '@/hooks';
@@ -119,8 +121,33 @@ function ProviderRow({
   );
 }
 
-export function AccountsView() {
+interface ConnectResult {
+  tone: 'info' | 'danger';
+  text: string;
+}
+
+/** The message for `?connected=` / `?error=`, shown once; the parameters are then removed from the address. */
+function useConnectResult(): ConnectResult | null {
   const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [result, setResult] = useState<ConnectResult | null>(null);
+  const connected = params.get('connected');
+  const failed = params.get('error');
+  const provider = params.get('provider');
+  useEffect(() => {
+    if (connected) setResult({ tone: 'info', text: `Connected ${providerLabel(connected)} successfully.` });
+    else if (failed) {
+      const who = provider ? providerLabel(provider) : 'the account';
+      setResult({ tone: 'danger', text: `Could not connect ${who}. ${describeErrorCode(failed)}` });
+    } else return;
+    router.replace(pathname);
+  }, [connected, failed, provider, router, pathname]);
+  return result;
+}
+
+export function AccountsView() {
+  const result = useConnectResult();
   const toast = useToast();
   const load = useCallback(async () => {
     const [providers, accounts] = await Promise.all([api.social.providers(), api.social.accounts()]);
@@ -132,8 +159,6 @@ export function AccountsView() {
   if (loading && !data) return <LoadingRows rows={4} />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
 
-  const connected = params.get('connected');
-  const failed = params.get('error');
   // Available providers first, unavailable ones after.
   const providers = [...data.providers].sort((a, b) => Number(b.available) - Number(a.available));
   const known = new Set(providers.map((p) => p.id));
@@ -141,8 +166,7 @@ export function AccountsView() {
 
   return (
     <div className="space-y-4">
-      {connected ? <Notice tone="info">Connected {connected} successfully.</Notice> : null}
-      {failed ? <Notice tone="danger">Connection failed ({failed}). Please try again.</Notice> : null}
+      {result ? <Notice tone={result.tone}>{result.text}</Notice> : null}
       <ul className="divide-y border-y">
         {providers.map((p) => (
           <ProviderRow

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { usePrefs } from '@/components/prefs-provider';
 import { PostList } from '@/components/post-row';
-import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { EmptyState, ErrorState, InlineError, LoadingRows } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -26,6 +26,7 @@ export function PostsView() {
   const [loading, setLoading] = useState(true);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [moreError, setMoreError] = useState<string | null>(null);
 
   const fetchPage = useCallback(
     async (after?: string) => {
@@ -38,6 +39,7 @@ export function PostsView() {
   const reload = useCallback(() => {
     setLoading(true);
     setError(null);
+    setMoreError(null);
     fetchPage().then(
       (p) => {
         setItems(p.items);
@@ -58,12 +60,14 @@ export function PostsView() {
   async function loadMore() {
     if (!cursor) return;
     setMore(true);
+    setMoreError(null);
     try {
       const p = await fetchPage(cursor);
       setItems((cur) => [...cur, ...p.items]);
       setCursor(p.next_cursor);
     } catch (e) {
-      setError(errorMessage(e));
+      // Keep the page that is already on screen; only the next page failed.
+      setMoreError(errorMessage(e));
     } finally {
       setMore(false);
     }
@@ -106,7 +110,7 @@ export function PostsView() {
       {loading ? (
         <LoadingRows rows={4} />
       ) : error ? (
-        <ErrorState error={new Error(error)} onRetry={reload} />
+        <ErrorState title="Could not load posts" error={new Error(error)} onRetry={reload} />
       ) : items.length === 0 ? (
         <EmptyState
           title={filtered ? 'No posts match these filters' : 'No posts yet'}
@@ -121,7 +125,12 @@ export function PostsView() {
       ) : (
         <>
           <PostList posts={items} />
-          {cursor ? (
+          {moreError ? (
+            <InlineError onRetry={() => void loadMore()} retryDisabled={more} className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2">
+              Could not load more posts. {moreError}
+            </InlineError>
+          ) : null}
+          {cursor && !moreError ? (
             <div className="text-center">
               <Button variant="secondary" onClick={() => void loadMore()} disabled={more}>
                 {more ? 'Loading…' : 'Load more'}
