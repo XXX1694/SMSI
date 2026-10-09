@@ -42,5 +42,6 @@ describe('PostDetail load failure', () => {
     const { container } = render(<PostDetail id="p1" />);
     expect(await screen.findByText('Could not load this post')).toBeInTheDocument();
     expect(container.textContent).not.toContain('{');
+    expect(container.textContent).not.toContain('ref ');
   });
 });

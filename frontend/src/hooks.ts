@@ -51,10 +51,10 @@ export function useAsync<T>(fn: () => Promise<T>): AsyncState<T> {
   return { data, error, loading, reload };
 }
 
-export function errorMessage(e: unknown): string {
+export function errorMessage(e: unknown, withRef = true): string {
   if (e instanceof ApiError) {
     const text = friendlyMessage(e.code, e.message);
-    return e.requestId ? `${text} (ref ${e.requestId})` : text;
+    return withRef && e.requestId ? `${text} (ref ${e.requestId})` : text;
   }
   return friendlyMessage(null, e instanceof Error ? e.message : null);
 }

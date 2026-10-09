@@ -154,7 +154,7 @@ export function PostDetail({ id }: { id: string }) {
   }, [inFlight, reload]);
 
   if (loading && !post) return <LoadingRows rows={4} />;
-  if (error || !post) return <ErrorState title="Could not load this post" error={error} onRetry={reload} />;
+  if (error || !post) return <ErrorState title="Could not load this post" showRef={false} error={error} onRetry={reload} />;
   const can = postActions(post.status);
 
   const act = (fn: () => Promise<unknown>, msg: string) => async () => {
