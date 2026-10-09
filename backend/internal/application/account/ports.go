@@ -45,6 +45,8 @@ const (
 	DatasetMCP            Dataset = "mcp_connections"
 	DatasetApprovals      Dataset = "approvals"
 	DatasetAuditLogs      Dataset = "audit_logs"
+	// DatasetSignInMethods is the Google or GitHub accounts the user signs in with (D-023).
+	DatasetSignInMethods Dataset = "sign_in_methods"
 )
 
 // Row is one record of a dataset, already rendered as JSON by the database from an explicit column list (so a column

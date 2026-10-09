@@ -5,7 +5,7 @@ import { LEGAL_EFFECTIVE_DATE, LEGAL_VERSION, type Operator } from '@/lib/legal'
 /** Chrome shared by /terms and /privacy: header, template notice, version line and the cross link. */
 export function LegalPage({ title, other, operator, children }: { title: string; other: 'terms' | 'privacy'; operator: Operator; children: ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10">
+    <main id="main" tabIndex={-1} className="mx-auto w-full max-w-2xl px-4 py-10 focus:outline-none">
       <nav aria-label="Legal" className="mb-8 flex flex-wrap items-center justify-between gap-2 text-sm">
         <Link href="/login" className="text-muted-foreground hover:text-foreground">
           Steerpost

@@ -105,7 +105,8 @@ func sweepAccountData(ctx context.Context, a *app.App, log *slog.Logger) {
 		} else if n > 0 {
 			log.InfoContext(ctx, "account purges queued", slog.Int("count", n))
 		}
-		// Expired sign-in flows (state, nonce, PKCE verifier, sign-up tickets) hold nothing once both have expired.
+		// Expired sign-in flows (state, nonce, PKCE verifier, and for an unfinished sign-up the provider id, email and name)
+		// are useless once both have expired; the Privacy Policy promises they are gone within about an hour.
 		if n, err := a.Services.Auth.PurgeExpiredOAuthFlows(ctx); err != nil {
 			log.WarnContext(ctx, "sign-in flow purge failed", slog.Any("error", err))
 		} else if n > 0 {

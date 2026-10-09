@@ -110,7 +110,7 @@ func writeArchive(ctx context.Context, w io.Writer, d Deps, e *dataexport.Export
 	if err := writeObject(zw, "profile.json", now, fetch(DatasetProfile)); err != nil {
 		return err
 	}
-	for _, ds := range []Dataset{DatasetSocialAccounts, DatasetPosts, DatasetAPIKeys, DatasetMCP, DatasetApprovals, DatasetAuditLogs} {
+	for _, ds := range []Dataset{DatasetSocialAccounts, DatasetPosts, DatasetAPIKeys, DatasetMCP, DatasetApprovals, DatasetAuditLogs, DatasetSignInMethods} {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func writeArchive(ctx context.Context, w io.Writer, d Deps, e *dataexport.Export
 func readme(now time.Time) string {
 	return "Steerpost data export, created " + now.UTC().Format(time.RFC3339) + `
 
-profile.json          your account (no password hash)
+profile.json          your account (no password hash; has_password says whether one is set)
 social_accounts.json  connected networks (no tokens or other credentials)
 posts.json            posts with their targets and every publishing attempt
 media.json            your uploads; the files are in media/
@@ -135,6 +135,7 @@ api_keys.json         API keys: name, prefix, scopes, dates (never the key or it
 mcp_connections.json  MCP connections
 approvals.json        approvals requested by your API keys
 audit_logs.json       the audit log
+sign_in_methods.json  Google or GitHub accounts you sign in with: provider, account id, email, dates
 
 All times are UTC (RFC 3339). Passwords, API keys and network credentials are not included.
 `

@@ -19,7 +19,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const error = isLogin ? params.get('error') : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-8">
+    <main id="main" tabIndex={-1} className="flex min-h-screen items-center justify-center px-4 py-8 focus:outline-none">
       <div className="w-full max-w-sm">
         <h1 className="text-xl font-semibold tracking-tight">{isLogin ? t('signInTitle') : t('createTitle')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{isLogin ? t('welcomeBack') : t('firstAccountNext')}</p>
