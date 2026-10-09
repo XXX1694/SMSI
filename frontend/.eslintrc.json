@@ -56,7 +56,6 @@
     {
       // debt: split by 2026-11. Components over the 80-line function ceiling (file length is fine).
       "files": [
-        "src/components/auth-form.tsx",
         "src/components/calendar-view.tsx",
         "src/components/composer/media-section.tsx",
         "src/components/developer/audit-view.tsx",

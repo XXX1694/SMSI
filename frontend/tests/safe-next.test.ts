@@ -17,6 +17,12 @@ describe('safeNext', () => {
 });
 
 describe('withNext', () => {
+  it.each(['/%2F%2Fevil.example', '/%5Cevil.example'])('keeps %s: the browser does not decode it into a slash, so it stays a path here', (raw) =>
+    expect(safeNext(raw)).toBe(raw),
+  );
+
+  it.each(['\\evil.example', 'https:evil.example'])('drops %s', (raw) => expect(safeNext(raw)).toBeNull());
+
   it('appends an encoded next, or nothing', () => {
     expect(withNext('/register', '/compose?post=1')).toBe('/register?next=%2Fcompose%3Fpost%3D1');
     expect(withNext('/register', null)).toBe('/register');
