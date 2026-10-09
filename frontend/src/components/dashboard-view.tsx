@@ -10,6 +10,7 @@ import { Section } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import type { DashboardSummary, Post } from '@/lib/types';
 import { useAsync } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: 'danger' }) {
   return (
@@ -20,36 +21,40 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 'da
   );
 }
 
+type SectionName = 'upcoming' | 'drafts' | 'recent' | 'failed';
+
 interface SectionProps {
-  title: string;
+  name: SectionName;
   posts: Post[];
-  empty: string;
   href?: string;
   onRetry?: (post: Post) => void;
 }
 
-function PostSection({ title, posts, empty, href, onRetry }: SectionProps) {
+function PostSection({ name, posts, href, onRetry }: SectionProps) {
+  const t = useTranslations('dashboard');
   return (
     <Section
-      title={title}
+      title={t(`sections.${name}.title`)}
       action={
         href ? (
           <Link
             href={href}
-            aria-label={`View all ${title.toLowerCase()}`}
+            aria-label={t(`sections.${name}.viewAll`)}
             className="-my-3 inline-flex min-h-11 items-center px-1 text-xs text-muted-foreground hover:text-foreground md:-my-2 md:min-h-8"
           >
-            View all
+            {t('viewAll')}
           </Link>
         ) : null
       }
     >
-      {posts.length === 0 ? <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">{empty}</p> : <PostList posts={posts} onRetry={onRetry} />}
+      {posts.length === 0 ? <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">{t(`sections.${name}.empty`)}</p> : <PostList posts={posts} onRetry={onRetry} />}
     </Section>
   );
 }
 
 export function DashboardView() {
+  const t = useTranslations('dashboard');
+  const tp = useTranslations('posts');
   const load = useCallback(async () => {
     const [summary, drafts, failed] = await Promise.all([
       api.dashboard.summary(),
@@ -69,27 +74,27 @@ export function DashboardView() {
   return (
     <div className="stagger space-y-10">
       <div>
-        <h2 className="sr-only">Overview</h2>
+        <h2 className="sr-only">{t('overview')}</h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 border-y py-4 md:grid-cols-4">
-          <Stat label="Connected accounts" value={summary.connected_accounts} />
-          <Stat label="Scheduled" value={summary.scheduled_posts} />
-          <Stat label="Published this month" value={summary.published_this_month} />
-          <Stat label="Failed" value={summary.failed} tone="danger" />
+          <Stat label={t('stats.accounts')} value={summary.connected_accounts} />
+          <Stat label={t('stats.scheduled')} value={summary.scheduled_posts} />
+          <Stat label={t('stats.publishedMonth')} value={summary.published_this_month} />
+          <Stat label={t('stats.failed')} value={summary.failed} tone="danger" />
         </dl>
       </div>
       <OnboardingChecklist connectedAccounts={summary.connected_accounts} />
       <div className="stagger grid gap-10 lg:grid-cols-2">
-        <PostSection title="Upcoming" posts={summary.upcoming} empty="Nothing scheduled." href="/posts?status=scheduled" />
-        <PostSection title="Drafts" posts={drafts} empty="No drafts." href="/posts?status=draft" />
-        <PostSection title="Recently published" posts={summary.recent} empty="Nothing published yet." href="/posts?status=published" />
-        <PostSection title="Failed" posts={failed} empty="No failed posts." href="/posts?status=failed" onRetry={setRetryTarget} />
+        <PostSection name="upcoming" posts={summary.upcoming} href="/posts?status=scheduled" />
+        <PostSection name="drafts" posts={drafts} href="/posts?status=draft" />
+        <PostSection name="recent" posts={summary.recent} href="/posts?status=published" />
+        <PostSection name="failed" posts={failed} href="/posts?status=failed" onRetry={setRetryTarget} />
       </div>
       <RetryPostDialog
         postId={retryTarget?.id ?? ''}
         open={retryTarget !== null}
         onOpenChange={(o) => !o && setRetryTarget(null)}
         onRetried={() => {
-          toast.success('Retry started');
+          toast.success(tp('retryStarted'));
           reload();
         }}
       />
