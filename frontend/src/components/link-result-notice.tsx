@@ -1,7 +1,7 @@
 'use client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type en from '../../messages/en.json';
+import type { Messages } from '@/i18n/catalog';
 import { Notice } from '@/components/states';
 import { useTranslations } from '@/i18n/use-translations';
 import { signInProviderKey } from '@/lib/sign-in-providers';
@@ -16,7 +16,7 @@ const CODES = [
   'oauth_provider_error',
   'identity_in_use',
   'account_unavailable',
-] as const satisfies readonly (keyof typeof en.settings.signIn.linkError)[];
+] as const satisfies readonly (keyof Messages['settings']['signIn']['linkError'])[];
 type Code = (typeof CODES)[number];
 const isCode = (c: string): c is Code => (CODES as readonly string[]).includes(c);
 

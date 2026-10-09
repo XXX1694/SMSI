@@ -1,0 +1,6 @@
+{
+  "label": "Sprache",
+  "hint": "Wähle die Sprache der Oberfläche. Datum und Uhrzeit richten sich weiter nach deiner Zeitzone.",
+  "optionBeta": "{name} (Beta-Übersetzung)",
+  "pseudo": "Pseudo-Locale (Test)"
+}

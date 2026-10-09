@@ -1,0 +1,23 @@
+{
+  "title": "Medien",
+  "subtitle": "Wiederverwendbare Bilder und Videos.",
+  "unsupportedType": "{name}: Typ nicht unterstützt. Verwende JPEG, PNG, WebP, GIF, MP4 oder MOV.",
+  "imageTooLarge": "{name}: zu groß ({size}). Bilder sind auf {limit} begrenzt.",
+  "videoTooLarge": "{name}: zu groß ({size}). Videos sind auf {limit} begrenzt.",
+  "emptyFile": "{name}: Datei ist leer.",
+  "uploadFiles": "Dateien hochladen",
+  "limits": "Bilder bis 10 MB · Videos bis 100 MB",
+  "noneTitle": "Noch keine Medien",
+  "noneBody": "Lade Bilder oder Videos hoch, um sie in mehreren Beiträgen zu verwenden.",
+  "kindVideo": "Video",
+  "kindFile": "Datei",
+  "deleteLabel": "{name} löschen",
+  "deleteTitle": "Diese Datei löschen?",
+  "deleteBody": "{name} wird aus deiner Mediathek entfernt. Dateien, die in einem Beitrag verwendet werden, können nicht gelöscht werden.",
+  "deleteBodyUnnamed": "Die Datei wird aus deiner Mediathek entfernt. Dateien, die in einem Beitrag verwendet werden, können nicht gelöscht werden.",
+  "deleted": "Datei gelöscht",
+  "libraryTitle": "Mediathek",
+  "libraryBody": "Wähle Dateien zum Anhängen an diesen Beitrag.",
+  "libraryEmpty": "Deine Mediathek ist leer. Lade zuerst eine Datei hoch.",
+  "attach": "{count, plural, one {# Datei anhängen} other {# Dateien anhängen}}"
+}

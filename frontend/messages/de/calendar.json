@@ -1,0 +1,19 @@
+{
+  "title": "Kalender",
+  "subtitle": "Entwürfe sowie geplante, veröffentlichte und fehlgeschlagene Beiträge in deiner Zeitzone.",
+  "month": "Monat",
+  "week": "Woche",
+  "day": "Tag",
+  "viewLabel": "Ansicht",
+  "legend": "Legende",
+  "previous": "Zurück",
+  "next": "Weiter",
+  "today": "Heute",
+  "chipTitle": "{status}: {title}",
+  "more": "{count, plural, one {+# weiterer} other {+# weitere}}",
+  "moreOnDay": "{count, plural, one {# weiterer Beitrag am {day}, Tag öffnen} other {# weitere Beiträge am {day}, Tag öffnen}}",
+  "postsOnDay": "{count, plural, one {# Beitrag am {day}, Tag öffnen} other {# Beiträge am {day}, Tag öffnen}}",
+  "postCount": "{count, plural, one {# Beitrag} other {# Beiträge}}",
+  "noPostsDay": "Keine Beiträge",
+  "noPostsPeriod": "Keine Beiträge in diesem Zeitraum."
+}

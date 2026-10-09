@@ -1,0 +1,6 @@
+{
+  "label": "Bahasa",
+  "hint": "Pilih bahasa antarmuka. Tanggal dan waktu tetap mengikuti zona waktu Anda.",
+  "optionBeta": "{name} (Terjemahan beta)",
+  "pseudo": "Pseudo-locale (pengujian)"
+}

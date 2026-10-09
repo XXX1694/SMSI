@@ -1,0 +1,70 @@
+{
+  "title": "Dashboard",
+  "subtitle": "What is going out, and what needs attention.",
+  "overview": "Overview",
+  "stats": {
+    "accounts": "Connected accounts",
+    "scheduled": "Scheduled",
+    "publishedMonth": "Published this month",
+    "failed": "Failed"
+  },
+  "viewAll": "View all",
+  "sections": {
+    "upcoming": {
+      "title": "Upcoming",
+      "empty": "Nothing scheduled.",
+      "viewAll": "View all upcoming"
+    },
+    "drafts": {
+      "title": "Drafts",
+      "empty": "No drafts.",
+      "viewAll": "View all drafts"
+    },
+    "recent": {
+      "title": "Recently published",
+      "empty": "Nothing published yet.",
+      "viewAll": "View all recently published"
+    },
+    "failed": {
+      "title": "Failed",
+      "empty": "No failed posts.",
+      "viewAll": "View all failed"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "Connect your first account",
+    "noAccountBody": "Connect a network to start publishing.",
+    "showChecklist": "Show setup checklist",
+    "setUp": "Set up",
+    "showSteps": "Show steps",
+    "dismiss": "Dismiss setup checklist",
+    "doneTitle": "You are set up",
+    "getStarted": "Get started",
+    "doneBody": "Every required step is done. You can hide this list.",
+    "progress": "{done} of {total, plural, one {# step} other {# steps}} done.",
+    "doneSr": "(done)",
+    "optional": "Optional",
+    "steps": {
+      "network": {
+        "title": "Connect a network",
+        "hint": "Steerpost publishes to the accounts you connect. Pick LinkedIn, Telegram or another network.",
+        "action": "Connect account"
+      },
+      "post": {
+        "title": "Write your first post",
+        "hint": "Save a draft or schedule it. Nothing is published until you say so.",
+        "action": "Write a post"
+      },
+      "agent": {
+        "title": "Connect an AI agent",
+        "hint": "Create an MCP connection or an API key so Claude or your own scripts can draft posts for you.",
+        "action": "Connect agent"
+      },
+      "approval": {
+        "title": "Review an approval",
+        "hint": "When an agent asks to publish, delete or disconnect, the request waits here.",
+        "action": "Open approvals"
+      }
+    }
+  }
+}

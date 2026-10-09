@@ -1,19 +1,22 @@
 import { PSEUDO_LOCALE, type AppLocale, type Locale } from '@/i18n/locales';
 import type { Catalog } from '@/i18n/pseudo';
 
-/** One lazy chunk per locale: catalogs are not part of the shared JS. English arrives with the page (see layout.tsx). */
-const LOADERS: Record<Locale, () => Promise<{ default: Catalog }>> = {
-  en: () => import('../../messages/en.json'),
-  ru: () => import('../../messages/ru.json'),
-  es: () => import('../../messages/es.json'),
-  'pt-BR': () => import('../../messages/pt-BR.json'),
-  de: () => import('../../messages/de.json'),
-  fr: () => import('../../messages/fr.json'),
-  id: () => import('../../messages/id.json'),
-  ja: () => import('../../messages/ja.json'),
-  'zh-CN': () => import('../../messages/zh-CN.json'),
-  kk: () => import('../../messages/kk.json'),
-  ar: () => import('../../messages/ar.json'),
+/**
+ * One lazy chunk per locale (src/i18n/catalogs/{locale}.ts imports that locale's messages/{locale}/*.json), so catalogs are
+ * not part of the shared JS and the build's chunk map stays small. English arrives with the page (see en-all.ts). Literal
+ * paths, not a template over the directory: webpack would otherwise emit a chunk and a map entry per file.
+ */
+const LOADERS: Record<Exclude<Locale, 'en'>, () => Promise<{ default: Catalog }>> = {
+  ru: () => import('@/i18n/catalogs/ru'),
+  es: () => import('@/i18n/catalogs/es'),
+  'pt-BR': () => import('@/i18n/catalogs/pt-BR'),
+  de: () => import('@/i18n/catalogs/de'),
+  fr: () => import('@/i18n/catalogs/fr'),
+  id: () => import('@/i18n/catalogs/id'),
+  ja: () => import('@/i18n/catalogs/ja'),
+  'zh-CN': () => import('@/i18n/catalogs/zh-CN'),
+  kk: () => import('@/i18n/catalogs/kk'),
+  ar: () => import('@/i18n/catalogs/ar'),
 };
 
 /** `target` laid over `base`: a key missing from the translation falls back to English. */

@@ -1,0 +1,21 @@
+{
+  "VALIDATION_ERROR": "Algunos datos no son válidos. Revísalos e inténtalo de nuevo.",
+  "UNAUTHENTICATED": "No has iniciado sesión o tu sesión ha terminado. Inicia sesión de nuevo.",
+  "FORBIDDEN": "No tienes permiso para hacer esto.",
+  "INSUFFICIENT_SCOPE": "Esta clave de API no tiene el permiso para esa acción.",
+  "QUOTA_EXCEEDED": "Has alcanzado un límite de tu plan. Consulta Configuración para ver lo que has usado.",
+  "EMAIL_NOT_VERIFIED": "Verifica primero tu correo electrónico y vuelve a intentarlo.",
+  "NOT_FOUND": "Este elemento ya no existe. Puede que se haya eliminado.",
+  "INVALID_STATE_TRANSITION": "El estado de esta publicación cambió. Recarga para verlo.",
+  "CONFLICT": "Esto ya existe. Usa otro nombre.",
+  "RATE_LIMITED": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
+  "SOCIAL_ACCOUNT_EXPIRED": "Esta cuenta necesita volver a conectarse. Vuelve a conectarla en Cuentas.",
+  "PROVIDER_NOT_AVAILABLE": "Esta red social aún no está disponible.",
+  "PROVIDER_ERROR": "La red social rechazó la publicación. Consulta el motivo en los intentos de la publicación.",
+  "INTERNAL": "Steerpost tuvo un problema. Inténtalo de nuevo en un momento.",
+  "NETWORK": "No se puede conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+  "UNKNOWN": "Algo salió mal. Inténtalo de nuevo.",
+  "access_denied": "El inicio de sesión se canceló o no se concedió el acceso.",
+  "withRef": "{text} (ref {id})",
+  "REAUTH_REQUIRED": "Vuelve a iniciar sesión para continuar."
+}

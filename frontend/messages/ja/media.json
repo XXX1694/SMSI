@@ -1,0 +1,23 @@
+{
+  "title": "メディア",
+  "subtitle": "繰り返し使える画像と動画です。",
+  "unsupportedType": "{name}：非対応の形式です。JPEG、PNG、WebP、GIF、MP4、MOVのいずれかを使用してください。",
+  "imageTooLarge": "{name}：サイズが大きすぎます（{size}）。画像は{limit}までです。",
+  "videoTooLarge": "{name}：サイズが大きすぎます（{size}）。動画は{limit}までです。",
+  "emptyFile": "{name}：ファイルが空です。",
+  "uploadFiles": "ファイルをアップロード",
+  "limits": "画像は10MBまで · 動画は100MBまで",
+  "noneTitle": "メディアはまだありません",
+  "noneBody": "画像や動画をアップロードすると、複数の投稿で再利用できます。",
+  "kindVideo": "動画",
+  "kindFile": "ファイル",
+  "deleteLabel": "{name}を削除",
+  "deleteTitle": "このファイルを削除しますか？",
+  "deleteBody": "{name}はライブラリから削除されます。投稿で使用中のファイルは削除できません。",
+  "deleteBodyUnnamed": "このファイルはライブラリから削除されます。投稿で使用中のファイルは削除できません。",
+  "deleted": "ファイルを削除しました",
+  "libraryTitle": "メディアライブラリ",
+  "libraryBody": "この投稿に添付するファイルを選択してください。",
+  "libraryEmpty": "ライブラリは空です。先にファイルをアップロードしてください。",
+  "attach": "{count, plural, other {#件のファイルを添付}}"
+}

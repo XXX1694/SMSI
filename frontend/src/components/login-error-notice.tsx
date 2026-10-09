@@ -1,5 +1,5 @@
 'use client';
-import type en from '../../messages/en.json';
+import type { Messages } from '@/i18n/catalog';
 import { Notice } from '@/components/states';
 import { useTranslations } from '@/i18n/use-translations';
 import { signInProviderKey } from '@/lib/sign-in-providers';
@@ -17,7 +17,7 @@ const CODES = [
   'identity_in_use',
   'account_unavailable',
   'signup_expired',
-] as const satisfies readonly (keyof typeof en.auth.loginError)[];
+] as const satisfies readonly (keyof Messages['auth']['loginError'])[];
 type Code = (typeof CODES)[number];
 const isCode = (c: string): c is Code => (CODES as readonly string[]).includes(c);
 

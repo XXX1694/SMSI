@@ -1,0 +1,23 @@
+{
+  "title": "Media",
+  "subtitle": "Reusable images and videos.",
+  "unsupportedType": "{name}: unsupported type. Use JPEG, PNG, WebP, GIF, MP4 or MOV.",
+  "imageTooLarge": "{name}: too large ({size}). Images are limited to {limit}.",
+  "videoTooLarge": "{name}: too large ({size}). Videos are limited to {limit}.",
+  "emptyFile": "{name}: file is empty.",
+  "uploadFiles": "Upload files",
+  "limits": "Images up to 10 MB · videos up to 100 MB",
+  "noneTitle": "No media yet",
+  "noneBody": "Upload images or videos to reuse them across posts.",
+  "kindVideo": "Video",
+  "kindFile": "File",
+  "deleteLabel": "Delete {name}",
+  "deleteTitle": "Delete this file?",
+  "deleteBody": "{name} will be removed from your library. Files used in a post cannot be deleted.",
+  "deleteBodyUnnamed": "The file will be removed from your library. Files used in a post cannot be deleted.",
+  "deleted": "File deleted",
+  "libraryTitle": "Media library",
+  "libraryBody": "Choose files to attach to this post.",
+  "libraryEmpty": "Your library is empty. Upload a file first.",
+  "attach": "{count, plural, one {Attach # file} other {Attach # files}}"
+}

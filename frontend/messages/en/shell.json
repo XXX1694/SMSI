@@ -1,0 +1,31 @@
+{
+  "skipToContent": "Skip to content",
+  "signOut": "Sign out",
+  "openMenu": "Open menu",
+  "closeMenu": "Close menu",
+  "mainNav": "Main",
+  "navWaiting": "{count, plural, one {# request waiting} other {# requests waiting}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, one {# request waits for you} other {# requests wait for you}}",
+  "emailBanner": {
+    "verifyHeading": "Verify your email.",
+    "verifyBody": "Steerpost sent a link to <addr>{email}</addr>. Until you open it you cannot connect accounts, schedule or publish posts, or create API keys.",
+    "sent": "Link sent. Check your inbox.",
+    "resend": "Resend email"
+  },
+  "demo": {
+    "label": "Demo",
+    "banner": "<b>Demo</b> — data stays in your browser ·",
+    "reset": "Reset",
+    "about": "About Steerpost",
+    "resetTitle": "Reset the demo?",
+    "resetBody": "Everything you changed in this demo is removed and the sample data comes back.",
+    "resetConfirm": "Reset demo"
+  },
+  "deletionBanner": {
+    "heading": "Your account will be deleted on {date}.",
+    "body": "All your data goes then and cannot be recovered. Your API keys were revoked and scheduled posts are drafts. You can still download your data in Settings.",
+    "cancel": "Cancel deletion",
+    "cancelling": "Cancelling…"
+  }
+}

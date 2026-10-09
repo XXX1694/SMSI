@@ -30,11 +30,11 @@ import { LanguageSelect } from '@/i18n/language-select';
 import { useLocaleSettings } from '@/i18n/locale-provider';
 import { StatusGlyph } from '@/components/ui/status-glyph';
 import { cn } from '@/lib/utils';
-import type en from '../../messages/en.json';
+import type { Messages } from '@/i18n/catalog';
 
 interface NavItem {
   href: string;
-  labelKey: keyof typeof en.nav;
+  labelKey: keyof Messages['nav'];
   icon: ComponentType<{ className?: string }>;
 }
 

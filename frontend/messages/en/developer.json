@@ -1,0 +1,186 @@
+{
+  "title": "Developer",
+  "subtitle": "API keys, MCP connections, usage and audit log.",
+  "navLabel": "Developer sections",
+  "navKeys": "API keys & audit log",
+  "navMcp": "MCP connections",
+  "keysSection": "API keys",
+  "usageSection": "Usage",
+  "auditSection": "Audit log",
+  "usage": {
+    "noneTitle": "No API usage yet",
+    "noneBody": "Requests made with API keys or MCP connections will be counted here.",
+    "totalRequests": "Total requests",
+    "perDay": "Requests per day",
+    "tableLabel": "Requests per key",
+    "colKey": "Key",
+    "colRequests": "Requests",
+    "colLastUsed": "Last used"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "Safe",
+      "medium": "Medium",
+      "dangerous": "Dangerous"
+    },
+    "dangerNotice": "Dangerous scopes let this key act on live accounts or remove data. Grant them only when you need them.",
+    "social_read": {
+      "label": "Read accounts",
+      "description": "List connected accounts and networks."
+    },
+    "posts_read": {
+      "label": "Read posts",
+      "description": "List posts, statuses and attempts."
+    },
+    "analytics_read": {
+      "label": "Read analytics",
+      "description": "Read analytics data."
+    },
+    "posts_write": {
+      "label": "Create and edit drafts",
+      "description": "Create drafts, edit and cancel posts."
+    },
+    "media_write": {
+      "label": "Upload media",
+      "description": "Upload files to the media library."
+    },
+    "posts_schedule": {
+      "label": "Schedule posts",
+      "description": "Schedule posts to publish later."
+    },
+    "posts_publish": {
+      "label": "Publish immediately",
+      "description": "Publish to live social accounts right now."
+    },
+    "posts_delete": {
+      "label": "Delete posts",
+      "description": "Delete posts from Steerpost. Published copies stay on the networks."
+    },
+    "social_disconnect": {
+      "label": "Disconnect accounts",
+      "description": "Remove connected social accounts."
+    },
+    "social_connect": {
+      "label": "Connect accounts",
+      "description": "Hand a network credential (token, app password, webhook URL) to Steerpost. Anyone holding this key can attach accounts."
+    }
+  },
+  "trusted": {
+    "label": "Trusted key: do not ask me before dangerous actions.",
+    "hint": "By default, dangerous actions by this key wait for your approval in Approvals.",
+    "warning": "A trusted key acts without asking. If it leaks, or the agent misbehaves, it can publish to your live networks, delete posts and disconnect accounts straight away. Leave this off unless the key runs unattended.",
+    "ack": "I understand this key can publish, delete and disconnect without my approval."
+  },
+  "apiKeys": {
+    "rawTitle": "Copy your API key",
+    "rawBody": "This is the only time the full key is shown. Store it somewhere safe.",
+    "copyKey": "Copy key",
+    "expiryNever": "Never",
+    "expiryDays": "{days, plural, one {# day} other {# days}}",
+    "expiryYear": "1 year",
+    "nameRequired": "Give the key a name.",
+    "scopesRequired": "Select at least one scope.",
+    "ackRequired": "Confirm that you understand the risk of dangerous scopes.",
+    "trustAckRequired": "Confirm that this key may act without your approval, or turn the trusted option off.",
+    "createTitle": "Create API key",
+    "createBody": "Keys act as you. Grant only what the integration needs.",
+    "nameLabel": "Name",
+    "namePlaceholder": "CI publisher",
+    "expiresLabel": "Expires",
+    "ackDangerous": "I understand this key can ask to publish, delete or disconnect. Each request waits for my approval.",
+    "createKey": "Create key",
+    "colName": "Name",
+    "colScopes": "Scopes",
+    "colLastUsed": "Last used",
+    "colActions": "Actions",
+    "badgeTrusted": "Trusted: acts without asking",
+    "badgeAsks": "Asks before dangerous actions",
+    "expired": "Expired",
+    "revoke": "Revoke",
+    "revokeLabel": "Revoke {name}",
+    "intro": "Use API keys for scripts and integrations. Send as <code>{header}</code>",
+    "emptyTitle": "No API keys",
+    "emptyBody": "Create a key to call the REST API from your own tools. To connect an AI agent, <link>use an MCP connection</link>.",
+    "tableLabel": "API keys",
+    "revokeTitle": "Revoke API key?",
+    "revokeBody": "Anything using “{name}” stops working immediately. This cannot be undone.",
+    "revoked": "Key revoked"
+  },
+  "mcp": {
+    "createdTitle": "Connection “{name}” created",
+    "createdBody": "This config contains the API key and is shown only once. Paste it into your MCP client now.",
+    "clientLabel": "Client",
+    "tabHttp": "Claude Code, Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "Native HTTP with an Authorization header. In Claude Code run the one-liner below; in Cursor put the JSON into <code>mcp.json</code> and replace the key with <code>{envKey}</code> if you keep it in an environment variable.",
+    "httpConfig": "HTTP config",
+    "connectorIntro": "<b>Connector (no install):</b> add a custom connector with your MCP URL and the header <code>{header}</code>. The URL must be reachable over HTTPS. Steps: <link>MCP docs</link>.",
+    "bridgeIntro": "<b>Bridge:</b> paste this into <code>claude_desktop_config.json</code> and restart Claude Desktop. It runs the community package <code>mcp-remote</code> pinned to an exact version; the key stays in the <code>env</code> block, not in the command line.",
+    "bridgeConfig": "Bridge config",
+    "copyKeyOnly": "Copy API key only",
+    "nameRequired": "Give the connection a name, e.g. “Claude Desktop”.",
+    "permsRequired": "Select at least one permission.",
+    "ackRequired": "Confirm that you understand the risk of dangerous permissions.",
+    "nameLabel": "Connection name",
+    "nameHint": "Shown in your MCP connections.",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "Permissions",
+    "approvalNotice": "Publishing, deleting and disconnecting wait for your approval in Approvals, every time.",
+    "ackLabel": "I understand and want to grant these permissions.",
+    "create": "Create connection",
+    "emptyTitle": "No agents connected",
+    "emptyBody": "Create a connection above, then paste the config into your MCP client.",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}last seen {when}",
+    "connectSection": "Connect an AI agent",
+    "listSection": "MCP connections",
+    "revokeTitle": "Revoke connection?",
+    "revokeBody": "“{name}” loses access immediately and its API key stops working.",
+    "revoked": "Connection revoked",
+    "perms": {
+      "read": {
+        "label": "Read posts",
+        "description": "Agents can list accounts, posts, statuses and analytics."
+      },
+      "draft": {
+        "label": "Create drafts",
+        "description": "Agents can create and edit drafts with media you uploaded."
+      },
+      "schedule": {
+        "label": "Schedule",
+        "description": "Agents can schedule posts to publish later."
+      },
+      "publish": {
+        "label": "Publish",
+        "description": "Agents can publish to live accounts immediately."
+      },
+      "delete": {
+        "label": "Delete",
+        "description": "Agents can delete posts."
+      },
+      "disconnect": {
+        "label": "Disconnect",
+        "description": "Agents can disconnect social accounts."
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "Filter audit events",
+    "all": "All activity",
+    "agents": "Agent actions",
+    "loadFailed": "Could not load the audit log",
+    "emptyAgentsTitle": "No agent actions yet",
+    "emptyAgentsBody": "Tool calls made through MCP appear here.",
+    "emptyTitle": "No audit events yet",
+    "tableLabel": "Audit events",
+    "colWhen": "When",
+    "colActor": "Actor",
+    "colAction": "Action",
+    "colResource": "Resource",
+    "actorApiKey": "API key",
+    "actorUser": "You",
+    "unknownTool": "unknown tool",
+    "directApi": "Direct API",
+    "directApiTitle": "Sent straight to the API, not through the MCP server",
+    "moreFailed": "Could not load more events. {reason}"
+  }
+}

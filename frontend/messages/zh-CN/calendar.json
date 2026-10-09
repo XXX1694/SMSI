@@ -1,0 +1,19 @@
+{
+  "title": "日历",
+  "subtitle": "按你的时区显示草稿、已定时、已发布和失败的帖子。",
+  "month": "月",
+  "week": "周",
+  "day": "日",
+  "viewLabel": "视图",
+  "legend": "图例",
+  "previous": "上一个",
+  "next": "下一个",
+  "today": "今天",
+  "chipTitle": "{status}：{title}",
+  "more": "{count, plural, other {另有 # 篇}}",
+  "moreOnDay": "{count, plural, other {{day}还有 # 篇帖子，打开当天}}",
+  "postsOnDay": "{count, plural, other {{day}有 # 篇帖子，打开当天}}",
+  "postCount": "{count, plural, other {# 篇帖子}}",
+  "noPostsDay": "没有帖子",
+  "noPostsPeriod": "此时间范围内没有帖子。"
+}

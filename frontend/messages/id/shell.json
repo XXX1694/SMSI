@@ -1,0 +1,31 @@
+{
+  "skipToContent": "Lompat ke konten",
+  "signOut": "Keluar",
+  "openMenu": "Buka menu",
+  "closeMenu": "Tutup menu",
+  "mainNav": "Utama",
+  "navWaiting": "{count, plural, other {# permintaan menunggu}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, other {# permintaan menunggu Anda}}",
+  "emailBanner": {
+    "verifyHeading": "Verifikasi email Anda.",
+    "verifyBody": "Steerpost mengirim tautan ke <addr>{email}</addr>. Sebelum Anda membukanya, Anda tidak dapat menghubungkan akun, menjadwalkan atau memublikasikan pos, atau membuat kunci API.",
+    "sent": "Tautan terkirim. Periksa kotak masuk Anda.",
+    "resend": "Kirim ulang email"
+  },
+  "demo": {
+    "label": "Demo",
+    "banner": "<b>Demo</b> — data tetap di browser Anda ·",
+    "reset": "Reset",
+    "about": "Tentang Steerpost",
+    "resetTitle": "Reset demo?",
+    "resetBody": "Semua yang Anda ubah di demo ini dihapus dan data contoh kembali seperti semula.",
+    "resetConfirm": "Reset demo"
+  },
+  "deletionBanner": {
+    "heading": "Akun Anda akan dihapus pada {date}.",
+    "body": "Saat itu semua data Anda hilang dan tidak dapat dipulihkan. Kunci API Anda sudah dicabut dan pos terjadwal menjadi draf. Anda masih dapat mengunduh data Anda di Pengaturan.",
+    "cancel": "Batalkan penghapusan",
+    "cancelling": "Membatalkan…"
+  }
+}

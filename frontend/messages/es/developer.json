@@ -1,0 +1,186 @@
+{
+  "title": "Desarrollo",
+  "subtitle": "Claves de API, conexiones MCP, uso y registro de auditoría.",
+  "navLabel": "Secciones de Desarrollo",
+  "navKeys": "Claves de API y auditoría",
+  "navMcp": "Conexiones MCP",
+  "keysSection": "Claves de API",
+  "usageSection": "Uso",
+  "auditSection": "Registro de auditoría",
+  "usage": {
+    "noneTitle": "Aún no hay uso de la API",
+    "noneBody": "Aquí se contarán las solicitudes hechas con claves de API o conexiones MCP.",
+    "totalRequests": "Solicitudes totales",
+    "perDay": "Solicitudes por día",
+    "tableLabel": "Solicitudes por clave",
+    "colKey": "Clave",
+    "colRequests": "Solicitudes",
+    "colLastUsed": "Último uso"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "Seguro",
+      "medium": "Medio",
+      "dangerous": "Peligroso"
+    },
+    "dangerNotice": "Los ámbitos peligrosos permiten que esta clave actúe sobre cuentas reales o elimine datos. Concédelos solo cuando los necesites.",
+    "social_read": {
+      "label": "Leer cuentas",
+      "description": "Listar las cuentas y redes sociales conectadas."
+    },
+    "posts_read": {
+      "label": "Leer publicaciones",
+      "description": "Listar publicaciones, estados e intentos."
+    },
+    "analytics_read": {
+      "label": "Leer analítica",
+      "description": "Leer los datos de analítica."
+    },
+    "posts_write": {
+      "label": "Crear y editar borradores",
+      "description": "Crear borradores, editar y cancelar publicaciones."
+    },
+    "media_write": {
+      "label": "Subir archivos multimedia",
+      "description": "Subir archivos a la biblioteca multimedia."
+    },
+    "posts_schedule": {
+      "label": "Programar publicaciones",
+      "description": "Programar publicaciones para publicarlas más tarde."
+    },
+    "posts_publish": {
+      "label": "Publicar de inmediato",
+      "description": "Publicar ahora mismo en cuentas reales de redes sociales."
+    },
+    "posts_delete": {
+      "label": "Eliminar publicaciones",
+      "description": "Eliminar publicaciones de Steerpost. Las copias publicadas se quedan en las redes sociales."
+    },
+    "social_disconnect": {
+      "label": "Desconectar cuentas",
+      "description": "Quitar cuentas de redes sociales conectadas."
+    },
+    "social_connect": {
+      "label": "Conectar cuentas",
+      "description": "Entregar a Steerpost una credencial de una red social (token, contraseña de aplicación, URL de webhook). Quien tenga esta clave puede añadir cuentas."
+    }
+  },
+  "trusted": {
+    "label": "Clave de confianza: no preguntarme antes de acciones peligrosas.",
+    "hint": "De forma predeterminada, las acciones peligrosas de esta clave esperan tu aprobación en Aprobaciones.",
+    "warning": "Una clave de confianza actúa sin preguntar. Si se filtra o el agente se comporta mal, puede publicar en tus redes sociales reales, eliminar publicaciones y desconectar cuentas de inmediato. Déjala desactivada, salvo que la clave se ejecute sin supervisión.",
+    "ack": "Entiendo que esta clave puede publicar, eliminar y desconectar sin mi aprobación."
+  },
+  "apiKeys": {
+    "rawTitle": "Copia tu clave de API",
+    "rawBody": "Esta es la única vez que se muestra la clave completa. Guárdala en un lugar seguro.",
+    "copyKey": "Copiar clave",
+    "expiryNever": "Nunca",
+    "expiryDays": "{days, plural, one {# día} many {# de días} other {# días}}",
+    "expiryYear": "1 año",
+    "nameRequired": "Ponle un nombre a la clave.",
+    "scopesRequired": "Selecciona al menos un ámbito.",
+    "ackRequired": "Confirma que entiendes el riesgo de los ámbitos peligrosos.",
+    "trustAckRequired": "Confirma que esta clave puede actuar sin tu aprobación o desactiva la opción de confianza.",
+    "createTitle": "Crear clave de API",
+    "createBody": "Las claves actúan como tú. Concede solo lo que necesite la integración.",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Publicador de CI",
+    "expiresLabel": "Caduca",
+    "ackDangerous": "Entiendo que esta clave puede pedir publicar, eliminar o desconectar. Cada solicitud espera mi aprobación.",
+    "createKey": "Crear clave",
+    "colName": "Nombre",
+    "colScopes": "Ámbitos",
+    "colLastUsed": "Último uso",
+    "colActions": "Acciones",
+    "badgeTrusted": "De confianza: actúa sin preguntar",
+    "badgeAsks": "Pregunta antes de acciones peligrosas",
+    "expired": "Caducada",
+    "revoke": "Revocar",
+    "revokeLabel": "Revocar {name}",
+    "intro": "Usa claves de API para scripts e integraciones. Envíala como <code>{header}</code>",
+    "emptyTitle": "Sin claves de API",
+    "emptyBody": "Crea una clave para llamar a la API REST desde tus propias herramientas. Para conectar un agente de IA, <link>usa una conexión MCP</link>.",
+    "tableLabel": "Claves de API",
+    "revokeTitle": "¿Revocar la clave de API?",
+    "revokeBody": "Todo lo que use “{name}” deja de funcionar de inmediato. Esto no se puede deshacer.",
+    "revoked": "Clave revocada"
+  },
+  "mcp": {
+    "createdTitle": "Conexión “{name}” creada",
+    "createdBody": "Esta configuración contiene la clave de API y se muestra una sola vez. Pégala ahora en tu cliente MCP.",
+    "clientLabel": "Cliente",
+    "tabHttp": "Claude Code, Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "HTTP nativo con una cabecera Authorization. En Claude Code ejecuta el comando de una línea de abajo; en Cursor pon el JSON en <code>mcp.json</code> y sustituye la clave por <code>{envKey}</code> si la guardas en una variable de entorno.",
+    "httpConfig": "Configuración HTTP",
+    "connectorIntro": "<b>Conector (sin instalar nada):</b> añade un conector personalizado con tu URL de MCP y la cabecera <code>{header}</code>. La URL debe ser accesible por HTTPS. Pasos: <link>documentación de MCP</link>.",
+    "bridgeIntro": "<b>Puente:</b> pega esto en <code>claude_desktop_config.json</code> y reinicia Claude Desktop. Ejecuta el paquete de la comunidad <code>mcp-remote</code> fijado a una versión exacta; la clave queda en el bloque <code>env</code>, no en la línea de comandos.",
+    "bridgeConfig": "Configuración del puente",
+    "copyKeyOnly": "Copiar solo la clave",
+    "nameRequired": "Ponle un nombre a la conexión, por ejemplo “Claude Desktop”.",
+    "permsRequired": "Selecciona al menos un permiso.",
+    "ackRequired": "Confirma que entiendes el riesgo de los permisos peligrosos.",
+    "nameLabel": "Nombre de la conexión",
+    "nameHint": "Se muestra en tus conexiones MCP.",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "Permisos",
+    "approvalNotice": "Publicar, eliminar y desconectar esperan tu aprobación en Aprobaciones, cada vez.",
+    "ackLabel": "Lo entiendo y quiero conceder estos permisos.",
+    "create": "Crear conexión",
+    "emptyTitle": "Ningún agente conectado",
+    "emptyBody": "Crea una conexión arriba y pega la configuración en tu cliente MCP.",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}visto por última vez: {when}",
+    "connectSection": "Conecta un agente de IA",
+    "listSection": "Conexiones MCP",
+    "revokeTitle": "¿Revocar la conexión?",
+    "revokeBody": "“{name}” pierde el acceso de inmediato y su clave de API deja de funcionar.",
+    "revoked": "Conexión revocada",
+    "perms": {
+      "read": {
+        "label": "Leer publicaciones",
+        "description": "Los agentes pueden listar cuentas, publicaciones, estados y analítica."
+      },
+      "draft": {
+        "label": "Crear borradores",
+        "description": "Los agentes pueden crear y editar borradores con archivos multimedia que hayas subido."
+      },
+      "schedule": {
+        "label": "Programar",
+        "description": "Los agentes pueden programar publicaciones para publicarlas más tarde."
+      },
+      "publish": {
+        "label": "Publicar",
+        "description": "Los agentes pueden publicar de inmediato en cuentas reales."
+      },
+      "delete": {
+        "label": "Eliminar",
+        "description": "Los agentes pueden eliminar publicaciones."
+      },
+      "disconnect": {
+        "label": "Desconectar",
+        "description": "Los agentes pueden desconectar cuentas de redes sociales."
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "Filtrar eventos de auditoría",
+    "all": "Toda la actividad",
+    "agents": "Acciones de agentes",
+    "loadFailed": "No se pudo cargar el registro de auditoría",
+    "emptyAgentsTitle": "Aún no hay acciones de agentes",
+    "emptyAgentsBody": "Las llamadas a herramientas hechas por MCP aparecen aquí.",
+    "emptyTitle": "Aún no hay eventos de auditoría",
+    "tableLabel": "Eventos de auditoría",
+    "colWhen": "Cuándo",
+    "colActor": "Autor",
+    "colAction": "Acción",
+    "colResource": "Recurso",
+    "actorApiKey": "Clave de API",
+    "actorUser": "Tú",
+    "unknownTool": "herramienta desconocida",
+    "directApi": "API directa",
+    "directApiTitle": "Enviado directamente a la API, no a través del servidor MCP",
+    "moreFailed": "No se pudieron cargar más eventos. {reason}"
+  }
+}

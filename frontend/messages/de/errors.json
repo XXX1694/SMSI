@@ -1,0 +1,21 @@
+{
+  "VALIDATION_ERROR": "Einige Angaben sind nicht gültig. Prüfe sie und versuche es erneut.",
+  "UNAUTHENTICATED": "Du bist nicht angemeldet, oder deine Sitzung ist abgelaufen. Melde dich erneut an.",
+  "FORBIDDEN": "Dazu hast du keine Berechtigung.",
+  "INSUFFICIENT_SCOPE": "Dieser API-Schlüssel hat nicht die Berechtigung für diese Aktion.",
+  "QUOTA_EXCEEDED": "Du hast ein Limit deines Tarifs erreicht. In den Einstellungen siehst du, was du verbraucht hast.",
+  "EMAIL_NOT_VERIFIED": "Bestätige zuerst deine E-Mail-Adresse und versuche es dann erneut.",
+  "NOT_FOUND": "Dieses Element gibt es nicht mehr. Es wurde möglicherweise gelöscht.",
+  "INVALID_STATE_TRANSITION": "Der Status dieses Beitrags hat sich geändert. Lade die Seite neu, um ihn zu sehen.",
+  "CONFLICT": "Das gibt es bereits. Verwende einen anderen Namen.",
+  "RATE_LIMITED": "Zu viele Anfragen. Warte einen Moment und versuche es erneut.",
+  "SOCIAL_ACCOUNT_EXPIRED": "Dieses Konto muss erneut verbunden werden. Das geht unter Konten.",
+  "PROVIDER_NOT_AVAILABLE": "Dieses Netzwerk ist noch nicht verfügbar.",
+  "PROVIDER_ERROR": "Das Netzwerk hat den Beitrag abgelehnt. Den Grund siehst du unter den Versuchen des Beitrags.",
+  "INTERNAL": "Bei Steerpost ist ein Problem aufgetreten. Versuche es gleich noch einmal.",
+  "NETWORK": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
+  "UNKNOWN": "Etwas ist schiefgelaufen. Versuche es erneut.",
+  "access_denied": "Die Anmeldung wurde abgebrochen, oder der Zugriff wurde nicht erteilt.",
+  "withRef": "{text} (Ref. {id})",
+  "REAUTH_REQUIRED": "Melde dich erneut an, um fortzufahren."
+}

@@ -1,0 +1,52 @@
+{
+  "title": "Freigaben",
+  "subtitle": "Gefährliche Aktionen von Agenten und API-Schlüsseln warten hier. Nichts passiert, bis du freigibst.",
+  "tabWaiting": "Wartet auf dich",
+  "tabHistory": "Verlauf",
+  "showLabel": "Freigaben anzeigen",
+  "emptyPendingTitle": "Nichts wartet auf dich",
+  "emptyPendingBody": "Anfragen von Agenten erscheinen hier.",
+  "emptyHistoryTitle": "Noch keine Entscheidungen",
+  "emptyHistoryBody": "Freigegebene und abgelehnte Anfragen stehen hier.",
+  "approvedToast": "Freigegeben: {action}. {agent} kann jetzt fortfahren.",
+  "deniedToast": "Abgelehnt: {action}.",
+  "status": {
+    "pending": "Wartet",
+    "approved": "Freigegeben, wartet auf den Agenten",
+    "consumed": "Freigegeben und ausgeführt",
+    "denied": "Abgelehnt",
+    "expired": "Abgelaufen"
+  },
+  "requestedBy": "Angefragt von <b>{agent}</b>",
+  "deny": "Ablehnen",
+  "approve": "Freigeben",
+  "approving": "Wird freigegeben…",
+  "denyLabel": "Ablehnen: {action}",
+  "approveLabel": "Freigeben: {action}",
+  "showLess": "Einklappen",
+  "showFull": "Volltext anzeigen",
+  "underMinute": "Weniger als eine Minute übrig",
+  "minLeft": "{count, plural, one {noch # Min.} other {noch # Min.}}",
+  "summary": {
+    "title": "Titel",
+    "text": "Text",
+    "media": "Medien",
+    "networks": "Netzwerke",
+    "accounts": "Konten",
+    "network": "Netzwerk",
+    "account": "Konto",
+    "scheduledFor": "Geplant für",
+    "textOn": "Text für {account}",
+    "images": "{count, plural, one {# Bild} other {# Bilder}}",
+    "videos": "{count, plural, one {# Video} other {# Videos}}",
+    "files": "{count, plural, one {# Datei} other {# Dateien}}"
+  },
+  "action": {
+    "post_publish": "Jetzt veröffentlichen",
+    "post_retry_now": "Jetzt erneut senden",
+    "post_delete": "Beitrag löschen",
+    "post_schedule_soon": "In den nächsten Minuten planen",
+    "social_account_disconnect": "Konto trennen",
+    "social_account_connect_token": "Mit Token verbinden"
+  }
+}

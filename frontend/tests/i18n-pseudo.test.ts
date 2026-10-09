@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatIcu } from '@/i18n/icu';
 import { pseudoCatalog, pseudoMessage, pseudoText } from '@/i18n/pseudo';
-import en from '../messages/en.json';
+import en from '@/i18n/en-all';
 
 describe('pseudo-locale', () => {
   it('accents and expands about 35 %', () => {

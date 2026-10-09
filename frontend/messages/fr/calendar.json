@@ -1,0 +1,19 @@
+{
+  "title": "Calendrier",
+  "subtitle": "Brouillons, posts planifiés, publiés et en échec, dans votre fuseau horaire.",
+  "month": "Mois",
+  "week": "Semaine",
+  "day": "Jour",
+  "viewLabel": "Vue",
+  "legend": "Légende",
+  "previous": "Précédent",
+  "next": "Suivant",
+  "today": "Aujourd’hui",
+  "chipTitle": "{status} : {title}",
+  "more": "{count, plural, one {+# autre} many {+# d’autres} other {+# autres}}",
+  "moreOnDay": "{count, plural, one {# autre post le {day}, ouvrir le jour} many {# d’autres posts le {day}, ouvrir le jour} other {# autres posts le {day}, ouvrir le jour}}",
+  "postsOnDay": "{count, plural, one {# post le {day}, ouvrir le jour} many {# de posts le {day}, ouvrir le jour} other {# posts le {day}, ouvrir le jour}}",
+  "postCount": "{count, plural, one {# post} many {# de posts} other {# posts}}",
+  "noPostsDay": "Aucun post",
+  "noPostsPeriod": "Aucun post sur cette période."
+}

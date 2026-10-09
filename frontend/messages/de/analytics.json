@@ -1,0 +1,22 @@
+{
+  "title": "Analysen",
+  "subtitle": "Kennzahlen, die deine Netzwerke melden.",
+  "period": "Zeitraum",
+  "lastDays": "{days, plural, one {Letzter # Tag} other {Letzte # Tage}}",
+  "none": "Keines der verbundenen Netzwerke meldet bisher Analysen.",
+  "supportedBy": "Analysen unterstützt von: {networks}.",
+  "emptyTitle": "Keine Analysedaten in diesem Zeitraum",
+  "emptyBody": "Kennzahlen erscheinen hier, sobald ein verbundenes Netzwerk sie meldet.",
+  "tableLabel": "Kennzahlen",
+  "colMetric": "Kennzahl",
+  "colLatest": "Neueste",
+  "colTotal": "Gesamt",
+  "colTrend": "Verlauf",
+  "trend": "Verlauf: {metric}",
+  "notEnough": "Zu wenige Daten",
+  "metrics": {
+    "impressions": "Impressionen",
+    "reactions": "Reaktionen",
+    "link_clicks": "Link-Klicks"
+  }
+}

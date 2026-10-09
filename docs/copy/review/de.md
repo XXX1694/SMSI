@@ -25,7 +25,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft` (shown as "Beta translation").
-Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/de.json` (676 keys), first drafted with the PR that added it.
+Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/de/*.json` (676 keys), first drafted with the PR that added it.
 
 Register: du, lower case; buttons in the infinitive («Speichern», «Planen»), body text in the du-imperative («Verbinde ein Konto.»);
 quotes „…“. Gendered person nouns are avoided by addressing "du" ("Admin" instead of "Administrator", "Wer" instead of "Akteur").

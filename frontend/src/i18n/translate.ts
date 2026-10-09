@@ -1,8 +1,7 @@
 import { formatNodes, parseIcu, type FormatContext, type IcuValue } from '@/i18n/icu';
 import type { Catalog } from '@/i18n/pseudo';
-import type en from '../../messages/en.json';
+import type { Messages } from '@/i18n/catalog';
 
-type Messages = typeof en;
 /** Dotted paths of every string in a catalog: `nav.dashboard`. */
 type Paths<T> = T extends string ? never : { [K in keyof T & string]: T[K] extends string ? K : `${K}.${Paths<T[K]>}` }[keyof T & string];
 type ObjectKeys<T> = { [K in keyof T & string]: T[K] extends string ? never : K }[keyof T & string];

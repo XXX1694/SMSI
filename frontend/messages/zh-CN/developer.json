@@ -1,0 +1,186 @@
+{
+  "title": "开发者",
+  "subtitle": "API 密钥、MCP 连接、用量和审计日志。",
+  "navLabel": "开发者板块",
+  "navKeys": "API 密钥与审计日志",
+  "navMcp": "MCP 连接",
+  "keysSection": "API 密钥",
+  "usageSection": "用量",
+  "auditSection": "审计日志",
+  "usage": {
+    "noneTitle": "还没有 API 用量",
+    "noneBody": "使用 API 密钥或 MCP 连接发出的请求会在这里统计。",
+    "totalRequests": "请求总数",
+    "perDay": "每日请求数",
+    "tableLabel": "各密钥的请求数",
+    "colKey": "密钥",
+    "colRequests": "请求数",
+    "colLastUsed": "最后使用"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "安全",
+      "medium": "中等",
+      "dangerous": "危险"
+    },
+    "dangerNotice": "危险的权限范围允许此密钥操作真实账号或删除数据。仅在确有需要时授予。",
+    "social_read": {
+      "label": "读取账号",
+      "description": "列出已连接的账号和社交网络。"
+    },
+    "posts_read": {
+      "label": "读取帖子",
+      "description": "列出帖子、状态和发布尝试。"
+    },
+    "analytics_read": {
+      "label": "读取数据分析",
+      "description": "读取数据分析数据。"
+    },
+    "posts_write": {
+      "label": "创建和编辑草稿",
+      "description": "创建草稿，编辑和取消帖子。"
+    },
+    "media_write": {
+      "label": "上传媒体",
+      "description": "向媒体库上传文件。"
+    },
+    "posts_schedule": {
+      "label": "定时发布帖子",
+      "description": "设置帖子稍后发布。"
+    },
+    "posts_publish": {
+      "label": "立即发布",
+      "description": "立即发布到真实的社交账号。"
+    },
+    "posts_delete": {
+      "label": "删除帖子",
+      "description": "从 Steerpost 删除帖子。已发布到各社交网络的副本会保留。"
+    },
+    "social_disconnect": {
+      "label": "断开账号连接",
+      "description": "移除已连接的社交账号。"
+    },
+    "social_connect": {
+      "label": "连接账号",
+      "description": "向 Steerpost 提供社交网络的凭据（令牌、应用专用密码、Webhook URL）。持有此密钥的任何人都可以添加账号。"
+    }
+  },
+  "trusted": {
+    "label": "受信任的密钥：执行危险操作前不再询问我。",
+    "hint": "默认情况下，此密钥发起的危险操作会在“审批”中等待你的批准。",
+    "warning": "受信任的密钥无需询问即可执行操作。如果它泄露，或智能体行为异常，它可能立即发布到你的真实社交网络、删除帖子并断开账号连接。除非该密钥在无人值守的环境中运行，否则请保持关闭。",
+    "ack": "我了解此密钥无需我的批准即可发布、删除和断开连接。"
+  },
+  "apiKeys": {
+    "rawTitle": "复制你的 API 密钥",
+    "rawBody": "完整密钥只会显示这一次。请将它保存在安全的地方。",
+    "copyKey": "复制密钥",
+    "expiryNever": "永不过期",
+    "expiryDays": "{days, plural, other {# 天}}",
+    "expiryYear": "1 年",
+    "nameRequired": "请为密钥命名。",
+    "scopesRequired": "请至少选择一个权限范围。",
+    "ackRequired": "请确认你了解危险权限范围的风险。",
+    "trustAckRequired": "请确认此密钥可以不经你批准而执行操作，或关闭“受信任”选项。",
+    "createTitle": "创建 API 密钥",
+    "createBody": "密钥以你的身份执行操作。只授予集成所需的权限。",
+    "nameLabel": "名称",
+    "namePlaceholder": "CI 发布器",
+    "expiresLabel": "有效期",
+    "ackDangerous": "我了解此密钥可以请求发布、删除或断开连接。每个请求都会等待我的批准。",
+    "createKey": "创建密钥",
+    "colName": "名称",
+    "colScopes": "权限范围",
+    "colLastUsed": "最后使用",
+    "colActions": "操作",
+    "badgeTrusted": "受信任：无需询问",
+    "badgeAsks": "危险操作前会询问",
+    "expired": "已过期",
+    "revoke": "撤销",
+    "revokeLabel": "撤销{name}",
+    "intro": "API 密钥用于脚本和集成。请通过以下请求头发送：<code>{header}</code>",
+    "emptyTitle": "没有 API 密钥",
+    "emptyBody": "创建一个密钥，即可从你自己的工具调用 REST API。若要连接 AI 智能体，请<link>使用 MCP 连接</link>。",
+    "tableLabel": "API 密钥",
+    "revokeTitle": "撤销 API 密钥？",
+    "revokeBody": "所有使用“{name}”的程序将立即失效，且无法撤回。",
+    "revoked": "密钥已撤销"
+  },
+  "mcp": {
+    "createdTitle": "连接“{name}”已创建",
+    "createdBody": "此配置包含 API 密钥，且只显示一次。请立即粘贴到你的 MCP 客户端。",
+    "clientLabel": "客户端",
+    "tabHttp": "Claude Code、Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "使用带 Authorization 请求头的原生 HTTP。在 Claude Code 中运行下面的单行命令；在 Cursor 中把 JSON 放入 <code>mcp.json</code>，如果你把密钥保存在环境变量中，请将密钥替换为 <code>{envKey}</code>。",
+    "httpConfig": "HTTP 配置",
+    "connectorIntro": "<b>连接器（无需安装）：</b>使用你的 MCP URL 和请求头 <code>{header}</code> 添加自定义连接器。该 URL 必须可通过 HTTPS 访问。步骤：<link>MCP 文档</link>。",
+    "bridgeIntro": "<b>桥接：</b>把下面的内容粘贴到 <code>claude_desktop_config.json</code> 并重启 Claude Desktop。它会运行固定到确切版本的社区软件包 <code>mcp-remote</code>；密钥保存在 <code>env</code> 块中，而不是命令行里。",
+    "bridgeConfig": "桥接配置",
+    "copyKeyOnly": "仅复制 API 密钥",
+    "nameRequired": "请为连接命名，例如“Claude Desktop”。",
+    "permsRequired": "请至少选择一项权限。",
+    "ackRequired": "请确认你了解危险权限的风险。",
+    "nameLabel": "连接名称",
+    "nameHint": "显示在你的 MCP 连接列表中。",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "权限",
+    "approvalNotice": "发布、删除和断开连接每次都会在“审批”中等待你的批准。",
+    "ackLabel": "我了解并希望授予这些权限。",
+    "create": "创建连接",
+    "emptyTitle": "没有已连接的智能体",
+    "emptyBody": "先在上方创建连接，然后把配置粘贴到你的 MCP 客户端。",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}最后活动：{when}",
+    "connectSection": "连接 AI 智能体",
+    "listSection": "MCP 连接",
+    "revokeTitle": "撤销连接？",
+    "revokeBody": "“{name}”将立即失去访问权限，其 API 密钥也将失效。",
+    "revoked": "连接已撤销",
+    "perms": {
+      "read": {
+        "label": "读取帖子",
+        "description": "智能体可以列出账号、帖子、状态和数据分析。"
+      },
+      "draft": {
+        "label": "创建草稿",
+        "description": "智能体可以使用你上传的媒体创建和编辑草稿。"
+      },
+      "schedule": {
+        "label": "定时发布",
+        "description": "智能体可以设置帖子稍后发布。"
+      },
+      "publish": {
+        "label": "发布",
+        "description": "智能体可以立即发布到真实账号。"
+      },
+      "delete": {
+        "label": "删除",
+        "description": "智能体可以删除帖子。"
+      },
+      "disconnect": {
+        "label": "断开连接",
+        "description": "智能体可以断开社交账号的连接。"
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "筛选审计事件",
+    "all": "所有活动",
+    "agents": "智能体操作",
+    "loadFailed": "无法加载审计日志",
+    "emptyAgentsTitle": "还没有智能体操作",
+    "emptyAgentsBody": "通过 MCP 发出的工具调用会显示在这里。",
+    "emptyTitle": "还没有审计事件",
+    "tableLabel": "审计事件",
+    "colWhen": "时间",
+    "colActor": "操作者",
+    "colAction": "操作",
+    "colResource": "对象",
+    "actorApiKey": "API 密钥",
+    "actorUser": "你",
+    "unknownTool": "未知工具",
+    "directApi": "直接调用 API",
+    "directApiTitle": "直接发送到 API，未经过 MCP 服务器",
+    "moreFailed": "无法加载更多事件。{reason}"
+  }
+}

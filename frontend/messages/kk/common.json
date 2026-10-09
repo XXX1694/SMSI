@@ -1,0 +1,65 @@
+{
+  "cancel": "Бас тарту",
+  "close": "Жабу",
+  "loading": "Жүктелуде…",
+  "working": "Орындалуда…",
+  "sending": "Жіберілуде…",
+  "saving": "Сақталуда…",
+  "tryAgain": "Қайталап көру",
+  "retry": "Қайта жариялау",
+  "edit": "Өзгерту",
+  "optionalLabel": "{label} (міндетті емес)",
+  "showField": "Көрсету: {label}",
+  "hideField": "Жасыру: {label}",
+  "never": "Ешқашан",
+  "justNow": "жаңа ғана",
+  "unknown": "Белгісіз",
+  "loadingFailed": "Жүктеу сәтсіз аяқталды",
+  "newPost": "Жаңа жазба",
+  "listSeparator": ", ",
+  "bytes": "{size} Б",
+  "kilobytes": "{size} КБ",
+  "megabytes": "{size} МБ",
+  "connectAccount": "Аккаунтты қосу",
+  "delete": "Жою",
+  "copy": "Көшіру",
+  "copyTitle": "Көшіру: {title}",
+  "copied": "Көшірілді",
+  "copyFailed": "Көшіру мүмкін болмады. Мәтінді таңдап, қолмен көшіріңіз.",
+  "haveSaved": "Сақтап қойдым",
+  "creating": "Жасалуда…",
+  "loadMore": "Тағы жүктеу",
+  "upload": "Жүктеп салу",
+  "uploading": "Жүктеп салынуда…",
+  "status": {
+    "post": {
+      "draft": "Нобай",
+      "scheduled": "Жоспарланған",
+      "publishing": "Жариялануда",
+      "published": "Жарияланған",
+      "partially_published": "Ішінара жарияланған",
+      "failed": "Қате",
+      "cancelled": "Болдырылмаған"
+    },
+    "target": {
+      "pending": "Күтуде",
+      "publishing": "Жариялануда",
+      "published": "Жарияланған",
+      "failed": "Қате",
+      "cancelled": "Болдырылмаған",
+      "needs_review": "Расталмаған"
+    },
+    "account": {
+      "active": "Белсенді",
+      "expired": "Қайта қосу керек",
+      "revoked": "Кері қайтарылған",
+      "error": "Қате"
+    },
+    "attempt": {
+      "started": "Басталды",
+      "succeeded": "Сәтті",
+      "failed": "Қате",
+      "unknown": "Расталмаған"
+    }
+  }
+}

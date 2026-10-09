@@ -1,0 +1,70 @@
+{
+  "title": "仪表盘",
+  "subtitle": "即将发出的内容，以及需要你处理的事项。",
+  "overview": "概览",
+  "stats": {
+    "accounts": "已连接账号",
+    "scheduled": "已定时",
+    "publishedMonth": "本月已发布",
+    "failed": "失败"
+  },
+  "viewAll": "查看全部",
+  "sections": {
+    "upcoming": {
+      "title": "即将发布",
+      "empty": "没有定时的帖子。",
+      "viewAll": "查看全部即将发布"
+    },
+    "drafts": {
+      "title": "草稿",
+      "empty": "没有草稿。",
+      "viewAll": "查看全部草稿"
+    },
+    "recent": {
+      "title": "最近发布",
+      "empty": "还没有发布任何内容。",
+      "viewAll": "查看全部最近发布"
+    },
+    "failed": {
+      "title": "失败",
+      "empty": "没有失败的帖子。",
+      "viewAll": "查看全部失败"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "连接你的第一个账号",
+    "noAccountBody": "连接一个社交网络，开始发布。",
+    "showChecklist": "显示设置清单",
+    "setUp": "已设置",
+    "showSteps": "显示步骤",
+    "dismiss": "关闭设置清单",
+    "doneTitle": "设置已完成",
+    "getStarted": "开始使用",
+    "doneBody": "所有必需步骤均已完成。你可以隐藏此清单。",
+    "progress": "已完成 {done} 步，共 {total, plural, other {# 步}}。",
+    "doneSr": "（已完成）",
+    "optional": "可选",
+    "steps": {
+      "network": {
+        "title": "连接社交网络",
+        "hint": "Steerpost 会发布到你连接的账号。选择 LinkedIn、Telegram 或其他社交网络。",
+        "action": "连接账号"
+      },
+      "post": {
+        "title": "撰写你的第一篇帖子",
+        "hint": "保存为草稿，或设置定时发布。在你确认之前，不会发布任何内容。",
+        "action": "撰写帖子"
+      },
+      "agent": {
+        "title": "连接 AI 智能体",
+        "hint": "创建 MCP 连接或 API 密钥，让智能体或你自己的脚本帮你起草帖子。",
+        "action": "连接智能体"
+      },
+      "approval": {
+        "title": "处理一个审批",
+        "hint": "当智能体请求发布、删除或断开连接时，请求会在这里等待。",
+        "action": "打开审批"
+      }
+    }
+  }
+}

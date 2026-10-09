@@ -25,7 +25,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft` (shown as "Beta translation").
-Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/es.json` (676 keys), first drafted with the PR that added it.
+Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/es/*.json` (676 keys), first drafted with the PR that added it.
 
 Register: Neutral international Spanish (es-419 vocabulary), tú. Buttons use the infinitive («Guardar», «Programar»), body text
 the tú imperative («Conecta una cuenta.»). No exclamations. Quotes “…”.

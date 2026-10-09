@@ -1,5 +1,5 @@
 import type { AppT } from '@/i18n/translate';
-import type en from '../../messages/en.json';
+import type { Messages } from '@/i18n/catalog';
 
 /** Codes with a sentence in the catalog (`errors.<code>`). Anything else gets `errors.UNKNOWN`, never the code itself. */
 const CODES = [
@@ -22,7 +22,7 @@ const CODES = [
   'UNKNOWN',
   // OAuth `error` values a network can send back to the callback.
   'access_denied',
-] as const satisfies readonly (keyof typeof en.errors)[];
+] as const satisfies readonly (keyof Messages['errors'])[];
 type Code = (typeof CODES)[number];
 const isCode = (code: string): code is Code => (CODES as readonly string[]).includes(code);
 

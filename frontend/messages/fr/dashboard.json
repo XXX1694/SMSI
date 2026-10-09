@@ -1,0 +1,70 @@
+{
+  "title": "Tableau de bord",
+  "subtitle": "Ce qui part, et ce qui demande votre attention.",
+  "overview": "Vue d’ensemble",
+  "stats": {
+    "accounts": "Comptes connectés",
+    "scheduled": "Planifiés",
+    "publishedMonth": "Publiés ce mois-ci",
+    "failed": "En échec"
+  },
+  "viewAll": "Tout voir",
+  "sections": {
+    "upcoming": {
+      "title": "À venir",
+      "empty": "Rien n’est planifié.",
+      "viewAll": "Voir tous les posts à venir"
+    },
+    "drafts": {
+      "title": "Brouillons",
+      "empty": "Aucun brouillon.",
+      "viewAll": "Voir tous les brouillons"
+    },
+    "recent": {
+      "title": "Publiés récemment",
+      "empty": "Rien n’a encore été publié.",
+      "viewAll": "Voir tous les posts publiés récemment"
+    },
+    "failed": {
+      "title": "En échec",
+      "empty": "Aucun post en échec.",
+      "viewAll": "Voir tous les posts en échec"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "Connectez votre premier compte",
+    "noAccountBody": "Connectez un réseau pour commencer à publier.",
+    "showChecklist": "Afficher la configuration",
+    "setUp": "Configuré",
+    "showSteps": "Les étapes",
+    "dismiss": "Masquer la liste de configuration",
+    "doneTitle": "Tout est prêt",
+    "getStarted": "Pour commencer",
+    "doneBody": "Toutes les étapes requises sont terminées. Vous pouvez masquer cette liste.",
+    "progress": "{done} sur {total, plural, one {# étape terminée} many {# d’étapes terminées} other {# étapes terminées}}.",
+    "doneSr": "(terminée)",
+    "optional": "Facultatif",
+    "steps": {
+      "network": {
+        "title": "Connectez un réseau",
+        "hint": "Steerpost publie sur les comptes que vous connectez. Choisissez LinkedIn, Telegram ou un autre réseau.",
+        "action": "Connecter un compte"
+      },
+      "post": {
+        "title": "Rédigez votre premier post",
+        "hint": "Enregistrez un brouillon ou planifiez-le. Rien n’est publié tant que vous ne le décidez pas.",
+        "action": "Rédiger un post"
+      },
+      "agent": {
+        "title": "Connectez un agent IA",
+        "hint": "Créez une connexion MCP ou une clé d’API pour que Claude ou vos propres scripts puissent rédiger des brouillons de posts à votre place.",
+        "action": "Connecter un agent"
+      },
+      "approval": {
+        "title": "Examinez une approbation",
+        "hint": "Quand un agent demande à publier, supprimer ou déconnecter, la demande attend ici.",
+        "action": "Voir approbations"
+      }
+    }
+  }
+}

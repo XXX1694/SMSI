@@ -1,0 +1,70 @@
+{
+  "title": "Dasbor",
+  "subtitle": "Apa yang akan terbit, dan apa yang perlu perhatian.",
+  "overview": "Ringkasan",
+  "stats": {
+    "accounts": "Akun terhubung",
+    "scheduled": "Terjadwal",
+    "publishedMonth": "Terbit bulan ini",
+    "failed": "Gagal"
+  },
+  "viewAll": "Lihat semua",
+  "sections": {
+    "upcoming": {
+      "title": "Mendatang",
+      "empty": "Tidak ada yang dijadwalkan.",
+      "viewAll": "Lihat semua yang mendatang"
+    },
+    "drafts": {
+      "title": "Draf",
+      "empty": "Tidak ada draf.",
+      "viewAll": "Lihat semua draf"
+    },
+    "recent": {
+      "title": "Baru terbit",
+      "empty": "Belum ada yang terbit.",
+      "viewAll": "Lihat semua yang baru terbit"
+    },
+    "failed": {
+      "title": "Gagal",
+      "empty": "Tidak ada pos yang gagal.",
+      "viewAll": "Lihat semua yang gagal"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "Hubungkan akun pertama Anda",
+    "noAccountBody": "Hubungkan sebuah jaringan untuk mulai memublikasikan.",
+    "showChecklist": "Lihat daftar langkah",
+    "setUp": "Sudah diatur",
+    "showSteps": "Lihat langkah",
+    "dismiss": "Tutup daftar langkah awal",
+    "doneTitle": "Pengaturan Anda selesai",
+    "getStarted": "Mulai",
+    "doneBody": "Semua langkah wajib sudah selesai. Anda dapat menyembunyikan daftar ini.",
+    "progress": "{done} dari {total, plural, other {# langkah}} selesai.",
+    "doneSr": "(selesai)",
+    "optional": "Opsional",
+    "steps": {
+      "network": {
+        "title": "Hubungkan jaringan",
+        "hint": "Steerpost memublikasikan ke akun yang Anda hubungkan. Pilih LinkedIn, Telegram, atau jaringan lain.",
+        "action": "Hubungkan akun"
+      },
+      "post": {
+        "title": "Tulis pos pertama Anda",
+        "hint": "Simpan sebagai draf atau jadwalkan. Tidak ada yang dipublikasikan sampai Anda memintanya.",
+        "action": "Tulis pos"
+      },
+      "agent": {
+        "title": "Hubungkan agen AI",
+        "hint": "Buat koneksi MCP atau kunci API agar Claude atau skrip Anda sendiri dapat menyusun draf pos untuk Anda.",
+        "action": "Hubungkan agen"
+      },
+      "approval": {
+        "title": "Tinjau persetujuan",
+        "hint": "Saat agen meminta untuk memublikasikan, menghapus, atau memutus koneksi, permintaannya menunggu di sini.",
+        "action": "Buka persetujuan"
+      }
+    }
+  }
+}

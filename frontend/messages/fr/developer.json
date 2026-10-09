@@ -1,0 +1,186 @@
+{
+  "title": "Développeur",
+  "subtitle": "Clés d’API, connexions MCP, utilisation et journal d’audit.",
+  "navLabel": "Sections Développeur",
+  "navKeys": "Clés d’API et audit",
+  "navMcp": "Connexions MCP",
+  "keysSection": "Clés d’API",
+  "usageSection": "Utilisation",
+  "auditSection": "Journal d’audit",
+  "usage": {
+    "noneTitle": "Aucune utilisation de l’API pour l’instant",
+    "noneBody": "Les requêtes effectuées avec des clés d’API ou des connexions MCP seront comptées ici.",
+    "totalRequests": "Total des requêtes",
+    "perDay": "Requêtes par jour",
+    "tableLabel": "Requêtes par clé",
+    "colKey": "Clé",
+    "colRequests": "Requêtes",
+    "colLastUsed": "Dernière utilisation"
+  },
+  "scopes": {
+    "risk": {
+      "safe": "Sûr",
+      "medium": "Moyen",
+      "dangerous": "Dangereux"
+    },
+    "dangerNotice": "Les portées dangereuses permettent à cette clé d’agir sur des comptes réels ou de supprimer des données. Ne les accordez que si nécessaire.",
+    "social_read": {
+      "label": "Lire les comptes",
+      "description": "Lister les comptes et réseaux connectés."
+    },
+    "posts_read": {
+      "label": "Lire les posts",
+      "description": "Lister les posts, statuts et tentatives."
+    },
+    "analytics_read": {
+      "label": "Lire les statistiques",
+      "description": "Lire les données statistiques."
+    },
+    "posts_write": {
+      "label": "Créer et modifier des brouillons",
+      "description": "Créer des brouillons, modifier et annuler des posts."
+    },
+    "media_write": {
+      "label": "Importer des médias",
+      "description": "Importer des fichiers dans la médiathèque."
+    },
+    "posts_schedule": {
+      "label": "Planifier des posts",
+      "description": "Planifier des posts à publier plus tard."
+    },
+    "posts_publish": {
+      "label": "Publier immédiatement",
+      "description": "Publier tout de suite sur des comptes sociaux réels."
+    },
+    "posts_delete": {
+      "label": "Supprimer des posts",
+      "description": "Supprimer des posts de Steerpost. Les copies publiées restent sur les réseaux."
+    },
+    "social_disconnect": {
+      "label": "Déconnecter des comptes",
+      "description": "Retirer des comptes sociaux connectés."
+    },
+    "social_connect": {
+      "label": "Connecter des comptes",
+      "description": "Remettre à Steerpost un identifiant de réseau (jeton, mot de passe d’application, URL de webhook). Toute personne qui détient cette clé peut rattacher des comptes."
+    }
+  },
+  "trusted": {
+    "label": "Clé de confiance : ne pas me demander avant les actions dangereuses.",
+    "hint": "Par défaut, les actions dangereuses de cette clé attendent votre approbation dans Approbations.",
+    "warning": "Une clé de confiance agit sans demander. Si elle fuit, ou si l’agent se comporte mal, elle peut publier sur vos réseaux réels, supprimer des posts et déconnecter des comptes immédiatement. Laissez cette option désactivée, sauf si la clé fonctionne sans surveillance.",
+    "ack": "Je comprends que cette clé peut publier, supprimer et déconnecter sans mon approbation."
+  },
+  "apiKeys": {
+    "rawTitle": "Copiez votre clé d’API",
+    "rawBody": "C’est la seule fois où la clé complète est affichée. Conservez-la en lieu sûr.",
+    "copyKey": "Copier la clé",
+    "expiryNever": "Jamais",
+    "expiryDays": "{days, plural, one {# jour} many {# de jours} other {# jours}}",
+    "expiryYear": "1 an",
+    "nameRequired": "Donnez un nom à la clé.",
+    "scopesRequired": "Sélectionnez au moins une portée.",
+    "ackRequired": "Confirmez que vous comprenez le risque des portées dangereuses.",
+    "trustAckRequired": "Confirmez que cette clé peut agir sans votre approbation, ou désactivez l’option de confiance.",
+    "createTitle": "Créer une clé d’API",
+    "createBody": "Les clés agissent en votre nom. N’accordez que ce dont l’intégration a besoin.",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Publication CI",
+    "expiresLabel": "Expiration",
+    "ackDangerous": "Je comprends que cette clé peut demander de publier, supprimer ou déconnecter. Chaque demande attend mon approbation.",
+    "createKey": "Créer la clé",
+    "colName": "Nom",
+    "colScopes": "Portées",
+    "colLastUsed": "Dernière utilisation",
+    "colActions": "Actions",
+    "badgeTrusted": "De confiance : agit sans demander",
+    "badgeAsks": "Demande avant les actions dangereuses",
+    "expired": "Expirée",
+    "revoke": "Révoquer",
+    "revokeLabel": "Révoquer {name}",
+    "intro": "Utilisez des clés d’API pour vos scripts et intégrations. Envoyez-la sous la forme <code>{header}</code>",
+    "emptyTitle": "Aucune clé d’API",
+    "emptyBody": "Créez une clé pour appeler l’API REST depuis vos propres outils. Pour connecter un agent IA, <link>utilisez une connexion MCP</link>.",
+    "tableLabel": "Clés d’API",
+    "revokeTitle": "Révoquer la clé d’API ?",
+    "revokeBody": "Tout ce qui utilise « {name} » cesse de fonctionner immédiatement. Cette action est irréversible.",
+    "revoked": "Clé révoquée"
+  },
+  "mcp": {
+    "createdTitle": "Connexion « {name} » créée",
+    "createdBody": "Cette configuration contient la clé d’API et n’est affichée qu’une fois. Collez-la dans votre client MCP maintenant.",
+    "clientLabel": "Client",
+    "tabHttp": "Claude Code, Cursor",
+    "tabStdio": "Claude Desktop",
+    "httpIntro": "HTTP natif avec un en-tête Authorization. Dans Claude Code, exécutez la commande ci-dessous ; dans Cursor, placez le JSON dans <code>mcp.json</code> et remplacez la clé par <code>{envKey}</code> si vous la gardez dans une variable d’environnement.",
+    "httpConfig": "Configuration HTTP",
+    "connectorIntro": "<b>Connecteur (sans installation) :</b> ajoutez un connecteur personnalisé avec votre URL MCP et l’en-tête <code>{header}</code>. L’URL doit être accessible en HTTPS. Procédure : <link>documentation MCP (EN)</link>.",
+    "bridgeIntro": "<b>Passerelle :</b> collez ceci dans <code>claude_desktop_config.json</code> et redémarrez Claude Desktop. Cela exécute le paquet communautaire <code>mcp-remote</code>, figé sur une version exacte ; la clé reste dans le bloc <code>env</code>, pas dans la ligne de commande.",
+    "bridgeConfig": "Configuration de la passerelle",
+    "copyKeyOnly": "Copier la clé seule",
+    "nameRequired": "Donnez un nom à la connexion, par exemple « Claude Desktop ».",
+    "permsRequired": "Sélectionnez au moins une autorisation.",
+    "ackRequired": "Confirmez que vous comprenez le risque des autorisations dangereuses.",
+    "nameLabel": "Nom de la connexion",
+    "nameHint": "Affiché dans vos connexions MCP.",
+    "namePlaceholder": "Claude Desktop",
+    "permissions": "Autorisations",
+    "approvalNotice": "Publier, supprimer et déconnecter attendent votre approbation dans Approbations, à chaque fois.",
+    "ackLabel": "Je comprends et je veux accorder ces autorisations.",
+    "create": "Créer la connexion",
+    "emptyTitle": "Aucun agent connecté",
+    "emptyBody": "Créez une connexion ci-dessus, puis collez la configuration dans votre client MCP.",
+    "lastSeen": "{hasClient, select, true {{client} · } other {}}dernière activité : {when}",
+    "connectSection": "Connecter un agent IA",
+    "listSection": "Connexions MCP",
+    "revokeTitle": "Révoquer la connexion ?",
+    "revokeBody": "« {name} » perd l’accès immédiatement et sa clé d’API cesse de fonctionner.",
+    "revoked": "Connexion révoquée",
+    "perms": {
+      "read": {
+        "label": "Lire les posts",
+        "description": "Les agents peuvent lister les comptes, posts, statuts et statistiques."
+      },
+      "draft": {
+        "label": "Créer des brouillons",
+        "description": "Les agents peuvent créer et modifier des brouillons avec les médias que vous avez importés."
+      },
+      "schedule": {
+        "label": "Planifier",
+        "description": "Les agents peuvent planifier des posts à publier plus tard."
+      },
+      "publish": {
+        "label": "Publier",
+        "description": "Les agents peuvent publier immédiatement sur des comptes réels."
+      },
+      "delete": {
+        "label": "Supprimer",
+        "description": "Les agents peuvent supprimer des posts."
+      },
+      "disconnect": {
+        "label": "Déconnecter",
+        "description": "Les agents peuvent déconnecter des comptes sociaux."
+      }
+    }
+  },
+  "audit": {
+    "filterLabel": "Filtrer les événements d’audit",
+    "all": "Toute l’activité",
+    "agents": "Actions des agents",
+    "loadFailed": "Impossible de charger le journal d’audit",
+    "emptyAgentsTitle": "Aucune action d’agent pour l’instant",
+    "emptyAgentsBody": "Les appels d’outils effectués via MCP apparaissent ici.",
+    "emptyTitle": "Aucun événement d’audit pour l’instant",
+    "tableLabel": "Événements d’audit",
+    "colWhen": "Quand",
+    "colActor": "Acteur",
+    "colAction": "Action",
+    "colResource": "Ressource",
+    "actorApiKey": "Clé d’API",
+    "actorUser": "Vous",
+    "unknownTool": "outil inconnu",
+    "directApi": "API directe",
+    "directApiTitle": "Envoyé directement à l’API, sans passer par le serveur MCP",
+    "moreFailed": "Impossible de charger plus d’événements. {reason}"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "label": "Idioma",
+  "hint": "Escolha o idioma da interface. Datas e horários continuam seguindo o seu fuso horário.",
+  "optionBeta": "{name} (tradução beta)",
+  "pseudo": "Pseudolocale (teste)"
+}

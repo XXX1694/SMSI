@@ -1,0 +1,19 @@
+{
+  "title": "Календарь",
+  "subtitle": "Черновики, запланированные, опубликованные и неудавшиеся посты в вашем часовом поясе.",
+  "month": "Месяц",
+  "week": "Неделя",
+  "day": "День",
+  "viewLabel": "Вид",
+  "legend": "Обозначения",
+  "previous": "Предыдущий",
+  "next": "Следующий",
+  "today": "Сегодня",
+  "chipTitle": "{status}: {title}",
+  "more": "{count, plural, one {ещё #} few {ещё #} many {ещё #} other {ещё #}}",
+  "moreOnDay": "{count, plural, one {Ещё # пост на {day}, открыть день} few {Ещё # поста на {day}, открыть день} many {Ещё # постов на {day}, открыть день} other {Ещё # поста на {day}, открыть день}}",
+  "postsOnDay": "{count, plural, one {# пост на {day}, открыть день} few {# поста на {day}, открыть день} many {# постов на {day}, открыть день} other {# поста на {day}, открыть день}}",
+  "postCount": "{count, plural, one {# пост} few {# поста} many {# постов} other {# поста}}",
+  "noPostsDay": "Нет постов",
+  "noPostsPeriod": "В этом периоде нет постов."
+}

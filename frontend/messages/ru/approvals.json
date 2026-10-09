@@ -1,0 +1,52 @@
+{
+  "title": "Одобрения",
+  "subtitle": "Опасные действия агентов и API-ключей ждут здесь. Ничего не произойдёт, пока вы не одобрите.",
+  "tabWaiting": "Ждут вас",
+  "tabHistory": "История",
+  "showLabel": "Показать одобрения",
+  "emptyPendingTitle": "Ничего не ждёт вашего решения",
+  "emptyPendingBody": "Запросы от агентов появятся здесь.",
+  "emptyHistoryTitle": "Решений пока нет",
+  "emptyHistoryBody": "Одобренные и отклонённые запросы перечислены здесь.",
+  "approvedToast": "Одобрено: {action}. {agent} может продолжать.",
+  "deniedToast": "Отклонено: {action}.",
+  "status": {
+    "pending": "Ожидает",
+    "approved": "Одобрено, ждёт агента",
+    "consumed": "Одобрено и выполнено",
+    "denied": "Отклонено",
+    "expired": "Срок истёк"
+  },
+  "requestedBy": "Запрос: <b>{agent}</b>",
+  "deny": "Отклонить",
+  "approve": "Одобрить",
+  "approving": "Одобрение…",
+  "denyLabel": "Отклонить: {action}",
+  "approveLabel": "Одобрить: {action}",
+  "showLess": "Свернуть",
+  "showFull": "Показать весь текст",
+  "underMinute": "Осталось меньше минуты",
+  "minLeft": "{count, plural, one {Осталась # мин} few {Осталось # мин} many {Осталось # мин} other {Осталось # мин}}",
+  "summary": {
+    "title": "Название",
+    "text": "Текст",
+    "media": "Медиафайлы",
+    "networks": "Соцсети",
+    "accounts": "Аккаунты",
+    "network": "Соцсеть",
+    "account": "Аккаунт",
+    "scheduledFor": "Запланировано на",
+    "textOn": "Текст для {account}",
+    "images": "{count, plural, one {# изображение} few {# изображения} many {# изображений} other {# изображения}}",
+    "videos": "{count, plural, one {# видео} few {# видео} many {# видео} other {# видео}}",
+    "files": "{count, plural, one {# файл} few {# файла} many {# файлов} other {# файла}}"
+  },
+  "action": {
+    "post_publish": "Опубликовать сейчас",
+    "post_retry_now": "Повторить сейчас",
+    "post_delete": "Удалить пост",
+    "post_schedule_soon": "Запланировать в ближайшие минуты",
+    "social_account_disconnect": "Отключить аккаунт",
+    "social_account_connect_token": "Подключить по токену"
+  }
+}

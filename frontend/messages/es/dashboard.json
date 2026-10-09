@@ -1,0 +1,70 @@
+{
+  "title": "Panel",
+  "subtitle": "Lo que está saliendo y lo que necesita atención.",
+  "overview": "Resumen",
+  "stats": {
+    "accounts": "Cuentas conectadas",
+    "scheduled": "Programadas",
+    "publishedMonth": "Publicadas este mes",
+    "failed": "Fallidas"
+  },
+  "viewAll": "Ver todo",
+  "sections": {
+    "upcoming": {
+      "title": "Próximas",
+      "empty": "Nada programado.",
+      "viewAll": "Ver todas las próximas"
+    },
+    "drafts": {
+      "title": "Borradores",
+      "empty": "Sin borradores.",
+      "viewAll": "Ver todos los borradores"
+    },
+    "recent": {
+      "title": "Publicadas recientemente",
+      "empty": "Aún no hay nada publicado.",
+      "viewAll": "Ver todas las publicadas recientemente"
+    },
+    "failed": {
+      "title": "Fallidas",
+      "empty": "Sin publicaciones fallidas.",
+      "viewAll": "Ver todas las fallidas"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "Conecta tu primera cuenta",
+    "noAccountBody": "Conecta una red social para empezar a publicar.",
+    "showChecklist": "Mostrar lista de pasos",
+    "setUp": "Configurado",
+    "showSteps": "Mostrar pasos",
+    "dismiss": "Descartar lista de configuración",
+    "doneTitle": "Todo está configurado",
+    "getStarted": "Primeros pasos",
+    "doneBody": "Todos los pasos obligatorios están hechos. Puedes ocultar esta lista.",
+    "progress": "{done} de {total, plural, one {# paso hecho} many {# de pasos hechos} other {# pasos hechos}}.",
+    "doneSr": "(hecho)",
+    "optional": "Opcional",
+    "steps": {
+      "network": {
+        "title": "Conecta una red social",
+        "hint": "Steerpost publica en las cuentas que conectes. Elige LinkedIn, Telegram u otra red social.",
+        "action": "Conectar cuenta"
+      },
+      "post": {
+        "title": "Redacta tu primera publicación",
+        "hint": "Guarda un borrador o prográmala. No se publica nada hasta que tú lo digas.",
+        "action": "Redactar"
+      },
+      "agent": {
+        "title": "Conecta un agente de IA",
+        "hint": "Crea una conexión MCP o una clave de API para que Claude o tus propios scripts puedan redactar borradores por ti.",
+        "action": "Conectar agente"
+      },
+      "approval": {
+        "title": "Revisa una aprobación",
+        "hint": "Cuando un agente pide publicar, eliminar o desconectar, la solicitud espera aquí.",
+        "action": "Abrir aprobaciones"
+      }
+    }
+  }
+}

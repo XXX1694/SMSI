@@ -135,7 +135,7 @@ export function problems({ catalogs, enabled, meta = {}, sources = [] }) {
   const errors = [];
   const warnings = [];
   const en = catalogs.en;
-  if (!en) return { errors: ['messages/en.json is missing'], warnings };
+  if (!en) return { errors: ['messages/en/ is missing'], warnings };
   const enFlat = flatten(en);
   for (const [k, v] of Object.entries(enFlat)) {
     if (typeof v !== 'string') errors.push(`en: ${k} must be a string`);
@@ -188,7 +188,7 @@ export function problems({ catalogs, enabled, meta = {}, sources = [] }) {
     for (const k of usedKeys(src)) used.add(k);
     for (const l of literals(src)) lits.add(l);
   }
-  for (const k of used) if (!(k in enFlat)) errors.push(`code uses ${k}, which is not in messages/en.json`);
+  for (const k of used) if (!(k in enFlat)) errors.push(`code uses ${k}, which is not in messages/en/*.json`);
   for (const k of Object.keys(enFlat)) {
     if (used.has(k) || lits.has(k) || [...prefixes].some((p) => k.startsWith(p))) continue;
     const parts = k.split('.');

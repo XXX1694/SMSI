@@ -1,0 +1,21 @@
+{
+  "VALIDATION_ERROR": "Alguns dados não são válidos. Confira-os e tente de novo.",
+  "UNAUTHENTICATED": "Você não está conectado ou sua sessão terminou. Entre de novo.",
+  "FORBIDDEN": "Você não tem permissão para fazer isso.",
+  "INSUFFICIENT_SCOPE": "Esta chave de API não tem a permissão para essa ação.",
+  "QUOTA_EXCEEDED": "Você atingiu um limite do seu plano. Veja em Configurações o que você usou.",
+  "EMAIL_NOT_VERIFIED": "Verifique seu e-mail primeiro e tente de novo.",
+  "NOT_FOUND": "Este item não existe mais. Ele pode ter sido excluído.",
+  "INVALID_STATE_TRANSITION": "O status deste post mudou. Recarregue para ver.",
+  "CONFLICT": "Isto já existe. Use outro nome.",
+  "RATE_LIMITED": "Requisições demais. Aguarde um instante e tente de novo.",
+  "SOCIAL_ACCOUNT_EXPIRED": "Esta conta precisa ser reconectada. Reconecte-a em Contas.",
+  "PROVIDER_NOT_AVAILABLE": "Esta rede ainda não está disponível.",
+  "PROVIDER_ERROR": "A rede recusou o post. Veja o motivo nas tentativas de publicação do post.",
+  "INTERNAL": "O Steerpost teve um problema. Tente de novo em instantes.",
+  "NETWORK": "Não foi possível acessar o servidor. Verifique sua conexão e tente de novo.",
+  "UNKNOWN": "Algo deu errado. Tente de novo.",
+  "access_denied": "O login foi cancelado ou o acesso não foi concedido.",
+  "withRef": "{text} (ref {id})",
+  "REAUTH_REQUIRED": "Entre novamente para continuar."
+}

@@ -1,0 +1,22 @@
+{
+  "title": "数据分析",
+  "subtitle": "各社交网络报告的指标。",
+  "period": "时间范围",
+  "lastDays": "{days, plural, other {最近 # 天}}",
+  "none": "已连接的社交网络暂时都没有提供数据分析。",
+  "supportedBy": "支持数据分析的社交网络：{networks}。",
+  "emptyTitle": "此时间范围内没有分析数据",
+  "emptyBody": "已连接的社交网络提供指标后，会显示在这里。",
+  "tableLabel": "指标",
+  "colMetric": "指标",
+  "colLatest": "最新",
+  "colTotal": "总计",
+  "colTrend": "趋势",
+  "trend": "{metric}趋势",
+  "notEnough": "数据不足",
+  "metrics": {
+    "impressions": "曝光量",
+    "reactions": "互动反应",
+    "link_clicks": "链接点击"
+  }
+}

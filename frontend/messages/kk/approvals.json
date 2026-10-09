@@ -1,0 +1,52 @@
+{
+  "title": "Мақұлдаулар",
+  "subtitle": "Агенттер мен API кілттерінің қауіпті әрекеттері осында күтеді. Сіз мақұлдамайынша ештеңе болмайды.",
+  "tabWaiting": "Сізді күтуде",
+  "tabHistory": "Тарих",
+  "showLabel": "Мақұлдауларды көрсету",
+  "emptyPendingTitle": "Күтіп тұрған ештеңе жоқ",
+  "emptyPendingBody": "Агенттердің сұраулары осында пайда болады.",
+  "emptyHistoryTitle": "Шешімдер әзірге жоқ",
+  "emptyHistoryBody": "Мақұлданған және қабылданбаған сұраулар осында тізімделеді.",
+  "approvedToast": "Мақұлданды: {action}. {agent} әрекетті жалғастыра алады.",
+  "deniedToast": "Қабылданбады: {action}.",
+  "status": {
+    "pending": "Күтуде",
+    "approved": "Мақұлданды, агентті күтуде",
+    "consumed": "Мақұлданды және орындалды",
+    "denied": "Қабылданбады",
+    "expired": "Мерзімі өтті"
+  },
+  "requestedBy": "Сұраған: <b>{agent}</b>",
+  "deny": "Қабылдамау",
+  "approve": "Мақұлдау",
+  "approving": "Мақұлдануда…",
+  "denyLabel": "Қабылдамау: {action}",
+  "approveLabel": "Мақұлдау: {action}",
+  "showLess": "Қысқарту",
+  "showFull": "Толық мәтінді көрсету",
+  "underMinute": "Бір минуттан аз қалды",
+  "minLeft": "{count, plural, one {# мин қалды} other {# мин қалды}}",
+  "summary": {
+    "title": "Тақырып",
+    "text": "Мәтін",
+    "media": "Медиа",
+    "networks": "Желілер",
+    "accounts": "Аккаунттар",
+    "network": "Желі",
+    "account": "Аккаунт",
+    "scheduledFor": "Жоспарланған уақыты",
+    "textOn": "{account} үшін мәтін",
+    "images": "{count, plural, one {# сурет} other {# сурет}}",
+    "videos": "{count, plural, one {# бейне} other {# бейне}}",
+    "files": "{count, plural, one {# файл} other {# файл}}"
+  },
+  "action": {
+    "post_publish": "Қазір жариялау",
+    "post_retry_now": "Қазір қайталау",
+    "post_delete": "Жазбаны жою",
+    "post_schedule_soon": "Алдағы бірнеше минутқа жоспарлау",
+    "social_account_disconnect": "Аккаунтты ажырату",
+    "social_account_connect_token": "Токен арқылы қосу"
+  }
+}

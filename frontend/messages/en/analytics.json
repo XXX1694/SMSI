@@ -1,0 +1,22 @@
+{
+  "title": "Analytics",
+  "subtitle": "Metrics your networks report.",
+  "period": "Period",
+  "lastDays": "{days, plural, one {Last # day} other {Last # days}}",
+  "none": "None of the connected networks report analytics yet.",
+  "supportedBy": "Analytics supported by: {networks}.",
+  "emptyTitle": "No analytics data in this period",
+  "emptyBody": "Metrics will appear here once a connected network reports them.",
+  "tableLabel": "Metrics",
+  "colMetric": "Metric",
+  "colLatest": "Latest",
+  "colTotal": "Total",
+  "colTrend": "Trend",
+  "trend": "{metric} trend",
+  "notEnough": "Not enough data",
+  "metrics": {
+    "impressions": "Impressions",
+    "reactions": "Reactions",
+    "link_clicks": "Link clicks"
+  }
+}

@@ -85,7 +85,8 @@ describe('OnboardingChecklist', () => {
     render(<OnboardingChecklist connectedAccounts={0} />);
     expect(await screen.findByRole('link', { name: 'Connect account' })).toHaveAttribute('href', '/accounts');
     expect(screen.queryByRole('heading', { name: 'Get started' })).not.toBeInTheDocument();
-    expect(spy).toHaveBeenCalled();
+    // The "Connect account" link renders before the failed request settles; wait for the log rather than race it.
+    await waitFor(() => expect(spy).toHaveBeenCalled());
     spy.mockRestore();
   });
 

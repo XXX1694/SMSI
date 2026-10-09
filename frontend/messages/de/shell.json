@@ -1,0 +1,31 @@
+{
+  "skipToContent": "Zum Inhalt springen",
+  "signOut": "Abmelden",
+  "openMenu": "Menü öffnen",
+  "closeMenu": "Menü schließen",
+  "mainNav": "Hauptnavigation",
+  "navWaiting": "{count, plural, one {# Anfrage wartet} other {# Anfragen warten}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, one {# Anfrage wartet auf dich} other {# Anfragen warten auf dich}}",
+  "emailBanner": {
+    "verifyHeading": "Bestätige deine E-Mail-Adresse.",
+    "verifyBody": "Steerpost hat einen Link an <addr>{email}</addr> gesendet. Bis du ihn öffnest, kannst du keine Konten verbinden, keine Beiträge planen oder veröffentlichen und keine API-Schlüssel erstellen.",
+    "sent": "Link gesendet. Prüfe dein Postfach.",
+    "resend": "Erneut senden"
+  },
+  "demo": {
+    "label": "Demo",
+    "banner": "<b>Demo</b> — Daten bleiben im Browser ·",
+    "reset": "Zurücksetzen",
+    "about": "Über Steerpost",
+    "resetTitle": "Demo zurücksetzen?",
+    "resetBody": "Alles, was du in dieser Demo geändert hast, wird entfernt, und die Beispieldaten kommen zurück.",
+    "resetConfirm": "Zurücksetzen"
+  },
+  "deletionBanner": {
+    "heading": "Dein Konto wird am {date} gelöscht.",
+    "body": "Dann sind alle deine Daten weg und lassen sich nicht wiederherstellen. Deine API-Schlüssel wurden widerrufen, geplante Beiträge sind jetzt Entwürfe. Deine Daten kannst du weiterhin in den Einstellungen herunterladen.",
+    "cancel": "Löschung abbrechen",
+    "cancelling": "Wird abgebrochen…"
+  }
+}

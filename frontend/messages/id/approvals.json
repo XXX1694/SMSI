@@ -1,0 +1,52 @@
+{
+  "title": "Persetujuan",
+  "subtitle": "Tindakan berbahaya dari agen dan kunci API menunggu di sini. Tidak ada yang terjadi sampai Anda menyetujuinya.",
+  "tabWaiting": "Menunggu Anda",
+  "tabHistory": "Riwayat",
+  "showLabel": "Tampilkan persetujuan",
+  "emptyPendingTitle": "Tidak ada yang menunggu Anda",
+  "emptyPendingBody": "Permintaan dari agen muncul di sini.",
+  "emptyHistoryTitle": "Belum ada keputusan",
+  "emptyHistoryBody": "Permintaan yang disetujui dan ditolak tercantum di sini.",
+  "approvedToast": "Disetujui: {action}. {agent} dapat melanjutkan sekarang.",
+  "deniedToast": "Ditolak: {action}.",
+  "status": {
+    "pending": "Menunggu",
+    "approved": "Disetujui, menunggu agen",
+    "consumed": "Disetujui dan selesai",
+    "denied": "Ditolak",
+    "expired": "Berakhir"
+  },
+  "requestedBy": "Diminta oleh <b>{agent}</b>",
+  "deny": "Tolak",
+  "approve": "Setujui",
+  "approving": "Menyetujui…",
+  "denyLabel": "Tolak: {action}",
+  "approveLabel": "Setujui: {action}",
+  "showLess": "Lebih sedikit",
+  "showFull": "Teks lengkap",
+  "underMinute": "Kurang dari semenit lagi",
+  "minLeft": "{count, plural, other {# menit lagi}}",
+  "summary": {
+    "title": "Judul",
+    "text": "Teks",
+    "media": "Media",
+    "networks": "Jaringan",
+    "accounts": "Akun",
+    "network": "Jaringan",
+    "account": "Akun",
+    "scheduledFor": "Dijadwalkan untuk",
+    "textOn": "Teks di {account}",
+    "images": "{count, plural, other {# gambar}}",
+    "videos": "{count, plural, other {# video}}",
+    "files": "{count, plural, other {# berkas}}"
+  },
+  "action": {
+    "post_publish": "Publikasikan sekarang",
+    "post_retry_now": "Ulangi sekarang",
+    "post_delete": "Hapus pos",
+    "post_schedule_soon": "Jadwalkan dalam beberapa menit ke depan",
+    "social_account_disconnect": "Putuskan koneksi akun",
+    "social_account_connect_token": "Hubungkan dengan token"
+  }
+}

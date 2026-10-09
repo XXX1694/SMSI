@@ -1,0 +1,31 @@
+{
+  "skipToContent": "跳到正文",
+  "signOut": "退出登录",
+  "openMenu": "打开菜单",
+  "closeMenu": "关闭菜单",
+  "mainNav": "主导航",
+  "navWaiting": "{count, plural, other {# 个请求待处理}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, other {# 个请求等你处理}}",
+  "emailBanner": {
+    "verifyHeading": "请验证你的邮箱。",
+    "verifyBody": "Steerpost 已向 <addr>{email}</addr> 发送了一个链接。在你打开该链接之前，无法连接账号、定时或发布帖子，也无法创建 API 密钥。",
+    "sent": "链接已发送。请查收邮件。",
+    "resend": "重新发送邮件"
+  },
+  "demo": {
+    "label": "演示",
+    "banner": "<b>演示</b>：数据只保存在你的浏览器中 ·",
+    "reset": "重置",
+    "about": "关于 Steerpost",
+    "resetTitle": "重置演示？",
+    "resetBody": "你在此演示中所做的全部更改都会被清除，示例数据将恢复。",
+    "resetConfirm": "重置演示"
+  },
+  "deletionBanner": {
+    "heading": "你的账号将于 {date} 删除。",
+    "body": "届时你的所有数据都会被删除且无法恢复。API 密钥已吊销，定时发布的帖子已变回草稿。你仍可在设置中下载自己的数据。",
+    "cancel": "取消删除",
+    "cancelling": "正在取消…"
+  }
+}

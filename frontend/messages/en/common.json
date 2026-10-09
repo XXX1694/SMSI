@@ -1,0 +1,65 @@
+{
+  "cancel": "Cancel",
+  "close": "Close",
+  "loading": "Loading…",
+  "working": "Working…",
+  "sending": "Sending…",
+  "saving": "Saving…",
+  "tryAgain": "Try again",
+  "retry": "Retry",
+  "edit": "Edit",
+  "optionalLabel": "{label} (optional)",
+  "showField": "Show {label}",
+  "hideField": "Hide {label}",
+  "never": "Never",
+  "justNow": "just now",
+  "unknown": "Unknown",
+  "loadingFailed": "Loading failed",
+  "newPost": "New post",
+  "listSeparator": ", ",
+  "bytes": "{size} B",
+  "kilobytes": "{size} KB",
+  "megabytes": "{size} MB",
+  "connectAccount": "Connect account",
+  "delete": "Delete",
+  "copy": "Copy",
+  "copyTitle": "Copy {title}",
+  "copied": "Copied",
+  "copyFailed": "Could not copy. Select the text and copy it by hand.",
+  "haveSaved": "I have saved it",
+  "creating": "Creating…",
+  "loadMore": "Load more",
+  "upload": "Upload",
+  "uploading": "Uploading…",
+  "status": {
+    "post": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "publishing": "Publishing",
+      "published": "Published",
+      "partially_published": "Partially published",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "target": {
+      "pending": "Pending",
+      "publishing": "Publishing",
+      "published": "Published",
+      "failed": "Failed",
+      "cancelled": "Canceled",
+      "needs_review": "Unconfirmed"
+    },
+    "account": {
+      "active": "Active",
+      "expired": "Needs reconnecting",
+      "revoked": "Revoked",
+      "error": "Error"
+    },
+    "attempt": {
+      "started": "Started",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "unknown": "Unconfirmed"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Calendar",
+  "subtitle": "Drafts, scheduled, published and failed posts in your time zone.",
+  "month": "Month",
+  "week": "Week",
+  "day": "Day",
+  "viewLabel": "View",
+  "legend": "Legend",
+  "previous": "Previous",
+  "next": "Next",
+  "today": "Today",
+  "chipTitle": "{status}: {title}",
+  "more": "{count, plural, one {+# more} other {+# more}}",
+  "moreOnDay": "{count, plural, one {# more post on {day}, open the day} other {# more posts on {day}, open the day}}",
+  "postsOnDay": "{count, plural, one {# post on {day}, open the day} other {# posts on {day}, open the day}}",
+  "postCount": "{count, plural, one {# post} other {# posts}}",
+  "noPostsDay": "No posts",
+  "noPostsPeriod": "No posts in this period."
+}

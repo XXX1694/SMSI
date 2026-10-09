@@ -1,0 +1,31 @@
+{
+  "skipToContent": "Ir para o conteúdo",
+  "signOut": "Sair",
+  "openMenu": "Abrir menu",
+  "closeMenu": "Fechar menu",
+  "mainNav": "Principal",
+  "navWaiting": "{count, plural, one {# pedido aguardando} many {# de pedidos aguardando} other {# pedidos aguardando}}",
+  "navBadge": "{over, select, true {99+} other {{count, number}}}",
+  "requestsWaiting": "{count, plural, one {# pedido espera por você} many {# de pedidos esperam por você} other {# pedidos esperam por você}}",
+  "emailBanner": {
+    "verifyHeading": "Verifique seu e-mail.",
+    "verifyBody": "O Steerpost enviou um link para <addr>{email}</addr>. Até você abri-lo, não é possível conectar contas, agendar ou publicar posts, nem criar chaves de API.",
+    "sent": "Link enviado. Confira sua caixa de entrada.",
+    "resend": "Reenviar e-mail"
+  },
+  "demo": {
+    "label": "Demo",
+    "banner": "<b>Demo</b> — dados ficam no seu navegador ·",
+    "reset": "Redefinir",
+    "about": "Sobre o Steerpost",
+    "resetTitle": "Redefinir a demo?",
+    "resetBody": "Tudo o que você alterou nesta demo é removido e os dados de exemplo voltam.",
+    "resetConfirm": "Redefinir demo"
+  },
+  "deletionBanner": {
+    "heading": "Sua conta será excluída em {date}.",
+    "body": "Nessa data, todos os seus dados serão apagados e não poderão ser recuperados. Suas chaves de API foram revogadas e os posts agendados viraram rascunhos. Você ainda pode baixar seus dados em Configurações.",
+    "cancel": "Cancelar exclusão",
+    "cancelling": "Cancelando…"
+  }
+}

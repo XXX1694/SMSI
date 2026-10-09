@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { formatIcu, IcuSyntaxError, parseIcu, SUPPORTED_STYLES } from '@/i18n/icu';
 import { formatTag } from '@/i18n/locales';
+import { readLocale } from '../scripts/i18n-layout.mjs';
 import { flatten, shape, STYLES } from '../scripts/i18n-lib.mjs';
 
 type V = Record<string, string | number | Date>;
@@ -94,10 +95,8 @@ function tagNames(el: MessageFormatElement): string[] {
 function catalogMessages(): [string, string][] {
   const out: [string, string][] = [];
   const dir = join(__dirname, '..', 'messages');
-  for (const f of readdirSync(dir)) {
-    if (f === 'meta.json') continue;
-    const flat = flatten(JSON.parse(readFileSync(join(dir, f), 'utf8')));
-    for (const [k, v] of Object.entries(flat)) out.push([`${f}:${k}`, String(v)]);
+  for (const locale of readdirSync(dir, { withFileTypes: true }).filter((f) => f.isDirectory()).map((f) => f.name)) {
+    for (const [k, v] of Object.entries(flatten(readLocale(join(dir, locale))))) out.push([`${locale}:${k}`, String(v)]);
   }
   return out;
 }

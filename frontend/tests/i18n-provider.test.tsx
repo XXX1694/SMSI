@@ -7,8 +7,8 @@ import { LocaleProvider, useLocaleSettings } from '@/i18n/locale-provider';
 import { useFormat } from '@/i18n/use-format';
 import { useTranslations } from '@/i18n/use-translations';
 
-// A partial Arabic catalog: one translated key, the rest must fall back to English.
-vi.mock('../messages/ar.json', () => ({ default: { nav: { dashboard: 'لوحة التحكم' } } }));
+// A partial Arabic catalog (the real file has none): one translated key, the rest must fall back to English.
+vi.mock('@/i18n/catalogs/ar', () => ({ default: { nav: { dashboard: 'لوحة التحكم' } } }));
 
 const ENABLED = ['en', 'ar'] as const;
 

@@ -1,0 +1,21 @@
+{
+  "VALIDATION_ERROR": "部分信息无效。请检查后重试。",
+  "UNAUTHENTICATED": "你尚未登录，或登录已过期。请重新登录。",
+  "FORBIDDEN": "你没有执行此操作的权限。",
+  "INSUFFICIENT_SCOPE": "此 API 密钥没有执行该操作的权限。",
+  "QUOTA_EXCEEDED": "你已达到套餐的使用上限。可在“设置”中查看用量。",
+  "EMAIL_NOT_VERIFIED": "请先验证你的邮箱地址，然后重试。",
+  "NOT_FOUND": "此项目已不存在，可能已被删除。",
+  "INVALID_STATE_TRANSITION": "此帖子的状态已更改。请刷新查看。",
+  "CONFLICT": "已存在。请使用其他名称。",
+  "RATE_LIMITED": "请求过于频繁。请稍等片刻后重试。",
+  "SOCIAL_ACCOUNT_EXPIRED": "此账号需要重新连接。请在“账号”中重新连接。",
+  "PROVIDER_NOT_AVAILABLE": "此社交网络暂不可用。",
+  "PROVIDER_ERROR": "该社交网络拒绝了这篇帖子。请在帖子的发布尝试中查看原因。",
+  "INTERNAL": "Steerpost 出现问题。请稍后重试。",
+  "NETWORK": "无法连接服务器。请检查网络连接后重试。",
+  "UNKNOWN": "出了点问题。请重试。",
+  "access_denied": "登录已取消，或未获得授权。",
+  "withRef": "{text}（请求 ID {id}）",
+  "REAUTH_REQUIRED": "请重新登录以继续。"
+}

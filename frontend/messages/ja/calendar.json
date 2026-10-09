@@ -1,0 +1,19 @@
+{
+  "title": "カレンダー",
+  "subtitle": "下書き、予約済み、投稿済み、失敗した投稿を、お使いのタイムゾーンで表示します。",
+  "month": "月",
+  "week": "週",
+  "day": "日",
+  "viewLabel": "表示",
+  "legend": "凡例",
+  "previous": "前へ",
+  "next": "次へ",
+  "today": "今日",
+  "chipTitle": "{status}：{title}",
+  "more": "{count, plural, other {他#件}}",
+  "moreOnDay": "{count, plural, other {{day}にさらに#件の投稿があります。この日を開く}}",
+  "postsOnDay": "{count, plural, other {{day}に#件の投稿があります。この日を開く}}",
+  "postCount": "{count, plural, other {#件}}",
+  "noPostsDay": "投稿なし",
+  "noPostsPeriod": "この期間の投稿はありません。"
+}

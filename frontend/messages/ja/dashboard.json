@@ -1,0 +1,70 @@
+{
+  "title": "ダッシュボード",
+  "subtitle": "これから投稿されるものと、対応が必要なものです。",
+  "overview": "概要",
+  "stats": {
+    "accounts": "連携済みアカウント",
+    "scheduled": "予約済み",
+    "publishedMonth": "今月の投稿済み",
+    "failed": "失敗"
+  },
+  "viewAll": "すべて表示",
+  "sections": {
+    "upcoming": {
+      "title": "今後の予定",
+      "empty": "予約はありません。",
+      "viewAll": "今後の予定をすべて表示"
+    },
+    "drafts": {
+      "title": "下書き",
+      "empty": "下書きはありません。",
+      "viewAll": "下書きをすべて表示"
+    },
+    "recent": {
+      "title": "最近の投稿",
+      "empty": "投稿済みの投稿はまだありません。",
+      "viewAll": "最近の投稿をすべて表示"
+    },
+    "failed": {
+      "title": "失敗",
+      "empty": "失敗した投稿はありません。",
+      "viewAll": "失敗した投稿をすべて表示"
+    }
+  },
+  "onboarding": {
+    "noAccountTitle": "最初のアカウントを連携",
+    "noAccountBody": "SNSを連携すると、投稿を始められます。",
+    "showChecklist": "セットアップのチェックリストを表示",
+    "setUp": "設定済み",
+    "showSteps": "手順を表示",
+    "dismiss": "セットアップのチェックリストを閉じる",
+    "doneTitle": "セットアップは完了です",
+    "getStarted": "はじめに",
+    "doneBody": "必須の手順はすべて完了しました。このリストは非表示にできます。",
+    "progress": "{total, plural, other {#ステップ}}中{done}ステップが完了しました。",
+    "doneSr": "（完了）",
+    "optional": "任意",
+    "steps": {
+      "network": {
+        "title": "SNSを連携",
+        "hint": "Steerpostは、連携したアカウントに投稿します。LinkedIn、Telegramなど、SNSを選んでください。",
+        "action": "アカウントを連携"
+      },
+      "post": {
+        "title": "最初の投稿を作成",
+        "hint": "下書きとして保存するか、予約できます。指示するまで何も投稿されません。",
+        "action": "投稿を作成"
+      },
+      "agent": {
+        "title": "AIエージェントを接続",
+        "hint": "MCP接続またはAPIキーを作成すると、Claudeや独自のスクリプトに投稿の下書きを任せられます。",
+        "action": "エージェントを接続"
+      },
+      "approval": {
+        "title": "承認を確認",
+        "hint": "エージェントが投稿、削除、連携解除を求めると、そのリクエストはここで待機します。",
+        "action": "承認を開く"
+      }
+    }
+  }
+}

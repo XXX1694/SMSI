@@ -1,0 +1,19 @@
+{
+  "title": "Calendário",
+  "subtitle": "Posts em rascunho, agendados, publicados e com falha no seu fuso horário.",
+  "month": "Mês",
+  "week": "Semana",
+  "day": "Dia",
+  "viewLabel": "Visualização",
+  "legend": "Legenda",
+  "previous": "Anterior",
+  "next": "Próximo",
+  "today": "Hoje",
+  "chipTitle": "{status}: {title}",
+  "more": "{count, plural, one {+# mais} many {+# mais} other {+# mais}}",
+  "moreOnDay": "{count, plural, one {Mais # post em {day}, abrir o dia} many {Mais # de posts em {day}, abrir o dia} other {Mais # posts em {day}, abrir o dia}}",
+  "postsOnDay": "{count, plural, one {# post em {day}, abrir o dia} many {# de posts em {day}, abrir o dia} other {# posts em {day}, abrir o dia}}",
+  "postCount": "{count, plural, one {# post} many {# de posts} other {# posts}}",
+  "noPostsDay": "Sem posts",
+  "noPostsPeriod": "Nenhum post neste período."
+}

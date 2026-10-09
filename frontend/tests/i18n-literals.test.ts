@@ -93,7 +93,7 @@ describe('hard-coded user-visible English', () => {
   it('leaves no English in components, pages or lib code outside the allow-list', () => {
     const hits = scanTree({ root, dirs: ['src/components', 'src/app', 'src/lib', 'src/hooks.ts'], allow }) as Hit[];
     const report = hits.map((h) => `${h.file}:${h.line} ${h.kind} "${h.text}"`);
-    expect(report, 'Move these strings into messages/en.json (useTranslations), or add a reason to scripts/i18n-literals.allow.json').toEqual([]);
+    expect(report, 'Move these strings into messages/en/<namespace>.json (useTranslations), or add a reason to scripts/i18n-literals.allow.json').toEqual([]);
   });
 
   it('keeps the allow-list honest: every entry still points at a file', () => {

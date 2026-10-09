@@ -1,0 +1,21 @@
+{
+  "VALIDATION_ERROR": "Certaines informations ne sont pas valides. Vérifiez-les et réessayez.",
+  "UNAUTHENTICATED": "Vous n’êtes pas connecté, ou votre session a pris fin. Connectez-vous de nouveau.",
+  "FORBIDDEN": "Vous n’avez pas l’autorisation d’effectuer cette action.",
+  "INSUFFICIENT_SCOPE": "Cette clé d’API n’a pas l’autorisation requise pour cette action.",
+  "QUOTA_EXCEEDED": "Vous avez atteint une limite de votre offre. Consultez Paramètres pour voir ce que vous avez utilisé.",
+  "EMAIL_NOT_VERIFIED": "Vérifiez d’abord votre adresse e-mail, puis réessayez.",
+  "NOT_FOUND": "Cet élément n’existe plus. Il a peut-être été supprimé.",
+  "INVALID_STATE_TRANSITION": "Le statut de ce post a changé. Rechargez la page pour le voir.",
+  "CONFLICT": "Cet élément existe déjà. Utilisez un autre nom.",
+  "RATE_LIMITED": "Trop de requêtes. Patientez un instant, puis réessayez.",
+  "SOCIAL_ACCOUNT_EXPIRED": "Ce compte doit être reconnecté. Reconnectez-le dans Comptes.",
+  "PROVIDER_NOT_AVAILABLE": "Ce réseau n’est pas encore disponible.",
+  "PROVIDER_ERROR": "Le réseau a refusé le post. Consultez le motif dans les tentatives du post.",
+  "INTERNAL": "Steerpost a rencontré un problème. Réessayez dans un instant.",
+  "NETWORK": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+  "UNKNOWN": "Une erreur s’est produite. Réessayez.",
+  "access_denied": "La connexion a été annulée, ou l’accès n’a pas été accordé.",
+  "withRef": "{text} (réf. {id})",
+  "REAUTH_REQUIRED": "Reconnectez-vous pour continuer."
+}
