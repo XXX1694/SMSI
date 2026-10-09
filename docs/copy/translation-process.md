@@ -24,14 +24,17 @@ steps; the schema and API changes below need a plan under AGENTS.md section 2.
 
 ## 2. Producing a translation
 
-1. A PR that adds or changes English keys also adds the wave-1 locales. A machine draft is allowed and is marked
-   `"state": "draft"` in `frontend/messages/state/{locale}.json`.
+1. A PR that adds or changes English keys does not have to add other locales. A locale is enabled in
+   `frontend/src/i18n/locales.ts` only when its catalog has every English key and the checks below pass.
 2. **Draft**: an LLM gets the key, the English text, the `meta` entry, the glossary row for every term the string contains,
    the style-guide section for that language and a screenshot of the screen. It returns ICU text only.
-3. **Review**: a native reviewer per locale (CODEOWNERS on `messages/{locale}.json`) changes the state to `"reviewed"`. The
-   owner reviews `ru`. `kk` needs a recruited native reviewer, and every `kk` glossary row marked "confirm" is settled first.
-4. **A release tag is blocked while any wave-1 key is still `draft`.** Pull requests are not: development does not wait for
-   reviewers.
+3. **Review**: a native reviewer per locale records the result in `docs/copy/review/{locale}.md` (status
+   `machine-draft` or `native-reviewed`, reviewer, date, catalog commit, open questions). The owner reviews `ru`. `kk`
+   needs a recruited native reviewer, every `kk` glossary row marked "confirm" is settled first, and `kk` stays out of
+   the language switcher until it is reviewed.
+4. **Beta translation rule (D-021).** A release is blocked only by missing keys or failed checks, never by review status.
+   A locale whose review status is `machine-draft` ships labelled "Beta translation" in the language switcher (the honesty
+   rule in AGENTS.md section 7). Pull requests do not wait for reviewers either.
 5. Glossary changes go through a PR to `glossary.csv` with a reason. A changed term triggers a re-check of every string that
    uses it.
 
@@ -73,7 +76,7 @@ Also:
     glossary term missing.
   - **Any meaning change in an error, a confirmation or a capability text blocks the merge.** More than 5 % minor
     differences trigger a full review of that locale.
-- **Screenshot review.** Playwright captures each wave-1 locale at 390 px and at desktop width: compose, accounts, post
+- **Screenshot review.** Playwright captures each enabled locale at 390 px and at desktop width: compose, accounts, post
   detail with its dialogs, MCP connections and sign-in. The `ui-reviewer` role checks clipping, wrapping, truncated buttons
   and mixed languages. Arabic, when added, is captured in both directions.
 - **Live check.** Before a release, someone fluent in the locale runs the acceptance scenario once in that language.
@@ -129,7 +132,7 @@ Record the choice in DECISIONS.md.
 2. Extract strings area by area (dashboard, composer, posts, accounts, developer), applying en-rewrite.md as each area
    moves. Each PR stays under about 400 lines of non-test code.
 3. Locale-aware formatting (`useFormatter`) and the "Time format" setting.
-4. `users.locale`, the language switcher and `Accept-Language` matching (uk never falls back to ru).
-5. Wave-1 catalogs: machine draft → native review → back-translation sample → screenshots.
+4. `users.locale`, the language switcher and `navigator.languages` matching (uk never falls back to ru).
+5. Catalogs in the D-021 order (languages.md): machine draft → back-translation sample → screenshots → enable with the "Beta translation" label → native review.
 6. Localized emails, then the localized landing page.
-7. Wave 2, adding RTL support (`ar-XB` pseudo-locale and logical CSS) before `ar`.
+7. `ar`, adding RTL support (`ar-XB` pseudo-locale and logical CSS) before `ar`.

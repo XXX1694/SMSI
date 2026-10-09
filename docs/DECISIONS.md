@@ -422,3 +422,25 @@ new empty volumes. Rename the copy only: users would still see `socialos` in ima
 redirect). Never create a repo named SMSI again. Dual-publish and the env fallback are removed once every known server pulls `steerpost-*`.
 The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*` GHCR packages start private; the owner makes them public
 (deploy/README.md, section 15.1). The shims (env fallback, dual publish, `curl -L` in `autoupdate.sh`) land and are deployed before the repository is renamed.
+
+## D-021: The UI is localized with next-intl on the client; locales ship when complete, beta until a native review (2026-10-09)
+
+**Decision.** The dashboard and the demo use next-intl's `NextIntlClientProvider` with ICU catalogs in
+`frontend/messages/{locale}.json` (typed from `en.json`). The locale is resolved in the browser, the same way in the
+standalone and the static-export build: `users.locale` → `localStorage socialos_locale` → `navigator.languages` → `en`.
+There are no `/[locale]/` routes in the app; the landing page gets `/{locale}/` pages with hreflang. Locales: `en` (source),
+then `ru`; `es`, `pt-BR`, `de`, `fr`, `id`; `ja`, `zh-CN`; `kk` (hidden until a native review); `ar` last, after logical CSS.
+This supersedes the wave table in docs/copy/languages.md: `uk` waits, `zh-CN` is in. `uk` and `zh-Hant` fall back to `en`.
+Dates and numbers come from `lib/time`/`lib/calendar` with an explicit locale and the user's timezone. CJK and Arabic use
+system fonts. API error codes, API messages, emails, MCP text and docs stay English; the UI maps error codes to text.
+Translations are machine-drafted with the glossary, back-translated on a sample and labelled "Beta translation" until a
+native speaker signs `docs/copy/review/{locale}.md`. CI blocks missing keys in every enabled locale.
+
+**Alternatives.** `[locale]` prefix routes with `generateStaticParams`: the app renders in the browser behind login, so no
+SEO gain, 11× the exported pages and every link rewritten. Server negotiation by cookie: impossible in the static export
+and makes every prod route dynamic. react-intl: same engine, no App Router helpers. i18next, Lingui, Paraglide: a second
+message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for glyphs every OS ships.
+
+**Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
+hint outside `en` until field codes exist. A release is blocked by missing keys or failed checks, not by draft status.
+Localized emails need a later decision built on `users.locale`.
