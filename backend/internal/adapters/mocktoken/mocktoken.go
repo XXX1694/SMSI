@@ -46,7 +46,7 @@ func (p *Provider) Capabilities() provider.Capabilities {
 	c.MaxImageBytes = 1 << 20
 	c.MaxMediaCount = 4
 	c.ConnectFields = []provider.ConnectField{
-		{Name: "api_key", Label: "API key", Help: "Any value starting with mt_ is accepted.", Placeholder: "mt_...", Kind: provider.FieldSecret, Required: true},
+		{Name: "api_key", Label: "API key", Help: "Any value starting with mt_ is accepted.", Placeholder: "mt_...", Kind: provider.FieldSecret, Secret: true, Required: true},
 		{Name: "handle", Label: "Handle", Help: "Optional display handle.", Placeholder: "my_handle", Kind: provider.FieldText},
 	}
 	c.Notes = "MOCK token provider for development and tests only. Nothing is posted anywhere."

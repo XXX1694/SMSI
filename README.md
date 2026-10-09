@@ -30,7 +30,7 @@
   <img alt="The SocialOS dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures." src="site/src/assets/screens/dashboard-light.png">
 </picture>
 
-> **Status: early (v0.1.0).** LinkedIn and Telegram publish today. More networks are planned, and the table below says
+> **Status: early (v0.1.0).** LinkedIn, Telegram and Discord publish today. More networks are planned, and the table below says
 > honestly what each one needs. The demo runs entirely in your browser: no sign-up, nothing is sent anywhere.
 
 ## Why SocialOS
@@ -80,7 +80,8 @@ plans, in roughly this order, with no dates.
 |---|---|---|
 | LinkedIn (personal profile) | ✅ Live | Your LinkedIn app with "Share on LinkedIn". Text, up to 20 images, delete |
 | Telegram (channels, groups) | ✅ Live | Your bot; you prove you control a chat with a one-time code. Text, images, video, delete |
-| Discord, Slack | 🔜 Next | A channel webhook URL. Slack is text only, without delete |
+| Discord (channel webhook) | ✅ Live | A channel webhook URL. Text, up to 10 images, delete |
+| Slack | 🔜 Next | A channel webhook URL. Text only, without delete |
 | Mastodon, Misskey | 🔜 Next | An access token from your instance |
 | Bluesky | 🔜 Next | Your handle and an app password |
 | Dev.to, WordPress, Ghost | 🔜 Next | An API key or application password; articles need a title |
@@ -96,8 +97,8 @@ plans, in roughly this order, with no dates.
 | Medium, WhatsApp Channels | ⛔ Not possible | No usable official API |
 
 ✅ publishes today · 🔜 planned, needs no platform review · 🔐 needs app review, verification or a paid API · ⛔ no
-official way to post. Setup for the live networks: [LinkedIn](docs/integrations/linkedin.md) and
-[Telegram](docs/integrations/telegram.md).
+official way to post. Setup for the live networks: [LinkedIn](docs/integrations/linkedin.md),
+[Telegram](docs/integrations/telegram.md) and [Discord](docs/integrations/discord.md).
 
 ## Use with your AI agent
 

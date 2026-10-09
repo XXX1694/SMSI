@@ -19,11 +19,15 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Connect a network with a pasted credential: `POST /api/v1/social/accounts/token` and the provider capability fields `connect_fields`, `max_image_bytes` and `requires_title`. It needs the new critical API-key scope `social:connect`, which is never in a default set (D-009).
 - Posts are checked against the stricter of the network limits and the account's own limits, and networks that need a title reject posts without one.
 - SSRF-safe HTTP client for hosts users supply (D-010).
+- Discord: connect a channel with its webhook URL and publish text and up to 10 images, or delete a post. The URL is stored encrypted and never returned; a timeout after sending goes to review instead of risking a duplicate. See [`docs/integrations/discord.md`](docs/integrations/discord.md).
+- Connect fields have a `secret` flag (`connect_fields[].secret` in `GET /social/providers`) for credentials that are not of kind `secret`, such as a webhook URL; forms must render them as password inputs.
 - Stub notes for Reddit, Medium and Hashnode; the X note now says the API is pay-per-use.
+- Sharing a host safely (host-proxy mode): every SocialOS container runs in the systemd slice `socialos.slice` (1 CPU, 664 MB, no swap, 512 tasks for the whole stack), may not swap and has a process cap; drop-ins cap dockerd and containerd; a guard timer stops the SocialOS worker, then the worker, MCP and UI, only when the host is under pressure and SocialOS is a real contributor (anonymous memory, not page cache, or its own CPU or IO), and resumes them once the host is calm; it also alerts on disk, data budget and the other services' health. A Caddy pre-check keeps a broken SocialOS snippet from stopping the host's Caddy. Runbook: `deploy/host-proxy/apply-guardrails.md`.
 
 ### Changed
 
 - Browser sessions now hold ten scopes (the new `social:connect`); the "Dangerous" list in the dashboard shows it.
+- Host-proxy mode: memory caps rebalanced to fit the slice (backend and worker 160m with `GOMEMLIMIT=100MiB`, frontend 160m, postgres 112m, minio 80m, mcp 56m, redis 32m, migrate 64m). Automatic updates do not deploy while the guard has shed load.
 
 ### Fixed
 
