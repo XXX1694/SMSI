@@ -13,11 +13,13 @@ import (
 type Code string
 
 const (
-	Validation             Code = "VALIDATION_ERROR"
-	Unauthenticated        Code = "UNAUTHENTICATED"
-	Forbidden              Code = "FORBIDDEN"
-	InsufficientScope      Code = "INSUFFICIENT_SCOPE"
-	EmailNotVerified       Code = "EMAIL_NOT_VERIFIED"
+	Validation        Code = "VALIDATION_ERROR"
+	Unauthenticated   Code = "UNAUTHENTICATED"
+	Forbidden         Code = "FORBIDDEN"
+	InsufficientScope Code = "INSUFFICIENT_SCOPE"
+	EmailNotVerified  Code = "EMAIL_NOT_VERIFIED"
+	// ReauthRequired: the action needs a fresh sign-in (a user without a password cannot confirm with one).
+	ReauthRequired         Code = "REAUTH_REQUIRED"
 	QuotaExceeded          Code = "QUOTA_EXCEEDED"
 	ApprovalRequired       Code = "APPROVAL_REQUIRED"
 	NotFound               Code = "NOT_FOUND"

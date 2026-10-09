@@ -614,7 +614,7 @@ Any future generic OIDC issuer (Keycloak, Authentik) gets its own provider id an
 `hd` rules apply only to tokens issued by `https://accounts.google.com`.
 
 Users may have no password (`users.password_hash` is nullable): login spends the cost of a real check for them, so timing does
-not reveal them, and password change points them to "Forgot password?" until set-password ships. Provider email changes are not synced to `users.email`.
+not reveal them, and password change points them to "Forgot password?" until set-password ships. Provider email changes are not synced to `users.email`. A user without a password deletes the account (D-019) with a session created in the last 10 minutes instead of a password, and an older session gets `403 REAUTH_REQUIRED` (sign in again, then retry), so deletion never needs a password that does not exist.
 
 **Consequences.** Google needs a domain the owner can verify (sslip.io hosts cannot be), so GitHub ships first. We now own
 account-linking security. Flow state lives in `auth_oauth_flows` (migration 00008) as hashes; user links in `user_identities`.

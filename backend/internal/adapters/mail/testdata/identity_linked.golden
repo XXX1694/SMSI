@@ -1,0 +1,19 @@
+Subject: A sign-in method was added to your Steerpost account
+
+--- text ---
+Your Steerpost account is now connected to GitHub. You can use it to sign in.
+
+You signed in with GitHub using the same email address, so we linked the two.
+
+If this was not you, sign in with your password and change it, then tell your server admin. Review your account here: https://app.example.com/verify-email#token=abc123
+
+Steerpost
+
+--- html ---
+<!doctype html>
+<html><body style="font-family:sans-serif;line-height:1.5;color:#111">
+<p>Your Steerpost account is now connected to GitHub. You can use it to sign in.</p>
+<p>You signed in with GitHub using the same email address, so we linked the two.</p>
+<p>If this was not you, sign in with your password and change it, then tell your server admin. <a href="https://app.example.com/verify-email#token=abc123">Review your account</a>.</p>
+<p style="color:#666;font-size:13px">Steerpost</p>
+</body></html>
