@@ -49,7 +49,7 @@ export function TelegramPreview({ author, text, media }: PreviewProps) {
         <p className="mb-1 text-xs font-semibold text-accent">{author}</p>
         <MediaStrip media={media} />
         <p className="mt-1 whitespace-pre-wrap break-words">{text.trim() ? text : <Empty />}</p>
-        <p className="mt-1 text-right text-[11px] text-muted-foreground">now</p>
+        <p className="mt-1 text-right text-2xs text-muted-foreground">now</p>
       </div>
     </div>
   );
