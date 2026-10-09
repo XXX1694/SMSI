@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/actor"
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/errs"
 )
 
@@ -112,4 +113,22 @@ func Paginate[T any](items []T, limit int, key func(T) Cursor) Result[T] {
 	}
 	items = items[:limit]
 	return Result[T]{Items: items, NextCursor: key(items[len(items)-1]).Encode()}
+}
+
+// ApprovalGate decides whether an actor may perform a dangerous action now. Require returns nil for browser sessions,
+// background actors and trusted keys; for any other API key it consumes a matching approved approval carried in ctx
+// (inside the caller's transaction) or answers errs.ApprovalRequired with a fresh pending approval (D-013).
+type ApprovalGate interface {
+	Require(ctx context.Context, a actor.Actor, req approval.Request) error
+}
+
+// FailClosedGate is the gate used when none is wired: agents that need approval are refused.
+type FailClosedGate struct{}
+
+// Require implements ApprovalGate.
+func (FailClosedGate) Require(_ context.Context, a actor.Actor, _ approval.Request) error {
+	if a.NeedsApproval() {
+		return errs.New(errs.Internal, "approval gate is not configured")
+	}
+	return nil
 }

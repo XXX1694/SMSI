@@ -20,6 +20,7 @@ export function redact(s: string): string {
 const HINTS: Record<string, string> = {
   INSUFFICIENT_SCOPE: "The API key lacks the scope this action needs. Ask the user to grant it in the SocialOS developer portal.",
   EMAIL_NOT_VERIFIED: "The SocialOS account has not verified its email address, so this action is blocked. Ask the user to open the verification link in their email (it can be resent from the SocialOS banner).",
+  APPROVAL_REQUIRED: "This action needs the owner's approval and was NOT performed. Ask the owner to approve it in SocialOS, wait until they confirm, then repeat the identical call with the approval_id below. An approval works once and only for that exact call.",
   FORBIDDEN: "The API key is not allowed to do this.",
   UNAUTHENTICATED: "The API key is invalid, expired or revoked.",
   SOCIAL_ACCOUNT_EXPIRED: "The social account's authorization expired. The user must reconnect it in SocialOS (this cannot be done through the API).",
@@ -32,6 +33,14 @@ const HINTS: Record<string, string> = {
   CONFLICT: "The action conflicts with the current state of the resource.",
 };
 
+/** approval_id, where to approve and until when; the API sends them as plain strings. */
+function approvalDetails(f: Readonly<Record<string, string>>): string {
+  const bits = [`approval_id: ${f.approval_id ?? "unknown"}`];
+  if (f.approve_url) bits.push(`ask the owner to approve at ${f.approve_url}`);
+  if (f.expires_at) bits.push(`expires_at: ${f.expires_at}`);
+  return `(${bits.join("; ")})`;
+}
+
 export function errorResult(message: string): CallToolResult {
   return { isError: true, content: [{ type: "text", text: redact(message) }] };
 }
@@ -42,6 +51,7 @@ export function toToolError(err: unknown): CallToolResult {
     const hint = HINTS[err.code];
     const parts = [`${err.code}: ${err.message}`];
     if (hint) parts.push(hint);
+    if (err.code === "APPROVAL_REQUIRED") parts.push(approvalDetails(err.fields));
     if (err.requestId) parts.push(`(request_id: ${err.requestId})`);
     return errorResult(parts.join(" "));
   }

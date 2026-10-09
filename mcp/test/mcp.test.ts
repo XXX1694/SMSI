@@ -47,7 +47,7 @@ describe("tool listing", () => {
   it("rejects calls to tools that are not granted", async () => {
     s.api.keys.set("sk_live_ro", ["posts:read"]);
     const c = await connect(s.mcpUrl, "sk_live_ro");
-    const r = await c.callTool({ name: "publish_post", arguments: { post_id: "p1", confirm: true } }).catch((e: unknown) => e);
+    const r = await c.callTool({ name: "publish_post", arguments: { post_id: "p1" } }).catch((e: unknown) => e);
     const failed = r instanceof Error || (r as { isError?: boolean }).isError === true;
     expect(failed).toBe(true);
     expect(s.api.calls).toHaveLength(0);
@@ -76,9 +76,9 @@ describe("tool -> REST mapping", () => {
       method: "POST", path: "/posts/p1/schedule", body: { scheduled_at: "2026-12-01T09:00:00Z" },
     },
     { name: "cancel_scheduled_post", args: { post_id: "p1" }, method: "POST", path: "/posts/p1/cancel" },
-    { name: "publish_post", args: { post_id: "p1", confirm: true }, method: "POST", path: "/posts/p1/publish" },
-    { name: "delete_post", args: { post_id: "p1", confirm: true }, method: "DELETE", path: "/posts/p1" },
-    { name: "disconnect_account", args: { account_id: "a1", confirm: true }, method: "DELETE", path: "/social/accounts/a1" },
+    { name: "publish_post", args: { post_id: "p1" }, method: "POST", path: "/posts/p1/publish" },
+    { name: "delete_post", args: { post_id: "p1" }, method: "DELETE", path: "/posts/p1" },
+    { name: "disconnect_account", args: { account_id: "a1" }, method: "DELETE", path: "/social/accounts/a1" },
   ];
 
   it("covers every tool", () => {
@@ -129,21 +129,80 @@ describe("tool -> REST mapping", () => {
   });
 });
 
-describe("confirm enforcement", () => {
+describe("approvals", () => {
+  const APPROVAL = "3f1c7e2a-9b1d-4c52-8d8e-5a0f1b2c3d4e";
+  const approvalError = {
+    status: 428,
+    body: {
+      error: {
+        code: "APPROVAL_REQUIRED", message: "this action needs the owner's approval", request_id: "rid-428",
+        fields: { approval_id: APPROVAL, approve_url: "https://app.example.test/approvals", expires_at: "2026-10-09T12:10:00Z", action: "post.publish" },
+      },
+    },
+  };
   const dangerous = [
-    ["publish_post", { post_id: "p1" }],
-    ["delete_post", { post_id: "p1" }],
-    ["disconnect_account", { account_id: "a1" }],
+    ["publish_post", { post_id: "p1" }, "POST /posts/p1/publish"],
+    ["delete_post", { post_id: "p1" }, "DELETE /posts/p1"],
+    ["disconnect_account", { account_id: "a1" }, "DELETE /social/accounts/a1"],
+    ["schedule_post", { post_id: "p1", scheduled_at: "2026-10-09T12:01:00Z" }, "POST /posts/p1/schedule"],
+    ["update_post", { post_id: "p1", scheduled_at: "2026-10-09T12:01:00Z" }, "PATCH /posts/p1"],
   ] as const;
 
-  it.each(dangerous)("%s refuses without confirm", async (name, args) => {
+  it.each(dangerous)("%s turns a 428 into a hint with the approval id and where to approve", async (name, args, route) => {
+    s.api.replies.set(route, approvalError);
     const c = await connect(s.mcpUrl);
-    for (const extra of [{}, { confirm: false }]) {
-      const r = await c.callTool({ name, arguments: { ...args, ...extra } });
-      expect(r.isError).toBe(true);
-      expect(text(r)).toContain("CONFIRMATION_REQUIRED");
-    }
+    const r = await c.callTool({ name, arguments: args });
+    expect(r.isError).toBe(true);
+    const t = text(r);
+    expect(t).toContain("APPROVAL_REQUIRED");
+    expect(t).toContain(APPROVAL);
+    expect(t).toContain("ask the owner to approve at https://app.example.test/approvals");
+    expect(t).toContain("NOT performed");
+    expect(t).toContain("rid-428");
+    await c.close();
+  });
+
+  it.each(dangerous)("%s sends approval_id as the X-Approval-Id header and never in the body", async (name, args) => {
+    const c = await connect(s.mcpUrl);
+    const r = await c.callTool({ name, arguments: { ...args, approval_id: APPROVAL } });
+    expect(r.isError).toBeFalsy();
+    const call = s.api.calls[0]!;
+    expect(call.headers["x-approval-id"]).toBe(APPROVAL);
+    expect(JSON.stringify(call.body ?? {})).not.toContain(APPROVAL);
+    await c.close();
+  });
+
+  it("sends no approval header on the first attempt", async () => {
+    const c = await connect(s.mcpUrl);
+    await c.callTool({ name: "publish_post", arguments: { post_id: "p1" } });
+    expect(s.api.calls[0]!.headers["x-approval-id"]).toBeUndefined();
+    await c.close();
+  });
+
+  it("the old confirm flag bypasses nothing: it is not forwarded and the API still decides", async () => {
+    s.api.replies.set("POST /posts/p1/publish", approvalError);
+    const c = await connect(s.mcpUrl);
+    const r = await c.callTool({ name: "publish_post", arguments: { post_id: "p1", confirm: true } });
+    expect(r.isError).toBe(true);
+    expect(text(r)).toContain("APPROVAL_REQUIRED");
+    expect(JSON.stringify(s.api.calls[0]!.body ?? {})).not.toContain("confirm");
+    await c.close();
+  });
+
+  it("rejects a malformed approval_id before calling the API", async () => {
+    const c = await connect(s.mcpUrl);
+    const r = await c.callTool({ name: "publish_post", arguments: { post_id: "p1", approval_id: "not-a-uuid" } });
+    expect(r.isError).toBe(true);
     expect(s.api.calls).toHaveLength(0);
+    await c.close();
+  });
+
+  it("tells the agent about the flow in the server instructions and tool descriptions", async () => {
+    const c = await connect(s.mcpUrl);
+    expect(c.getInstructions()).toContain("approval_id");
+    const publish = (await c.listTools()).tools.find((t) => t.name === "publish_post")!;
+    expect(publish.description).toContain("APPROVAL_REQUIRED");
+    expect(JSON.stringify(publish.inputSchema)).not.toContain("confirm");
     await c.close();
   });
 });
@@ -160,7 +219,7 @@ describe("error mapping", () => {
   it.each(errs)("maps %i %s to a clear tool error", async (status, code, hint) => {
     s.api.replies.set("POST /posts/p1/publish", { status, body: { error: { code, message: "backend says no", request_id: "rid-9" } } });
     const c = await connect(s.mcpUrl);
-    const r = await c.callTool({ name: "publish_post", arguments: { post_id: "p1", confirm: true } });
+    const r = await c.callTool({ name: "publish_post", arguments: { post_id: "p1" } });
     expect(r.isError).toBe(true);
     const t = text(r);
     expect(t).toContain(code);

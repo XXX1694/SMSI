@@ -27,6 +27,7 @@ type Service struct {
 	enc             port.Encryptor
 	redirectBaseURL string
 	gate            OwnerGate
+	approvals       port.ApprovalGate
 }
 
 // Deps bundles dependencies.
@@ -44,6 +45,8 @@ type Deps struct {
 	RedirectBaseURL string
 	// Gate, when set, is consulted before any account is stored (see OwnerGate).
 	Gate OwnerGate
+	// Approvals asks the owner to approve dangerous actions of API keys; nil refuses them (fail closed).
+	Approvals port.ApprovalGate
 }
 
 // NewService creates the service.
@@ -52,8 +55,11 @@ func NewService(d Deps) *Service {
 	if log == nil {
 		log = slog.Default()
 	}
+	if d.Approvals == nil {
+		d.Approvals = port.FailClosedGate{}
+	}
 	return &Service{repo: d.Repo, states: d.States, links: d.Links, log: log, vault: NewVault(d.Repo, d.Enc), registry: d.Registry,
-		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL, gate: d.Gate}
+		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL, gate: d.Gate, approvals: d.Approvals}
 }
 
 // Vault exposes credential storage to other use cases (scheduler).
@@ -105,6 +111,9 @@ func (s *Service) Disconnect(ctx context.Context, a actor.Actor, id uuid.UUID) e
 	return s.tx.InTx(ctx, func(ctx context.Context) error {
 		acc, err := s.repo.Get(ctx, a.UserID, id)
 		if err != nil {
+			return err
+		}
+		if err := s.approvals.Require(ctx, a, disconnectRequest(acc)); err != nil {
 			return err
 		}
 		if err := s.repo.SetStatus(ctx, a.UserID, id, socialaccount.StatusRevoked); err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/apikey"
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
@@ -114,6 +115,9 @@ type CreateKeyInput struct {
 	Name      string
 	Scopes    []string
 	ExpiresAt *time.Time
+	// DangerousPolicy is "approve" (default when empty) or "trusted": a trusted key skips the owner's approval for
+	// dangerous actions (D-013).
+	DangerousPolicy string
 }
 
 func (s *Service) validateKeyInput(in CreateKeyInput) (string, []apikey.Scope, error) {
@@ -143,27 +147,34 @@ func (s *Service) CreateKey(ctx context.Context, a actor.Actor, in CreateKeyInpu
 	if err != nil {
 		return nil, "", err
 	}
+	policy := in.DangerousPolicy
+	if policy == "" {
+		policy = approval.PolicyApprove
+	}
+	if !approval.ValidPolicy(policy) {
+		return nil, "", errs.Validationf("dangerous_policy must be approve or trusted").WithField("dangerous_policy", "invalid")
+	}
 	var key *apikey.Key
 	var raw string
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
-		key, raw, err = s.insertKey(ctx, a, name, scopes, in.ExpiresAt)
+		key, raw, err = s.insertKey(ctx, a, name, scopes, in.ExpiresAt, policy)
 		return err
 	})
 	return key, raw, err
 }
 
-func (s *Service) insertKey(ctx context.Context, a actor.Actor, name string, scopes []apikey.Scope, exp *time.Time) (*apikey.Key, string, error) {
+func (s *Service) insertKey(ctx context.Context, a actor.Actor, name string, scopes []apikey.Scope, exp *time.Time, policy string) (*apikey.Key, string, error) {
 	gen, err := crypto.GenerateAPIKey()
 	if err != nil {
 		return nil, "", err
 	}
-	k := &apikey.Key{ID: uuid.New(), UserID: a.UserID, Name: name, Prefix: gen.Prefix, KeyHash: gen.Hash, Scopes: scopes, ExpiresAt: exp}
+	k := &apikey.Key{ID: uuid.New(), UserID: a.UserID, Name: name, Prefix: gen.Prefix, KeyHash: gen.Hash, Scopes: scopes, ExpiresAt: exp, DangerousPolicy: policy}
 	if err := s.keys.Create(ctx, k); err != nil {
 		return nil, "", err
 	}
 	if err := s.audit.Record(ctx, a, audit.ActionAPIKeyCreated, "api_key", k.ID.String(),
-		map[string]any{"name": name, "scopes": apikey.Strings(scopes), "prefix": gen.Prefix}); err != nil {
+		map[string]any{"name": name, "scopes": apikey.Strings(scopes), "prefix": gen.Prefix, "dangerous_policy": policy}); err != nil {
 		return nil, "", err
 	}
 	return k, gen.Raw, nil

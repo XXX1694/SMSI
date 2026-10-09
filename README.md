@@ -143,7 +143,7 @@ The suites cover these areas:
 - scope authorization (`INSUFFICIENT_SCOPE`);
 - CSRF, media validation and the uniform error format;
 - LinkedIn and Telegram adapters against `httptest` fakes;
-- MCP tool filtering by scope, confirm flags, error mapping and the SDK client over Streamable HTTP.
+- MCP tool filtering by scope, the approval flow, error mapping and the SDK client over Streamable HTTP.
 
 No test needs real OAuth credentials.
 
@@ -290,9 +290,9 @@ To get a key, create a connection in **Developer → MCP connections**. The UI s
 | `create_draft`, `update_post` | `posts:write` | safe / low |
 | `cancel_scheduled_post` | `posts:write` | medium |
 | `schedule_post` | `posts:schedule` | medium |
-| `publish_post` | `posts:publish` | **sensitive**, requires `confirm: true` |
-| `delete_post` | `posts:delete` | **sensitive**, requires `confirm: true` |
-| `disconnect_account` | `social:disconnect` | **critical**, requires `confirm: true` |
+| `publish_post` | `posts:publish` | **sensitive**, needs the owner's approval |
+| `delete_post` | `posts:delete` | **sensitive**, needs the owner's approval |
+| `disconnect_account` | `social:disconnect` | **critical**, needs the owner's approval |
 
 Tools without a granted scope are not even listed. The REST API enforces scopes again on every call, and every agent action is written to the audit log as `api_key:<name>`. Revoking the connection invalidates the key immediately. Keys can never create keys or change account security. Client configuration examples (Claude Desktop over stdio, HTTP clients, `mcp-remote`) are in [`mcp/README.md`](mcp/README.md). OAuth 2.1 authorization for MCP is the planned upgrade path; the key model already provides per-user binding, scopes, expiry and revocation.
 

@@ -29,7 +29,7 @@
           </li>
           <li>
             <h3>Let agents help, within limits</h3>
-            <p>Create an MCP connection, tick the permissions you are comfortable with and paste the config into your agent. It can draft and schedule; anything risky needs an explicit confirmation.</p>
+            <p>Create an MCP connection, tick the permissions you are comfortable with and paste the config into your agent. It can draft and schedule; anything risky waits for your approval.</p>
           </li>
         </ol>
       </section>
@@ -98,7 +98,7 @@
             <h3>Permission model</h3>
             <ul class="facts">
               <li><strong>Scoped keys.</strong> Nine scopes. Tools a key has no scope for are not even listed, and the REST API checks the scope again on every call.</li>
-              <li><strong>Dangerous actions are opt-in.</strong> <code>publish_post</code>, <code>delete_post</code> and <code>disconnect_account</code> are off by default and need <code>confirm: true</code> on every call.</li>
+              <li><strong>Dangerous actions are opt-in.</strong> <code>publish_post</code>, <code>delete_post</code> and <code>disconnect_account</code> are off by default, and every call needs your approval in SocialOS before it runs.</li>
               <li><strong>Revocable and expiring.</strong> Keys are stored as SHA-256 hashes and shown once. Revoking a connection invalidates its key immediately.</li>
               <li><strong>Audited.</strong> Every agent action lands in the audit log as <code>api_key:&lt;name&gt;</code>. Keys can never create keys or change account security.</li>
             </ul>

@@ -61,10 +61,18 @@ func TestAgentAcceptanceFlow(t *testing.T) {
 		t.Fatalf("forbidden publish changed the post: %v", st)
 	}
 
+	// Scheduling less than AGENT_MIN_SCHEDULE_LEAD ahead is publish-now in disguise: the owner approves it first.
 	at := time.Now().Add(2 * time.Second)
-	sched := agent.must("POST", "/api/v1/posts/"+postID+"/schedule", map[string]any{"scheduled_at": fmtTime(at.Add(time.Second))}, 200)
-	if sched["status"] != "scheduled" {
-		t.Fatalf("not scheduled: %v", sched)
+	body := map[string]any{"scheduled_at": fmtTime(at.Add(3 * time.Second))}
+	pending := agent.do("POST", "/api/v1/posts/"+postID+"/schedule", body)
+	if pending.status != http.StatusPreconditionRequired || pending.errCode(t) != "APPROVAL_REQUIRED" {
+		t.Fatalf("a near-term schedule by an agent needs approval: %d %s", pending.status, pending.body)
+	}
+	approvalID := pending.errBody(t)["fields"].(map[string]any)["approval_id"].(string)
+	human.must("POST", "/api/v1/approvals/"+approvalID+"/approve", nil, 200)
+	sched := agent.doWith("POST", "/api/v1/posts/"+postID+"/schedule", body, map[string]string{"X-Approval-Id": approvalID})
+	if sched.status != 200 || sched.json(t)["status"] != "scheduled" {
+		t.Fatalf("not scheduled: %d %s", sched.status, sched.body)
 	}
 	st := agent.waitStatus(postID, "published", 20*time.Second)
 	target := st["targets"].([]any)[0].(map[string]any)
@@ -85,7 +93,8 @@ func TestAgentAcceptanceFlow(t *testing.T) {
 	}
 	for _, want := range []actorAction{
 		{"user", "user.registered"}, {"user", "social_account.connected"}, {"user", "api_key.created"},
-		{"api_key", "post.created"}, {"api_key", "post.scheduled"}, {"api_key", "api_key.request"},
+		{"api_key", "post.created"}, {"api_key", "post.scheduled"}, {"api_key", "api_key.request"}, {"api_key", "approval.requested"},
+		{"user", "approval.approved"}, {"api_key", "approval.used"},
 		{"scheduler", "post_target.published"}, {"scheduler", "post.completed"},
 	} {
 		if seen[want] == 0 {

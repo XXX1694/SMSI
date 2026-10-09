@@ -117,16 +117,17 @@ func FromStrings(in []string) []Scope {
 
 // Key is a stored API key (raw secret is never stored).
 type Key struct {
-	ID         uuid.UUID
-	UserID     uuid.UUID
-	Name       string
-	Prefix     string
-	KeyHash    string
-	Scopes     []Scope
-	ExpiresAt  *time.Time
-	RevokedAt  *time.Time
-	LastUsedAt *time.Time
-	CreatedAt  time.Time
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	Name            string
+	Prefix          string
+	KeyHash         string
+	Scopes          []Scope
+	ExpiresAt       *time.Time
+	RevokedAt       *time.Time
+	LastUsedAt      *time.Time
+	CreatedAt       time.Time
+	DangerousPolicy string // "approve" (default) or "trusted"; see approval.Policy*
 }
 
 // Usable reports whether the key may authenticate at time now.

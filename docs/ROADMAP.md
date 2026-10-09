@@ -48,7 +48,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ next · ⛔ blocked (the reason is g
 - ⏳ OAuth 2.1 for MCP clients, next to API keys.
 - ⏳ Ready-made configs for Claude Desktop, Claude Code and Cursor.
 - ✅ Audit of every MCP tool call (D-007, #18).
-- ⏳ Server-side approval of dangerous actions (plan ready).
+- 🔄 Server-side approval of dangerous actions (D-013): API and MCP done, dashboard page next.
 - ⏳ Publish to npm and MCP registries (only after the owner's go-ahead).
 
 ## 6. Security before release

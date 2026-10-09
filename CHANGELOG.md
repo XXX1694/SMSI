@@ -18,8 +18,12 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - SSRF-safe HTTP client for hosts users supply (D-010).
 - Stub notes for Reddit, Medium and Hashnode; the X note now says the API is pay-per-use.
 
+- Approvals for dangerous actions (D-013): publishing now, retrying now, deleting a post, disconnecting an account, connecting with a pasted token, or scheduling less than 5 minutes ahead (`AGENT_MIN_SCHEDULE_LEAD`) with an API key or an MCP connection answers `428 APPROVAL_REQUIRED` and waits for you. Approve or deny in the dashboard under **Approvals** (`GET /approvals`, `POST /approvals/{id}/approve|deny`); the agent repeats the same call with `X-Approval-Id` and it works once. New settings `APPROVAL_TTL`, `APPROVAL_MAX_PENDING`, `AGENT_MIN_SCHEDULE_LEAD`; new audit entries `approval.requested|approved|denied|used`.
+- API keys have a `dangerous_policy`: `approve` (default, also for existing keys) or `trusted` (set when creating the key, skips approvals).
+
 ### Changed
 
+- **Breaking for API-key integrations:** dangerous actions made with a key now need your approval (see above). The MCP tools `publish_post`, `delete_post` and `disconnect_account` no longer take `confirm`; they take an optional `approval_id`, and `schedule_post` and `update_post` take one too. An agent that only schedules at least 5 minutes ahead is not affected.
 - Browser sessions now hold ten scopes (the new `social:connect`); the "Dangerous" list in the dashboard shows it.
 
 ## [0.1.0] - 2026-10-09

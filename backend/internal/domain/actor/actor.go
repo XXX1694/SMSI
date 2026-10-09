@@ -34,7 +34,13 @@ type Actor struct {
 	// address, or when the server does not enforce verification (no mail
 	// delivery). Scheduler and system actors need no flag (see RequireVerified).
 	EmailVerified bool
+	// DangerousPolicy is the API key's dangerous_policy ("approve" or "trusted"); empty means "approve".
+	DangerousPolicy string
 }
+
+// NeedsApproval reports whether a dangerous action by this actor must be approved by the owner first: API keys do,
+// unless the owner marked the key trusted. Sessions, the scheduler and system actors never do.
+func (a Actor) NeedsApproval() bool { return a.Type == TypeAPIKey && a.DangerousPolicy != "trusted" }
 
 // IsSession reports whether the actor authenticated with a browser session.
 func (a Actor) IsSession() bool { return a.Type == TypeUser && a.SessionID != uuid.Nil }

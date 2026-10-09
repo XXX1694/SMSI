@@ -120,12 +120,13 @@ post_media(post_id, media_id, position, primary key(post_id, media_id))
 scheduled_jobs(id, post_target_id, run_at, asynq_task_id, status ['pending','enqueued','done','cancelled'], unique(post_target_id) where status in ('pending','enqueued'))
 publication_attempts(id, post_target_id, attempt_no, started_at, finished_at, status ['started','succeeded','failed','unknown'],
                      error_code, error_message, response_metadata jsonb, unique(post_target_id, attempt_no))
-api_keys(id, user_id, name, prefix, key_hash unique, scopes text[], expires_at, revoked_at, last_used_at)
+api_keys(id, user_id, name, prefix, key_hash unique, scopes text[], expires_at, revoked_at, last_used_at, dangerous_policy ['approve','trusted'] default 'approve')
+action_approvals(id, user_id, actor_type ['api_key'], actor_id, actor_label, action, resource_type, resource_id, fingerprint, summary jsonb, status ['pending','approved','denied','consumed','expired'], expires_at, decided_at, consumed_at)
 mcp_connections(id, user_id, api_key_id, name, client_name, last_seen_at, revoked_at)
 audit_logs(id, user_id, actor_type ['user','api_key','scheduler','system'], actor_id, actor_label, action, resource_type, resource_id, metadata jsonb, request_id, ip)
 analytics(id, user_id, social_account_id, post_target_id null, metric, value bigint, captured_at)   -- MVP: table + endpoint, filled by adapters that CanAnalytics (none yet) and by internal counters
 ```
-Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`, `email_tokens(user_id, purpose, created_at desc)`, `email_tokens(expires_at)`.
+Indexes: `(user_id, status)`, `(user_id, scheduled_at)`, `post_targets(post_id)`, `scheduled_jobs(run_at) where status='pending'`, `audit_logs(user_id, created_at desc)`, `action_approvals(user_id, status, created_at desc)`, `telegram_link_codes(user_id, created_at desc)`, `telegram_link_codes(user_id, expires_at) where used_at is null`, `telegram_link_codes(expires_at)`, `email_tokens(user_id, purpose, created_at desc)`, `email_tokens(expires_at)`.
 
 ## 4. REST API (`/api/v1`)
 
@@ -133,7 +134,7 @@ Error format everywhere:
 ```json
 {"error":{"code":"SOCIAL_ACCOUNT_EXPIRED","message":"LinkedIn authorization has expired","request_id":"…"}}
 ```
-Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`; also `EMAIL_NOT_VERIFIED` when the server enforces email verification and the owner has not verified, see Auth), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
+Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also missing scope: `INSUFFICIENT_SCOPE`; also `EMAIL_NOT_VERIFIED` when the server enforces email verification and the owner has not verified, see Auth), `APPROVAL_REQUIRED 428` (an API key attempted a dangerous action; see "Approvals"), `NOT_FOUND 404`, `INVALID_STATE_TRANSITION 409`, `CONFLICT 409`, `RATE_LIMITED 429`, `SOCIAL_ACCOUNT_EXPIRED 422`, `PROVIDER_NOT_AVAILABLE 501`, `PROVIDER_ERROR 502`, `INTERNAL 500`.
 Pagination: `?limit=&cursor=` → `{"items":[…],"next_cursor":null|"…"}`. Times are RFC 3339 UTC.
 
 ### Auth
@@ -209,12 +210,17 @@ Security properties: user B cannot connect user A's channel without posting a co
 `GET /analytics?from=&to=` · `GET /dashboard/summary` → `{connected_accounts, scheduled_posts, drafts, published_this_month, failed, upcoming:[…], recent:[…]}`
 `GET /audit-logs?limit=&cursor=&action=` (session only; `action` keeps one action, e.g. `mcp.tool_call` for agent actions)
 
+### Approvals
+Dangerous actions made with an **API key** (not a browser session) need the owner's approval first (D-013): `POST /posts/{id}/publish`, `POST /posts/{id}/retry` without `scheduled_at`, `DELETE /posts/{id}`, `DELETE /social/accounts/{id}`, `POST /social/accounts/token`, and any schedule (`POST /posts` with `schedule`, `POST /posts/{id}/schedule`, `PATCH /posts/{id}` or `POST /posts/{id}/retry` with a time) less than `AGENT_MIN_SCHEDULE_LEAD` (default 5m) ahead. The scope check comes first (403); then, for a key whose `dangerous_policy` is `approve` (the default), the call answers `428` and does nothing:
+`{"error":{"code":"APPROVAL_REQUIRED","message":"…","request_id":"…","fields":{"approval_id":"<uuid>","approve_url":"<WEB_BASE_URL>/approvals","expires_at":"<RFC 3339>","action":"post.publish|post.retry_now|post.delete|social_account.disconnect|social_account.connect_token|post.schedule_soon"}}}`
+The owner decides in the browser: `GET /approvals?status=pending|all&limit=&cursor=` · `GET /approvals/{id}` · `POST /approvals/{id}/approve` · `POST /approvals/{id}/deny` (session only; a key gets 403; other tenants get 404; a decided or expired approval gets 409). The agent then repeats the **identical** call with the header `X-Approval-Id: <approval_id>` (a header, so DELETE needs no body). It succeeds once: the approval is bound to the key, the action, the target and a hash of the payload (a post is bound to its `updated_at`, so editing it voids the approval; a create-and-schedule to the whole body; a token connect to every submitted value), and it is spent in the same transaction as the action. Anything else (reuse, another key, another target, an edited payload, a pending or expired id, another tenant's id) answers `428` with a fresh approval and no hint about why; an approval the owner denied answers `403`. Asking again while one is open returns the same `approval_id`; at most `APPROVAL_MAX_PENDING` (10) are open per user, then `429`. Env: `APPROVAL_TTL` (10m), `APPROVAL_MAX_PENDING`, `AGENT_MIN_SCHEDULE_LEAD` (`0` turns the lead rule off). Audit: `approval.requested|approved|denied|used`. A key created with `dangerous_policy: "trusted"` skips approvals (session only, on creation); sessions, the scheduler and system actors never need them.
+
 ### Developer
-`GET/POST /developer/api-keys {name, scopes[], expires_at?}` (raw key returned once) · `DELETE /developer/api-keys/{id}` (revoke)
+`GET/POST /developer/api-keys {name, scopes[], expires_at?, dangerous_policy?}` (raw key returned once; `dangerous_policy` is `approve` by default) · `DELETE /developer/api-keys/{id}` (revoke)
 `GET/POST /developer/mcp-connections {name, scopes[]}` (creates key, returns raw key once + ready-to-paste config) · `DELETE /developer/mcp-connections/{id}` · `GET /developer/usage`
 
 ### Audit actions and MCP headers
-Audit actions: `user.registered|login|logout`, `social_account.connected|disconnected|expired`, `post.created|updated|deleted|scheduled|unscheduled|cancelled|publish_requested|retried|completed`, `post_target.published|failed|needs_review`, `media.uploaded|deleted`, `api_key.created|revoked`, `mcp_connection.created|revoked`, `api_key.request` (any API-key request without a tool name), **`mcp.tool_call`** (one MCP tool call, see D-007).
+Audit actions: `user.registered|login|logout`, `social_account.connected|disconnected|expired`, `post.created|updated|deleted|scheduled|unscheduled|cancelled|publish_requested|retried|completed`, `post_target.published|failed|needs_review`, `media.uploaded|deleted`, `approval.requested|approved|denied|used`, `api_key.created|revoked`, `mcp_connection.created|revoked`, `api_key.request` (any API-key request without a tool name), **`mcp.tool_call`** (one MCP tool call, see D-007).
 
 An API-key request that carries `X-MCP-Tool: <tool_name>` (must match `^[a-z_]{1,64}$`, otherwise it is dropped and the request is recorded as `api_key.request`) is audited as one `mcp.tool_call` row instead. Metadata is an allow-list: `tool`, `method`, `route` (pattern, never the raw path), `status`, `error_code`, `target_ids` (UUID URL params `id` / `*_id`), `client` (key label, `MCP: <name>` for MCP connections), `credential_id` (key id, never the key), `via_gateway`; the row's `ip` is the client IP. Headers, query strings, bodies and tokens never reach the log.
 
@@ -231,7 +237,7 @@ Env: `MCP_GATEWAY_SECRET` (backend and mcp share it; min 32 chars, empty = disab
 
 ### Scopes
 `social:read` (accounts, providers) · `posts:read` · `posts:write` (create/update drafts, cancel) · `posts:schedule` · `posts:publish` (**sensitive**) · `posts:delete` (**sensitive**) · `social:disconnect` (**critical**) · `social:connect` (**critical**, hands a network credential to SocialOS) · `media:write` · `analytics:read`.
-Browser sessions have all scopes. API keys carry only granted scopes; `publish`, `delete`, `connect`, `disconnect` are never in default sets; UI shows them under a "Dangerous" heading and requires confirmation. API keys can never create/revoke API keys, or change password (session-only).
+Browser sessions have all scopes. API keys carry only granted scopes; `publish`, `delete`, `connect`, `disconnect` are never in default sets; UI shows them under a "Dangerous" heading and requires confirmation. Using them with a key also needs the owner's approval per action (Approvals, D-013). API keys can never create/revoke API keys, or change password (session-only).
 
 ## 5. MCP tools
 
@@ -247,13 +253,13 @@ Transport: Streamable HTTP at `POST /mcp` with `Authorization: Bearer sk_live_�
 | get_analytics | analytics:read | safe | GET /analytics |
 | create_draft `{content, social_account_ids[], media_ids?, title?, per_platform_content?}` | posts:write | safe | POST /posts |
 | update_post | posts:write | low | PATCH /posts/{id} |
-| schedule_post `{post_id, scheduled_at}` | posts:schedule | medium | POST /posts/{id}/schedule |
+| schedule_post `{post_id, scheduled_at, approval_id?}` | posts:schedule | medium | POST /posts/{id}/schedule |
 | cancel_scheduled_post | posts:write | medium | POST /posts/{id}/cancel |
-| publish_post `{post_id, confirm: true}` | posts:publish | sensitive | POST /posts/{id}/publish |
-| delete_post `{post_id, confirm: true}` | posts:delete | sensitive | DELETE /posts/{id} |
-| disconnect_account `{account_id, confirm: true}` | social:disconnect | critical | DELETE /social/accounts/{id} |
+| publish_post `{post_id, approval_id?}` | posts:publish | sensitive | POST /posts/{id}/publish |
+| delete_post `{post_id, approval_id?}` | posts:delete | sensitive | DELETE /posts/{id} |
+| disconnect_account `{account_id, approval_id?}` | social:disconnect | critical | DELETE /social/accounts/{id} |
 
-Dangerous tools require an explicit `confirm: true` argument and carry MCP annotations (`destructiveHint`, `readOnlyHint`). Every REST call made via an API key writes an audit log with actor `api_key` / key name; tool calls are recorded as `mcp.tool_call` with the tool name (the MCP server sends `X-MCP-Tool` on every tool call, see §4 "Audit actions and MCP headers").
+Dangerous tools carry no `confirm` flag any more: the REST API answers `APPROVAL_REQUIRED` (428) and the tool returns the `approval_id`, where the owner approves (`approve_url`) and when it expires; the agent repeats the identical call with `approval_id`, which the tool sends as `X-Approval-Id`. `update_post` and `schedule_post` take `approval_id` too, for schedules under 5 minutes ahead. The tools carry MCP annotations (`destructiveHint`, `readOnlyHint`). Every REST call made via an API key writes an audit log with actor `api_key` / key name; tool calls are recorded as `mcp.tool_call` with the tool name (the MCP server sends `X-MCP-Tool` on every tool call, see §4 "Audit actions and MCP headers").
 
 ## 6. Scheduler / publishing flow & idempotency
 

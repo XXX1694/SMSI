@@ -46,6 +46,11 @@ func (s *Service) ConnectWithToken(ctx context.Context, a actor.Actor, providerN
 	if err != nil {
 		return nil, err
 	}
+	// Before the live check: nothing is sent to the network until the owner agreed. The approval is spent here, so a
+	// credential the network rejects needs a new approval.
+	if err := s.approvals.Require(ctx, a, connectRequest(p, clean)); err != nil {
+		return nil, err
+	}
 	vctx, cancel := context.WithTimeout(ctx, VerifyTimeout)
 	defer cancel()
 	prof, secret, err := conn.Verify(vctx, clean)

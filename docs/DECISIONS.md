@@ -162,3 +162,33 @@ request. Adapters with a fixed host set `AllowedHosts` instead. Every adapter ta
 
 **Consequences.** A self-hosted instance on a private network cannot be connected. Accepted: SocialOS runs on a shared
 host next to other services (D-001).
+
+## D-013: Dangerous actions by API keys need the owner's approval, enforced in the API (2026-10-09)
+
+**Context.** Until now an agent was asked to pass `confirm: true` for publish, delete and disconnect. The flag is an
+argument the agent writes itself, so it proves nothing, and it only existed in the MCP server: a plain REST call with the
+key skipped it.
+
+**Decision.** The application layer decides. When a request authenticated by an API key attempts a dangerous action
+(publish now, retry now, delete a post, disconnect an account, connect with a pasted token (D-009), or schedule less than
+`AGENT_MIN_SCHEDULE_LEAD` (5 m) ahead, which is publish-now in disguise) and the key's `dangerous_policy` is `approve`
+(the default for every new and existing key), the API answers `428 APPROVAL_REQUIRED` with an `approval_id` and stores a
+pending approval. Only a browser session can approve or deny it. The agent then repeats the identical call with the
+header `X-Approval-Id`. An approval belongs to one user and key, covers one action on one target with one payload
+(fingerprint: post id and `updated_at`, the requested time, a hash of the whole create body or of the connect fields),
+expires after `APPROVAL_TTL` (10 m) and is spent in the same transaction as the action, so a failed action does not burn
+it and two racing calls cannot both use it. The scope check still comes first. The `confirm` flag is gone from MCP.
+Sessions, the scheduler and system actors never need approval; `dangerous_policy: trusted` (chosen when the owner creates
+the key) skips it for that key on purpose. Anything that does not match gets a fresh `428` and no hint why (no oracle on
+other tenants' ids); an approval the owner denied gets `403` so the agent stops. A repeated ask returns the open
+approval; at most 10 are open per user. The pending row is written outside the request's transaction, otherwise the 428
+would roll it back. Created, approved, denied and used are audited.
+
+**Alternatives.** A server-minted confirmation token: the agent can fetch and present it itself, so it proves no more than
+`confirm: true`. A per-key allow flag only: no per-action guarantee. Enforcing in the MCP server: bypassed by curl.
+Approval id in the body: DELETE has none, a header works for every route.
+
+**Consequences.** Breaking for API-key integrations: dangerous calls now take two steps and a human, so unattended
+publishing needs a `trusted` key (opt-in, shown as such) or a scheduled post at least 5 minutes ahead. The approval is
+spent before the live check of a token connect, so a rejected credential needs a new approval. Whoever holds the owner's
+browser session can approve. Changing `dangerous_policy` of an existing key and an OAuth-grant policy come later.

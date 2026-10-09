@@ -66,6 +66,11 @@ func (s *Service) Create(ctx context.Context, a actor.Actor, in CreateInput) (*p
 		p.Targets[i].PostID = p.ID
 	}
 	err = s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
+		if schedule {
+			if err := s.scheduleGuard(ctx, a, *in.ScheduledAt, createScheduleRequest(title, in, accountIDs, overrides)); err != nil {
+				return nil, err
+			}
+		}
 		if err := s.repo.Create(ctx, p); err != nil {
 			return nil, err
 		}
@@ -120,6 +125,14 @@ func (s *Service) Update(ctx context.Context, a actor.Actor, id uuid.UUID, in Up
 		if in.ScheduledAt != nil && p.Status != post.StatusScheduled {
 			return nil, errs.Validationf("use POST /posts/{id}/schedule to schedule a draft").WithField("scheduled_at", "post is not scheduled")
 		}
+		if in.ScheduledAt != nil {
+			if err := s.validateScheduleTime(*in.ScheduledAt); err != nil {
+				return nil, err
+			}
+			if err := s.scheduleGuard(ctx, a, *in.ScheduledAt, scheduleRequest(p, *in.ScheduledAt)); err != nil {
+				return nil, err
+			}
+		}
 		if err := s.applyUpdate(ctx, p, in); err != nil {
 			return nil, err
 		}
@@ -131,9 +144,6 @@ func (s *Service) Update(ctx context.Context, a actor.Actor, id uuid.UUID, in Up
 		}
 		runAt := *p.ScheduledAt
 		if in.ScheduledAt != nil {
-			if err := s.validateScheduleTime(*in.ScheduledAt); err != nil {
-				return nil, err
-			}
 			runAt = *in.ScheduledAt
 		}
 		return s.reschedule(ctx, p, runAt)

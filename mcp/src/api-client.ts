@@ -6,6 +6,8 @@ export class ApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly requestId?: string,
+    /** Extra detail the API attaches to an error (for APPROVAL_REQUIRED: approval_id, approve_url, expires_at, action). */
+    public readonly fields: Readonly<Record<string, string>> = {},
   ) {
     super(message);
     this.name = "ApiError";
@@ -20,6 +22,8 @@ export interface Me {
 export interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
+  /** An approval the owner granted for exactly this call; sent as X-Approval-Id. */
+  approvalId?: string;
 }
 
 export interface ClientOptions {
@@ -66,6 +70,7 @@ export class SocialOSClient {
       "User-Agent": "socialos-mcp/0.1",
     };
     if (this.opts.tool && TOOL_NAME.test(this.opts.tool)) headers["X-MCP-Tool"] = this.opts.tool;
+    if (o.approvalId) headers["X-Approval-Id"] = o.approvalId;
     if (this.opts.gatewaySecret) {
       headers["X-SocialOS-Gateway"] = this.opts.gatewaySecret;
       if (this.opts.clientIp) headers["X-SocialOS-Client-IP"] = this.opts.clientIp;
@@ -99,12 +104,13 @@ export class SocialOSClient {
       }
     }
     if (!res.ok) {
-      const e = (json as { error?: { code?: string; message?: string; request_id?: string } } | undefined)?.error;
+      const e = (json as { error?: { code?: string; message?: string; request_id?: string; fields?: unknown } } | undefined)?.error;
       throw new ApiError(
         res.status,
         e?.code ?? defaultCode(res.status),
         e?.message ?? `SocialOS API returned HTTP ${res.status}`,
         e?.request_id ?? res.headers.get("x-request-id") ?? this.requestId,
+        stringFields(e?.fields),
       );
     }
     return (json ?? { ok: true }) as T;
@@ -120,6 +126,14 @@ export class SocialOSClient {
   }
 }
 
+function stringFields(v: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (v && typeof v === "object") {
+    for (const [k, val] of Object.entries(v)) if (typeof val === "string") out[k] = val;
+  }
+  return out;
+}
+
 function defaultCode(status: number): string {
   switch (status) {
     case 400: return "VALIDATION_ERROR";
@@ -127,6 +141,7 @@ function defaultCode(status: number): string {
     case 403: return "FORBIDDEN";
     case 404: return "NOT_FOUND";
     case 409: return "CONFLICT";
+    case 428: return "APPROVAL_REQUIRED";
     case 429: return "RATE_LIMITED";
     default: return status >= 500 ? "INTERNAL" : "ERROR";
   }

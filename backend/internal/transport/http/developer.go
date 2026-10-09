@@ -13,6 +13,8 @@ type createKeyReq struct {
 	Name      string     `json:"name"`
 	Scopes    []string   `json:"scopes"`
 	ExpiresAt *time.Time `json:"expires_at"`
+	// DangerousPolicy is "approve" (default) or "trusted".
+	DangerousPolicy string `json:"dangerous_policy"`
 }
 
 func (a *API) listKeys(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +44,8 @@ func (a *API) createKey(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	k, raw, err := a.svc.Developer.CreateKey(r.Context(), actorOf(r), developer.CreateKeyInput{Name: req.Name, Scopes: req.Scopes, ExpiresAt: req.ExpiresAt})
+	k, raw, err := a.svc.Developer.CreateKey(r.Context(), actorOf(r), developer.CreateKeyInput{Name: req.Name, Scopes: req.Scopes, ExpiresAt: req.ExpiresAt,
+		DangerousPolicy: req.DangerousPolicy})
 	if err != nil {
 		httpx.Error(w, r, err)
 		return

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/apikey"
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/media"
@@ -74,6 +75,9 @@ func (s *Service) Schedule(ctx context.Context, a actor.Actor, id uuid.UUID, at 
 	err := s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
 		p, err := s.repo.GetForUpdate(ctx, a.UserID, id)
 		if err != nil {
+			return nil, err
+		}
+		if err := s.scheduleGuard(ctx, a, at, scheduleRequest(p, at)); err != nil {
 			return nil, err
 		}
 		return s.scheduleLocked(ctx, a, p, at)
@@ -164,6 +168,9 @@ func (s *Service) PublishNow(ctx context.Context, a actor.Actor, id uuid.UUID) (
 		if p.Status.Retryable() {
 			return nil, errs.Newf(errs.InvalidStateTransition, "post is %s; use retry", p.Status)
 		}
+		if err := s.gate.Require(ctx, a, postRequest(approval.ActionPostPublish, p)); err != nil {
+			return nil, err
+		}
 		if err := post.Transition(p.Status, post.StatusPublishing); err != nil {
 			return nil, err
 		}
@@ -224,6 +231,9 @@ func (s *Service) Retry(ctx context.Context, a actor.Actor, id uuid.UUID, in Ret
 		if !p.Status.Retryable() {
 			return nil, errs.Newf(errs.InvalidStateTransition, "post in status %s cannot be retried", p.Status)
 		}
+		if err := s.retryGuard(ctx, a, p, in); err != nil {
+			return nil, err
+		}
 		if n, err := s.resetForRetry(ctx, p, in.IncludeNeedsReview); err != nil || n == 0 {
 			if err == nil {
 				err = errs.Validationf("no failed targets to retry")
@@ -243,6 +253,14 @@ func (s *Service) Retry(ctx context.Context, a actor.Actor, id uuid.UUID, in Ret
 		return nil, err
 	}
 	return s.repo.Get(ctx, a.UserID, id)
+}
+
+// retryGuard: retrying now is publishing now; retrying for a time too close is the same.
+func (s *Service) retryGuard(ctx context.Context, a actor.Actor, p *post.Post, in RetryInput) error {
+	if in.ScheduledAt != nil {
+		return s.scheduleGuard(ctx, a, *in.ScheduledAt, scheduleRequest(p, *in.ScheduledAt))
+	}
+	return s.gate.Require(ctx, a, postRequest(approval.ActionPostRetryNow, p))
 }
 
 func (s *Service) resetForRetry(ctx context.Context, p *post.Post, includeReview bool) (int, error) {
@@ -272,6 +290,9 @@ func (s *Service) Delete(ctx context.Context, a actor.Actor, id uuid.UUID) error
 		}
 		if !p.Status.Deletable() {
 			return nil, errs.Newf(errs.InvalidStateTransition, "post in status %s cannot be deleted", p.Status)
+		}
+		if err := s.gate.Require(ctx, a, deleteRequest(p)); err != nil {
+			return nil, err
 		}
 		jobs, err := s.cancelJobs(ctx, p)
 		if err != nil {

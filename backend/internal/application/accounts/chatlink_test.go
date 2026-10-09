@@ -51,7 +51,10 @@ func (r *memRepo) Get(_ context.Context, userID, id uuid.UUID) (*socialaccount.A
 	}
 	return nil, errs.NotFoundf("social account")
 }
-func (r *memRepo) SetStatus(context.Context, uuid.UUID, uuid.UUID, socialaccount.Status) error {
+func (r *memRepo) SetStatus(_ context.Context, _ uuid.UUID, id uuid.UUID, st socialaccount.Status) error {
+	if a, ok := r.accs[id]; ok {
+		a.Status = st
+	}
 	return nil
 }
 func (r *memRepo) SaveCredentials(context.Context, uuid.UUID, EncryptedCredentials) error { return nil }

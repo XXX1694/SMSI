@@ -49,6 +49,8 @@ func StatusOf(c errs.Code) int {
 		return http.StatusConflict
 	case errs.RateLimited:
 		return http.StatusTooManyRequests
+	case errs.ApprovalRequired:
+		return http.StatusPreconditionRequired
 	case errs.SocialAccountExpired:
 		return http.StatusUnprocessableEntity
 	case errs.ProviderNotAvailable:

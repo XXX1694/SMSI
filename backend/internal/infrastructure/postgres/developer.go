@@ -15,12 +15,12 @@ type APIKeys struct{ db *DB }
 // NewAPIKeys creates the repo.
 func NewAPIKeys(db *DB) *APIKeys { return &APIKeys{db: db} }
 
-const keyCols = `id, user_id, name, prefix, key_hash, scopes, expires_at, revoked_at, last_used_at, created_at`
+const keyCols = `id, user_id, name, prefix, key_hash, scopes, expires_at, revoked_at, last_used_at, created_at, dangerous_policy`
 
 func scanKey(row interface{ Scan(...any) error }) (*apikey.Key, error) {
 	var k apikey.Key
 	var scopes []string
-	if err := row.Scan(&k.ID, &k.UserID, &k.Name, &k.Prefix, &k.KeyHash, &scopes, &k.ExpiresAt, &k.RevokedAt, &k.LastUsedAt, &k.CreatedAt); err != nil {
+	if err := row.Scan(&k.ID, &k.UserID, &k.Name, &k.Prefix, &k.KeyHash, &scopes, &k.ExpiresAt, &k.RevokedAt, &k.LastUsedAt, &k.CreatedAt, &k.DangerousPolicy); err != nil {
 		return nil, err
 	}
 	k.Scopes = apikey.FromStrings(scopes)
@@ -29,9 +29,9 @@ func scanKey(row interface{ Scan(...any) error }) (*apikey.Key, error) {
 
 // Create inserts a key (hash only).
 func (r *APIKeys) Create(ctx context.Context, k *apikey.Key) error {
-	return mapErr(r.db.q(ctx).QueryRow(ctx, `INSERT INTO api_keys (id, user_id, name, prefix, key_hash, scopes, expires_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING created_at`,
-		k.ID, k.UserID, k.Name, k.Prefix, k.KeyHash, apikey.Strings(k.Scopes), k.ExpiresAt).Scan(&k.CreatedAt), "api key")
+	return mapErr(r.db.q(ctx).QueryRow(ctx, `INSERT INTO api_keys (id, user_id, name, prefix, key_hash, scopes, expires_at, dangerous_policy)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING created_at`,
+		k.ID, k.UserID, k.Name, k.Prefix, k.KeyHash, apikey.Strings(k.Scopes), k.ExpiresAt, k.DangerousPolicy).Scan(&k.CreatedAt), "api key")
 }
 
 // List returns the user's keys.

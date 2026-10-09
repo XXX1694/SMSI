@@ -218,3 +218,28 @@ func TestMCPGatewaySecret(t *testing.T) {
 		t.Fatalf("32 chars are fine: %v", err)
 	}
 }
+
+func TestApprovalSettingsDefaultAndAreValidated(t *testing.T) {
+	validEnv(t)
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.AgentMinScheduleLead != 5*time.Minute || c.ApprovalTTL != 10*time.Minute || c.ApprovalMaxPending != 10 {
+		t.Fatalf("defaults: %v %v %d", c.AgentMinScheduleLead, c.ApprovalTTL, c.ApprovalMaxPending)
+	}
+	t.Setenv("AGENT_MIN_SCHEDULE_LEAD", "0s") // 0 switches the rule off
+	t.Setenv("APPROVAL_TTL", "30m")
+	t.Setenv("APPROVAL_MAX_PENDING", "3")
+	if c, err = Load(); err != nil || c.AgentMinScheduleLead != 0 || c.ApprovalTTL != 30*time.Minute || c.ApprovalMaxPending != 3 {
+		t.Fatalf("overrides: %+v %v", c, err)
+	}
+	for env, val := range map[string]string{"AGENT_MIN_SCHEDULE_LEAD": "-1m", "APPROVAL_TTL": "10s", "APPROVAL_MAX_PENDING": "0"} {
+		t.Run(env, func(t *testing.T) {
+			t.Setenv(env, val)
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), env) {
+				t.Fatalf("%s=%s should be rejected, got %v", env, val, err)
+			}
+		})
+	}
+}
