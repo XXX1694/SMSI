@@ -204,7 +204,7 @@ Security properties: user B cannot connect user A's channel without posting a co
 `POST /posts/{id}/publish` · `POST /posts/{id}/schedule {scheduled_at}` · `POST /posts/{id}/cancel` · `POST /posts/{id}/retry` · `GET /posts/{id}/status`
 
 ### Media
-`POST /media` (multipart `file`; ≤ 100 MB video / 10 MB image; MIME sniffed server-side; allow-list jpeg/png/webp/gif, mp4/quicktime) · `GET /media` · `GET /media/{id}` (includes short-lived `url`) · `DELETE /media/{id}`
+`POST /media` (multipart `file`; ≤ 100 MB video / 10 MB image; MIME sniffed server-side from the first bytes; allow-list jpeg/png/webp/gif, mp4/quicktime; the body is streamed to S3 in 5 MiB parts, size enforced while streaming, at most `MEDIA_UPLOAD_CONCURRENCY` (2) at once, then `429 RATE_LIMITED` + `Retry-After`; the web UI posts it directly to the API host, see D-015) · `GET /media` · `GET /media/{id}` (includes short-lived `url`) · `DELETE /media/{id}`
 
 ### Analytics & dashboard
 `GET /analytics?from=&to=` · `GET /dashboard/summary` → `{connected_accounts, scheduled_posts, drafts, published_this_month, failed, upcoming:[…], recent:[…]}`
