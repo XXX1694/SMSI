@@ -24,6 +24,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 ### Fixed
 
 - The site smoke test confirms the demo's Reset dialog (it had been failing since the reset confirmation landed).
+- Pages no longer scroll slightly on notched iPhones: the safe-area body padding is now subtracted from the `min-h-screen` and `md:h-screen` heights (dynamic viewport units, so the mobile browser bars are accounted for); desktop and Android, with zero insets, are unchanged.
 - The completed setup checklist collapses to a "Set up" line with a "Show steps" button; the Approvals tab is kept in the URL (`?tab=history`); stacked table rows (Developer on phones) are more compact.
 - Calendar month view no longer scrolls sideways at 768 to 1280 px; event chips are at least 24 px tall with a gap between them.
 - Approval cards no longer break labels on phones and show network and status names (LinkedIn, Telegram, Draft) instead of codes.
