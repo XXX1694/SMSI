@@ -6,6 +6,7 @@ package errs
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // Code is a stable, machine-readable error code.
@@ -38,7 +39,9 @@ type Error struct {
 	// Transient marks a conflict that nothing in the request caused (a database deadlock): the same request can be
 	// repeated at once. The HTTP layer adds Retry-After.
 	Transient bool
-	cause     error
+	// RetryAfter, when positive, is how long the caller should wait before repeating a RATE_LIMITED request.
+	RetryAfter time.Duration
+	cause      error
 }
 
 func (e *Error) Error() string {
@@ -66,6 +69,12 @@ func Wrap(code Code, msg string, cause error) *Error {
 // AsTransient marks the error as safe to repeat immediately.
 func (e *Error) AsTransient() *Error {
 	e.Transient = true
+	return e
+}
+
+// WithRetryAfter sets how long a rate-limited caller should wait.
+func (e *Error) WithRetryAfter(d time.Duration) *Error {
+	e.RetryAfter = d
 	return e
 }
 

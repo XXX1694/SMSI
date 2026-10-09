@@ -284,6 +284,19 @@
       "agentsUnlimited": "AI agents: no request limit.",
       "agentsLimit": "AI agents: up to {rpm, plural, one {# request} other {# requests}} per minute across all your keys and connections.",
       "loadFailed": "Could not load your usage"
+    },
+    "yourData": "Your data",
+    "export": {
+      "loadFailed": "Could not load your exports",
+      "intro": "Download a ZIP with your profile, posts with their targets and publishing attempts, connected accounts (without credentials), API key names, the audit log, approvals and your media files. Passwords, keys and tokens are never included.",
+      "preparing": "Preparing your export. You can leave this page; it is ready when you come back.",
+      "ready": "Your export ({size}) is ready. The download link works for 5 minutes; the file is deleted on {date}.",
+      "failed": "The last export could not be built. Nothing was kept; try again.",
+      "expired": "Your last export expired and was deleted. Request a new one.",
+      "download": "Download ZIP",
+      "requestNew": "Request a new export",
+      "request": "Request export",
+      "cooldown": "A new export can be requested 24 hours after the last one."
     }
   },
   "dashboard": {
