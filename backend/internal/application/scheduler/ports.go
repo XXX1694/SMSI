@@ -33,8 +33,8 @@ func (r RetryInfo) Exhausted() bool { return r.Retried >= r.MaxRetry }
 
 // Targets is the worker's view of post_targets and attempts.
 type Targets interface {
-	// LockTarget locks a target row with FOR UPDATE SKIP LOCKED.
-	// It returns (nil, false, nil) when another transaction holds the lock.
+	// LockTarget locks a target row with FOR UPDATE SKIP LOCKED, after taking the owning post's row lock (post → target,
+	// issue #38). It returns (nil, false, nil) when another transaction holds the target lock.
 	LockTarget(ctx context.Context, id uuid.UUID) (*post.Target, bool, error)
 	// LockTargetWait locks a target row of the given owner, waiting for other holders (finalize path).
 	LockTargetWait(ctx context.Context, userID, id uuid.UUID) error

@@ -25,17 +25,13 @@ function FormField({
 }) {
   const optional = !field.required && !/optional/i.test(field.label);
   const props = {
-    id,
     name: field.name,
     value,
     placeholder: field.placeholder || undefined,
-    'aria-required': field.required,
-    'aria-invalid': error ? true : undefined,
-    'aria-describedby': error ? `${id}-error` : field.help ? `${id}-hint` : undefined,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
   };
   return (
-    <Field label={optional ? `${field.label} (optional)` : field.label} htmlFor={id} hint={field.help} error={error || null}>
+    <Field label={field.label} optional={optional} required={field.required} htmlFor={id} hint={field.help} error={error || null}>
       {isSecretField(field) ? (
         <SecretInput {...props} label={field.label} />
       ) : (

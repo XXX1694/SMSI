@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/components/auth-provider';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Field, Input } from '@/components/ui/input';
 import { InlineError } from '@/components/states';
 import { DEMO, DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/demo/config';
@@ -18,6 +20,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const [password, setPassword] = useState(DEMO && mode === 'login' ? DEMO_PASSWORD : '');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const isLogin = mode === 'login';
 
@@ -28,10 +31,14 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       setError('Password must be at least 8 characters.');
       return;
     }
+    if (!isLogin && !accepted) {
+      setError('Accept the Terms and the Privacy Policy to create an account.');
+      return;
+    }
     setBusy(true);
     try {
       if (isLogin) await login(email.trim(), password);
-      else await register(email.trim(), password, name.trim());
+      else await register(email.trim(), password, name.trim(), accepted);
       const next = params.get('next');
       router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard');
     } catch (err) {
@@ -71,6 +78,22 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
+          {!isLogin ? (
+            <div className="flex items-start gap-2 text-sm">
+              <Checkbox id="accept-terms" checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} required />
+              <label htmlFor="accept-terms" className="leading-snug">
+                I agree to the{' '}
+                <Link href="/terms" target="_blank" className="text-accent hover:underline">
+                  Terms
+                </Link>{' '}
+                and the{' '}
+                <Link href="/privacy" target="_blank" className="text-accent hover:underline">
+                  Privacy Policy
+                </Link>
+                .
+              </label>
+            </div>
+          ) : null}
           {isLogin && !DEMO ? (
             <p className="-mt-2 text-right text-xs">
               <Link href="/forgot-password" className="text-accent hover:underline">
@@ -102,6 +125,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             </>
           )}
         </p>
+        <LegalLinks className="mt-6" />
       </div>
     </main>
   );

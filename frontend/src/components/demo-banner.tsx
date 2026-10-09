@@ -15,7 +15,7 @@ export function DemoBanner() {
   return (
     <div
       role="note"
-      className="fixed inset-x-0 top-0 z-40 flex h-7 items-center justify-between gap-3 border-b bg-muted px-3 text-xs text-muted-foreground"
+      className="fixed inset-x-0 top-0 z-banner flex h-7 items-center justify-between gap-3 border-b bg-muted px-3 text-xs text-muted-foreground"
     >
       <p className="truncate">
         <span className="font-medium text-foreground">Demo</span> — data stays in your browser ·{' '}

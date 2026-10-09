@@ -12,6 +12,7 @@ import (
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/errs"
+	"github.com/socialos/backend/internal/domain/terms"
 	"github.com/socialos/backend/internal/domain/user"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 )
@@ -82,6 +83,8 @@ func NewService(d Deps) (*Service, error) {
 // RegisterInput is the registration payload.
 type RegisterInput struct {
 	Email, Password, DisplayName string
+	// AcceptTerms must be true: the caller confirms the current Terms and Privacy Policy (terms.CurrentVersion).
+	AcceptTerms bool
 }
 
 // Register creates a user and logs them in.
@@ -97,11 +100,17 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, ci ClientInfo)
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
+	if !in.AcceptTerms {
+		return nil, IssuedSession{}, errs.Validationf("you must accept the Terms and the Privacy Policy").
+			WithField("accept_terms", "must be accepted")
+	}
+	acceptedAt := s.clock.Now()
 	hash, err := s.hasher.Hash(ctx, in.Password)
 	if err != nil {
 		return nil, IssuedSession{}, err
 	}
-	u := &user.User{Email: email, PasswordHash: hash, DisplayName: name, Status: user.StatusActive, Plan: user.DefaultPlan}
+	u := &user.User{Email: email, PasswordHash: hash, DisplayName: name, Status: user.StatusActive, Plan: user.DefaultPlan,
+		TermsAcceptedAt: &acceptedAt, TermsVersion: terms.CurrentVersion}
 	var issued IssuedSession
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		if err := s.users.Create(ctx, u); err != nil {
