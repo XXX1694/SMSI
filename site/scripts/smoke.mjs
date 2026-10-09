@@ -6,7 +6,7 @@
  *   npm run build && npm run smoke
  *
  * Checks the landing page (hero video, honest network list, scroll story, reduced motion, phone), the docs, and the browser-only demo: seeded dashboard, compose -> schedule,
- * the calendar, an MCP connection on the Developer page and the banner's Reset. Fails on any console
+ * the calendar, an MCP connection on the Developer page and the banner's Reset (with its confirmation). Fails on any console
  * error, page error or failed local request. Screenshots go to SMOKE_OUT (default: a temp folder).
  */
 import { mkdirSync, mkdtempSync } from 'node:fs';
@@ -311,6 +311,8 @@ await step('state survives a reload, Reset restores the seed', async () => {
   await monthGoto();
   await visible(page.getByRole('link', { name: new RegExp(TITLE) }));
   await page.getByRole('button', { name: 'Reset' }).click();
+  // Reset asks for confirmation since the UI audit (#140).
+  await page.getByRole('button', { name: 'Reset demo', exact: true }).click();
   await page.waitForURL(/\/demo\/dashboard\/?$/, { timeout: 15_000 });
   await visible(page.getByText('Release 2.5 teaser'));
   await page.goto(`${SITE}/demo/calendar/`);
