@@ -11,7 +11,7 @@ describe('safeNext', () => {
     ['/compose?post=1', '/compose?post=1'],
   ])('keeps the in-app path %s', (raw, want) => expect(safeNext(raw)).toBe(want));
 
-  it.each([null, undefined, '', 'dashboard', 'https://evil.example', '//evil.example', '/\\evil.example', 'javascript:alert(1)', '/\t/evil.example', '/\n/evil.example', '/\r//evil.example', '/\u0000/evil', '/\u007f/evil', '/a\tb', '/next?u=https://x.test', `/${'a'.repeat(512)}`])('drops %s', (raw) =>
+  it.each([null, undefined, '', 'dashboard', 'https://evil.example', '//evil.example', '/\\evil.example', 'javascript:alert(1)', '/\t/evil.example', '/\n/evil.example', '/\r//evil.example', '/.//evil.example', '/a/..//evil.example', '/\u0000/evil', '/\u007f/evil', '/a\tb', '/next?u=https://x.test', `/${'a'.repeat(512)}`])('drops %s', (raw) =>
     expect(safeNext(raw)).toBeNull(),
   );
 });

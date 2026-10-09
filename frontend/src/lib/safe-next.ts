@@ -15,7 +15,9 @@ export function safeNext(raw: string | null | undefined): string | null {
   if (FORBIDDEN.test(raw) || raw.includes('://')) return null;
   try {
     const base = typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
-    if (new URL(raw, base).origin !== new URL(base).origin) return null;
+    const url = new URL(raw, base);
+    // `/.//evil.com` normalises to the path `//evil.com`: same origin here, but protocol-relative wherever it is reused.
+    if (url.origin !== new URL(base).origin || url.pathname.startsWith('//')) return null;
   } catch {
     return null;
   }
