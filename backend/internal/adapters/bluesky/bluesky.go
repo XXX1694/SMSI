@@ -18,7 +18,6 @@ package bluesky
 import (
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/socialos/backend/internal/adapters/provider"
@@ -66,7 +65,7 @@ func New(cfg Config) *Adapter {
 	if pds == "" {
 		pds = defaultPDS
 	}
-	a := &Adapter{cfg: cfg, pds: pds, sessions: &sessionCache{entries: map[string]*sessionEntry{}, mu: sync.Mutex{}}}
+	a := &Adapter{cfg: cfg, pds: pds, sessions: newSessionCache()}
 	if cfg.HTTPClient != nil {
 		a.fixed, a.custom = cfg.HTTPClient, cfg.HTTPClient
 		return a

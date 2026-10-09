@@ -2,8 +2,9 @@ package bluesky
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -36,13 +37,31 @@ type sessionResponse struct {
 type sessionEntry struct {
 	mu           sync.Mutex
 	sess         *session
-	pwHash       [32]byte
+	pwMAC        []byte // keyed fingerprint of the password this session was made with
 	blockedUntil time.Time
 }
 
 type sessionCache struct {
 	mu      sync.Mutex
 	entries map[string]*sessionEntry
+	macKey  []byte // random per process, never persisted
+}
+
+func newSessionCache() *sessionCache {
+	k := make([]byte, 32)
+	if _, err := rand.Read(k); err != nil {
+		panic("bluesky: no randomness for the session cache: " + err.Error())
+	}
+	return &sessionCache{entries: map[string]*sessionEntry{}, macKey: k}
+}
+
+// fingerprint is an HMAC-SHA256 of the password under a random in-memory key. It
+// only detects that the stored password changed; it is not a stored credential
+// hash and cannot be reproduced outside this process.
+func (c *sessionCache) fingerprint(password string) []byte {
+	m := hmac.New(sha256.New, c.macKey)
+	m.Write([]byte(password))
+	return m.Sum(nil)
 }
 
 func (c *sessionCache) entry(key string) *sessionEntry {
@@ -118,8 +137,8 @@ func (a *Adapter) acquire(ctx context.Context, t target, force bool) (*session, 
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	now := a.cfg.Now()
-	h := sha256.Sum256([]byte(t.password))
-	if e.sess != nil && subtle.ConstantTimeCompare(h[:], e.pwHash[:]) != 1 {
+	h := a.sessions.fingerprint(t.password)
+	if e.sess != nil && !hmac.Equal(h, e.pwMAC) {
 		e.sess = nil
 	}
 	if e.sess != nil && !force && now.Add(30*time.Second).Before(e.sess.accessExp) {
@@ -128,7 +147,7 @@ func (a *Adapter) acquire(ctx context.Context, t target, force bool) (*session, 
 	if e.sess != nil && now.Add(30*time.Second).Before(e.sess.refreshExp) {
 		s, err := a.refresh(ctx, t, e.sess)
 		if err == nil {
-			e.sess, e.pwHash = s, h
+			e.sess, e.pwMAC = s, h
 			return s, nil
 		}
 		if !isAuth(err) && !isRateLimited(err) {
@@ -152,7 +171,7 @@ func (a *Adapter) acquire(ctx context.Context, t target, force bool) (*session, 
 		}
 		return nil, err
 	}
-	e.sess, e.pwHash = s, h
+	e.sess, e.pwMAC = s, h
 	return s, nil
 }
 

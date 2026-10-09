@@ -198,3 +198,39 @@ func TestServerAndRequestErrorMapping(t *testing.T) {
 		t.Errorf("InvalidRequest: %v", err)
 	}
 }
+
+func TestChangedPasswordDropsCachedSession(t *testing.T) {
+	f := newFake(t)
+	a := f.adapter()
+	if _, err := a.Publish(context.Background(), req("one")); err != nil {
+		t.Fatal(err)
+	}
+	// Same password again: the cached session is reused.
+	r2 := req("two")
+	r2.IdempotencyKey = "target-2"
+	if _, err := a.Publish(context.Background(), r2); err != nil {
+		t.Fatal(err)
+	}
+	if f.creates != 1 {
+		t.Fatalf("creates %d, want 1 while the password is unchanged", f.creates)
+	}
+	// A new password must log in again even though the cached token is still valid.
+	f.mu.Lock()
+	f.password = "rotated-rotated-pw" // gitleaks:allow (fake test value)
+	f.mu.Unlock()
+	r3 := req("three")
+	r3.IdempotencyKey = "target-3"
+	r3.AccessToken = "rotated-rotated-pw" // gitleaks:allow (fake test value)
+	if _, err := a.Publish(context.Background(), r3); err != nil {
+		t.Fatal(err)
+	}
+	if f.creates != 2 {
+		t.Fatalf("creates %d, want 2 after the password changed", f.creates)
+	}
+	// And the old password is no longer served from the cache.
+	r4 := req("four")
+	r4.IdempotencyKey = "target-4"
+	if _, err := a.Publish(context.Background(), r4); provider.Classify(err) != provider.KindAuth {
+		t.Fatalf("old password: want auth, got %v", err)
+	}
+}
