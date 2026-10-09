@@ -185,13 +185,14 @@ assess_socialos() {
 }
 
 # assess_containers: finds a SocialOS container that thrashes its own page cache: memory.current at THRASH_MEM_PCT of
-# memory.max AND workingset_refault_file growing faster than THRASH_REFAULT_MBPS (pages, 4 KiB each, since the last
+# memory.max AND workingset_refault_file growing faster than THRASH_REFAULT_MBPS (pages of getconf PAGESIZE, since the last
 # run). That is a cap too small for the working set: it reads the same files from disk again and again. Shedding other
 # containers cannot help, only that container can. Sets THRASHING (entries "service|id|mem%|refault MB/s") and
 # TOP_IO ("service MB/s": the container with the highest disk read+write rate, empty when below SLICE_IO_MBPS).
 # Needs the first run to have a previous reading, so it detects from the second run on.
 assess_containers() {
-  local id svc cg cur max pct pages rate mbps io top_mbps=0
+  local id svc cg cur max pct pages rate mbps io top_mbps=0 page
+  page=$(getconf PAGESIZE 2>/dev/null || echo 4096)
   THRASHING=()
   TOP_IO=""
   while read -r id svc; do
@@ -213,7 +214,7 @@ assess_containers() {
     ((max > 0)) || continue
     rate=$(counter_rate "refault-$svc" "$pages")
     pct=$((cur * 100 / max))
-    mbps=$((${rate:-0} * 4096 / 1048576))
+    mbps=$((${rate:-0} * page / 1048576))
     if ((pct >= THRASH_MEM_PCT && mbps >= THRASH_REFAULT_MBPS)); then THRASHING+=("$svc|$id|$pct|$mbps"); fi
   done < <(dk ps --no-trunc --filter "label=com.docker.compose.project=$PROJECT" --filter status=running \
     --format '{{.ID}} {{.Label "com.docker.compose.service"}}' 2>/dev/null || true)

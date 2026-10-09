@@ -721,9 +721,12 @@ the other site as well: add its URL to `UPTIME_URLS`.
 **A container that thrashes its page cache.** When a container sits at 95% of its `memory.max` (`GUARD_THRASH_MEM_PCT`)
 and re-reads the pages it just lost faster than 20 MB/s (`workingset_refault_file`, `GUARD_THRASH_REFAULT_MBPS`), its cap is
 too small for its working set and shedding other containers cannot help. The guard raises `thrash-<service>` (naming the
-container and the `<SERVICE>_MEM_LIMIT` to raise), restarts it once per `GUARD_THRASH_COOLDOWN` (3600 s) if it is
-`postgres redis minio backend` (`GUARD_THRASH_ESSENTIAL`) or stops it otherwise, and does not shed that run. The `pressure`
-alert also names the container with the most disk IO and says when shedding does not stop it. Detection needs two runs.
+container and the `<SERVICE>_MEM_LIMIT` to raise). It acts only after two consecutive thrash readings, only while the host
+is under pressure (on a calm host it only alerts) and not while `deploy.sh` holds `.deploy/lock`: it restarts the container
+once per episode if it is `postgres redis minio backend` (`GUARD_THRASH_ESSENTIAL`), or stops it otherwise (shed level 1,
+started again after the usual calm runs), and does not shed that run. If it thrashes again a restart cannot help, so it
+stays an alert until the container has been quiet for `GUARD_THRASH_COOLDOWN` (3600 s). The `pressure` alert also names the
+container with the most disk IO and says when shedding does not stop it.
 
 IO is the one budget without a proof: the host disk uses the `none` scheduler without `io.cost`, so `IOWeight` has no
 effect. The slice caps reads at 60 MB/s and deliberately has **no write cap** until the disk has been measured in a

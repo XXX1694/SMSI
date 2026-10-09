@@ -277,5 +277,5 @@ cd /sys/fs/cgroup/socialos.slice/docker-"$id".scope && cat memory.current memory
 
 Run it twice a few seconds apart: a `workingset_refault_file` that grows by more than 5000 pages per second (20 MB/s)
 while `memory.current` is at `memory.max` means the cap is too small. The guard (`thrash-<service>` alert) restarts the
-container once an hour; the fix is a larger `<SERVICE>_MEM_LIMIT` (and a matching `GOMEMLIMIT`) in `.env` and
+container once per episode, and only on a stressed host; the fix is a larger `<SERVICE>_MEM_LIMIT` (and a matching `GOMEMLIMIT`) in `.env` and
 `docker compose up -d <service>`.
