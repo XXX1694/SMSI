@@ -14,7 +14,8 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
 
       <LegalSection title="What is stored">
         <ul>
-          <li>Account: your email address, your display name and a salted hash of your password (Argon2id). The password itself is never stored.</li>
+          <li>Account: your email address, your display name and, if you set one, a salted hash of your password (Argon2id). The password itself is never stored.</li>
+          <li>Sign-in with Google or GitHub, if you use it: which provider, your account id there, the email address it reports and whether it verified it, when you connected it and when you last signed in with it. The provider&apos;s access token is used once to read these and then thrown away.</li>
           <li>Terms: the version of these texts you accepted and when.</li>
           <li>Connected networks: the access tokens or credentials that LinkedIn, Telegram, Discord, Mastodon and Bluesky give Steerpost. They are encrypted at rest and never shown in the interface, logs or audit log.</li>
           <li>Content: your posts, their schedule and status, and the media you upload.</li>
@@ -32,15 +33,7 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
         </p>
       </LegalSection>
 
-      <LegalSection title="What leaves the server">
-        <p>
-          Steerpost calls the APIs of the networks you connect, only on your behalf: LinkedIn, Telegram, Discord, Mastodon and Bluesky. It sends
-          the post text and media you chose to publish and reads back the status and ids it needs. Those networks have their own privacy
-          policies, which apply to what they receive.
-        </p>
-        <p>If the operator turned on email, a mail server also receives your address to send verification and password-reset messages.</p>
-        <p>There are no advertising or analytics trackers, and no third-party scripts, in the web app. It sets two cookies, a session cookie and a CSRF cookie, which are needed to sign in.</p>
-      </LegalSection>
+      <WhatLeavesTheServer />
 
       <LegalSection title="How long it is kept">
         <ul>
@@ -54,12 +47,12 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
       <LegalSection title="Export and deletion">
         <p>
           Export: in Settings, under &quot;Your data&quot;, you can download a ZIP of everything you have in Steerpost: your profile, posts, connected
-          accounts (without credentials), API key names, approvals, the audit log and your media files. The file is deleted from storage after a few days.
+          accounts (without credentials), the Google or GitHub accounts you sign in with, API key names, approvals, the audit log and your media files. The file is deleted from storage after a few days.
         </p>
         <p>
-          Deletion: in Settings, under &quot;Your data&quot;, you can delete your whole account. You confirm with your password and by typing your email.
+          Deletion: in Settings, under &quot;Your data&quot;, you can delete your whole account. You confirm with your password (or, if you never set one, by having signed in within the last 10 minutes) and by typing your email.
           Your sessions and API keys are signed out at once and scheduled posts are set back to drafts. After a grace period (7 days unless the operator
-          changed it) your posts, media files, connected networks and their stored credentials, API keys, approvals and audit log are deleted. Until then you can sign in
+          changed it) your posts, media files, connected networks and their stored credentials, linked Google or GitHub accounts, API keys, approvals and audit log are deleted. Until then you can sign in
           and cancel. A record that an account was deleted, with counts only and no personal data, is kept. You can also delete single posts and media and disconnect a network at any time.
         </p>
         <p>Backups and server logs are not touched by this; they expire on the operator&apos;s schedule.</p>
@@ -84,5 +77,25 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
         <p>Contact: {operator.contact}</p>
       </LegalSection>
     </LegalPage>
+  );
+}
+
+/** Every third party that receives data, including the sign-in providers (D-023). */
+function WhatLeavesTheServer() {
+  return (
+    <LegalSection title="What leaves the server">
+      <p>
+        Steerpost calls the APIs of the networks you connect, only on your behalf: LinkedIn, Telegram, Discord, Mastodon and Bluesky. It sends
+        the post text and media you chose to publish and reads back the status and ids it needs. Those networks have their own privacy
+        policies, which apply to what they receive.
+      </p>
+      <p>
+        If you choose &quot;Continue with Google&quot; or &quot;Continue with GitHub&quot;, your browser goes to that provider to sign in, and Steerpost asks it
+        only for your account id, name and email address (Google: <code>openid email profile</code>; GitHub: <code>user:email</code>). Steerpost never
+        sees your password there and cannot post anything with it. The provider&apos;s own privacy policy applies to that sign-in.
+      </p>
+      <p>If the operator turned on email, a mail server also receives your address to send verification and password-reset messages.</p>
+      <p>There are no advertising or analytics trackers, and no third-party scripts, in the web app. It sets two cookies, a session cookie and a CSRF cookie, which are needed to sign in. Signing in with Google or GitHub adds a short-lived cookie that ties the provider&apos;s answer to your browser; it expires after 10 minutes.</p>
+    </LegalSection>
   );
 }

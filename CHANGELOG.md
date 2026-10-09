@@ -15,6 +15,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Changed
 
+- Privacy Policy and Terms version `2026-10-11`: the Privacy Policy covers signing in with Google or GitHub (what is stored, the scopes asked for, the 10-minute sign-in cookie, export and deletion, confirming deletion without a password). New accounts accept this version; existing ones are not blocked (D-016).
 - Hero transitions, step 6 of D-024: signing in, registering and finishing a Google or GitHub sign-up fill the screen with an accent circle from the pressed button and reveal the dashboard behind it; Publish now (composer and post page) sends a diagonal accent wipe across the screen and the success message lands after it. Each is one overlay that never takes the pointer, at most 520 ms, and is skipped under reduced motion and Pause motion. Scheduling from the composer into the calendar (the shared-element move) is a separate step.
 - Motion, step 5 of D-024: moving between pages is a 150 ms fade instead of a 320 ms rise; lists no longer stagger in (accounts, approvals, media, posts, the onboarding steps), except the dashboard's sections on its first load in a tab; a view transition whose navigation never commits releases the page after 300 ms instead of 1 s.
 - The Dockerfiles pin their base images by digest (`golang:1.26-alpine`, `node:22-alpine`, `distroless/static-debian12:nonroot`), so a registry or mirror cannot hand a release a different or stale base for the tag; Dependabot's weekly docker update bumps the digests.
@@ -31,6 +32,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- The data export now includes `sign_in_methods.json` (the Google or GitHub accounts you sign in with: provider, account id there, email, dates), and `profile.json` says whether a password is set. Before, the archive left them out although it promised everything.
 - The "Create one" and "Sign in" links between `/login` and `/register` dropped `?next=`; they keep it now, and only same-origin paths are accepted.
 
 ### Removed

@@ -22,7 +22,7 @@ func NewExportData(db *DB) *ExportData { return &ExportData{db: db} }
 var exportQueries = map[account.Dataset]string{
 	account.DatasetProfile: `SELECT id, jsonb_build_object('id', id, 'email', email, 'display_name', display_name, 'status', status,
 		'plan', plan, 'email_verified_at', email_verified_at, 'terms_accepted_at', terms_accepted_at,
-		'terms_version', terms_version, 'created_at', created_at)::text
+		'terms_version', terms_version, 'has_password', password_hash IS NOT NULL, 'created_at', created_at)::text
 		FROM users WHERE id = $1 AND id > $2 ORDER BY id LIMIT $3`,
 	account.DatasetSocialAccounts: `SELECT id, jsonb_build_object('id', id, 'provider', provider, 'provider_account_id', provider_account_id,
 		'username', username, 'display_name', display_name, 'avatar_url', avatar_url, 'scopes', scopes, 'metadata', metadata,
@@ -58,6 +58,10 @@ var exportQueries = map[account.Dataset]string{
 		'actor_label', actor_label, 'action', action, 'resource_type', resource_type, 'resource_id', resource_id,
 		'metadata', metadata, 'request_id', request_id, 'ip', ip, 'created_at', created_at)::text
 		FROM audit_logs WHERE user_id = $1 AND id > $2 ORDER BY id LIMIT $3`,
+	// At most one row per provider; the UNIQUE (user_id, provider) index serves the filter.
+	account.DatasetSignInMethods: `SELECT id, jsonb_build_object('id', id, 'provider', provider, 'provider_account_id', subject,
+		'email', email, 'email_verified', email_verified, 'linked_at', linked_at, 'last_login_at', last_login_at)::text
+		FROM user_identities WHERE user_id = $1 AND id > $2 ORDER BY id LIMIT $3`,
 }
 
 // Rows returns the next batch of a dataset.

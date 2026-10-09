@@ -109,7 +109,7 @@ func TestAccountExportFlow(t *testing.T) {
 
 	files := e.zipOf(uid, id)
 	for _, name := range []string{"README.txt", "profile.json", "social_accounts.json", "posts.json", "media.json", "api_keys.json",
-		"mcp_connections.json", "approvals.json", "audit_logs.json"} {
+		"mcp_connections.json", "approvals.json", "audit_logs.json", "sign_in_methods.json"} {
 		if _, ok := files[name]; !ok {
 			t.Errorf("archive lacks %s", name)
 		}

@@ -3,4 +3,4 @@ package terms
 
 // CurrentVersion is the date of the legal texts in frontend/src/lib/legal.ts (LEGAL_VERSION). Bump both together
 // whenever the meaning of either text changes; terms_test.go fails if they drift apart.
-const CurrentVersion = "2026-10-10"
+const CurrentVersion = "2026-10-11"
