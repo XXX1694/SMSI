@@ -26,6 +26,7 @@
       "Request failed (": "Fallback ApiError.message when the server sends no body; API messages stay English and the UI never shows it (isTechnicalMessage)."
     },
     "src/lib/normalize.ts": {
+      "Google": "Sign-in provider brand name (proper noun), same in every language.",
       "Telegram": "Network brand name (proper noun), same in every language.",
       "Instagram": "Network brand name (proper noun), same in every language.",
       "Facebook": "Network brand name (proper noun), same in every language.",

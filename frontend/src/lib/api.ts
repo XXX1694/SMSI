@@ -8,6 +8,7 @@ import {
   normalizePendingSignup,
   normalizeSignInProviders,
   normalizePage,
+  normalizeSignInMethods,
   normalizeTelegramLink,
   normalizeTelegramLinkState,
   normalizeProvider,
@@ -31,6 +32,7 @@ import type {
   PendingSignup,
   Post,
   Provider,
+  SignInMethodList,
   SignInProvider,
   SocialAccount,
   TelegramLink,
@@ -50,6 +52,21 @@ export interface PostFilters {
   to?: string;
   limit?: number;
   cursor?: string;
+}
+
+/** The body of the calls that re-authenticate: `current_password` only for users who have a password. */
+function reauthBody(currentPassword: string | undefined): Record<string, string> {
+  return currentPassword ? { current_password: currentPassword } : {};
+}
+
+/** Only an http(s) URL may be navigated to: a `javascript:` or `data:` value in a tampered answer would run in our origin. */
+function webUrl(raw: string | undefined): string {
+  try {
+    const u = new URL(raw ?? '');
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : '';
+  } catch {
+    return '';
+  }
 }
 
 export const api = {
@@ -112,6 +129,27 @@ export const api = {
         method: 'POST',
         body: { current_password: currentPassword, new_password: newPassword, revoke_keys: revokeKeys },
       });
+    },
+    /** The sign-in methods of the signed-in user (D-023): linked provider accounts and whether a password is set. */
+    async signInMethods(): Promise<SignInMethodList> {
+      return normalizeSignInMethods(await request('/auth/identities'));
+    },
+    /**
+     * Starts connecting a provider account; the answer is where the browser goes next. Users with a password send it
+     * (`current_password`, a wrong one is a 400 with that field); users without one need a session younger than
+     * 10 minutes or get 403 REAUTH_REQUIRED. 409: already connected, 404: provider switched off.
+     */
+    async linkIdentity(provider: string, currentPassword?: string): Promise<{ authorize_url: string }> {
+      const r = (await request(`/auth/identities/${enc(provider)}/link`, { method: 'POST', body: reauthBody(currentPassword) })) as { authorize_url?: string } | null;
+      return { authorize_url: webUrl(r?.authorize_url) };
+    },
+    /** Disconnects a provider account (same re-authentication as `linkIdentity`). 409: it is the last way to sign in. */
+    async unlinkIdentity(provider: string, currentPassword?: string): Promise<void> {
+      await request(`/auth/identities/${enc(provider)}`, { method: 'DELETE', body: reauthBody(currentPassword) });
+    },
+    /** For accounts without a password (409 otherwise). Signs the other sessions out; a session older than 10 minutes is 403 REAUTH_REQUIRED. */
+    async setPassword(newPassword: string): Promise<void> {
+      await request('/auth/password/set', { method: 'POST', body: { new_password: newPassword } });
     },
   },
   social: {

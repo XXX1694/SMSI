@@ -257,7 +257,7 @@ describe('the app screens are fully translated in the pseudo-locale (demo data, 
   const data: (RegExp | ((s: string) => boolean))[] = [
     isSeedData,
     /^[a-z]+:[a-z]+(, [a-z]+:[a-z]+)*$/,
-    /^(LinkedIn|Telegram|Test network|Claude Desktop|UTC|free|English|Discord|Mastodon|Bluesky|Instagram|Facebook|TikTok|YouTube|Threads|Pinterest)$/,
+    /^(LinkedIn|Telegram|GitHub|Google|Test network|Claude Desktop|UTC|free|English|Discord|Mastodon|Bluesky|Instagram|Facebook|TikTok|YouTube|Threads|Pinterest)$/,
     /^(LinkedIn|Telegram|Test network)(, (LinkedIn|Telegram|Test network))*$/, // network names joined with the catalog separator
     /^[A-Z][A-Za-z_-]+\/[A-Za-z_/-]+$/, // time zone ids
     /^\d{1,2} \w{3,4} \d{4}, \d{2}:\d{2}$/,
