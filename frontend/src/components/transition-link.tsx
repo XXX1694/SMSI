@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ComponentProps, MouseEvent } from 'react';
-import { isCurrentLocation, runWithTransition } from '@/lib/view-transition';
+import { isCurrentPath, runWithTransition } from '@/lib/view-transition';
 
 /**
  * A Link whose plain left-click navigates inside a view transition. Modified clicks (new tab, download, external
@@ -24,8 +24,9 @@ export function TransitionLink({ onClick, href, target, ...props }: ComponentPro
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     if (target && target !== '_self') return;
     const to = hrefToString(href);
-    // Same page: nothing is committed, so a transition would only freeze the page until its timeout.
-    if (isCurrentLocation(to)) return;
+    // Same pathname (same page, or only the query/hash changes): no pathname change is signalled, so a transition would
+    // only freeze the page until its timeout. Let the Link navigate normally.
+    if (isCurrentPath(to)) return;
     e.preventDefault();
     runWithTransition(() => router.push(to));
   }

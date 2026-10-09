@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TransitionLink, hrefToString } from '@/components/transition-link';
-import { isCurrentLocation, notifyNavigated, runWithTransition } from '@/lib/view-transition';
+import { isCurrentPath, notifyNavigated, runWithTransition } from '@/lib/view-transition';
 
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), usePathname: () => '/' }));
@@ -80,12 +80,21 @@ describe('TransitionLink', () => {
 });
 
 describe('same-page clicks', () => {
-  it('detects the current location ignoring trailing slashes, and compares query and hash', () => {
+  it('compares pathnames only, ignoring trailing slashes', () => {
     window.history.pushState({}, '', '/posts/?status=draft#top');
-    expect(isCurrentLocation('/posts?status=draft#top')).toBe(true);
-    expect(isCurrentLocation('/posts')).toBe(false);
-    expect(isCurrentLocation('/posts?status=failed#top')).toBe(false);
-    expect(isCurrentLocation('/compose?status=draft#top')).toBe(false);
+    expect(isCurrentPath('/posts')).toBe(true);
+    expect(isCurrentPath('/posts?status=failed')).toBe(true);
+    expect(isCurrentPath('/compose')).toBe(false);
+  });
+
+  it('does not start a transition for a query-only change (dashboard "View all" then sidebar Posts)', () => {
+    const start = vi.fn();
+    doc.startViewTransition = start;
+    window.history.pushState({}, '', '/posts?status=draft');
+    render(<TransitionLink href="/posts">Posts</TransitionLink>);
+    expect(fireEvent.click(screen.getByRole('link', { name: 'Posts' }))).toBe(true);
+    expect(start).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('does not start a transition or push when the target is the current page', () => {

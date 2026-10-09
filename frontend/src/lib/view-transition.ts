@@ -24,14 +24,18 @@ function stripSlashes(path: string): string {
   return trimmed === '' ? '/' : trimmed;
 }
 
-/** True when `target` (a router href: path, optional query and hash) is the page the browser is already on. */
-export function isCurrentLocation(target: string): boolean {
+/**
+ * True when `target` (a router href) has the pathname the browser is already on. Query-only and hash-only changes keep
+ * the pathname, which is the only thing that signals a committed navigation (`notifyNavigated`), so they must not
+ * start a view transition: it would wait for the timeout.
+ */
+export function isCurrentPath(target: string): boolean {
   if (typeof window === 'undefined') return false;
   const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '');
   const url = new URL(target, window.location.origin);
   const here = window.location;
   const herePath = base && here.pathname.startsWith(base) ? here.pathname.slice(base.length) : here.pathname;
-  return stripSlashes(url.pathname) === stripSlashes(herePath) && url.search === here.search && url.hash === here.hash;
+  return stripSlashes(url.pathname) === stripSlashes(herePath);
 }
 
 /** Marks <html> so CSS can drop the fallback animation in browsers that animate through the API. */
