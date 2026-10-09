@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 export function LegalLinks({ className }: { className?: string }) {
   return (
     <p className={cn('flex gap-3 text-xs text-muted-foreground', className)}>
-      <Link href="/terms" className="hover:text-foreground hover:underline">
+      <Link href="/terms" className="inline-flex min-h-11 items-center hover:text-foreground hover:underline md:min-h-0">
         Terms
       </Link>
-      <Link href="/privacy" className="hover:text-foreground hover:underline">
+      <Link href="/privacy" className="inline-flex min-h-11 items-center hover:text-foreground hover:underline md:min-h-0">
         Privacy
       </Link>
     </p>

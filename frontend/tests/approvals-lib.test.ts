@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actionLabel, isIrreversible, isOpen, summaryLines, timeLeft } from '@/lib/approvals';
+import { accountText, actionLabel, isIrreversible, isOpen, summaryLines, timeLeft } from '@/lib/approvals';
 import type { Approval } from '@/lib/types';
 
 const NOW = new Date('2026-10-08T12:00:00Z');
@@ -42,7 +42,7 @@ describe('approvals helpers', () => {
     expect(summaryLines(a, 'UTC')).toEqual([
       { label: 'Title', value: 'Launch', long: false },
       { label: 'Text', value: 'Hello', long: false },
-      { label: 'Networks', value: 'linkedin, telegram', long: false },
+      { label: 'Networks', value: 'LinkedIn, Telegram', long: false },
       { label: 'Scheduled for', value: expect.stringContaining('12:02'), long: false },
       { label: 'Instance url', value: 'social.example.com', long: false },
     ]);
@@ -57,7 +57,7 @@ describe('approvals helpers', () => {
     );
     expect(lines).toEqual([
       { label: 'Text', value: long, long: true },
-      { label: 'Text on telegram', value: 'short one', long: false },
+      { label: 'Text on Telegram', value: 'short one', long: false },
       { label: 'Media', value: '2 images, 1 video', long: false },
     ]);
     expect(summaryLines({ ...base, summary: { content: 'a\nb\nc\nd\ne' } }, 'UTC')[0]!.long).toBe(true);
@@ -75,7 +75,23 @@ describe('approvals helpers', () => {
       },
       'UTC',
     );
-    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on linkedin · @alex', 'Text on linkedin · @team', 'Accounts']);
-    expect(lines.at(-1)!.value).toBe('linkedin · @alex, linkedin · @team');
+    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on LinkedIn (@alex)', 'Text on LinkedIn (@team)', 'Accounts']);
+    expect(lines.at(-1)!.value).toBe('LinkedIn (@alex), LinkedIn (@team)');
+  });
+});
+
+describe('display names', () => {
+  it('turns network ids and account strings into names a person recognises', () => {
+    expect(accountText('linkedin · @demo')).toBe('LinkedIn (@demo)');
+    expect(accountText('telegram')).toBe('Telegram');
+    expect(accountText('Some Free Text, with spaces')).toBe('Some Free Text, with spaces');
+  });
+
+  it('shows a post status code as the badge text', () => {
+    const lines = summaryLines({ ...base, summary: { status: 'draft', provider: 'mock' } }, 'UTC');
+    expect(lines).toEqual([
+      { label: 'Network', value: 'Mock', long: false },
+      { label: 'Status', value: 'Draft', long: false },
+    ]);
   });
 });

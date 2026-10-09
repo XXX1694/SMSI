@@ -6,6 +6,18 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- App: a "Skip to content" link as the first tab stop and a focusable `main` landmark; failed posts on the dashboard get a Retry button; the calendar "+N more" and the mobile post count open that day.
+
+### Fixed
+
+- Calendar month view no longer scrolls sideways at 768 to 1280 px; event chips are at least 24 px tall with a gap between them.
+- Approval cards no longer break labels on phones and show network and status names (LinkedIn, Telegram, Draft) instead of codes.
+- Settings Terms and Privacy links are underlined, not only coloured. The Escape key closes the mobile menu and returns focus to its button; the mobile header stays visible while scrolling.
+- Touch targets: buttons, nav links, pending pill, legal links, "View all" and the demo Reset reach 44 px (24 px for Reset) on phones while desktop stays compact. Toasts respect the bottom safe-area inset.
+- Demo banner is a labelled landmark, and Reset asks before wiping demo data. Loading states carry visible-to-screen-reader text, the email notice close button and the dashboard "View all" links have specific names, and the dashboard stats row has a heading.
+
 ### Changed
 
 - Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).

@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { BASE_PATH, SITE_HREF, wipeDemoStorage } from '@/lib/demo/config';
 
 /**
@@ -6,26 +8,43 @@ import { BASE_PATH, SITE_HREF, wipeDemoStorage } from '@/lib/demo/config';
  * `html[data-demo]` rules in globals.css reserve its height so nothing sits underneath it.
  */
 export function DemoBanner() {
+  const [confirming, setConfirming] = useState(false);
   // A full page load re-creates the in-memory backend from the (now empty) storage, i.e. a fresh seed.
-  function reset() {
+  async function reset() {
     wipeDemoStorage();
     window.location.assign(`${BASE_PATH}/dashboard/`);
   }
 
   return (
-    <div
-      role="note"
+    <aside
+      aria-label="Demo"
       className="fixed inset-x-0 top-0 z-banner flex h-7 items-center justify-between gap-3 border-b bg-muted px-3 text-xs text-muted-foreground"
     >
-      <p className="truncate">
-        <span className="font-medium text-foreground">Demo</span> — data stays in your browser ·{' '}
-        <button type="button" onClick={reset} className="underline underline-offset-2 hover:text-foreground">
+      <p className="flex min-w-0 items-center gap-1">
+        <span className="truncate">
+          <span className="font-medium text-foreground">Demo</span> — data stays in your browser ·{' '}
+        </span>
+        {/* The pseudo-element grows the hit area past the 28 px banner without making the banner taller. */}
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="relative shrink-0 underline underline-offset-2 after:absolute after:-inset-x-2 after:-inset-y-2 after:content-[''] hover:text-foreground"
+        >
           Reset
         </button>
       </p>
       <a href={SITE_HREF} className="hidden shrink-0 hover:text-foreground sm:inline">
         About Steerpost
       </a>
-    </div>
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Reset the demo?"
+        description="Everything you changed in this demo is removed and the sample data comes back."
+        confirmLabel="Reset demo"
+        destructive
+        onConfirm={reset}
+      />
+    </aside>
   );
 }

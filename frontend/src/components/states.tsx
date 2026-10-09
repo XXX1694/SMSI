@@ -7,10 +7,11 @@ import { errorMessage } from '@/hooks';
 
 export function LoadingRows({ rows = 3 }: { rows?: number }) {
   return (
-    <div role="status" aria-label="Loading" className="space-y-3 animate-fade-in">
+    <div role="status" className="space-y-3 animate-fade-in">
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }

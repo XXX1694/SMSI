@@ -69,7 +69,7 @@ describe('EmailBanner', () => {
     authMock.user = me({ verification_enforced: false, mail_delivery: 'log' });
     const first = render(<EmailBanner />);
     expect(screen.getByRole('note')).toHaveTextContent('Email delivery is not configured on this server');
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss email notice' }));
     expect(first.container).toBeEmptyDOMElement();
     first.unmount();
     const again = render(<EmailBanner />);

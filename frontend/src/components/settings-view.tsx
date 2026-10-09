@@ -74,11 +74,11 @@ export function SettingsView() {
       <Section title="Legal">
         <p className="text-sm text-muted-foreground">
           Read the{' '}
-          <Link href="/terms" className="text-accent hover:underline">
+          <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
             Terms of Service
           </Link>{' '}
           and the{' '}
-          <Link href="/privacy" className="text-accent hover:underline">
+          <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
             Privacy Policy
           </Link>
           . The operator of this instance is responsible for both.

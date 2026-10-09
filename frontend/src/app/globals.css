@@ -18,6 +18,11 @@
 /* Demo build only (html[data-demo]): leave room for the fixed 1.75rem banner so the page never gets a stray scrollbar. */
 html[data-demo] body { padding-top: 1.75rem; }
 html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
+html[data-demo] [data-app-header] { top: 1.75rem; }
+/* Anchors and focused elements must not hide under the sticky mobile header. */
+@media (max-width: 767px) {
+  html { scroll-padding-top: 4rem; }
+}
 @media (min-width: 768px) {
   html[data-demo] #sidebar { top: 1.75rem; height: calc(100vh - 1.75rem); }
 }

@@ -1,3 +1,5 @@
+import { providerLabel } from './normalize';
+import { postStatusView } from './status';
 import { formatDateTime } from './time';
 import type { Approval, ApprovalAction } from './types';
 
@@ -81,6 +83,15 @@ function mediaText(m: Record<string, unknown>): string {
   return count ? plural(count, 'file') : '';
 }
 
+/** `linkedin · @demo` -> `LinkedIn (@demo)`; a bare id (`telegram`) -> `Telegram`. Anything that does not look like an id stays as sent. */
+export function accountText(raw: string): string {
+  const [id, ...rest] = raw.split(' · ');
+  if (!id || !/^[a-z][a-z0-9_]*$/.test(id)) return raw;
+  const name = providerLabel(id);
+  const handle = rest.join(' · ').trim();
+  return handle ? `${name} (${handle})` : name;
+}
+
 function asText(v: unknown): string {
   if (Array.isArray(v)) return v.map(String).join(', ');
   return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
@@ -96,11 +107,16 @@ export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
     const raw = a.summary[key];
     if (key === 'platforms' && Array.isArray(a.summary.accounts)) continue; // the accounts line says it with names
     if (key === 'targets' && Array.isArray(raw)) {
-      for (const t of raw) if (isRec(t)) add(`Text on ${asText(t.account) || asText(t.platform)}`, asText(t.content));
+      for (const t of raw) if (isRec(t)) add(`Text on ${accountText(asText(t.account) || asText(t.platform))}`, asText(t.content));
     } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw));
     else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone));
+    else if (key === 'platforms' || key === 'accounts' || key === 'provider') add(label, asText(raw).split(', ').map(accountText).join(', '));
     else add(label, asText(raw));
   }
-  for (const key of Object.keys(a.summary)) if (!KNOWN.some(([k]) => k === key)) add(sentence(key), asText(a.summary[key]));
+  for (const key of Object.keys(a.summary)) {
+    if (KNOWN.some(([k]) => k === key)) continue;
+    // A post status the server sent as a code ("draft") reads as the badge text ("Draft").
+    add(sentence(key), key === 'status' ? postStatusView(asText(a.summary[key])).label : asText(a.summary[key]));
+  }
   return out;
 }

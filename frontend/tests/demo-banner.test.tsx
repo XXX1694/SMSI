@@ -13,7 +13,7 @@ afterEach(() => {
 describe('DemoBanner', () => {
   it('says the data stays in the browser and offers a reset', () => {
     render(<DemoBanner />);
-    expect(screen.getByRole('note')).toHaveTextContent('Demo — data stays in your browser · Reset');
+    expect(screen.getByRole('complementary', { name: 'Demo' })).toHaveTextContent('Demo — data stays in your browser · Reset');
     expect(screen.getByRole('button', { name: 'Reset' })).toBeInTheDocument();
   });
 
@@ -23,6 +23,8 @@ describe('DemoBanner', () => {
     window.localStorage.setItem(STORAGE_KEY, '{"anything":true}');
     render(<DemoBanner />);
     await userEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(assign).not.toHaveBeenCalled(); // asks first
+    await userEvent.click(screen.getByRole('button', { name: 'Reset demo' }));
     expect(assign).toHaveBeenCalled();
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(String(assign.mock.calls[0]?.[0])).toMatch(/\/dashboard\/$/);
