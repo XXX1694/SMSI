@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState, ErrorState, InlineError, LoadingRows, Notice } from '@/components/states';
