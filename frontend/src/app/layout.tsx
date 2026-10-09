@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { AuthProvider } from '@/components/auth-provider';
 import { DemoBanner } from '@/components/demo-banner';
+import { FocusOnNavigate } from '@/components/focus-on-navigate';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { ToastProvider } from '@/components/toast';
 import { BRAND_HEX } from '@/lib/brand';
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
             <ToastProvider>
               <AuthProvider>{children}</AuthProvider>
+              <FocusOnNavigate />
             </ToastProvider>
           </LocaleProvider>
         </PrefsProvider>
