@@ -4,6 +4,7 @@ package approval
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"strconv"
@@ -32,7 +33,8 @@ const (
 	StatusApproved Status = "approved"
 	StatusDenied   Status = "denied"
 	StatusConsumed Status = "consumed"
-	StatusExpired  Status = "expired"
+	// StatusExpired is reported, never stored: a pending or approved row past its deadline reads as expired.
+	StatusExpired Status = "expired"
 )
 
 // Policy is a credential's dangerous_policy.
@@ -90,6 +92,16 @@ func Fingerprint(parts ...string) string {
 		h.Write([]byte(strconv.Itoa(len(p)) + ":" + p))
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// KeyedFingerprint is Fingerprint under a secret key (HMAC-SHA256): for payloads that hold a credential, so the stored
+// value cannot be used to test guesses of it.
+func KeyedFingerprint(key []byte, parts ...string) string {
+	m := hmac.New(sha256.New, key)
+	for _, p := range parts {
+		m.Write([]byte(strconv.Itoa(len(p)) + ":" + p))
+	}
+	return hex.EncodeToString(m.Sum(nil))
 }
 
 type ctxKey struct{}

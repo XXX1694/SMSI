@@ -216,3 +216,23 @@ func TestKeyPolicyDefaultsToApprove(t *testing.T) {
 		t.Fatal("MCP connections must default to approve")
 	}
 }
+
+// The owner sees everything the approval is bound to: the whole text, per-network text and media.
+func TestApprovalSummaryShowsFullTextOverridesAndMedia(t *testing.T) {
+	r := newAgentRig(t, "summary@example.com")
+	long := strings.Repeat("long text ", 60) // 600 characters, over any preview length
+	p := r.owner.must("POST", "/api/v1/posts", map[string]any{"content": long, "social_account_ids": []string{r.acc}}, 201)["id"].(string)
+	r.owner.must("PATCH", "/api/v1/posts/"+p, map[string]any{"targets": []map[string]any{{"social_account_id": r.acc, "content": "mock network text"}}}, 200)
+	id := needApproval(t, r.agent.do("POST", "/api/v1/posts/"+p+"/publish", nil), "post.publish")
+	sum := r.owner.must("GET", "/api/v1/approvals/"+id, nil, 200)["summary"].(map[string]any)
+	if sum["content"] != long {
+		t.Fatalf("summary text is cut: %d of %d characters", len(sum["content"].(string)), len(long))
+	}
+	targets, _ := sum["targets"].([]any)
+	if len(targets) != 1 || targets[0].(map[string]any)["content"] != "mock network text" || targets[0].(map[string]any)["platform"] != "mock" {
+		t.Fatalf("per-network text missing: %v", sum["targets"])
+	}
+	if m, _ := sum["media"].(map[string]any); m == nil || m["count"] != float64(0) {
+		t.Fatalf("media summary missing: %v", sum["media"])
+	}
+}

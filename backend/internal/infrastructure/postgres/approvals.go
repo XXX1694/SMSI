@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,7 +29,9 @@ func scanApproval(row interface{ Scan(...any) error }) (*approval.Approval, erro
 		return nil, err
 	}
 	a.Summary = map[string]any{}
-	_ = json.Unmarshal(summary, &a.Summary)
+	if err := json.Unmarshal(summary, &a.Summary); err != nil {
+		return nil, fmt.Errorf("postgres: approval summary: %w", err)
+	}
 	return &a, nil
 }
 
@@ -46,7 +49,7 @@ func (r *Approvals) Create(ctx context.Context, a *approval.Approval) error {
 	return mapErr(err, "approval")
 }
 
-// FindPending returns the open approval with the same binding (uses approvals_user_idx).
+// FindPending returns the open approval with the same binding (uses action_approvals_user_idx).
 func (r *Approvals) FindPending(ctx context.Context, userID uuid.UUID, b approvals.Binding, now time.Time) (*approval.Approval, error) {
 	a, err := scanApproval(r.db.q(ctx).QueryRow(ctx, `SELECT `+approvalCols+` FROM action_approvals
 		WHERE user_id = $1 AND status = 'pending' AND expires_at > $2 AND actor_type = $3 AND actor_id = $4
@@ -56,12 +59,25 @@ func (r *Approvals) FindPending(ctx context.Context, userID uuid.UUID, b approva
 	return a, mapErr(err, "approval")
 }
 
-// CountPending counts the user's open approvals.
-func (r *Approvals) CountPending(ctx context.Context, userID uuid.UUID, now time.Time) (int, error) {
+// CountPending counts the open approvals of one key (action_approvals_user_idx: user, status).
+func (r *Approvals) CountPending(ctx context.Context, userID uuid.UUID, actorID string, now time.Time) (int, error) {
 	var n int
-	err := r.db.q(ctx).QueryRow(ctx, `SELECT count(*) FROM action_approvals WHERE user_id = $1 AND status = 'pending' AND expires_at > $2`,
-		userID, now).Scan(&n)
+	err := r.db.q(ctx).QueryRow(ctx, `SELECT count(*) FROM action_approvals
+		WHERE user_id = $1 AND status = 'pending' AND expires_at > $2 AND actor_id = $3`, userID, now, actorID).Scan(&n)
 	return n, err
+}
+
+// LockActor serialises check-then-insert for one (user, key) until the surrounding transaction ends.
+func (r *Approvals) LockActor(ctx context.Context, userID uuid.UUID, actorID string) error {
+	_, err := r.db.q(ctx).Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, userID.String()+"/"+actorID)
+	return err
+}
+
+// DeleteDecidedBefore deletes every approval whose deadline passed before t. Whatever its state, such a row is over:
+// a pending or approved one expired, a denied or consumed one was decided before its deadline (action_approvals_expires_idx).
+func (r *Approvals) DeleteDecidedBefore(ctx context.Context, t time.Time) (int64, error) {
+	tag, err := r.db.q(ctx).Exec(ctx, `DELETE FROM action_approvals WHERE expires_at < $1`, t)
+	return tag.RowsAffected(), err
 }
 
 // Consume flips one approved approval to consumed. The single UPDATE is the lock: of two concurrent callers only one

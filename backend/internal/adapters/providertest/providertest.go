@@ -87,16 +87,21 @@ func checkTokenForm(t *testing.T, p provider.Provider, c provider.Capabilities) 
 		switch f.Kind {
 		case provider.FieldText, provider.FieldURL:
 		case provider.FieldSecret:
-			secrets++
+			if !f.Secret {
+				t.Errorf("field %q has kind secret but is not marked Secret", f.Name)
+			}
 		default:
 			t.Errorf("field %q has unknown kind %q", f.Name, f.Kind)
+		}
+		if f.Secret {
+			secrets++
 		}
 		if f.Required {
 			required++
 		}
 	}
 	if secrets == 0 {
-		t.Error("a token provider needs at least one secret field")
+		t.Error("a token provider needs at least one field marked Secret")
 	}
 	if required == 0 {
 		t.Error("a token provider needs at least one required field")

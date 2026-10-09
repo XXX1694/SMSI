@@ -16,8 +16,8 @@ func disconnectRequest(acc *socialaccount.Account) approval.Request {
 }
 
 // connectRequest binds the approval to the provider and every submitted value, so the key cannot swap the credential
-// after the owner agreed. The fingerprint hashes secrets with the rest; the summary never shows a secret or a full URL.
-func connectRequest(p provider.Provider, fields map[string]string) approval.Request {
+// after the owner agreed. The fingerprint is an HMAC over every value, secrets included; the summary never shows a secret or a full URL.
+func connectRequest(key []byte, p provider.Provider, fields map[string]string) approval.Request {
 	names := make([]string, 0, len(fields))
 	for n := range fields {
 		names = append(names, n)
@@ -40,5 +40,5 @@ func connectRequest(p provider.Provider, fields map[string]string) approval.Requ
 		}
 	}
 	return approval.Request{Action: approval.ActionAccountConnect, ResourceType: "social_provider", ResourceID: p.Name(),
-		Fingerprint: approval.Fingerprint(parts...), Summary: shown}
+		Fingerprint: approval.KeyedFingerprint(key, parts...), Summary: shown}
 }

@@ -49,12 +49,31 @@ func run() error {
 	}
 	go a.Reconciler.Loop(ctx, cfg.ReconcileEvery)
 	go serveHealth(ctx, a, log)
+	go purgeApprovals(ctx, a, cfg.ApprovalRetention, log)
 	startTelegramIntake(ctx, a, cfg, log)
 	log.Info("worker started", slog.String("queue", cfg.QueueName), slog.Int("concurrency", cfg.WorkerConc))
 	<-ctx.Done()
 	log.Info("shutting down worker")
 	srv.Shutdown()
 	return nil
+}
+
+// purgeApprovals deletes decided and expired approvals older than the retention, once an hour, until ctx ends.
+func purgeApprovals(ctx context.Context, a *app.App, retention time.Duration, log *slog.Logger) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		if n, err := a.Services.Approvals.Purge(ctx, retention); err != nil {
+			log.WarnContext(ctx, "approval retention failed", slog.Any("error", err))
+		} else if n > 0 {
+			log.InfoContext(ctx, "old approvals deleted", slog.Int64("count", n))
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }
 
 // startTelegramIntake long-polls the Bot API for the messages that prove chat

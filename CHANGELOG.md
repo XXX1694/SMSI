@@ -12,19 +12,33 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - When `MAIL_PROVIDER=smtp`, unverified accounts get `403 EMAIL_NOT_VERIFIED` on connecting networks, scheduling, publishing, editing scheduled posts and creating API keys. With the log provider nothing is restricted and the dashboard says mail is off. Existing accounts start unverified.
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.
 - Database migration `00003` also prepares plans, quotas, data export and account deletion; it needs no manual step.
-
 - Connect a network with a pasted credential: `POST /api/v1/social/accounts/token` and the provider capability fields `connect_fields`, `max_image_bytes` and `requires_title`. It needs the new critical API-key scope `social:connect`, which is never in a default set (D-009).
 - Posts are checked against the stricter of the network limits and the account's own limits, and networks that need a title reject posts without one.
 - SSRF-safe HTTP client for hosts users supply (D-010).
+- Discord: connect a channel with its webhook URL and publish text and up to 10 images, or delete a post. The URL is stored encrypted and never returned; a timeout after sending goes to review instead of risking a duplicate. See [`docs/integrations/discord.md`](docs/integrations/discord.md).
+- Connect fields have a `secret` flag (`connect_fields[].secret` in `GET /social/providers`) for credentials that are not of kind `secret`, such as a webhook URL; forms must render them as password inputs.
+- Mastodon (and API-compatible Fediverse servers): connect with an instance URL and an access token, publish text and images (public), delete. Limits are read from the instance. A repeated publish after a timeout is safe because of the `Idempotency-Key`. See `docs/integrations/mastodon.md`.
 - Stub notes for Reddit, Medium and Hashnode; the X note now says the API is pay-per-use.
+- Sharing a host safely (host-proxy mode): every SocialOS container runs in the systemd slice `socialos.slice` (1 CPU, 664 MB, no swap, 512 tasks for the whole stack), may not swap and has a process cap; drop-ins cap dockerd and containerd; a guard timer stops the SocialOS worker, then the worker, MCP and UI, only when the host is under pressure and SocialOS is a real contributor (anonymous memory, not page cache, or its own CPU or IO), and resumes them once the host is calm; it also alerts on disk, data budget and the other services' health. A Caddy pre-check keeps a broken SocialOS snippet from stopping the host's Caddy. Runbook: `deploy/host-proxy/apply-guardrails.md`.
 
-- Approvals for dangerous actions (D-013): publishing now, retrying now, deleting a post, disconnecting an account, connecting with a pasted token, or scheduling less than 5 minutes ahead (`AGENT_MIN_SCHEDULE_LEAD`) with an API key or an MCP connection answers `428 APPROVAL_REQUIRED` and waits for you. Approve or deny in the dashboard under **Approvals** (`GET /approvals`, `POST /approvals/{id}/approve|deny`); the agent repeats the same call with `X-Approval-Id` and it works once. New settings `APPROVAL_TTL`, `APPROVAL_MAX_PENDING`, `AGENT_MIN_SCHEDULE_LEAD`; new audit entries `approval.requested|approved|denied|used`.
+- Approvals for dangerous actions (D-013): publishing now, retrying now, deleting a post, disconnecting an account, connecting with a pasted token, or scheduling less than 5 minutes ahead (`AGENT_MIN_SCHEDULE_LEAD`) with an API key or an MCP connection answers `428 APPROVAL_REQUIRED` and waits for you. Approve or deny in the dashboard under **Approvals** (`GET /approvals`, `POST /approvals/{id}/approve|deny`); the agent repeats the same call with `X-Approval-Id` and it works once. New settings `APPROVAL_TTL`, `APPROVAL_MAX_PENDING` (per key), `APPROVAL_RETENTION`, `AGENT_MIN_SCHEDULE_LEAD` (also gates edits of posts that run soon); new audit entries `approval.requested|approved|denied|used`.
 - API keys have a `dangerous_policy`: `approve` (default, also for existing keys) or `trusted` (set when creating the key, skips approvals).
 
 ### Changed
 
 - **Breaking for API-key integrations:** dangerous actions made with a key now need your approval (see above). The MCP tools `publish_post`, `delete_post` and `disconnect_account` no longer take `confirm`; they take an optional `approval_id`, and `schedule_post` and `update_post` take one too. An agent that only schedules at least 5 minutes ahead is not affected.
+- The SSRF guard also blocks site-local `fec0::/10`, IPv4-compatible `::/96` and local-use NAT64 `64:ff9b:1::/48` (the whole range is blocked).
 - Browser sessions now hold ten scopes (the new `social:connect`); the "Dangerous" list in the dashboard shows it.
+- Host-proxy mode: memory caps rebalanced to fit the slice (backend and worker 160m with `GOMEMLIMIT=100MiB`, frontend 160m, postgres 112m, minio 80m, mcp 56m, redis 32m, migrate 64m). Automatic updates do not deploy while the guard has shed load.
+
+### Fixed
+
+- The Posts date filter now uses the timezone chosen in Settings instead of the browser's, so "From" and "To" cover whole days where you expect them.
+- Colour contrast: unsupported-network badges and the dark-mode "Scheduled" badge now meet WCAG AA (axe `color-contrast` is clean in light and dark). The dark accent is slightly lighter, in the app and on the site.
+
+### Changed
+
+- One shared table for post attempts, analytics, API usage, API keys and the audit log. On phones each row becomes a stacked card showing every column (the Error column is no longer hidden), `/developer` no longer scrolls sideways at 390 px, and wide tables can be scrolled with the keyboard.
 
 ## [0.1.0] - 2026-10-09
 

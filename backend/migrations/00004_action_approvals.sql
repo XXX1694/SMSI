@@ -17,7 +17,7 @@ CREATE TABLE action_approvals (
   resource_id   text NOT NULL DEFAULT '',
   fingerprint   text NOT NULL,
   summary       jsonb NOT NULL DEFAULT '{}',
-  status        text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','denied','consumed','expired')),
+  status        text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','denied','consumed')),
   expires_at    timestamptz NOT NULL,
   decided_at    timestamptz,
   consumed_at   timestamptz,
@@ -26,6 +26,8 @@ CREATE TABLE action_approvals (
 );
 -- Serves the owner's list (user, newest first, status filter) and the per-user pending count.
 CREATE INDEX action_approvals_user_idx ON action_approvals(user_id, status, created_at DESC);
+-- Serves the retention delete. "Expired" is not stored: a pending or approved row past expires_at is reported as such.
+CREATE INDEX action_approvals_expires_idx ON action_approvals(expires_at);
 
 CREATE TRIGGER action_approvals_updated_at BEFORE UPDATE ON action_approvals
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();

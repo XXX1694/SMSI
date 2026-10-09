@@ -2,83 +2,154 @@ package posts
 
 import (
 	"context"
-	"encoding/json"
 	"sort"
 	"strconv"
 	"time"
-	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/approval"
+	"github.com/socialos/backend/internal/domain/media"
 	"github.com/socialos/backend/internal/domain/post"
 )
 
 // DefaultMinAgentLead is how far ahead an API key must schedule without the owner's approval.
 const DefaultMinAgentLead = 5 * time.Minute
 
-const summaryContentRunes = 280
-
-// postRequest binds an approval to one post at its current version: editing the post afterwards (updated_at moves)
-// voids the approval. extra parts narrow it further (e.g. the requested time).
-func postRequest(action approval.Action, p *post.Post, extra ...string) approval.Request {
-	parts := append([]string{p.ID.String(), strconv.FormatInt(p.UpdatedAt.UnixMicro(), 10)}, extra...)
-	return approval.Request{Action: action, ResourceType: "post", ResourceID: p.ID.String(),
-		Fingerprint: approval.Fingerprint(parts...), Summary: postSummary(p)}
+// gated describes one dangerous call for the approval gate. The request (with its summary, which may need a media
+// lookup) is only built for callers that need approval.
+type gated struct {
+	action approval.Action
+	p      *post.Post
+	// fingerprint binds the approval; see the helpers below.
+	fingerprint string
+	media       []media.Media // nil: load them from p.MediaIDs when the summary is built
+	at          *time.Time
+	resource    string // resource type, "post" by default
 }
 
-// deleteRequest is bound to the post id only: deleting is the same decision whatever the draft says.
-func deleteRequest(p *post.Post) approval.Request {
-	r := postRequest(approval.ActionPostDelete, p)
-	r.Fingerprint = approval.Fingerprint(p.ID.String())
-	return r
-}
-
-func postSummary(p *post.Post) map[string]any {
-	platforms := make([]string, 0, len(p.Targets))
-	for _, t := range p.Targets {
-		platforms = append(platforms, t.Platform)
-	}
-	return map[string]any{"title": p.Title, "content": truncateRunes(p.Content, summaryContentRunes),
-		"platforms": platforms, "status": string(p.Status)}
-}
-
-func truncateRunes(s string, n int) string {
-	if utf8.RuneCountInString(s) <= n {
-		return s
-	}
-	r := []rune(s)
-	return string(r[:n]) + "…"
-}
-
-// scheduleGuard sends a key's schedule closer than the minimum lead through the approval gate (OD-2): such a
-// schedule is publish-now with extra steps.
-func (s *Service) scheduleGuard(ctx context.Context, a actor.Actor, at time.Time, req approval.Request) error {
-	if !a.NeedsApproval() || !at.Before(s.clock.Now().Add(s.minAgentLead)) {
+func (s *Service) require(ctx context.Context, a actor.Actor, g gated) error {
+	if !a.NeedsApproval() {
 		return nil
 	}
-	req.Action = approval.ActionPostScheduleSoon
+	ms := g.media
+	if ms == nil {
+		var err error
+		if ms, err = s.loadMedia(ctx, g.p.UserID, g.p.MediaIDs); err != nil {
+			return err
+		}
+	}
+	req := approval.Request{Action: g.action, ResourceType: "post", ResourceID: g.p.ID.String(), Fingerprint: g.fingerprint,
+		Summary: summarize(g.p, ms, g.at)}
+	if g.resource != "" {
+		req.ResourceType, req.ResourceID = g.resource, ""
+	}
 	return s.gate.Require(ctx, a, req)
 }
 
-// scheduleRequest binds the approval to the post version and the requested time (to the second).
-func scheduleRequest(p *post.Post, at time.Time) approval.Request {
-	r := postRequest(approval.ActionPostScheduleSoon, p, strconv.FormatInt(at.UTC().Unix(), 10))
-	r.Summary["scheduled_at"] = at.UTC().Format(time.RFC3339)
-	return r
+// versionFingerprint binds an approval to one post at its current version: editing the post afterwards (updated_at
+// moves) voids it. extra parts narrow it further (the requested time, retry options).
+func versionFingerprint(p *post.Post, extra ...string) string {
+	return approval.Fingerprint(append([]string{p.ID.String(), strconv.FormatInt(p.UpdatedAt.UnixMicro(), 10)}, extra...)...)
 }
 
-// createScheduleRequest binds the approval to the whole payload of a create-and-schedule call.
-func createScheduleRequest(title string, in CreateInput, accountIDs []uuid.UUID, overrides map[uuid.UUID]string) approval.Request {
-	keys := make([]string, 0, len(overrides))
-	for id, c := range overrides {
-		keys = append(keys, id.String()+"="+c)
+// stateFingerprint binds an approval to everything a post will publish: title, text, per-network text, media and run
+// time. Used where the call itself changes the post (an edit, a create), so the owner approves the result.
+func stateFingerprint(id string, p *post.Post, at time.Time) string {
+	parts := []string{id, p.Title, p.Content, strconv.FormatInt(at.UTC().Unix(), 10)}
+	targets := make([]string, 0, len(p.Targets))
+	for _, t := range p.Targets {
+		targets = append(targets, t.SocialAccountID.String()+"="+t.Content)
 	}
-	sort.Strings(keys)
-	canon, _ := json.Marshal(map[string]any{"title": title, "content": in.Content, "accounts": accountIDs,
-		"overrides": keys, "media": in.MediaIDs, "at": in.ScheduledAt.UTC().Unix()})
-	return approval.Request{Action: approval.ActionPostScheduleSoon, ResourceType: "post_input",
-		Fingerprint: approval.Fingerprint(string(canon)),
-		Summary: map[string]any{"title": title, "content": truncateRunes(in.Content, summaryContentRunes),
-			"accounts": len(accountIDs), "scheduled_at": in.ScheduledAt.UTC().Format(time.RFC3339)}}
+	sort.Strings(targets)
+	parts = append(parts, targets...)
+	parts = append(parts, "media")
+	for _, m := range p.MediaIDs {
+		parts = append(parts, m.String())
+	}
+	return approval.Fingerprint(parts...)
+}
+
+// summarize is what the owner reads before deciding, and it shows everything the fingerprint covers: the full text
+// (validation caps it at MaxContentLen), every per-network text that differs from it, the media and the run time.
+func summarize(p *post.Post, ms []media.Media, at *time.Time) map[string]any {
+	platforms := make([]string, 0, len(p.Targets))
+	var overrides []map[string]any
+	for _, t := range p.Targets {
+		platforms = append(platforms, t.Platform)
+		if t.Content != p.Content {
+			overrides = append(overrides, map[string]any{"platform": t.Platform, "content": t.Content})
+		}
+	}
+	out := map[string]any{"title": p.Title, "content": p.Content, "platforms": platforms, "status": string(p.Status),
+		"media": mediaSummary(len(p.MediaIDs), ms)}
+	if len(overrides) > 0 {
+		out["targets"] = overrides
+	}
+	if at != nil {
+		out["scheduled_at"] = at.UTC().Format(time.RFC3339)
+	}
+	return out
+}
+
+func mediaSummary(n int, ms []media.Media) map[string]any {
+	images, videos := 0, 0
+	for _, m := range ms {
+		if m.Kind == media.KindVideo {
+			videos++
+		} else {
+			images++
+		}
+	}
+	return map[string]any{"count": n, "images": images, "videos": videos}
+}
+
+func (s *Service) requirePublish(ctx context.Context, a actor.Actor, p *post.Post) error {
+	return s.require(ctx, a, gated{action: approval.ActionPostPublish, p: p, fingerprint: versionFingerprint(p)})
+}
+
+func (s *Service) requireRetryNow(ctx context.Context, a actor.Actor, p *post.Post, in RetryInput) error {
+	return s.require(ctx, a, gated{action: approval.ActionPostRetryNow, p: p,
+		fingerprint: versionFingerprint(p, strconv.FormatBool(in.IncludeNeedsReview))})
+}
+
+// requireDelete is bound to the post id only: deleting is the same decision whatever the draft says.
+func (s *Service) requireDelete(ctx context.Context, a actor.Actor, p *post.Post) error {
+	return s.require(ctx, a, gated{action: approval.ActionPostDelete, p: p, fingerprint: approval.Fingerprint(p.ID.String())})
+}
+
+// tooSoon: a key scheduling closer than the minimum lead is publishing now with extra steps (OD-2). A lead of 0
+// switches the rule off.
+func (s *Service) tooSoon(a actor.Actor, at time.Time) bool {
+	return a.NeedsApproval() && s.minAgentLead > 0 && at.Before(s.clock.Now().Add(s.minAgentLead))
+}
+
+// requireSoon gates a schedule or retry-for-later of an unchanged post.
+func (s *Service) requireSoon(ctx context.Context, a actor.Actor, p *post.Post, at time.Time, extra ...string) error {
+	if !s.tooSoon(a, at) {
+		return nil
+	}
+	return s.require(ctx, a, gated{action: approval.ActionPostScheduleSoon, p: p, at: &at,
+		fingerprint: versionFingerprint(p, append([]string{strconv.FormatInt(at.UTC().Unix(), 10)}, extra...)...)})
+}
+
+// requireSoonAfterEdit gates an edit that leaves the post running within the minimum lead, whether or not the time
+// itself changed. p is the post AFTER the edit and the approval covers that state, so it cannot be replayed with
+// other text, networks or media.
+func (s *Service) requireSoonAfterEdit(ctx context.Context, a actor.Actor, p *post.Post, at time.Time) error {
+	if !s.tooSoon(a, at) {
+		return nil
+	}
+	return s.require(ctx, a, gated{action: approval.ActionPostScheduleSoon, p: p, at: &at, fingerprint: stateFingerprint(p.ID.String(), p, at)})
+}
+
+// requireSoonCreate gates a create-and-schedule: the approval covers the whole payload (the post has no id yet).
+func (s *Service) requireSoonCreate(ctx context.Context, a actor.Actor, p *post.Post, ms []media.Media, at time.Time) error {
+	if !s.tooSoon(a, at) {
+		return nil
+	}
+	if ms == nil {
+		ms = []media.Media{}
+	}
+	return s.require(ctx, a, gated{action: approval.ActionPostScheduleSoon, p: p, at: &at, media: ms, resource: "post_input",
+		fingerprint: stateFingerprint("", p, at)})
 }

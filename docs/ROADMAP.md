@@ -60,7 +60,8 @@ Legend: ✅ done · 🔄 in progress · ⏳ next · ⛔ blocked (the reason is g
 
 ## 7. Design and product
 
-- ⏳ Positioning and landing page; one design language; empty states; mobile layout.
+- 🔄 Positioning, competitors and a prioritised backlog in [PRODUCT](PRODUCT.md); the "Now" features are issues #75–#82.
+- ⏳ Landing page; one design language; empty states; mobile layout.
 - 🔄 More networks: research of every platform's current API and a tiered rollout plan (token-only first) in progress.
 - ⏳ Ideas with honest effort estimates: an AI writing assistant, analytics, a Flutter client.
 

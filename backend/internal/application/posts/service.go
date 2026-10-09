@@ -43,9 +43,11 @@ type Deps struct {
 	Clock    port.Clock
 	// Gate asks the owner to approve dangerous actions of API keys; nil refuses them (fail closed).
 	Gate port.ApprovalGate
-	// MinAgentLead overrides DefaultMinAgentLead; negative disables the rule.
+	// MinAgentLead is how far ahead a key may schedule without approval (DefaultMinAgentLead when 0).
 	MinAgentLead time.Duration
-	Log          *slog.Logger
+	// NoAgentLead switches the lead rule off (AGENT_MIN_SCHEDULE_LEAD=0).
+	NoAgentLead bool
+	Log         *slog.Logger
 }
 
 // NewService creates the posts service.
@@ -57,8 +59,11 @@ func NewService(d Deps) *Service {
 		d.Gate = port.FailClosedGate{}
 	}
 	lead := d.MinAgentLead
-	if lead == 0 {
+	if lead <= 0 {
 		lead = DefaultMinAgentLead
+	}
+	if d.NoAgentLead {
+		lead = 0
 	}
 	return &Service{repo: d.Repo, jobs: d.Jobs, queue: d.Queue, accounts: d.Accounts, media: d.Media,
 		registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, gate: d.Gate, minAgentLead: lead, log: d.Log}

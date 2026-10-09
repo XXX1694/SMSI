@@ -2,6 +2,7 @@
 import { useCallback } from 'react';
 import { Sparkline } from '@/components/sparkline';
 import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { formatRelative } from '@/lib/time';
 import { useAsync } from '@/hooks';
@@ -21,26 +22,24 @@ export function UsageView() {
         </div>
         <Sparkline values={data.by_day.map((d) => d.requests)} label="Requests per day" />
       </div>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 font-medium">Key</th>
-              <th className="px-3 py-2 text-right font-medium">Requests</th>
-              <th className="px-3 py-2 font-medium">Last used</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {data.by_key.map((k) => (
-              <tr key={k.name}>
-                <td className="px-3 py-2">{k.name}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{k.requests.toLocaleString()}</td>
-                <td className="px-3 py-2 text-muted-foreground">{formatRelative(k.last_used_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table label="Requests per key">
+        <Thead>
+          <Tr>
+            <Th>Key</Th>
+            <Th align="right">Requests</Th>
+            <Th>Last used</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {data.by_key.map((k) => (
+            <Tr key={k.name}>
+              <Td label="Key">{k.name}</Td>
+              <Td label="Requests" align="right" className="tabular-nums">{k.requests.toLocaleString()}</Td>
+              <Td label="Last used" className="text-muted-foreground">{formatRelative(k.last_used_at)}</Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
     </div>
   );
 }

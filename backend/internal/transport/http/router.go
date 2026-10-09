@@ -15,10 +15,8 @@ import (
 	"github.com/socialos/backend/internal/application/auth"
 	"github.com/socialos/backend/internal/application/developer"
 	"github.com/socialos/backend/internal/application/media"
-	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/application/posts"
 	"github.com/socialos/backend/internal/domain/errs"
-	"github.com/socialos/backend/internal/infrastructure/clock"
 	"github.com/socialos/backend/internal/observability"
 	"github.com/socialos/backend/internal/transport/httpx"
 	"github.com/socialos/backend/internal/transport/middleware"
@@ -62,8 +60,6 @@ type Options struct {
 	// TelegramWebhookSecret enables POST /webhooks/telegram (webhook intake
 	// mode); with an empty secret the route does not exist.
 	TelegramWebhookSecret string
-	// Clock is the time source for rendered approval status; nil means the system clock.
-	Clock port.Clock
 }
 
 // API holds handler dependencies.
@@ -71,7 +67,6 @@ type API struct {
 	svc     Services
 	opt     Options
 	trusted middleware.TrustedProxies
-	clock   port.Clock
 }
 
 // NewRouter builds the HTTP handler.
@@ -91,10 +86,7 @@ func NewRouter(svc Services, opt Options) http.Handler {
 	if opt.MailLimiter == nil {
 		opt.MailLimiter = middleware.NewLimiter(1.0/60, 3)
 	}
-	if opt.Clock == nil {
-		opt.Clock = clock.System{}
-	}
-	a := &API{svc: svc, opt: opt, trusted: middleware.TrustedProxies(opt.TrustedProxies), clock: opt.Clock}
+	a := &API{svc: svc, opt: opt, trusted: middleware.TrustedProxies(opt.TrustedProxies)}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.Recover, middleware.AccessLog(opt.Logger, opt.Metrics), middleware.SecurityHeaders,
 		middleware.CORS(opt.CORSOrigins))

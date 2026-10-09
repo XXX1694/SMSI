@@ -114,3 +114,19 @@ func TestPKCEChallenge(t *testing.T) {
 		t.Fatal("constant time equal wrong")
 	}
 }
+
+func TestSubkeyIsDeterministicPerPurposeAndDiffersFromTheMaster(t *testing.T) {
+	master := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32))
+	a, err := Subkey(master, "approval-fingerprint")
+	if err != nil || len(a) != 32 {
+		t.Fatalf("%v %d", err, len(a))
+	}
+	again, _ := Subkey(master, "approval-fingerprint")
+	other, _ := Subkey(master, "something-else")
+	if !bytes.Equal(a, again) || bytes.Equal(a, other) || bytes.Equal(a, bytes.Repeat([]byte{7}, 32)) {
+		t.Fatal("subkeys must be stable, purpose-bound and not the master key")
+	}
+	if _, err := Subkey("not base64!", "x"); err == nil {
+		t.Fatal("a bad master key must fail")
+	}
+}

@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
+	"github.com/socialos/backend/internal/adapters/discord"
 	"github.com/socialos/backend/internal/adapters/linkedin"
 	"github.com/socialos/backend/internal/adapters/mail"
+	"github.com/socialos/backend/internal/adapters/mastodon"
 	"github.com/socialos/backend/internal/adapters/mock"
 	"github.com/socialos/backend/internal/adapters/mocktoken"
 	"github.com/socialos/backend/internal/adapters/provider"
@@ -55,7 +56,6 @@ type App struct {
 	DB         *postgres.DB
 	Redis      *redis.Conn
 	Queue      *queue.Client
-	Clock      port.Clock
 	Mailer     port.Mailer    // sends mail; used by the worker
 	MailQueue  port.MailQueue // enqueues mail; used by the API
 	Storage    media.Storage
@@ -136,6 +136,8 @@ func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Regi
 	reg.Register(linkedin.New(linkedin.Config{ClientID: cfg.LinkedInID, ClientSecret: cfg.LinkedInSecret,
 		APIVersion: cfg.LinkedInVersion, UsePKCE: cfg.LinkedInPKCE}))
 	reg.Register(telegram.New(telegram.Config{BotToken: cfg.TelegramToken}))
+	reg.Register(discord.New(discord.Config{}))
+	reg.Register(mastodon.New(mastodon.Config{}))
 	if cfg.MockProviders {
 		reg.Register(mock.New())
 		reg.Register(mocktoken.New())
@@ -144,14 +146,6 @@ func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Regi
 		reg.Register(p)
 	}
 	return reg
-}
-
-// agentLead maps AGENT_MIN_SCHEDULE_LEAD=0 (rule off) to the negative value the posts service reads as "off".
-func agentLead(cfg *config.Config) time.Duration {
-	if cfg.AgentMinScheduleLead == 0 {
-		return -1
-	}
-	return cfg.AgentMinScheduleLead
 }
 
 func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
@@ -167,7 +161,6 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	if hasher == nil {
 		hasher = crypto.NewPasswordHasher(crypto.DefaultArgon2)
 	}
-	a.Clock = clk
 	db := a.DB
 	auditRepo := postgres.NewAudit(db)
 	auditSvc := audit.NewService(auditRepo, clk)
@@ -175,7 +168,7 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	mediaRepo, keyRepo, analyticsRepo := postgres.NewMedia(db), postgres.NewAPIKeys(db), postgres.NewAnalytics(db)
 
 	approvalSvc := approvals.NewService(approvals.Deps{Repo: postgres.NewApprovals(db), Tx: db, Audit: auditSvc, Clock: clk,
-		Detach: db.WithoutTx, Config: approvals.Config{TTL: cfg.ApprovalTTL, MaxPending: cfg.ApprovalMaxPending, WebBaseURL: cfg.WebBaseURL}})
+		Config: approvals.Config{TTL: cfg.ApprovalTTL, MaxPending: cfg.ApprovalMaxPending, WebBaseURL: cfg.WebBaseURL}})
 	authSvc, err := auth.NewService(auth.Deps{Users: postgres.NewUsers(db), Sessions: postgres.NewSessions(db), APIKeys: keyRepo,
 		Hasher: hasher, Tx: db, Audit: auditSvc, Clock: clk, SessionTTL: cfg.SessionTTL,
 		Tokens: postgres.NewEmailTokens(db), Mail: a.MailQueue, Forgot: a.Queue.ForgotQueue(), Log: log, WebBaseURL: cfg.WebBaseURL,
@@ -183,15 +176,20 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	if err != nil {
 		return fmt.Errorf("auth service: %w", err)
 	}
+	fingerprintKey, err := crypto.Subkey(cfg.EncryptionKey, "approval-fingerprint")
+	if err != nil {
+		return fmt.Errorf("approval fingerprint key: %w", err)
+	}
 	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Links: postgres.NewLinkCodes(db),
 		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL,
-		Gate: verifiedOwners{users: postgres.NewUsers(db), enforce: requireVerification(cfg)}, Approvals: approvalSvc})
+		Gate: verifiedOwners{users: postgres.NewUsers(db), enforce: requireVerification(cfg)}, Approvals: approvalSvc,
+		FingerprintKey: fingerprintKey})
 	analyticsSvc := analytics.NewService(analyticsRepo, clk)
 	a.Services = transport.Services{
 		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc, Approvals: approvalSvc,
 		Posts: posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
 			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc,
-			MinAgentLead: agentLead(cfg)}),
+			MinAgentLead: cfg.AgentMinScheduleLead, NoAgentLead: cfg.AgentMinScheduleLead == 0}),
 		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk),
 		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
 			Tx: db, Audit: auditSvc, Clock: clk, MCPPublicURL: cfg.MCPPublicURL, APIPublicURL: cfg.APIPublicURL}),
@@ -237,7 +235,7 @@ func (a *App) Router() http.Handler {
 		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, GatewaySecret: a.Cfg.GatewaySecret,
 		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
 		MailLimiter: a.MailLimit, MailDelivery: mailDelivery(a.Cfg), RequireVerification: requireVerification(a.Cfg),
-		TelegramWebhookSecret: webhookSecret, Clock: a.Clock,
+		TelegramWebhookSecret: webhookSecret,
 		Ready: []transport.ReadyCheck{
 			{Name: "postgres", Check: a.DB.Ping},
 			{Name: "redis", Check: a.Redis.Ping},
