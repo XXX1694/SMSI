@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { validateComposer, type ValidationIssue } from '@/lib/composer';
 import { postHref } from '@/lib/demo/config';
 import { buildUpdate, formFromPost, freshness, type FormValues } from '@/lib/post-edit';
-import { postActions } from '@/lib/status';
+import { postActions, postStatusView } from '@/lib/status';
 import type { Post, Provider, SocialAccount } from '@/lib/types';
 import { errorMessage } from '@/hooks';
 import { Feedback } from './issue-list';
@@ -38,8 +38,8 @@ function Conflict({ latest, onLoad, onForce }: { latest: Post; onLoad: () => voi
       <Notice tone="danger">
         <span className="font-medium">This post changed since you opened it.</span>{' '}
         {stillEditable
-          ? 'Someone or something (another tab, or an agent) saved a newer version. Saving now would overwrite it.'
-          : `It is now ${latest.status.replace('_', ' ')} and can no longer be edited.`}
+          ? 'A newer version was saved in another tab or by an agent. Saving now overwrites it.'
+          : `It is now ${postStatusView(latest.status).label} and cannot be edited.`}
       </Notice>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={onLoad}>
@@ -101,7 +101,7 @@ export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, p
       await api.posts.schedule(post.id, at);
       return true;
     } catch (e) {
-      setApiError(`Changes saved; the post is still a draft and was not scheduled: ${errorMessage(e, false)}`);
+      setApiError(`Changes saved, but the post was not scheduled: ${errorMessage(e, false)}`);
       return false;
     }
   }

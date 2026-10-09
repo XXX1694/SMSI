@@ -131,7 +131,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, ci ClientInfo)
 
 // Login verifies credentials and issues a session. Errors never reveal whether the email exists.
 func (s *Service) Login(ctx context.Context, email, password string, ci ClientInfo) (*user.User, IssuedSession, error) {
-	invalid := errs.New(errs.Unauthenticated, "invalid email or password")
+	invalid := errs.New(errs.Unauthenticated, "Wrong email or password.")
 	norm, err := user.NormalizeEmail(email)
 	if err != nil {
 		if err := s.burnDummy(ctx, password); err != nil {

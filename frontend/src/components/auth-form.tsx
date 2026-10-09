@@ -52,11 +52,11 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       <div className="w-full max-w-sm">
         <h1 className="text-xl font-semibold tracking-tight">{isLogin ? 'Sign in to Steerpost' : 'Create your account'}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {isLogin ? 'Welcome back.' : 'Start composing and scheduling in a minute.'}
+          {isLogin ? 'Welcome back.' : 'Next, you will connect your first account.'}
         </p>
         {DEMO ? (
           <p className="mt-3 rounded-md border bg-muted px-3 py-2 text-xs text-muted-foreground">
-            This is a demo with a built-in account, so the form is already filled in. Just press Sign in.
+            Demo account: the form is filled in. Select Sign in.
           </p>
         ) : null}
         <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
@@ -105,7 +105,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             <InlineError>{error}</InlineError>
           ) : null}
           <Button type="submit" className="w-full" disabled={busy || !email || !password}>
-            {busy ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}
+            {busy ? (isLogin ? 'Signing in…' : 'Creating account…') : isLogin ? 'Sign in' : 'Create account'}
           </Button>
         </form>
         <p className="mt-6 text-sm text-muted-foreground">
@@ -113,12 +113,12 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             <>
               No account?{' '}
               <Link href="/register" className="text-accent hover:underline">
-                Register
+                Create one
               </Link>
             </>
           ) : (
             <>
-              Already registered?{' '}
+              Have an account?{' '}
               <Link href="/login" className="text-accent hover:underline">
                 Sign in
               </Link>

@@ -15,6 +15,8 @@ import type { Post } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { errorMessage } from '@/hooks';
 
+const VIEW_LABEL = { month: 'Month', week: 'Week', day: 'Day' } as const;
+
 const TONE_CLASS: Record<string, string> = {
   neutral: 'border-l-muted-foreground/50 bg-muted',
   info: 'border-l-accent bg-accent-soft',
@@ -65,7 +67,7 @@ function DayCell({ day, month, posts, today, timezone }: { day: string; month: s
         ))}
         {posts.length > 3 ? <p className="px-1 text-xs text-muted-foreground">+{posts.length - 3} more</p> : null}
       </div>
-      {posts.length > 0 ? <p className="text-xs text-muted-foreground sm:hidden">{posts.length} post{posts.length > 1 ? 's' : ''}</p> : null}
+      {posts.length > 0 ? <p className="text-xs text-muted-foreground sm:hidden">{posts.length === 1 ? '1 post' : `${posts.length} posts`}</p> : null}
     </div>
   );
 }
@@ -95,7 +97,7 @@ function DayList({ day, posts, timezone, today }: { day: string; posts: Post[]; 
         {weekdayShort(day)} {dayNumber(day)}
       </h3>
       {posts.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nothing</p>
+        <p className="text-xs text-muted-foreground">No posts</p>
       ) : (
         <div className="space-y-1">
           {posts.map((p) => (
@@ -158,6 +160,7 @@ export function CalendarViewPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
+          {/* Translator note: "Previous" and "Next" move the calendar by one date period (month, week or day); "Today" jumps to the current date. */}
           <Button variant="secondary" size="icon" aria-label="Previous" onClick={() => setAnchor(shift(view, current, -1))}>
             <ChevronLeft className="h-4 w-4" aria-hidden />
           </Button>
@@ -178,9 +181,9 @@ export function CalendarViewPage() {
               type="button"
               aria-pressed={view === v}
               onClick={() => setView(v)}
-              className={cn('px-3 py-1.5 text-sm capitalize first:rounded-l-md last:rounded-r-md', view === v ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/60')}
+              className={cn('px-3 py-1.5 text-sm first:rounded-l-md last:rounded-r-md', view === v ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/60')}
             >
-              {v}
+              {VIEW_LABEL[v]}
             </button>
           ))}
         </div>

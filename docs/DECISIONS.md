@@ -460,3 +460,20 @@ message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for
 **Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
 hint outside `en` until field codes exist. A release is blocked by missing keys or failed checks, not by draft status.
 Localized emails need a later decision built on `users.locale`.
+
+## D-022: Steerpost is licensed under the AGPL-3.0 (2026-10-09)
+
+**Context.** The repository was public but had no licence, so no one could legally use, modify or self-host the code, and
+copy that called the product "open-source" was not true. The owner chose a licence.
+
+**Decision.** AGPL-3.0-only, in `LICENSE` (the unmodified text from gnu.org), with `"license": "AGPL-3.0-only"` in every
+`package.json`. Anyone may use, modify and self-host Steerpost; whoever runs a modified version as a network service must
+offer its source to that service's users. This matches comparable self-hosted social schedulers (Postiz, TryPost).
+
+**Alternatives.** MIT or Apache-2.0 (more permissive: a hosted fork could stay closed, which works against a small
+open-source project). No licence (source-available only; rejected because the product is meant to be self-hosted by
+others).
+
+**Consequences.** Product copy may say "open-source (AGPL-3.0)". Contributions are accepted under the same licence. The
+owner, as the sole author so far, could still dual-license later; once outside contributions land, that would need their
+agreement or a CLA.

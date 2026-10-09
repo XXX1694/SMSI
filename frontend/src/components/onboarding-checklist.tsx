@@ -38,11 +38,11 @@ function NoAccountYet() {
       title="Connect your first account"
       action={
         <Button asChild>
-          <Link href="/accounts">Go to accounts</Link>
+          <Link href="/accounts">Connect account</Link>
         </Button>
       }
     >
-      Connect LinkedIn, Telegram or the mock provider to start publishing.
+      Connect a network to start publishing.
     </EmptyState>
   );
 }

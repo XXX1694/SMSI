@@ -26,8 +26,8 @@ func TestStubsAreHonestlyUnsupported(t *testing.T) {
 		if c.CanPublishText || c.CanPublishImage || c.CanPublishVideo || c.CanSchedule || c.CanDelete || c.CanAnalytics || c.MaxTextLength != 0 || c.MaxMediaCount != 0 {
 			t.Errorf("%s claims capabilities it does not have: %+v", p.Name(), c)
 		}
-		if !c.RequiresApproval || c.ConnectMethod != provider.ConnectNone || !strings.HasPrefix(c.Notes, "UNSUPPORTED") || len(c.Notes) < 30 {
-			t.Errorf("%s capabilities must be labelled as unsupported with the reason: %+v", p.Name(), c)
+		if !c.RequiresApproval || c.ConnectMethod != provider.ConnectNone || !strings.HasPrefix(c.Notes, "Not available yet: ") || len(c.Notes) < 30 {
+			t.Errorf("%s capabilities must be labelled as not available yet with the reason: %+v", p.Name(), c)
 		}
 		// A stub cannot even be asked to publish or connect: the registry refuses, and there is no code path that fakes success.
 		if _, ok := p.(provider.Publisher); ok {

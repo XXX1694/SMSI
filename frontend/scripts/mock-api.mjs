@@ -343,7 +343,7 @@ async function handle(req, res) {
     if (act === 'status') return send(res, 200, { id: p.id, status: p.status, targets: p.targets.map((t) => ({ id: t.id, status: t.status })) });
     if (!act && m === 'DELETE') { db.posts = db.posts.filter((x) => x !== p); audit(user.display_name, 'post.delete', 'post', p.id); return send(res, 204); }
     if (!act && m === 'PATCH') {
-      if (p.status !== 'draft' && p.status !== 'scheduled') return fail(res, 409, 'INVALID_STATE_TRANSITION', `post in status ${p.status} cannot be edited`);
+      if (p.status !== 'draft' && p.status !== 'scheduled') return fail(res, 409, 'INVALID_STATE_TRANSITION', "Only drafts and scheduled posts can be edited.");
       const content = typeof body.content === 'string' ? body.content : (p.content ?? p.targets[0]?.content ?? '');
       const ids = body.social_account_ids ?? p.targets.map((t) => t.social_account_id);
       const accs = ids.map((id) => mine(db.accounts).find((a) => a.id === id));

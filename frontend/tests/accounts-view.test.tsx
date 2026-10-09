@@ -25,7 +25,7 @@ describe('AccountsView connect result', () => {
     search.value = 'error=access_denied&provider=linkedin';
     render(<AccountsView />);
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('cancelled');
+    expect(alert).toHaveTextContent('canceled');
     expect(alert).not.toHaveTextContent('access_denied');
     expect(router.replace).toHaveBeenCalledWith('/accounts');
   });
@@ -33,7 +33,7 @@ describe('AccountsView connect result', () => {
   it('confirms a successful connection once and clears the query parameters', async () => {
     search.value = 'connected=linkedin';
     render(<AccountsView />);
-    expect(await screen.findByText(/Connected linkedin successfully/i)).toBeInTheDocument();
+    expect(await screen.findByText(/LinkedIn connected\./i)).toBeInTheDocument();
     expect(router.replace).toHaveBeenCalledWith('/accounts');
   });
 });
@@ -65,5 +65,50 @@ describe('AccountsView connect with a token', () => {
     expect(await screen.findByRole('list', { name: 'Discord accounts' })).toHaveTextContent('Discord #general');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(apiMock.social.accounts).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('AccountsView honest copy', () => {
+  it('shows each unavailable network its own reason, not a blanket approval message', async () => {
+    search.value = '';
+    const stub = (provider: string, notes: string) =>
+      normalizeProvider({ provider, configured: false, status: 'unsupported', capabilities: { requires_approval: true, notes } });
+    apiMock.social.providers.mockResolvedValue([
+      stub('x', 'Not available yet: X charges per post through its paid API.'),
+      stub('medium', 'Not available yet: Medium reportedly no longer issues new integration tokens.'),
+    ]);
+    render(<AccountsView />);
+    expect(await screen.findByText(/X charges per post/)).toBeInTheDocument();
+    expect(screen.getByText(/Medium reportedly/)).toBeInTheDocument();
+    expect(screen.queryByText(/Requires platform approval/i)).not.toBeInTheDocument();
+  });
+
+  it('offers Reconnect for an account that needs reconnecting', async () => {
+    search.value = '';
+    const discord = normalizeProvider({
+      provider: 'discord',
+      configured: true,
+      status: 'supported',
+      capabilities: { can_publish_text: true, connect_method: 'token', connect_fields: [{ name: 'webhook_url', label: 'Webhook URL', kind: 'url', secret: true, required: true }] },
+    });
+    apiMock.social.providers.mockResolvedValue([discord]);
+    apiMock.social.accounts.mockResolvedValue([
+      { id: 'a1', provider: 'discord', username: '#general', display_name: 'Discord #general', avatar_url: null, status: 'expired', scopes: [], connected_at: '2026-10-08T10:00:00Z' },
+    ]);
+    render(<AccountsView />);
+    expect(await screen.findByText('Needs reconnecting')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reconnect' })).toBeInTheDocument();
+  });
+
+  it('names what stays when disconnecting', async () => {
+    search.value = '';
+    const discord = normalizeProvider({ provider: 'discord', configured: true, status: 'supported', capabilities: { can_publish_text: true } });
+    apiMock.social.providers.mockResolvedValue([discord]);
+    apiMock.social.accounts.mockResolvedValue([
+      { id: 'a1', provider: 'discord', username: '#general', display_name: 'Discord #general', avatar_url: null, status: 'active', scopes: [], connected_at: '2026-10-08T10:00:00Z' },
+    ]);
+    render(<AccountsView />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Discord #general' }));
+    expect(await screen.findByText('Posts scheduled for Discord #general fail unless you connect it again before they are due. Published posts stay on Discord.')).toBeInTheDocument();
   });
 });

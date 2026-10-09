@@ -7,7 +7,7 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
       <LegalSection title="Who this is about">
         <p>
           Steerpost is software that schedules and publishes social posts. Anyone can run their own copy. This policy describes what that
-          software does with your data. The person or organisation that runs this copy is its operator (named under Contact below).
+          software does with your data. The person or organization that runs this copy is its operator (named under Contact below).
         </p>
         <p>The operator decides what happens to your data and answers for it. Steerpost does not run a central service that collects your data.</p>
       </LegalSection>

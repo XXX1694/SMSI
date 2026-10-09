@@ -37,7 +37,7 @@ func New() *Provider {
 }
 
 func (p *Provider) Name() string        { return Name }
-func (p *Provider) DisplayName() string { return "Mock Network (dev/test)" }
+func (p *Provider) DisplayName() string { return "Test network" }
 func (p *Provider) Configured() bool    { return true }
 func (p *Provider) Supported() bool     { return true }
 
@@ -47,7 +47,7 @@ func (p *Provider) Capabilities() provider.Capabilities {
 		CanPublishText: true, CanPublishImage: true, CanPublishVideo: true, CanDelete: true,
 		MaxTextLength: 5000, MaxMediaCount: 10, SafeToRetryAfterUnknown: false,
 		ConnectMethod: provider.ConnectOAuth,
-		Notes:         "MOCK provider for development and tests only. Nothing is posted anywhere.",
+		Notes:         "Test network. Nothing is posted anywhere.",
 	}
 }
 

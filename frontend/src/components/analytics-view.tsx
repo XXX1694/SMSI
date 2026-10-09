@@ -37,14 +37,13 @@ export function AnalyticsView() {
       </div>
       {withAnalytics.length === 0 ? (
         <Notice tone="info">
-          None of the currently available platforms expose analytics through their API, so there is nothing to
-          measure from them yet. Only internal counters appear below, if any.
+          None of the connected networks report analytics yet.
         </Notice>
       ) : (
         <p className="text-sm text-muted-foreground">Analytics supported by: {withAnalytics.map((p) => providerLabel(p.id)).join(', ')}.</p>
       )}
       {data.metrics.length === 0 ? (
-        <EmptyState title="No analytics data in this period">Metrics will appear here once a connected platform reports them.</EmptyState>
+        <EmptyState title="No analytics data in this period">Metrics will appear here once a connected network reports them.</EmptyState>
       ) : (
         <Table label="Metrics">
           <Thead>

@@ -13,9 +13,18 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - `Intl` formatting helpers for numbers, dates, times and relative times that honour the locale and the Settings timezone (`src/i18n/format.ts`, `useFormat()`). Arabic keeps Latin digits and the Gregorian calendar.
 - `npm run i18n:check` (part of `npm run lint`): every catalog key must exist in English, every message must be valid ICU with the same placeholders and tags, enabled locales must be complete with all plural categories, code may only use keys English defines; unused keys and missing `meta.json` descriptions are warnings.
 - The sidebar navigation labels are the first strings read from the catalog.
+- Reconnect button on accounts that need reconnecting (OAuth and token networks).
+- Glossary: approvals, deny, trusted key, main text, operator, open-source and the approval statuses; `docs/copy/style-guide.md` section 7 describes server-side approval.
 
 ### Changed
 
+- Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).
+- App copy follows the copy review (`docs/copy`): shorter and plainer text, one term per concept, no idioms, translator notes next to the 14 ambiguous strings. No API values changed.
+- Honesty fixes: the MCP panel and the "I understand" checkbox on API keys describe approvals (D-013), not a confirm flag; Publish now and Retry now count as irreversible in Approvals (danger-style Approve); each unavailable network shows its own reason from the capabilities (X, Medium and Hashnode no longer say "Requires platform approval"); the token form promises HTTPS only when the page is served over HTTPS; the media delete warning matches the backend (a file used in a post cannot be deleted); the Terms say API-key dangerous actions need approval unless the key is trusted, and name the AGPL-3.0.
+- Status names: the target status "Needs review" and the attempt status "Unknown outcome" are now "Unconfirmed" in the UI (API values `needs_review` and `unknown` are unchanged). "Cancelled" is "Canceled", "Expired" on an account is "Needs reconnecting" (with a Reconnect button), the test network is no longer called "Mock", and the post page says "Accounts" instead of "Targets".
+- Backend messages that reach the UI or agents are plain sentences with a next step (no raw ids, statuses or byte counts). Provider notes drop internal words; unavailable networks say "Not available yet: <reason>".
+- Mail templates: one verb ("Verify"), "server admin" instead of "operator", and the export mail no longer points to a settings page that has no export.
+- MCP tool descriptions and error hints: no duplicate SENSITIVE/CRITICAL prefix, correct reconnect and scope guidance, `needs_review` explained, agents are told to show the final text, accounts and time before `schedule_post`.
 - Docs: D-021 (locale set and rollout order, `uk` waits, `zh-CN` joins), `docs/copy/languages.md` and `translation-process.md` updated, a release is no longer blocked by a locale's review status (machine-drafted locales ship as "Beta translation"), and the copy glossary has `zh-CN`, `ar`, `fr` and `id` columns.
 
 ## [0.3.0] - 2026-10-09

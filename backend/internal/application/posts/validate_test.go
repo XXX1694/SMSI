@@ -201,3 +201,17 @@ func TestCheckContentWithAccountLimits(t *testing.T) {
 		t.Errorf("within both limits: %v", err)
 	}
 }
+
+func TestImageSizeMessageIsInMegabytes(t *testing.T) {
+	caps := provider.Capabilities{CanPublishImage: true, MaxMediaCount: 1, MaxImageBytes: 2 << 20}
+	big := media.Media{ID: uuid.New(), Kind: media.KindImage, SizeBytes: 3 << 20}
+	err := CheckContent("Bluesky", caps, "", "hi", []media.Media{big})
+	if err == nil || !strings.Contains(err.Error(), "Bluesky accepts images up to 2 MB") {
+		t.Fatalf("want the limit in MB, got %v", err)
+	}
+	for in, want := range map[int64]string{1 << 20: "1", 10 << 20: "10", 3 << 19: "1.5"} {
+		if got := megabytes(in); got != want {
+			t.Errorf("megabytes(%d) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -15,7 +15,7 @@
   <a href="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/XXX1694/steerpost/actions/workflows/security.yml"><img alt="Security" src="https://github.com/XXX1694/steerpost/actions/workflows/security.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/XXX1694/steerpost/releases"><img alt="Release" src="https://img.shields.io/github/v/release/XXX1694/steerpost?sort=semver"></a>
-  <a href="#license"><img alt="License: to be decided" src="https://img.shields.io/badge/license-to%20be%20decided-lightgrey"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
 </p>
 
 <p align="center">
@@ -36,8 +36,8 @@
 
 ## Why Steerpost
 
-- **Built for agents, with a leash.** Claude, Cursor and other MCP clients can draft and schedule posts. Each agent gets a
-  scoped, revocable key, risky actions need an explicit confirmation, and every call lands in the audit log.
+- **Built for agents, with limits you set.** Claude, Cursor and other MCP clients can draft and schedule posts. Each agent gets a
+  scoped, revocable key, risky actions wait for your approval, and every call lands in the audit log.
 - **Yours to run.** One `make up` starts the whole stack. Your accounts, tokens and posts stay in your own database, with
   tokens encrypted at rest and no third-party trackers.
 - **Honest about networks.** Each network reports what it really supports. An unsupported feature fails with a clear
@@ -59,7 +59,7 @@
 
 - An MCP server with 14 tools, over Streamable HTTP or stdio.
 - Keys carry only the scopes you tick. Tools outside a key's scope are not even listed, and the API checks every call again.
-- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in Steerpost before it runs.
+- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in Steerpost before it runs, unless you mark the key as trusted.
 - Every agent action is in the audit log, with an "Agent actions" filter.
 
 **Self-hosting**
@@ -68,7 +68,7 @@
   updates from GitHub Releases, and a mode for servers that already run a reverse proxy.
 - Multi-arch images (amd64, arm64) on GHCR.
 
-**Not there yet:** a drag-and-drop calendar, a posting queue with time slots, threads, first comments, team workspaces and
+**Not there yet:** a drag-and-drop calendar, a posting queue with time slots, threads, first comments, team workspaces with shared
 approvals, and OAuth for MCP clients. The analytics page exists, but no connected network reports metrics yet. The
 prioritised backlog is in [PRODUCT](docs/PRODUCT.md).
 
@@ -91,11 +91,11 @@ plans, in roughly this order, with no dates.
 | Threads, Instagram, Facebook Pages | 🔜 Next | Your own Meta app. Works for your own accounts; anyone else needs Meta App Review. Instagram needs a Business or Creator account |
 | Tumblr | 🔜 Next | Your own Tumblr OAuth app |
 | Nostr | 🔜 Next | Waits for a decision on how to hold the key |
-| X | 🔐 Needs review | Paid API, charged per post |
-| LinkedIn company pages | 🔐 Needs review | LinkedIn's Community Management API approval |
-| YouTube, TikTok | 🔐 Needs review | Google verification or a TikTok audit; until then, posts are private only |
-| Reddit, Pinterest, Max | 🔐 Needs review | Platform approval or a verified business profile |
-| Hashnode | 🔐 Needs review | A paid Hashnode plan |
+| X | 🔐 Needs app review | Paid API, charged per post |
+| LinkedIn company pages | 🔐 Needs app review | LinkedIn's Community Management API approval |
+| YouTube, TikTok | 🔐 Needs app review | Google verification or a TikTok audit; until then, posts are private only |
+| Reddit, Pinterest, Max | 🔐 Needs app review | Platform approval or a verified business profile |
+| Hashnode | 🔐 Needs app review | A paid Hashnode plan |
 | Medium, WhatsApp Channels | ⛔ Not possible | No usable official API |
 
 ✅ publishes today · 🔜 planned, needs no platform review · 🔐 needs app review, verification or a paid API · ⛔ no
@@ -145,13 +145,13 @@ claude mcp add --transport http steerpost https://mcp.example.com/mcp \
   "mcpServers": {
     "steerpost": {
       "url": "https://mcp.example.com/mcp",
-      "headers": { "Authorization": "Bearer ${env:SOCIALOS_API_KEY}" }
+      "headers": { "Authorization": "Bearer ${env:STEERPOST_API_KEY}" }
     }
   }
 }
 ```
 
-Set `SOCIALOS_API_KEY` in the environment Cursor starts from, or paste the key in place of the variable.
+Set `STEERPOST_API_KEY` in the environment Cursor starts from, or paste the key in place of the variable.
 
 </details>
 
@@ -184,8 +184,8 @@ Or run the Steerpost MCP server itself in stdio mode from a checkout (`cd mcp &&
       "command": "node",
       "args": ["/path/to/steerpost/mcp/dist/index.js", "--stdio"],
       "env": {
-        "SOCIALOS_API_URL": "https://api.example.com",
-        "SOCIALOS_API_KEY": "sk_live_..."
+        "STEERPOST_API_URL": "https://api.example.com",
+        "STEERPOST_API_KEY": "sk_live_..."
       }
     }
   }
@@ -278,4 +278,4 @@ repository yet, so contact the maintainer, [@XXX1694](https://github.com/XXX1694
 
 ## License
 
-To be decided. The repository has no licence file yet, so no open-source licence applies until one is added.
+Steerpost is open-source under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). You may use, modify and self-host it. If you run a modified version as a network service, you must offer its source code to the users of that service. See [D-022](docs/DECISIONS.md) for why this licence was chosen.

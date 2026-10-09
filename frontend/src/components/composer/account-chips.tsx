@@ -12,6 +12,7 @@ export function AccountChips({
   selected: string[];
   onToggle: (id: string) => void;
 }) {
+  // Translator note: label above the account chips; the accounts follow it as the object ("Publish to LinkedIn").
   return (
     <div role="group" aria-label="Publish to" className="flex flex-wrap gap-2">
       {accounts.map((a) => {
@@ -24,7 +25,7 @@ export function AccountChips({
             aria-pressed={on}
             disabled={!usable}
             onClick={() => onToggle(a.id)}
-            title={usable ? undefined : `Connection is ${a.status}`}
+            title={usable ? undefined : 'Needs reconnecting'}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50',
               on ? 'border-accent bg-accent-soft text-accent' : 'hover:bg-muted',

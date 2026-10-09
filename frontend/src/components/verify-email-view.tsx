@@ -61,7 +61,7 @@ export function VerifyEmailView() {
   }
   if (state === 'success') {
     return (
-      <AuthShell title="Email verified" description="Thanks. Your address is confirmed and every feature is unlocked.">
+      <AuthShell title="Email verified" description="Your email is verified. Every feature is unlocked.">
         <Button asChild className="w-full">
           <Link href={user ? '/dashboard' : '/login'}>{user ? 'Go to the dashboard' : 'Sign in'}</Link>
         </Button>

@@ -90,6 +90,14 @@ function TokenConnectForm({ provider, onConnected, onCancel }: { provider: Provi
 }
 
 /** "Connect with a token": a form built entirely from the provider's `connect_fields`. Closing it discards every value. */
+/** The HTTPS promise is made only when this page is served over HTTPS; local installs use http://localhost. */
+function storageNote(): string {
+  const https = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  return https
+    ? 'Steerpost receives these details over HTTPS, stores them encrypted and never shows them again.'
+    : 'Steerpost stores these details encrypted and never shows them again.';
+}
+
 export function TokenConnectDialog({
   provider,
   open,
@@ -103,7 +111,7 @@ export function TokenConnectDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title={`Connect ${provider.name}`} description="Paste the details below. They are sent once over HTTPS, stored encrypted and never shown again.">
+      <DialogContent title={`Connect ${provider.name}`} description={storageNote()}>
         <TokenConnectForm provider={provider} onConnected={onConnected} onCancel={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

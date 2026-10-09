@@ -30,8 +30,7 @@ function useNow(): Date {
 function Empty({ tab }: { tab: Tab }) {
   return tab === 'pending' ? (
     <EmptyState title="Nothing is waiting for you">
-      When an agent or API key tries to publish, delete, disconnect, connect an account or schedule within minutes, the request shows up here and
-      nothing happens until you decide.
+      Requests from agents appear here.
     </EmptyState>
   ) : (
     <EmptyState title="No decisions yet">Approved and denied requests are listed here.</EmptyState>
@@ -50,7 +49,8 @@ export function ApprovalsView() {
     setBusyId(a.id);
     try {
       await (approve ? api.approvals.approve(a.id) : api.approvals.deny(a.id));
-      toast.success(approve ? `Approved: ${actionLabel(a.action)}. The agent can repeat its call now.` : `Denied: ${actionLabel(a.action)}.`);
+      // Translator note: "Approved: {action}": {action} is a label such as "Publish now" or "Delete post", shown as a name.
+      toast.success(approve ? `Approved: ${actionLabel(a.action)}. ${a.actor_label} can go ahead now.` : `Denied: ${actionLabel(a.action)}.`);
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
