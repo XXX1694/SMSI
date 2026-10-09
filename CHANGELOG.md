@@ -32,6 +32,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Settings Terms and Privacy links are underlined, not only coloured. The Escape key closes the mobile menu and returns focus to its button; the mobile header stays visible while scrolling.
 - Touch targets: buttons, nav links, pending pill, legal links, "View all" and the demo Reset reach 44 px (24 px for Reset) on phones while desktop stays compact. Toasts respect the bottom safe-area inset.
 - Demo banner is a labelled landmark, and Reset asks before wiping demo data. Loading states carry visible-to-screen-reader text, the email notice close button and the dashboard "View all" links have specific names, and the dashboard stats row has a heading.
+- "Canceled" is spelled the American way in the message about a post that cannot be edited (it said "cancelled"), matching the status name.
+- The "requests waiting" pill in the mobile header no longer wraps: on phones it shows only the count (screen readers still hear "N requests wait for you"), and the full text appears from 640 px.
 
 ### Changed
 
@@ -44,6 +46,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Mail templates: one verb ("Verify"), "server admin" instead of "operator", and the export mail no longer points to a settings page that has no export.
 - MCP tool descriptions and error hints: no duplicate SENSITIVE/CRITICAL prefix, correct reconnect and scope guidance, `needs_review` explained, agents are told to show the final text, accounts and time before `schedule_post`.
 - Docs: D-021 (locale set and rollout order, `uk` waits, `zh-CN` joins), `docs/copy/languages.md` and `translation-process.md` updated, a release is no longer blocked by a locale's review status (machine-drafted locales ship as "Beta translation"), and the copy glossary has `zh-CN`, `ar`, `fr` and `id` columns.
+- All user-visible app strings now come from the message catalog, so the JavaScript that ships with the app grows: the English catalog (about 10.5 kB gzipped) lands in a shared chunk, so first-load JS on `/login` goes from 131 to 147 kB, `/verify-email` 125 to 140, `/compose` 155 to 168 and `/accounts` 149 to 162 (the shared baseline stays 103 kB). Splitting the catalog by namespace is a follow-up (D-021).
+- File sizes above 999 KB group thousands in English ("1,024 MB" instead of "1024 MB"), as the number follows the locale.
 
 ## [0.3.0] - 2026-10-09
 
