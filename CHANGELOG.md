@@ -6,6 +6,10 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Changed
+
+- Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).
+
 ## [0.3.0] - 2026-10-09
 
 ### Added
