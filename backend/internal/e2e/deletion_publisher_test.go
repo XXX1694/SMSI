@@ -83,7 +83,7 @@ func TestPublisherSkipsScheduledPostOfAccountBeingDeletedAndItCanBeRescheduled(t
 	if n := len(e.activeJobs(postID)); n != 0 {
 		t.Fatalf("%d jobs still active; the skip must cancel every job of the post", n)
 	}
-	if e.count(`SELECT count(*) FROM post_attempts a JOIN post_targets t ON t.id = a.post_target_id WHERE t.post_id = $1`, postID) != 0 {
+	if e.count(`SELECT count(*) FROM publication_attempts a JOIN post_targets t ON t.id = a.post_target_id WHERE t.post_id = $1`, postID) != 0 {
 		t.Fatal("an attempt was made for an account being deleted")
 	}
 
