@@ -116,3 +116,13 @@ func (r *Sessions) DeleteAllForUser(ctx context.Context, userID, except uuid.UUI
 	tag, err := r.db.q(ctx).Exec(ctx, `DELETE FROM sessions WHERE user_id = $1 AND id <> $2`, userID, except)
 	return tag.RowsAffected(), mapErr(err, "session")
 }
+
+// Publishable reports whether the user exists, is active and has no deletion scheduled (system: the publisher's check).
+func (r *Users) Publishable(ctx context.Context, id uuid.UUID) (bool, error) {
+	var ok bool
+	err := r.db.q(ctx).QueryRow(ctx, `SELECT status = 'active' AND deletion_scheduled_at IS NULL FROM users WHERE id = $1`, id).Scan(&ok)
+	if errs.Is(mapErr(err, "user"), errs.NotFound) {
+		return false, nil
+	}
+	return ok, err
+}

@@ -26,6 +26,10 @@ func (s *DeletionService) Purge(ctx context.Context, userID uuid.UUID) error {
 	if !ok {
 		return nil // cancelled, not due yet, or already gone
 	}
+	// The account may have been given work between the request and now (a post scheduled before access ended).
+	if _, err := s.d.Posts.UnscheduleAll(ctx, userID); err != nil {
+		return fmt.Errorf("stop scheduled posts: %w", err)
+	}
 	if why, err := s.d.Repo.Busy(ctx, userID); err != nil {
 		return err
 	} else if why != "" {
@@ -49,6 +53,11 @@ func (s *DeletionService) Purge(ctx context.Context, userID uuid.UUID) error {
 	}
 	if err := s.purgeExports(ctx, userID); err != nil {
 		return err
+	}
+	if s.d.Prefixes != nil {
+		if err := s.d.Prefixes.DeletePrefix(ctx, "users/"+userID.String()+"/"); err != nil {
+			return fmt.Errorf("delete remaining objects: %w", err)
+		}
 	}
 	if err := s.d.Repo.DeleteUser(ctx, userID, s.d.Clock.Now()); err != nil {
 		return err

@@ -1,7 +1,7 @@
-Subject: Your SocialOS account will be deleted
+Subject: Your Steerpost account will be deleted
 
 --- text ---
-Deletion of your SocialOS account was requested. Your sessions and API keys were signed out and revoked, and scheduled posts were set back to drafts.
+Deletion of your Steerpost account was requested. Your sessions and API keys were signed out and revoked, and scheduled posts were set back to drafts.
 
 All your data will be deleted on 16 October 2026, 12:00 UTC. This cannot be undone.
 
@@ -9,14 +9,14 @@ To keep your account, sign in before then and cancel the deletion: https://app.e
 
 If you did not request this, sign in and cancel now, then change your password.
 
-SocialOS
+Steerpost
 
 --- html ---
 <!doctype html>
 <html><body style="font-family:sans-serif;line-height:1.5;color:#111">
-<p>Deletion of your SocialOS account was requested. Your sessions and API keys were signed out and revoked, and scheduled posts were set back to drafts.</p>
+<p>Deletion of your Steerpost account was requested. Your sessions and API keys were signed out and revoked, and scheduled posts were set back to drafts.</p>
 <p>All your data will be deleted on <strong>16 October 2026, 12:00 UTC</strong>. This cannot be undone.</p>
 <p>To keep your account, sign in before then and cancel the deletion: <a href="https://app.example.com/verify-email#token=abc123">https://app.example.com/verify-email#token=abc123</a></p>
 <p>If you did not request this, sign in and cancel now, then change your password.</p>
-<p style="color:#666;font-size:13px">SocialOS</p>
+<p style="color:#666;font-size:13px">Steerpost</p>
 </body></html>

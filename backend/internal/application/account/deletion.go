@@ -29,11 +29,13 @@ type DeletionDeps struct {
 	Posts     PostStopper
 	Queue     PurgeQueue
 	Store     ObjectStore
-	Mail      port.MailQueue
-	Tx        port.TxRunner
-	Audit     port.AuditRecorder
-	Clock     port.Clock
-	Log       *slog.Logger
+	// Prefixes deletes everything under a key prefix; nil only in tests whose storage cannot list.
+	Prefixes PrefixDeleter
+	Mail     port.MailQueue
+	Tx       port.TxRunner
+	Audit    port.AuditRecorder
+	Clock    port.Clock
+	Log      *slog.Logger
 	// WebBaseURL is where the mails link to.
 	WebBaseURL string
 	// Grace is the period between the request and the purge. Zero means DefaultGrace.
@@ -78,12 +80,10 @@ func (s *DeletionService) Request(ctx context.Context, a actor.Actor, password, 
 	if err := s.reauthenticate(ctx, u, password, confirmEmail); err != nil {
 		return nil, err
 	}
-	// Before anything is revoked: if a post cannot be stopped nothing has changed and the owner can try again.
-	if _, err := s.d.Posts.UnscheduleAll(ctx, u.ID); err != nil {
-		return nil, err
-	}
 	now := s.d.Clock.Now()
 	purgeAt := now.Add(s.d.Grace)
+	// Access ends first, in one transaction: once it commits no session or key can schedule anything, and the account
+	// refuses scheduling and publishing while the deletion is pending (RequireNotDeleting, the publisher's owner check).
 	err = s.d.Tx.InTx(ctx, func(ctx context.Context) error {
 		if err := s.d.Repo.Schedule(ctx, u.ID, now, purgeAt); err != nil {
 			return err
@@ -102,6 +102,11 @@ func (s *DeletionService) Request(ctx context.Context, a actor.Actor, password, 
 	if err != nil {
 		return nil, err
 	}
+	// Then the scheduled posts go back to drafts. A failure is not fatal: the publisher skips them anyway and the purge
+	// stops them again; it is logged so it can be looked at.
+	if _, err := s.d.Posts.UnscheduleAll(ctx, u.ID); err != nil {
+		s.d.Log.WarnContext(ctx, "scheduled posts not stopped at deletion request", slog.String("user_id", u.ID.String()), slog.Any("error", err))
+	}
 	s.notify(ctx, u.Email, mail.AccountDeletionScheduled, mail.Data{Link: s.d.WebBaseURL + "/login", Date: purgeAt.UTC().Format("2 January 2006, 15:04 UTC")})
 	return &Schedule{PurgeAt: purgeAt}, nil
 }
@@ -113,7 +118,12 @@ func (s *DeletionService) reauthenticate(ctx context.Context, u *user.User, pass
 	if errs.CodeOf(err) == errs.RateLimited {
 		return err
 	}
-	if err != nil || !ok {
+	if err != nil {
+		// Not a wrong password: a broken hash or a hasher failure must not look like one.
+		s.d.Log.ErrorContext(ctx, "password check failed during account deletion", slog.String("user_id", u.ID.String()), slog.Any("error", err))
+		return errs.Wrap(errs.Internal, "could not check the password", err)
+	}
+	if !ok {
 		return errs.Validationf("the password is incorrect").WithField("password", "incorrect")
 	}
 	if !strings.EqualFold(strings.TrimSpace(confirmEmail), u.Email) {

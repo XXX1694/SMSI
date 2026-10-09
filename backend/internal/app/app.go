@@ -203,14 +203,14 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 		Posts: postSvc,
 		Deletion: account.NewDeletionService(account.DeletionDeps{Repo: postgres.NewDeletions(db), Users: postgres.NewUsers(db),
 			Passwords: hasher, Sessions: postgres.NewSessions(db), Keys: keyRepo, Posts: postSvc, Queue: a.Queue.PurgeQueue(),
-			Store: a.Storage, Mail: a.MailQueue, Tx: db, Audit: auditSvc, Clock: clk, Log: log, WebBaseURL: cfg.WebBaseURL,
+			Store: a.Storage, Prefixes: prefixDeleter(a.Storage), Mail: a.MailQueue, Tx: db, Audit: auditSvc, Clock: clk, Log: log, WebBaseURL: cfg.WebBaseURL,
 			Grace: cfg.DeletionGrace()}),
 		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk,
 			media.WithUploadLimit(cfg.MediaUploadConcurrency, media.DefaultUploadWait)).WithQuota(quotaSvc, db),
 		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
 			Tx: db, Audit: auditSvc, Clock: clk, MCPPublicURL: cfg.MCPPublicURL, APIPublicURL: cfg.APIPublicURL}),
 	}
-	a.Publisher = scheduler.NewPublisher(scheduler.Deps{Targets: postRepo, Posts: postRepo, Jobs: jobRepo,
+	a.Publisher = scheduler.NewPublisher(scheduler.Deps{Owners: postgres.NewUsers(db), Targets: postRepo, Posts: postRepo, Jobs: jobRepo,
 		Accounts: accountsAdapter{repo: accountRepo, svc: accountSvc}, Vault: accountSvc.Vault(),
 		Media: mediaAdapter{repo: mediaRepo, storage: a.Storage}, Metrics: analyticsSvc, Registry: a.Registry,
 		Tx: db, Audit: auditSvc, Clock: clk, Log: log, Queue: a.Queue,
@@ -274,4 +274,11 @@ func (a *App) Close() {
 	if a.DB != nil {
 		a.DB.Close()
 	}
+}
+
+// prefixDeleter returns the storage's prefix deletion (S3 and the in-memory store have it); nil for a test double
+// that cannot list objects.
+func prefixDeleter(s media.Storage) account.PrefixDeleter {
+	pd, _ := s.(account.PrefixDeleter)
+	return pd
 }

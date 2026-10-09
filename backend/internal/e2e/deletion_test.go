@@ -125,7 +125,25 @@ func TestAccountDeletionFlow(t *testing.T) {
 	if st := back.must("GET", "/api/v1/posts/"+postID, nil, 200)["status"]; st != "draft" {
 		t.Fatalf("scheduled post is %v during the grace period", st)
 	}
+	// While the deletion is pending the account cannot schedule or publish anything.
+	for _, tc := range []struct {
+		path string
+		body any
+	}{
+		{"/api/v1/posts/" + postID + "/schedule", map[string]any{"scheduled_at": fmtTime(clk.Now().Add(48 * time.Hour))}},
+		{"/api/v1/posts/" + postID + "/publish", nil},
+	} {
+		if r := back.do("POST", tc.path, tc.body); r.status != http.StatusConflict || !strings.Contains(string(r.body), "scheduled for deletion") {
+			t.Fatalf("POST %s during the grace period: %d %s", tc.path, r.status, r.body)
+		}
+	}
+	if st := back.must("GET", "/api/v1/posts/"+postID, nil, 200)["status"]; st != "draft" {
+		t.Fatalf("post is %v after refused attempts", st)
+	}
 	back.must("POST", "/api/v1/account/delete/cancel", nil, 204)
+	// Cancelling gives the account back its rights.
+	back.must("POST", "/api/v1/posts/"+postID+"/schedule", map[string]any{"scheduled_at": fmtTime(clk.Now().Add(48 * time.Hour))}, 200)
+	back.must("POST", "/api/v1/posts/"+postID+"/unschedule", nil, 200)
 	if back.must("GET", "/api/v1/me", nil, 200)["user"].(map[string]any)["deletion_scheduled_at"] != nil {
 		t.Fatal("cancel did not clear the schedule")
 	}
@@ -149,6 +167,9 @@ func TestAccountDeletionFlow(t *testing.T) {
 	if n, _ := e.app.Services.Deletion.Sweep(context.Background()); n != 0 {
 		t.Fatalf("sweep inside the grace period queued %d", n)
 	}
+	// An object no row knows about (a failed export's leftover) must go with the account, another user's must stay.
+	leftover := "users/" + uid + "/exports/leftover.zip"
+	_ = e.storage.Put(context.Background(), leftover, strings.NewReader("x"), 1, "application/zip")
 	clk.set(clk.Now().Add(8 * 24 * time.Hour))
 	if n, err := e.app.Services.Deletion.Sweep(context.Background()); err != nil || n != 1 {
 		t.Fatalf("sweep after the grace period: %d %v", n, err)
@@ -166,7 +187,7 @@ func TestAccountDeletionFlow(t *testing.T) {
 			t.Errorf("%s: %d rows left", table, n)
 		}
 	}
-	if e.storage.Has("users/"+uid+"/media/"+mediaID+".png") || e.storage.Has(aliceKey) {
+	if e.storage.Has("users/"+uid+"/media/"+mediaID+".png") || e.storage.Has(aliceKey) || e.storage.Has(leftover) {
 		t.Error("objects left in storage")
 	}
 	for _, k := range []string{"posts", "media", "social_accounts", "audit_logs"} {

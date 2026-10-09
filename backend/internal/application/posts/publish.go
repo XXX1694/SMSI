@@ -21,6 +21,9 @@ func (s *Service) PublishNow(ctx context.Context, a actor.Actor, id uuid.UUID) (
 	if err := a.RequireVerified(); err != nil {
 		return nil, err
 	}
+	if err := a.RequireNotDeleting(); err != nil {
+		return nil, err
+	}
 	err := s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
 		p, err := s.repo.GetForUpdate(ctx, a.UserID, id)
 		if err != nil {
@@ -88,6 +91,9 @@ func (s *Service) Retry(ctx context.Context, a actor.Actor, id uuid.UUID, in Ret
 		return nil, err
 	}
 	if err := a.RequireVerified(); err != nil {
+		return nil, err
+	}
+	if err := a.RequireNotDeleting(); err != nil {
 		return nil, err
 	}
 	err := s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {

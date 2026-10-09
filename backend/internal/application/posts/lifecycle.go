@@ -102,6 +102,9 @@ func (s *Service) Schedule(ctx context.Context, a actor.Actor, id uuid.UUID, at 
 	if err := a.RequireVerified(); err != nil {
 		return nil, err
 	}
+	if err := a.RequireNotDeleting(); err != nil {
+		return nil, err
+	}
 	if err := s.validateScheduleTime(at); err != nil {
 		return nil, err
 	}

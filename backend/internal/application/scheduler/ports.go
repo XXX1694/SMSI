@@ -102,3 +102,9 @@ type MediaStore interface {
 type Metrics interface {
 	Increment(ctx context.Context, userID, accountID, targetID uuid.UUID, metric string, value int64) error
 }
+
+// Owners tells the publisher whether an owner's posts may still go out.
+type Owners interface {
+	// Publishable is false for an account that is deleted or scheduled for deletion (D-019).
+	Publishable(ctx context.Context, userID uuid.UUID) (bool, error)
+}

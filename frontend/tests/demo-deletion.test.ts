@@ -11,7 +11,7 @@ function rig() {
   const call = (method: Method, path: string, body?: unknown) => engine.handle({ method, path, body }) as { status: number; body: any };
   return { call };
 }
-const ok = { password: 'demo12345', confirm: 'demo@socialos.dev' };
+const ok = { password: 'demo12345', confirm: 'demo@example.com' };
 
 describe('demo account deletion', () => {
   it('needs the right password and the typed email, and names the field', () => {

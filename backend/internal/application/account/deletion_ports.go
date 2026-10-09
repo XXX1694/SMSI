@@ -89,3 +89,9 @@ type PostStopper interface {
 type PurgeQueue interface {
 	EnqueuePurge(ctx context.Context, userID uuid.UUID) error
 }
+
+// PrefixDeleter deletes every object whose key starts with prefix. The purge uses it to finish the job after the
+// keys it knows about: leftovers of failed exports and uploads that were in flight.
+type PrefixDeleter interface {
+	DeletePrefix(ctx context.Context, prefix string) error
+}

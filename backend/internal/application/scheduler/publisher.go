@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"github.com/socialos/backend/internal/domain/audit"
 	"log/slog"
 	"time"
 
@@ -29,6 +30,7 @@ var errTooEarly = errors.New("task fired before the job run_at")
 
 // Publisher executes publish:target jobs.
 type Publisher struct {
+	owners   Owners
 	targets  Targets
 	posts    Posts
 	jobs     Jobs
@@ -55,6 +57,8 @@ type Deps struct {
 	Vault    Vault
 	Media    MediaStore
 	Metrics  Metrics
+	// Owners (optional) lets the publisher skip accounts that are deleted or scheduled for deletion.
+	Owners   Owners
 	Registry *provider.Registry
 	Tx       port.TxRunner
 	Audit    port.AuditRecorder
@@ -77,7 +81,7 @@ func NewPublisher(d Deps) *Publisher {
 	if d.Sleep == nil {
 		d.Sleep = sleepCtx
 	}
-	return &Publisher{queue: d.Queue, sleep: d.Sleep, targets: d.Targets, posts: d.Posts, jobs: d.Jobs, accounts: d.Accounts, vault: d.Vault,
+	return &Publisher{owners: d.Owners, queue: d.Queue, sleep: d.Sleep, targets: d.Targets, posts: d.Posts, jobs: d.Jobs, accounts: d.Accounts, vault: d.Vault,
 		media: d.Media, metrics: d.Metrics, registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, log: d.Log, observe: d.OnOutcome}
 }
 
@@ -157,6 +161,9 @@ func (p *Publisher) prepare(ctx context.Context, pl Payload, t *post.Target) (*r
 		return nil, err
 	}
 	r := &run{target: t, post: ps, actor: actor.Scheduler(t.UserID), payload: pl}
+	if skipped, err := p.skipForOwner(ctx, r); err != nil || skipped {
+		return nil, err
+	}
 	if t.Status == post.TargetPublished || t.Status == post.TargetCancelled || t.Status == post.TargetNeedsReview ||
 		(ps.Status != post.StatusScheduled && ps.Status != post.StatusPublishing) {
 		return nil, p.jobs.MarkDoneForTarget(ctx, t.ID)
@@ -244,4 +251,27 @@ func (p *Publisher) startAttempt(ctx context.Context, r *run) error {
 		Status: post.AttemptStarted, ResponseMetadata: map[string]any{},
 	}
 	return p.targets.InsertAttempt(ctx, r.attempt)
+}
+
+// skipForOwner stops a due job whose owner is deleted or scheduled for deletion: the post goes back to a draft, the job
+// is finished and nothing is sent to a network (D-019). It runs inside the begin tx with the post and target locked.
+func (p *Publisher) skipForOwner(ctx context.Context, r *run) (bool, error) {
+	if p.owners == nil {
+		return false, nil
+	}
+	ok, err := p.owners.Publishable(ctx, r.target.UserID)
+	if err != nil || ok {
+		return false, err
+	}
+	if r.post.Status == post.StatusScheduled {
+		r.post.Status, r.post.ScheduledAt = post.StatusDraft, nil
+		if err := p.posts.Update(ctx, r.post); err != nil {
+			return false, err
+		}
+	}
+	if err := p.jobs.MarkDoneForTarget(ctx, r.target.ID); err != nil {
+		return false, err
+	}
+	return true, p.audit.Record(ctx, r.actor, audit.ActionPostUnscheduled, "post", r.post.ID.String(),
+		map[string]any{"reason": "account_deletion", "post_target_id": r.target.ID.String()})
 }

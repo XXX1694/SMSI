@@ -53,7 +53,7 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
 
       <LegalSection title="Export and deletion">
         <p>
-          Export: in Settings, under &quot;Your data&quot;, you can download a ZIP of everything you have in SocialOS: your profile, posts, connected
+          Export: in Settings, under &quot;Your data&quot;, you can download a ZIP of everything you have in Steerpost: your profile, posts, connected
           accounts (without credentials), API key names, approvals, the audit log and your media files. The file is deleted from storage after a few days.
         </p>
         <p>

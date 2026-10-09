@@ -173,6 +173,41 @@ func (s *S3) Delete(ctx context.Context, key string) error {
 	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
 }
 
+// DeletePrefix removes every object under prefix (listing is paged by the client, so memory stays bounded).
+func (s *S3) DeletePrefix(ctx context.Context, prefix string) error {
+	if err := s.ensure(ctx); err != nil {
+		return err
+	}
+	lctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	objects := make(chan minio.ObjectInfo)
+	var listErr error
+	go func() {
+		defer close(objects)
+		for o := range s.client.ListObjects(lctx, s.bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
+			if o.Err != nil {
+				listErr = o.Err
+				return
+			}
+			select {
+			case objects <- o:
+			case <-lctx.Done():
+				return
+			}
+		}
+	}()
+	var firstErr error
+	for e := range s.client.RemoveObjects(ctx, s.bucket, objects, minio.RemoveObjectsOptions{}) {
+		if firstErr == nil {
+			firstErr = e.Err
+		}
+	}
+	if firstErr != nil {
+		return firstErr
+	}
+	return listErr
+}
+
 // PresignGet returns a short-lived download URL.
 func (s *S3) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error) {
 	u, err := s.signer.PresignedGetObject(ctx, s.bucket, key, ttl, url.Values{})

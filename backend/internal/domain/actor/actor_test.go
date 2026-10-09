@@ -48,3 +48,18 @@ func TestContextRoundTrip(t *testing.T) {
 		t.Fatal("expected no actor")
 	}
 }
+
+func TestRequireNotDeleting(t *testing.T) {
+	if err := (Actor{UserID: uuid.New(), Type: TypeUser, DeletionScheduled: true}).RequireNotDeleting(); !errs.Is(err, errs.Conflict) {
+		t.Fatalf("a session of an account being deleted: %v", err)
+	}
+	if err := (Actor{UserID: uuid.New(), Type: TypeAPIKey, DeletionScheduled: true}).RequireNotDeleting(); !errs.Is(err, errs.Conflict) {
+		t.Fatalf("an API key of an account being deleted: %v", err)
+	}
+	for _, a := range []Actor{{Type: TypeUser}, Scheduler(uuid.New()), System(uuid.New(), "account_deletion")} {
+		a.DeletionScheduled = a.Type == TypeScheduler || a.Type == TypeSystem
+		if err := a.RequireNotDeleting(); err != nil {
+			t.Fatalf("%s must pass: %v", a.Type, err)
+		}
+	}
+}

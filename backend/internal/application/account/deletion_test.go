@@ -32,7 +32,7 @@ func newDelRig(t *testing.T) *delRig {
 	r := &delRig{w: newWorld(clk), store: storage.NewMemory(), mail: &mailSink{}, queue: &purgeQueued{}, audit: &auditLog{}, clock: clk}
 	r.u = r.w.addUser("owner@example.com")
 	r.svc = NewDeletionService(DeletionDeps{Repo: r.w, Users: r.w, Passwords: r.w, Sessions: r.w, Keys: r.w, Posts: r.w, Queue: r.queue,
-		Store: r.store, Mail: r.mail, Tx: passTx{}, Audit: r.audit, Clock: clk, WebBaseURL: "https://app.test/", Grace: 7 * 24 * time.Hour})
+		Store: r.store, Prefixes: r.store, Mail: r.mail, Tx: passTx{}, Audit: r.audit, Clock: clk, WebBaseURL: "https://app.test/", Grace: 7 * 24 * time.Hour})
 	return r
 }
 
@@ -94,8 +94,8 @@ func TestRequestSchedulesRevokesAndNotifies(t *testing.T) {
 	if r.w.sessions[r.u.ID] != 0 || r.w.keysLeft[r.u.ID] != 0 {
 		t.Fatal("sessions and keys must be revoked at request time")
 	}
-	if got := strings.Join(r.w.order, ","); got != "unschedule,schedule" {
-		t.Fatalf("posts must be stopped before anything is revoked: %s", got)
+	if got := strings.Join(r.w.order, ","); got != "schedule,unschedule" {
+		t.Fatalf("access must end (schedule + revoke in one tx) before posts are stopped: %s", got)
 	}
 	if r.mail.templates() != "account_deletion_scheduled" || !strings.Contains(r.mail.sent[0].Text, "https://app.test/login") {
 		t.Fatalf("mail: %q", r.mail.templates())
@@ -175,7 +175,7 @@ func TestPurgeWaitsForTheGracePeriodThenDeletesInOrder(t *testing.T) {
 		t.Fatalf("deletion record: %+v", rec)
 	}
 	// Posts (and what cascades from them) go before media, the user row goes last.
-	got := strings.Join(r.w.order, ",")
+	got := strings.TrimPrefix(strings.Join(r.w.order, ","), "unschedule,") // the purge stops posts again after its claim
 	if !strings.HasPrefix(got, "batch:posts") || strings.Index(got, "media") < strings.LastIndex(got, "batch:posts") || !strings.HasSuffix(got, ",user") {
 		t.Fatalf("order: %s", got)
 	}
@@ -220,5 +220,91 @@ func TestPurgeWaitsForARunningPublishAndCanResume(t *testing.T) {
 	}
 	if got := r.w.records[r.u.ID].counts.Posts; got != int64(purgeBatch+30) {
 		t.Fatalf("counts of the first attempt were overwritten: %d", got)
+	}
+}
+
+func TestAHasherFailureIsNotReportedAsAWrongPassword(t *testing.T) {
+	r := newDelRig(t)
+	r.svc.d.Passwords = brokenHasher{err: errBoom}
+	_, err := r.svc.Request(context.Background(), r.session(), "secret", r.u.Email)
+	_ = wantCode(t, err, errs.Internal)
+	r.svc.d.Passwords = brokenHasher{err: errs.New(errs.RateLimited, "busy")}
+	_, err = r.svc.Request(context.Background(), r.session(), "secret", r.u.Email)
+	_ = wantCode(t, err, errs.RateLimited)
+	if len(r.w.scheduled) != 0 || r.w.sessions[r.u.ID] != 2 {
+		t.Fatal("a failed password check changed state")
+	}
+}
+
+type brokenHasher struct{ err error }
+
+func (b brokenHasher) Verify(context.Context, string, string) (bool, error) { return false, b.err }
+
+// flakyStore fails the nth Delete once, like an S3 error in the middle of a purge.
+type flakyStore struct {
+	*storage.Memory
+	failAt int
+	calls  int
+}
+
+func (f *flakyStore) Delete(ctx context.Context, key string) error {
+	f.calls++
+	if f.calls == f.failAt {
+		return errBoom
+	}
+	return f.Memory.Delete(ctx, key)
+}
+
+func TestPurgeSurvivesAnS3ErrorMidwayAndACompletesOnRerun(t *testing.T) {
+	r := newDelRig(t)
+	ctx := context.Background()
+	mediaKey, exportKey := r.seed(t)
+	f := &flakyStore{Memory: r.store, failAt: 2} // media key is call 1, the export key call 2
+	r.svc.d.Store = f
+	if _, err := r.svc.Request(ctx, r.session(), "secret", r.u.Email); err != nil {
+		t.Fatal(err)
+	}
+	r.clock.t = r.clock.t.Add(8 * 24 * time.Hour)
+	if err := r.svc.Purge(ctx, r.u.ID); err == nil || !strings.Contains(err.Error(), "export object") {
+		t.Fatalf("want the S3 error, got %v", err)
+	}
+	if r.w.users[r.u.ID] == nil || r.w.users[r.u.ID].Status != user.StatusDeleted {
+		t.Fatal("a half-done purge must leave the claimed account for the rerun")
+	}
+	if n, _ := r.svc.Sweep(ctx); n != 1 {
+		t.Fatalf("sweep must pick the half-done purge up, got %d", n)
+	}
+	if err := r.svc.Purge(ctx, r.u.ID); err != nil {
+		t.Fatalf("rerun: %v", err)
+	}
+	if r.w.users[r.u.ID] != nil || r.store.Has(mediaKey) || r.store.Has(exportKey) {
+		t.Fatal("rerun did not finish the purge")
+	}
+	if rec := r.w.records[r.u.ID]; rec.purged == nil || rec.counts.Posts != int64(purgeBatch+30) {
+		t.Fatalf("record after rerun: %+v", rec)
+	}
+}
+
+func TestPurgeRemovesObjectsNoRowKnowsAbout(t *testing.T) {
+	r := newDelRig(t)
+	ctx := context.Background()
+	prefix := "users/" + r.u.ID.String() + "/"
+	for _, k := range []string{prefix + "exports/failed-leftover.zip", prefix + "media/in-flight.mp4", "users/" + uuid.NewString() + "/media/theirs.png"} {
+		if err := r.store.Put(ctx, k, strings.NewReader("x"), 1, "x"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := r.svc.Request(ctx, r.session(), "secret", r.u.Email); err != nil {
+		t.Fatal(err)
+	}
+	r.clock.t = r.clock.t.Add(8 * 24 * time.Hour)
+	if err := r.svc.Purge(ctx, r.u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if r.store.Has(prefix+"exports/failed-leftover.zip") || r.store.Has(prefix+"media/in-flight.mp4") {
+		t.Fatal("orphan objects survived the purge")
+	}
+	if r.store.Len() != 1 {
+		t.Fatalf("another user's object must stay; %d objects left", r.store.Len())
 	}
 }

@@ -510,3 +510,11 @@ new empty volumes. Rename the copy only: users would still see `socialos` in ima
 redirect). Never create a repo named SMSI again. Dual-publish and the env fallback are removed once every known server pulls `steerpost-*`.
 The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*` GHCR packages start private; the owner makes them public
 (deploy/README.md, section 15.1). The shims (env fallback, dual publish, `curl -L` in `autoupdate.sh`) land and are deployed before the repository is renamed.
+
+Addendum (review): the legal version is bumped to 2026-10-10 because the Privacy Policy now describes export and
+deletion, which changes its meaning. As D-016 says, a bump only affects new accounts; existing users are not asked to
+accept again. While a deletion is scheduled the account refuses scheduling and publishing (`409`, `RequireNotDeleting`,
+set at authentication), the publisher skips due jobs of such accounts (the post goes back to a draft, audited as
+`post.unscheduled` with reason `account_deletion`), access is revoked in the same transaction that sets the schedule
+(posts are unscheduled right after, and again by the purge after it claims the account), and the purge removes every
+object under `users/<uid>/` (S3 listing) after the keys it knows, so failed-export leftovers go too.

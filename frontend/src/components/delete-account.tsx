@@ -59,7 +59,7 @@ export function DeleteAccount() {
         Delete account…
       </Button>
       <Dialog open={open} onOpenChange={(o) => !busy && reset(o)}>
-        <DialogContent title="Delete your account?" description="Everything you own in SocialOS is deleted after the grace period. This cannot be undone.">
+        <DialogContent title="Delete your account?" description="Everything you own in Steerpost is deleted after the grace period. This cannot be undone.">
           <form onSubmit={submit} className="space-y-4" noValidate aria-label="Delete account">
             <Field label="Your password" htmlFor="del-password" error={problem.password}>
               <Input id="del-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />

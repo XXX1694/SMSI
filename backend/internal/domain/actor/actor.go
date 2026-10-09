@@ -35,6 +35,9 @@ type Actor struct {
 	// address, or when the server does not enforce verification (no mail
 	// delivery). Scheduler and system actors need no flag (see RequireVerified).
 	EmailVerified bool
+	// DeletionScheduled is set by authentication when the owner asked for account deletion and has not cancelled.
+	// Such an account cannot schedule or publish anything (RequireNotDeleting).
+	DeletionScheduled bool
 	// DangerousPolicy is the API key's dangerous_policy ("approve" or "trusted"); empty means "approve".
 	DangerousPolicy string
 }
@@ -94,6 +97,16 @@ func (a Actor) RequireVerified() error {
 		return nil
 	}
 	return errs.New(errs.EmailNotVerified, "verify your email address to use this feature")
+}
+
+// RequireNotDeleting refuses scheduling and publishing while the owner's account is scheduled for deletion: nothing
+// may go out under an account whose data is about to be deleted (D-019). Background actors pass; the publisher
+// applies the same rule to jobs that were already queued.
+func (a Actor) RequireNotDeleting() error {
+	if a.DeletionScheduled && a.Type != TypeScheduler && a.Type != TypeSystem {
+		return errs.New(errs.Conflict, "this account is scheduled for deletion; cancel the deletion to schedule or publish posts")
+	}
+	return nil
 }
 
 // EffectiveScopes returns the scopes the actor holds.
