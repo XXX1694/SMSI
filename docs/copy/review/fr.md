@@ -26,7 +26,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft` (shown as "Beta translation").
-Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/fr/*.json` (676 keys, same structure and order as `en.json`).
+Reviewer: none yet. Date: none yet. Catalog: `frontend/messages/fr/*.json` (676 keys, same structure and order as `messages/en/*.json`).
 
 Register: vous. Buttons use the infinitive («Enregistrer», «Planifier»), body text the imperative («Connectez un compte.»). No
 exclamation marks. Sentence case. Full sentences end with a period; labels, buttons and badges do not.

@@ -12,6 +12,13 @@ steps; the schema and API changes below need a plan under AGENTS.md section 2.
   - `frontend/messages/{locale}/{namespace}.json` for the dashboard and demo: one file per top-level namespace (`composer.json`
     holds `composer.publishNow`). English is the source; `src/i18n/catalog.ts` lists the namespaces (bundles) and types them
     from `messages/en/`. A locale may lack a file; that namespace then reads English. A file English lacks is an error.
+  - Workflow for the files:
+    - New namespace: add `messages/en/<ns>.json`, then the id to `BUNDLES` and the file to the `Messages` type in
+      `src/i18n/catalog.ts`, and the import to `src/i18n/en-all.ts`. `npm run i18n:check` fails when they disagree.
+    - Translating a namespace for a locale: add `messages/<locale>/<ns>.json` and its import to
+      `src/i18n/catalogs/<locale>.ts` (the check fails when the index and the files on disk differ).
+    - New locale: add `src/i18n/catalogs/<locale>.ts` and a `LOADERS` entry in `src/i18n/messages.ts`, besides the
+      registry entry in `locales.ts`.
   - `frontend/messages/meta.json` holds per-key metadata for translators and checks:
     `{ "composer.publishNow": { "type": "button", "description": "Publishes immediately; opens a confirmation", "maxLength": 18 } }`.
     `type` is one of `button | tab | badge | nav | title | body | error | toast | aria`.

@@ -12,12 +12,3 @@ export function problems(input: {
   sources?: string[];
 }): { errors: string[]; warnings: string[] };
 export const STYLES: { number: string[]; date: string[]; time: string[] };
-export function listBundles(localeDir: string): string[];
-export function readLocale(localeDir: string): Record<string, object>;
-export function catalogBundles(source: string): { list: string[]; typed: string[] };
-export function indexBundles(source: string, locale: string): string[];
-export function layoutProblems(input: {
-  bundles: Record<string, string[]>;
-  catalog: { list: string[]; typed: string[] };
-  indexes?: Record<string, string[] | null>;
-}): string[];

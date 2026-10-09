@@ -25,7 +25,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft`. Hidden: `kk` is not enabled in `frontend/src/i18n/locales.ts` and stays out of the switcher until a native reviewer signs this file.
-Catalog: `frontend/messages/kk/*.json` (687 keys, all of `en.json`).
+Catalog: `frontend/messages/kk/*.json` (687 keys, all of `messages/en/*.json`).
 
 Register: «сіз», buttons as verbal nouns (-у), Cyrillic. Steerpost never takes a case suffix: sentences are restructured («Steerpost жүйесіне кіру»); network names are followed by a separate word («{network} желісінде»), not a suffix.
 

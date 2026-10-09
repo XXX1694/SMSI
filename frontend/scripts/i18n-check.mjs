@@ -9,7 +9,8 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { catalogBundles, indexBundles, layoutProblems, listBundles, listSources, problems, readJson, readLocale } from './i18n-lib.mjs';
+import { catalogBundles, indexBundles, layoutProblems, listBundles, readLocale, strayEntries } from './i18n-layout.mjs';
+import { listSources, problems, readJson } from './i18n-lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'messages');
@@ -20,6 +21,7 @@ const known = [...(/export const LOCALES = \[([^\]]*)\]/.exec(locales)?.[1] ?? '
 
 const catalogs = {};
 const bundles = {};
+const stray = {};
 const errors = [];
 for (const f of readdirSync(dir, { withFileTypes: true })) {
   if (!f.isDirectory()) {
@@ -32,13 +34,14 @@ for (const f of readdirSync(dir, { withFileTypes: true })) {
 for (const l of known) {
   catalogs[l] = readLocale(join(dir, l));
   bundles[l] = listBundles(join(dir, l));
+  stray[l] = strayEntries(join(dir, l));
 }
 const indexes = {};
 for (const l of known) {
   const file = join(root, 'src/i18n/catalogs', `${l}.ts`);
   if (l !== 'en') indexes[l] = existsSync(file) ? indexBundles(readFileSync(file, 'utf8'), l) : null;
 }
-errors.push(...layoutProblems({ bundles, indexes, catalog: catalogBundles(readFileSync(join(root, 'src/i18n/catalog.ts'), 'utf8')) }));
+errors.push(...layoutProblems({ bundles, indexes, stray, catalog: catalogBundles(readFileSync(join(root, 'src/i18n/catalog.ts'), 'utf8')) }));
 
 const sources = listSources(join(root, 'src')).map((p) => readFileSync(p, 'utf8'));
 const res = problems({ catalogs, enabled, meta: readJson(join(dir, 'meta.json')), sources });

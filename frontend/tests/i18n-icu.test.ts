@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { formatIcu, IcuSyntaxError, parseIcu, SUPPORTED_STYLES } from '@/i18n/icu';
 import { formatTag } from '@/i18n/locales';
-import { flatten, readLocale, shape, STYLES } from '../scripts/i18n-lib.mjs';
+import { readLocale } from '../scripts/i18n-layout.mjs';
+import { flatten, shape, STYLES } from '../scripts/i18n-lib.mjs';
 
 type V = Record<string, string | number | Date>;
 const D = new Date('2026-10-09T23:30:00Z');

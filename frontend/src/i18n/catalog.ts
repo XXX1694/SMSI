@@ -22,8 +22,6 @@ export const BUNDLES = [
   'developer',
 ] as const;
 
-export type BundleId = (typeof BUNDLES)[number];
-
 /** The shape of the English catalog; every key path is typed from it. */
 export type Messages = {
   nav: typeof import('../../messages/en/nav.json');

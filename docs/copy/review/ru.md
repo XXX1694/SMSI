@@ -27,7 +27,7 @@ To mark the review done, set `review: 'native-reviewed'` for this locale in `sit
 ## App
 
 Status: `machine-draft`. Enabling `ru` in `frontend/src/i18n/locales.ts` is a separate change; it then shows "Beta translation".
-Catalog: `frontend/messages/ru/*.json` (687 keys, all of `en.json`). The owner reviews this locale natively.
+Catalog: `frontend/messages/ru/*.json` (687 keys, all of `messages/en/*.json`). The owner reviews this locale natively.
 
 Register: «вы», buttons in the infinitive, body text in the polite imperative, ё written, «…» quotes.
 

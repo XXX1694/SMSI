@@ -4,18 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { LanguageSelect } from '@/i18n/language-select';
 import { LocaleProvider, useLocaleSettings } from '@/i18n/locale-provider';
-import type { AppLocale } from '@/i18n/locales';
-import type { Catalog } from '@/i18n/pseudo';
 import { useFormat } from '@/i18n/use-format';
 import { useTranslations } from '@/i18n/use-translations';
 
-// A partial Arabic catalog (no bundle files exist for it): one translated key, the rest must fall back to English.
-vi.mock('@/i18n/messages', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/i18n/messages')>();
-  return { ...actual, loadMessages: async (locale: AppLocale, en: Catalog) =>
-      locale === 'ar' ? actual.mergeMessages(en, { nav: { dashboard: 'لوحة التحكم' } }) : actual.loadMessages(locale, en),
-  };
-});
+// A partial Arabic catalog (the real file has none): one translated key, the rest must fall back to English.
+vi.mock('@/i18n/catalogs/ar', () => ({ default: { nav: { dashboard: 'لوحة التحكم' } } }));
 
 const ENABLED = ['en', 'ar'] as const;
 

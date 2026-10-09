@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ENABLED_LOCALES, LOCALES } from '@/i18n/locales';
 import { createTranslator } from '@/i18n/translate';
-import { catalogBundles, flatten, indexBundles, layoutProblems, listBundles, listSources, literals, problems, readLocale, usedKeys } from '../scripts/i18n-lib.mjs';
+import { catalogBundles, indexBundles, layoutProblems, listBundles, readLocale, strayEntries } from '../scripts/i18n-layout.mjs';
+import { flatten, listSources, literals, problems, usedKeys } from '../scripts/i18n-lib.mjs';
 import en from '@/i18n/en-all';
 import meta from '../messages/meta.json';
 
@@ -97,7 +98,7 @@ describe('typed keys', () => {
     expect(createTranslator({ locale: 'en', messages: en })('language.optionBeta', { name: 'Русский' })).toBe('Русский (Beta translation)');
   });
   it('reject unknown keys at compile time and report them at runtime', () => {
-    // @ts-expect-error not a key of messages/en.json
+    // @ts-expect-error not a key of the English catalog (messages/en/*.json)
     expect(createTranslator({ locale: 'en', messages: en, onMissing: () => {} }, 'nav')('nonsense')).toBe('nav.nonsense');
     // @ts-expect-error not a namespace
     createTranslator({ locale: 'en', messages: en }, 'nonsense');
@@ -147,6 +148,18 @@ describe('bundle layout', () => {
       'src/i18n/catalogs/ru.ts imports messages/ru/gone.json, which does not exist',
       'src/i18n/catalogs/fr.ts is missing (it imports the files of messages/fr/)',
     ]);
+  });
+
+  it('rejects a stray file or folder in a locale folder', () => {
+    const errors = layoutProblems({ bundles: { en: ['nav'] }, catalog: { list: ['nav'], typed: ['nav'] }, stray: { ru: ['notes.txt', 'old'] } });
+    expect(errors).toEqual([
+      'messages/ru/notes.txt: only {bundle}.json files belong in a locale folder',
+      'messages/ru/old: only {bundle}.json files belong in a locale folder',
+    ]);
+  });
+
+  it('finds no stray entries in the real locale folders', () => {
+    expect(LOCALES.flatMap((l) => strayEntries(join(root, 'messages', l)))).toEqual([]);
   });
 
   it('reads the files a locale index imports', () => {
