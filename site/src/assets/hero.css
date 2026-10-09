@@ -1,14 +1,15 @@
 /* Hero: copy on the left, the real product footage on the right, the flow canvas behind the footage only (never under the text).
    Colour comes from the shared tokens. Everything that moves animates transform and opacity. */
 :root {
-  --hero-glow: hsl(var(--accent) / 0.2);
-  --hero-glow-soft: hsl(var(--accent) / 0.1);
+  /* The mesh (landing.css) now carries the colour; these glows only add depth behind the headline, kept low enough that the
+     lead text stays AA on mesh plus glow (scripts/glass.test.mjs reads --hero-glow). */
+  --hero-glow: hsl(var(--accent) / 0.08);
+  --hero-glow-soft: hsl(var(--accent) / 0.05);
 }
-@media (prefers-color-scheme: dark) { :root { --hero-glow: hsl(var(--accent) / 0.28); --hero-glow-soft: hsl(var(--accent) / 0.14); } }
+@media (prefers-color-scheme: dark) { :root { --hero-glow: hsl(var(--accent) / 0.1); --hero-glow-soft: hsl(var(--accent) / 0.06); } }
 
 .hero { position: relative; min-height: 100svh; display: flex; align-items: center; padding-block: calc(5.5rem + env(safe-area-inset-top, 0px)) 3rem; overflow: clip; }
-.hero-bg { position: absolute; inset: 0; pointer-events: none; }
-.hero-bg::after { content: ''; position: absolute; inset: auto 0 0; height: 24%; background: linear-gradient(transparent, hsl(var(--background))); }
+.hero-bg { position: absolute; inset: 0; pointer-events: none; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
 .blob { position: absolute; border-radius: 50%; will-change: transform; }
 .blob-a { width: 60vmax; height: 60vmax; left: -22vmax; top: -26vmax; background: radial-gradient(closest-side, var(--hero-glow), transparent); animation: drift-a 26s ease-in-out infinite alternate; }
 .blob-b { width: 54vmax; height: 54vmax; right: -20vmax; top: 4vmax; background: radial-gradient(closest-side, var(--hero-glow-soft), transparent); animation: drift-b 32s ease-in-out infinite alternate; }
@@ -20,7 +21,7 @@
 
 /* A soft light that follows the pointer (desktop with a mouse only; motion.js moves it). */
 .hero-light { display: none; position: absolute; left: 0; top: 0; width: 40rem; height: 40rem; margin: -20rem 0 0 -20rem; border-radius: 50%; opacity: 0;
-  background: radial-gradient(closest-side, hsl(var(--accent) / 0.16), transparent); transform: translate3d(var(--lx, 60vw), var(--ly, 30vh), 0); transition: opacity 0.8s var(--lp-ease); will-change: transform; }
+  background: radial-gradient(closest-side, hsl(var(--accent) / 0.08), transparent); transform: translate3d(var(--lx, 60vw), var(--ly, 30vh), 0); transition: opacity 0.8s var(--lp-ease); will-change: transform; }
 @media (hover: hover) and (pointer: fine) { .hero-light { display: block; } .hero-light.is-on { opacity: 1; } }
 
 .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; width: 100%; }
@@ -44,8 +45,8 @@
   mask-image: linear-gradient(90deg, transparent 0, transparent 6%, #000 24%, #000 92%, transparent), linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent);
   mask-composite: intersect; }
 .hero-flow { display: block; width: 100%; height: 100%; }
-.stage .frame { position: relative; padding: 6px; border-radius: 22px; border: 1px solid hsl(var(--border)); background: hsl(var(--foreground) / 0.05);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.25), 0 50px 90px -40px hsl(var(--accent) / 0.55), 0 2px 8px hsl(var(--foreground) / 0.1); transform-origin: 50% 100%; }
+.stage .frame { position: relative; padding: 6px; border-radius: 22px;
+  box-shadow: var(--glass-highlight), var(--shadow-glass), 0 50px 90px -40px hsl(var(--accent) / 0.45); transform-origin: 50% 100%; }
 .stage .poster, .stage .poster img, .stage video { border-radius: 16px; }
 .stage .poster { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: hsl(var(--surface)); }
 .stage .poster img { width: 100%; height: 100%; object-fit: cover; }
