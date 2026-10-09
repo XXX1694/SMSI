@@ -12,6 +12,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Changed
 
+- CI is one workflow: `security.yml` is merged into `ci.yml`. A pull request that touches everything runs 9 jobs instead of 19; the scanners (govulncheck, `npm audit`, gitleaks, Trivy, CodeQL) keep their checks and SARIF categories. The new aggregator job **CI ok** is the single check a branch ruleset needs to require; jobs skipped because their paths did not change count as passed. The weekly scan now runs from `ci.yml`.
+- GitHub Pages moved into `ci.yml`: a `site` job builds the demo and the site, checks links and runs the browser smoke test on every pull request that touches `frontend/`, `site/`, `docs/` or the READMEs, so breakage no longer reaches `main`; a `pages` job deploys only after a push to `main`. `pages.yml` and its "is Pages enabled?" gate are gone.
 - Registration asks for email and password only; the name is no longer collected there (the API already accepts an empty one). Errors appear under their field when it loses focus and for every `fields.*` the server refuses; the submit button is never silently disabled (an incomplete form lists what is missing and focuses the first field); the password has a show/hide toggle; the email input is `autocapitalize="none"` with spell-check off. A taken email offers "Sign in" and "Forgot password?".
 
 ### Fixed
