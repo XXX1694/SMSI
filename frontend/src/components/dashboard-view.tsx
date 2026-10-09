@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { CalendarClock, Link2, Send, TriangleAlert } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { OnboardingChecklist } from '@/components/onboarding-checklist';
 import { PostList } from '@/components/post-row';
@@ -12,11 +13,21 @@ import type { DashboardSummary, Post } from '@/lib/types';
 import { useAsync } from '@/hooks';
 import { useTranslations } from '@/i18n/use-translations';
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: 'danger' }) {
+const STAT_ICONS = { accounts: Link2, scheduled: CalendarClock, publishedMonth: Send, failed: TriangleAlert } as const;
+
+function Stat({ name, value, tone }: { name: keyof typeof STAT_ICONS; value: number; tone?: 'danger' }) {
+  const t = useTranslations('dashboard.stats');
+  const Icon = STAT_ICONS[name];
+  const alert = tone === 'danger' && value > 0;
   return (
-    <div className="px-1 py-2 sm:px-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`mt-1 text-2xl font-semibold tabular-nums ${tone === 'danger' && value > 0 ? 'text-danger' : ''}`}>{value}</dd>
+    <div className="glass-card rounded-xl border p-4">
+      <dt className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span aria-hidden className={`grid h-7 w-7 shrink-0 place-items-center rounded-md ${alert ? 'bg-danger/10 text-danger' : 'bg-secondary text-secondary-foreground'}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="min-w-0">{t(name)}</span>
+      </dt>
+      <dd className={`mt-2 text-3xl font-semibold tabular-nums tracking-tight ${alert ? 'text-danger' : ''}`}>{value}</dd>
     </div>
   );
 }
@@ -75,11 +86,11 @@ export function DashboardView() {
     <div className="stagger space-y-10">
       <div>
         <h2 className="sr-only">{t('overview')}</h2>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 border-y py-4 md:grid-cols-4">
-          <Stat label={t('stats.accounts')} value={summary.connected_accounts} />
-          <Stat label={t('stats.scheduled')} value={summary.scheduled_posts} />
-          <Stat label={t('stats.publishedMonth')} value={summary.published_this_month} />
-          <Stat label={t('stats.failed')} value={summary.failed} tone="danger" />
+        <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          <Stat name="accounts" value={summary.connected_accounts} />
+          <Stat name="scheduled" value={summary.scheduled_posts} />
+          <Stat name="publishedMonth" value={summary.published_this_month} />
+          <Stat name="failed" value={summary.failed} tone="danger" />
         </dl>
       </div>
       <OnboardingChecklist connectedAccounts={summary.connected_accounts} />

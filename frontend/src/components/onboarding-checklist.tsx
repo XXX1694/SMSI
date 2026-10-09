@@ -76,7 +76,7 @@ export function OnboardingChecklist({ connectedAccounts }: { connectedAccounts: 
 function SetUpLine({ onExpand, onDismiss }: { onExpand: () => void; onDismiss: () => void }) {
   const t = useTranslations('dashboard.onboarding');
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 rounded-lg border px-4 py-2 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 glass-card rounded-xl border px-4 py-2 text-sm">
       <p className="flex items-center gap-2 font-medium">
         <Check className="h-4 w-4 text-success" aria-hidden /> {t('setUp')}
       </p>
@@ -124,7 +124,7 @@ function Checklist({ connectedAccounts, onDismiss, onComplete }: { connectedAcco
   const nextId = steps.find((s) => !s.done && !s.optional)?.id;
 
   return (
-    <Card as="section" aria-labelledby="onboarding-title" className="space-y-4">
+    <Card as="section" surface="glass" aria-labelledby="onboarding-title" className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 id="onboarding-title" className="text-sm font-semibold tracking-tight">
@@ -138,7 +138,7 @@ function Checklist({ connectedAccounts, onDismiss, onComplete }: { connectedAcco
           <X className="h-4 w-4" aria-hidden />
         </Button>
       </div>
-      <ol className="stagger divide-y rounded-md border">
+      <ol className="stagger divide-y rounded-md border bg-background">
         {steps.map((s) => (
           <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3" data-done={s.done}>
             <span
