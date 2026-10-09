@@ -17,7 +17,7 @@ npm start                 # Streamable HTTP: POST /mcp, GET /health
 npm run start:stdio       # stdio (needs SOCIALOS_API_KEY)
 npm run dev               # tsx watch
 npm test
-docker build -t socialos-mcp . && docker run -p 3333:3333 -e SOCIALOS_API_URL=http://api:8080 socialos-mcp
+docker build -t socialos-local-mcp . && docker run -p 3333:3333 -e SOCIALOS_API_URL=http://api:8080 socialos-local-mcp
 ```
 
 Dangerous tools (`publish_post`, `delete_post`, `disconnect_account`) need `confirm: true`; grant their scopes
@@ -25,7 +25,34 @@ Dangerous tools (`publish_post`, `delete_post`, `disconnect_account`) need `conf
 
 ## Client configuration
 
-Claude Desktop (stdio, local build):
+There is no SocialOS package on npm. Never run an `npx` command for a SocialOS-named package: the name is not ours, and
+whoever registers it would receive your API key.
+
+Claude Desktop, option 1: a custom connector (nothing to install). Settings, Customize, Connectors, Add custom connector:
+enter the HTTPS MCP URL, choose "No sign-in" and add `Authorization: Bearer sk_live_...` under Request headers
+([Anthropic docs](https://claude.com/docs/connectors/custom/remote-mcp)). Request headers are a beta that not every plan has
+yet, the server must be reachable from the internet (Claude connects from Anthropic's cloud, so `localhost` does not work), and
+OAuth sign-in is not available for SocialOS yet.
+
+Claude Desktop, option 2: the `mcp-remote` bridge (community package, MIT, pinned to an exact version). Edit
+`claude_desktop_config.json` and restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "socialos": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@0.14.3", "http://localhost:3333/mcp", "--header", "Authorization:${SOCIALOS_AUTH_HEADER}"],
+      "env": { "SOCIALOS_AUTH_HEADER": "Bearer sk_live_..." }
+    }
+  }
+}
+```
+
+The header value lives in `env` so the key is not on the command line and the space in `Bearer ...` survives on Windows.
+Upgrade the pinned version deliberately, never use an unpinned `npx -y`.
+
+Claude Desktop, option 3 (local build, stdio):
 
 ```json
 {
@@ -53,6 +80,8 @@ Remote / HTTP (clients that support Streamable HTTP with headers):
 }
 ```
 
-Claude Code: `claude mcp add --transport http socialos http://localhost:3333/mcp --header "Authorization: Bearer sk_live_..."`
+Claude Code: `claude mcp add --transport http socialos http://localhost:3333/mcp --header "Authorization: Bearer $SOCIALOS_API_KEY"`
 
-Clients without header support can bridge with `npx mcp-remote http://localhost:3333/mcp --header "Authorization: Bearer sk_live_..."`.
+Cursor (`mcp.json`): `{ "mcpServers": { "socialos": { "url": "http://localhost:3333/mcp", "headers": { "Authorization": "Bearer ${env:SOCIALOS_API_KEY}" } } } }`
+
+Other clients without header support can use the same pinned `mcp-remote@0.14.3` bridge as above.

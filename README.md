@@ -157,7 +157,7 @@ Set `SOCIALOS_API_KEY` in the environment Cursor starts from, or paste the key i
 <details>
 <summary><strong>Claude Desktop</strong> (<code>claude_desktop_config.json</code>)</summary>
 
-Claude Desktop starts a local process. Bridge it to your server with [`mcp-remote`](https://github.com/geelen/mcp-remote):
+Claude Desktop starts a local process. Bridge it to your server with [`mcp-remote`](https://github.com/geelen/mcp-remote) (community package, pinned to an exact version; upgrade it deliberately, never use an unpinned `npx -y`):
 
 ```json
 {
@@ -165,10 +165,10 @@ Claude Desktop starts a local process. Bridge it to your server with [`mcp-remot
     "socialos": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "https://mcp.example.com/mcp",
-        "--header", "Authorization:${SOCIALOS_AUTH}"
+        "-y", "mcp-remote@0.14.3", "https://mcp.example.com/mcp",
+        "--header", "Authorization:${SOCIALOS_AUTH_HEADER}"
       ],
-      "env": { "SOCIALOS_AUTH": "Bearer sk_live_..." }
+      "env": { "SOCIALOS_AUTH_HEADER": "Bearer sk_live_..." }
     }
   }
 }
