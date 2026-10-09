@@ -105,7 +105,7 @@ export const writeTools = [
     scope: "posts:publish",
     risk: "sensitive",
     description:
-      "Publishes the post to the live social networks immediately and cannot be undone by this API. The owner must approve it in Steerpost first: the first call answers APPROVAL_REQUIRED with an approval_id and nothing is published; once the owner approved, repeat the identical call with approval_id. Returns immediately; poll get_post_status for the outcome.",
+      "Publishes the post to the live social networks immediately and cannot be undone by this API. Unless the key is trusted, the owner must approve it in Steerpost first: the first call answers APPROVAL_REQUIRED with an approval_id and nothing is published; once the owner approved, repeat the identical call with approval_id. Returns immediately; poll get_post_status for the outcome.",
     inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Publish post now", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     handler: (c, a) => {
@@ -118,7 +118,7 @@ export const writeTools = [
     scope: "posts:delete",
     risk: "sensitive",
     description:
-      "Deletes a post in Steerpost. Published copies stay on the networks. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "Deletes a post in Steerpost. Published copies stay on the networks. Unless the key is trusted, the owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Delete post", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {
@@ -131,7 +131,7 @@ export const writeTools = [
     scope: "social:disconnect",
     risk: "critical",
     description:
-      "Disconnects a social account and deletes its stored credentials. Its scheduled posts fail until the user connects it again in the Steerpost web app. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "Disconnects a social account and deletes its stored credentials. Its scheduled posts fail unless the user connects it again before they are due. Published posts stay on the network. Unless the key is trusted, the owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: { account_id: id("Social account id"), approval_id: approvalId },
     annotations: { title: "Disconnect social account", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {

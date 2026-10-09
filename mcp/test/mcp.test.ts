@@ -29,6 +29,8 @@ describe("tool listing", () => {
     for (const t of tools) expect(t.description).not.toMatch(/\b(SENSITIVE|CRITICAL|WILL)\b/);
     expect(byName.disconnect_account!.description).not.toContain("OAuth");
     expect(byName.get_post_status!.description).toContain("it may post twice");
+    expect(byName.publish_post!.description).toContain("Unless the key is trusted");
+    expect(byName.disconnect_account!.description).toContain("fail unless the user connects it again before they are due");
     await c.close();
   });
 
@@ -205,6 +207,7 @@ describe("approvals", () => {
   it("tells the agent about the flow in the server instructions and tool descriptions", async () => {
     const c = await connect(s.mcpUrl);
     expect(c.getInstructions()).toContain("approval_id");
+    expect(c.getInstructions()).toContain("unless the key is trusted");
     const publish = (await c.listTools()).tools.find((t) => t.name === "publish_post")!;
     expect(publish.description).toContain("APPROVAL_REQUIRED");
     expect(JSON.stringify(publish.inputSchema)).not.toContain("confirm");

@@ -15,7 +15,7 @@
   <a href="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/XXX1694/steerpost/actions/workflows/security.yml"><img alt="Security" src="https://github.com/XXX1694/steerpost/actions/workflows/security.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/XXX1694/steerpost/releases"><img alt="Release" src="https://img.shields.io/github/v/release/XXX1694/steerpost?sort=semver"></a>
-  <a href="#license"><img alt="License: to be decided" src="https://img.shields.io/badge/license-to%20be%20decided-lightgrey"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
 </p>
 
 <p align="center">
@@ -91,11 +91,11 @@ plans, in roughly this order, with no dates.
 | Threads, Instagram, Facebook Pages | 🔜 Next | Your own Meta app. Works for your own accounts; anyone else needs Meta App Review. Instagram needs a Business or Creator account |
 | Tumblr | 🔜 Next | Your own Tumblr OAuth app |
 | Nostr | 🔜 Next | Waits for a decision on how to hold the key |
-| X | 🔐 Needs review | Paid API, charged per post |
-| LinkedIn company pages | 🔐 Needs review | LinkedIn's Community Management API approval |
-| YouTube, TikTok | 🔐 Needs review | Google verification or a TikTok audit; until then, posts are private only |
-| Reddit, Pinterest, Max | 🔐 Needs review | Platform approval or a verified business profile |
-| Hashnode | 🔐 Needs review | A paid Hashnode plan |
+| X | 🔐 Needs app review | Paid API, charged per post |
+| LinkedIn company pages | 🔐 Needs app review | LinkedIn's Community Management API approval |
+| YouTube, TikTok | 🔐 Needs app review | Google verification or a TikTok audit; until then, posts are private only |
+| Reddit, Pinterest, Max | 🔐 Needs app review | Platform approval or a verified business profile |
+| Hashnode | 🔐 Needs app review | A paid Hashnode plan |
 | Medium, WhatsApp Channels | ⛔ Not possible | No usable official API |
 
 ✅ publishes today · 🔜 planned, needs no platform review · 🔐 needs app review, verification or a paid API · ⛔ no
@@ -278,4 +278,4 @@ repository yet, so contact the maintainer, [@XXX1694](https://github.com/XXX1694
 
 ## License
 
-To be decided. The repository has no licence file yet, so no open-source licence applies until one is added.
+Steerpost is open-source under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). You may use, modify and self-host it. If you run a modified version as a network service, you must offer its source code to the users of that service. See [D-022](docs/DECISIONS.md) for why this licence was chosen.

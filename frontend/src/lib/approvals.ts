@@ -1,3 +1,4 @@
+import { providerLabel } from './normalize';
 import { formatDateTime } from './time';
 import type { Approval, ApprovalAction } from './types';
 
@@ -5,7 +6,7 @@ const LABELS: Record<ApprovalAction, string> = {
   'post.publish': 'Publish now',
   'post.retry_now': 'Retry now',
   'post.delete': 'Delete post',
-  'post.schedule_soon': 'Schedule at short notice',
+  'post.schedule_soon': 'Schedule in the next few minutes',
   'social_account.disconnect': 'Disconnect account',
   'social_account.connect_token': 'Connect with a token',
 };
@@ -97,9 +98,11 @@ export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
     const raw = a.summary[key];
     if (key === 'platforms' && Array.isArray(a.summary.accounts)) continue; // the accounts line says it with names
     if (key === 'targets' && Array.isArray(raw)) {
-      for (const t of raw) if (isRec(t)) add(`Text on ${asText(t.account) || asText(t.platform)}`, asText(t.content));
+      for (const t of raw) if (isRec(t)) add(`Text on ${asText(t.account) || providerLabel(asText(t.platform))}`, asText(t.content));
     } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw));
     else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone));
+    else if (key === 'platforms' || key === 'provider') add(label, asText(raw).split(', ').map(providerLabel).join(', '));
+    else if (key === 'accounts' && Array.isArray(raw)) add(label, raw.map((x) => String(x).replace(/^[a-z0-9_]+(?= · )/, providerLabel)).join(', '));
     else add(label, asText(raw));
   }
   for (const key of Object.keys(a.summary)) if (!KNOWN.some(([k]) => k === key)) add(sentence(key), asText(a.summary[key]));

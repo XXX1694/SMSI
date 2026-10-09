@@ -82,7 +82,18 @@ describe('approvals helpers', () => {
 
 describe('approval copy', () => {
   it('names the real dangerous actions in plain words', () => {
-    expect(actionLabel('post.schedule_soon')).toBe('Schedule at short notice');
+    expect(actionLabel('post.schedule_soon')).toBe('Schedule in the next few minutes');
     expect(actionLabel('post.publish')).toBe('Publish now');
+  });
+});
+
+describe('summary shows network names, not ids', () => {
+  it('maps platform ids in text lines, networks and accounts', () => {
+    const a = {
+      summary: { platforms: ['telegram'], accounts: ['linkedin · @demo', 'telegram · @chan'], targets: [{ platform: 'telegram', content: 'Hi' }] },
+    } as unknown as Parameters<typeof summaryLines>[0];
+    const lines = summaryLines(a, 'UTC');
+    expect(lines.find((l) => l.label === 'Accounts')?.value).toBe('LinkedIn · @demo, Telegram · @chan');
+    expect(lines.find((l) => l.label === 'Text on Telegram')?.value).toBe('Hi');
   });
 });

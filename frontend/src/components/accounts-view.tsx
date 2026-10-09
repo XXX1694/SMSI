@@ -226,7 +226,7 @@ export function AccountsView() {
         open={target !== null}
         onOpenChange={(o) => !o && setTarget(null)}
         title="Disconnect account?"
-        description={`Posts scheduled for ${target?.display_name || target?.username || 'this account'} will fail. Published posts stay on ${target ? providerLabel(target.provider) : 'the network'}.`}
+        description={`Posts scheduled for ${target?.display_name || target?.username || 'this account'} fail unless you connect it again before they are due. Published posts stay on ${target ? providerLabel(target.provider) : 'the network'}.`}
         confirmLabel="Disconnect"
         destructive
         onConfirm={async () => {

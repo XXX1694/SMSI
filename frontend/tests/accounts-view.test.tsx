@@ -109,6 +109,6 @@ describe('AccountsView honest copy', () => {
     ]);
     render(<AccountsView />);
     await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Discord #general' }));
-    expect(await screen.findByText('Posts scheduled for Discord #general will fail. Published posts stay on Discord.')).toBeInTheDocument();
+    expect(await screen.findByText('Posts scheduled for Discord #general fail unless you connect it again before they are due. Published posts stay on Discord.')).toBeInTheDocument();
   });
 });

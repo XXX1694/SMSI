@@ -8,6 +8,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Changed
 
+- Steerpost is now open-source under the AGPL-3.0 (`LICENSE`, D-022).
 - App copy follows the copy review (`docs/copy`): shorter and plainer text, one term per concept, no idioms, translator notes next to the 14 ambiguous strings. No API values changed.
 - Honesty fixes: the MCP panel and the "I understand" checkbox on API keys describe approvals (D-013), not a confirm flag; Publish now and Retry now count as irreversible in Approvals (danger-style Approve); each unavailable network shows its own reason from the capabilities (X, Medium and Hashnode no longer say "Requires platform approval"); the token form promises HTTPS only when the page is served over HTTPS; the media delete warning matches the backend (a file used in a post cannot be deleted); the Terms say API-key dangerous actions need approval unless the key is trusted, and name the AGPL-3.0.
 - Status names: the target status "Needs review" and the attempt status "Unknown outcome" are now "Unconfirmed" in the UI (API values `needs_review` and `unknown` are unchanged). "Cancelled" is "Canceled", "Expired" on an account is "Needs reconnecting" (with a Reconnect button), the test network is no longer called "Mock", and the post page says "Accounts" instead of "Targets".

@@ -39,7 +39,7 @@ function CreatedPanel({ created, onDone }: { created: CreatedMcpConnection; onDo
           <div className="mb-2 space-y-2 text-sm text-muted-foreground">
             <p>
               <strong>Connector (no install):</strong> add a custom connector with your MCP URL and the header{' '}
-              <code>Authorization: Bearer &lt;key&gt;</code>. The URL must be reachable over HTTPS.
+              <code>Authorization: Bearer &lt;key&gt;</code>. The URL must be reachable over HTTPS. Steps: <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/XXX1694/steerpost/blob/main/mcp/README.md" target="_blank" rel="noreferrer">MCP docs</a>.
             </p>
             <p>
               <strong>Bridge:</strong> paste this into <code>claude_desktop_config.json</code> and restart Claude Desktop. It runs the community package{' '}
