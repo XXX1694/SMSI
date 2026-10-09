@@ -6,10 +6,11 @@ import type { Capabilities } from '@/lib/types';
 const caps = { canPublishText: true, canPublishImage: false, canPublishVideo: false, canSchedule: true, canDelete: false, canAnalytics: false, maxTextLength: 280 } as Capabilities;
 
 describe('CapabilityBadges', () => {
-  it('says "No" to screen readers and strikes unsupported items without fading them (contrast)', () => {
+  it('tells screen readers what is not supported and strikes unsupported items without fading them (contrast)', () => {
     render(<CapabilityBadges caps={caps} />);
-    const off = screen.getByText('Image');
-    expect(screen.getAllByText('No').length).toBe(4);
+    const off = screen.getByText('Image').parentElement as HTMLElement;
+    expect(screen.getAllByText(/^Does not support /).length).toBe(4);
+    expect(screen.getAllByText(/^Supports /).length).toBe(2);
     expect(off.className).toContain('line-through');
     expect(off.className).not.toMatch(/opacity-/);
   });

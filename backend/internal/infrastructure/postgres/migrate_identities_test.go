@@ -30,9 +30,7 @@ func TestMigration00008UpAndDown(t *testing.T) {
 	if _, err := db.Pool.Exec(ctx, `INSERT INTO users (email, password_hash) VALUES ('keeps@example.com','$argon2id$x')`); err != nil {
 		t.Fatal(err)
 	}
-	if err := postgres.MigrateDownTo(ctx, url, 7, testutil.Logger()); err != nil {
-		t.Fatalf("down to 00007: %v", err)
-	}
+	downTo(t, url, 7)
 	if tables, nullable := state(); tables != 0 || nullable {
 		t.Fatalf("down: tables=%d password_hash nullable=%v", tables, nullable)
 	}
@@ -60,9 +58,7 @@ func TestPasswordHashNullableSurvivesDownMigration(t *testing.T) {
 	if err := postgres.NewUsers(db).Create(ctx, &user.User{Email: "social-only@example.com", Status: user.StatusActive}); err != nil {
 		t.Fatal(err)
 	}
-	if err := postgres.MigrateDownTo(ctx, url, 7, testutil.Logger()); err != nil {
-		t.Fatalf("down with a password-less user: %v", err)
-	}
+	downTo(t, url, 7)
 	if got := scalar[string](t, db, `SELECT password_hash FROM users WHERE email='social-only@example.com'`); got != "!" {
 		t.Fatalf("marker %q, want !", got)
 	}

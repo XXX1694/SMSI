@@ -1,14 +1,26 @@
+import type { AppT } from '@/i18n/translate';
 import { providerLabel } from './normalize';
 import type { Post } from './types';
 
-export function postLabel(post: Pick<Post, 'title' | 'content' | 'targets'>): string {
-  const text = post.title?.trim() || post.content?.trim() || post.targets[0]?.content?.trim() || 'Untitled post';
+/** Items on one line: "LinkedIn, Telegram". The separator comes from the catalog. */
+export function joinList(items: readonly string[], t: AppT): string {
+  return items.join(t('common.listSeparator'));
+}
+
+export function postLabel(post: Pick<Post, 'title' | 'content' | 'targets'>, t: AppT): string {
+  const text = post.title?.trim() || post.content?.trim() || post.targets[0]?.content?.trim() || t('posts.untitled');
   return text.length > 90 ? `${text.slice(0, 89)}…` : text;
 }
 
-export function postPlatforms(post: Pick<Post, 'targets'>): string {
-  const names = [...new Set(post.targets.map((t) => providerLabel(t.platform)))];
-  return names.join(', ') || 'No targets';
+/** Display name of a network id; "Unknown" (from the catalog) when the id is empty. Use this, not `providerLabel`, in the UI. */
+export function providerName(id: string, t: AppT): string {
+  return providerLabel(id) || t('common.unknown');
+}
+
+/** Distinct network names of a post's targets; "No targets" when it has none. */
+export function postPlatforms(post: Pick<Post, 'targets'>, t: AppT): string {
+  const names = [...new Set(post.targets.map((x) => providerName(x.platform, t)))];
+  return joinList(names, t) || t('posts.noTargets');
 }
 
 /** The timestamp most relevant to a post given its status. */

@@ -37,6 +37,9 @@ type User struct {
 	EmailVerifiedAt *time.Time
 	Plan            string
 	DeletedAt       *time.Time
+	// DeletionScheduledAt is when the account will be deleted for good; nil unless the owner asked for deletion and
+	// has not cancelled. Until then the account still works (the owner can export and cancel).
+	DeletionScheduledAt *time.Time
 	// TermsAcceptedAt and TermsVersion record which legal texts the owner accepted at registration.
 	// Accounts created before the Terms existed have a nil time and an empty version.
 	TermsAcceptedAt *time.Time

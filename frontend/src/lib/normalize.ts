@@ -42,6 +42,8 @@ export function normalizeMe(raw: unknown): Me {
     email_verified: user.email_verified !== false,
     verification_enforced: r.verification_enforced === true,
     mail_delivery: r.mail_delivery === 'log' ? 'log' : 'smtp',
+    deletion_grace_days: typeof r.deletion_grace_days === 'number' && r.deletion_grace_days > 0 ? r.deletion_grace_days : 7,
+    deletion_scheduled_at: typeof user.deletion_scheduled_at === 'string' ? user.deletion_scheduled_at : null,
   };
 }
 
@@ -130,8 +132,9 @@ const LABELS: Record<string, string> = {
   bluesky: 'Bluesky',
 };
 
+/** Display name of a network id. An empty id gives an empty string; the caller supplies the "Unknown" text from the catalog. */
 export function providerLabel(id: string): string {
-  return LABELS[id] ?? (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Unknown');
+  return LABELS[id] ?? (id ? id.charAt(0).toUpperCase() + id.slice(1) : '');
 }
 
 export function unwrapList<T>(raw: unknown): T[] {

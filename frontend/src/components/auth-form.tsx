@@ -9,9 +9,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field, Input } from '@/components/ui/input';
 import { InlineError } from '@/components/states';
 import { DEMO, DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/demo/config';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { nodes } from '@/i18n/rich';
+import { useTranslations } from '@/i18n/use-translations';
 
 export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
+  const t = useTranslations('auth');
+  const errorText = useErrorText();
   const { login, register } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
@@ -28,11 +32,11 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
     e.preventDefault();
     setError(null);
     if (!isLogin && password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('passwordShort'));
       return;
     }
     if (!isLogin && !accepted) {
-      setError('Accept the Terms and the Privacy Policy to create an account.');
+      setError(t('acceptTerms'));
       return;
     }
     setBusy(true);
@@ -42,7 +46,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       const next = params.get('next');
       router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard');
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorText(err));
       setBusy(false);
     }
   }
@@ -50,25 +54,30 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-xl font-semibold tracking-tight">{isLogin ? 'Sign in to Steerpost' : 'Create your account'}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{isLogin ? t('signInTitle') : t('createTitle')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {isLogin ? 'Welcome back.' : 'Next, you will connect your first account.'}
+          {isLogin ? t('welcomeBack') : t('firstAccountNext')}
         </p>
         {DEMO ? (
           <p className="mt-3 rounded-md border bg-muted px-3 py-2 text-xs text-muted-foreground">
-            Demo account: the form is filled in. Select Sign in.
+            {t('demoNote')}
+          </p>
+        ) : null}
+        {isLogin && params.get('deleted') === '1' ? (
+          <p role="status" className="mt-3 rounded-md border bg-muted px-3 py-2 text-sm">
+            {t('deletedNotice')}
           </p>
         ) : null}
         <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
           {!isLogin ? (
-            <Field label="Name" htmlFor="name">
+            <Field label={t('name')} htmlFor="name">
               <Input id="name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
           ) : null}
-          <Field label="Email" htmlFor="email">
+          <Field label={t('email')} htmlFor="email">
             <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
-          <Field label="Password" htmlFor="password" hint={isLogin ? undefined : 'At least 8 characters.'}>
+          <Field label={t('password')} htmlFor="password" hint={isLogin ? undefined : t('passwordHint')}>
             <Input
               id="password"
               type="password"
@@ -82,22 +91,27 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             <div className="flex items-start gap-2 text-sm">
               <Checkbox id="accept-terms" checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} required />
               <label htmlFor="accept-terms" className="leading-snug">
-                I agree to the{' '}
-                <Link href="/terms" target="_blank" className="text-accent hover:underline">
-                  Terms
-                </Link>{' '}
-                and the{' '}
-                <Link href="/privacy" target="_blank" className="text-accent hover:underline">
-                  Privacy Policy
-                </Link>
-                .
+                {nodes(
+                  t.rich('agree', {
+                    terms: (c) => (
+                      <Link href="/terms" target="_blank" className="text-accent hover:underline">
+                        {c}
+                      </Link>
+                    ),
+                    privacy: (c) => (
+                      <Link href="/privacy" target="_blank" className="text-accent hover:underline">
+                        {c}
+                      </Link>
+                    ),
+                  }),
+                )}
               </label>
             </div>
           ) : null}
           {isLogin && !DEMO ? (
             <p className="-mt-2 text-right text-xs">
               <Link href="/forgot-password" className="text-accent hover:underline">
-                Forgot password?
+                {t('forgot')}
               </Link>
             </p>
           ) : null}
@@ -105,23 +119,33 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             <InlineError>{error}</InlineError>
           ) : null}
           <Button type="submit" className="w-full" disabled={busy || !email || !password}>
-            {busy ? (isLogin ? 'Signing in…' : 'Creating account…') : isLogin ? 'Sign in' : 'Create account'}
+            {busy ? (isLogin ? t('signingIn') : t('creating')) : isLogin ? t('signIn') : t('createAccount')}
           </Button>
         </form>
         <p className="mt-6 text-sm text-muted-foreground">
           {isLogin ? (
             <>
-              No account?{' '}
-              <Link href="/register" className="text-accent hover:underline">
-                Create one
-              </Link>
+              {nodes(
+                t.rich('noAccount', {
+                  link: (c) => (
+                    <Link href="/register" className="text-accent hover:underline">
+                      {c}
+                    </Link>
+                  ),
+                }),
+              )}
             </>
           ) : (
             <>
-              Have an account?{' '}
-              <Link href="/login" className="text-accent hover:underline">
-                Sign in
-              </Link>
+              {nodes(
+                t.rich('haveAccount', {
+                  link: (c) => (
+                    <Link href="/login" className="text-accent hover:underline">
+                      {c}
+                    </Link>
+                  ),
+                }),
+              )}
             </>
           )}
         </p>

@@ -17,6 +17,15 @@ func scalar[T any](t *testing.T, db *postgres.DB, sql string) T {
 	return v
 }
 
+// downTo rolls the schema back until version is the newest applied one. Tests name the version they examine instead
+// of counting "down" steps, which move whenever another migration lands.
+func downTo(t *testing.T, url string, version int64) {
+	t.Helper()
+	if err := postgres.MigrateDownTo(context.Background(), url, version, testutil.Logger()); err != nil {
+		t.Fatalf("down to %05d: %v", version, err)
+	}
+}
+
 func tableCount(t *testing.T, db *postgres.DB) int {
 	return scalar[int](t, db, `SELECT count(*) FROM information_schema.tables WHERE table_schema='public'
 		AND table_name IN ('email_tokens','data_exports','account_deletions')`)
@@ -62,9 +71,7 @@ func TestMigration00003UpAndDown(t *testing.T) {
 	}
 
 	// Everything above 00003 has its own test; roll it back so "down" below undoes exactly 00003.
-	if err := postgres.MigrateDownTo(ctx, url, 3, testutil.Logger()); err != nil {
-		t.Fatalf("down to 00003: %v", err)
-	}
+	downTo(t, url, 3)
 	// A deleted user must not block the rollback.
 	if _, err := db.Pool.Exec(ctx, `INSERT INTO users (email, password_hash, status) VALUES ('gone@example.com','x','deleted')`); err != nil {
 		t.Fatal(err)

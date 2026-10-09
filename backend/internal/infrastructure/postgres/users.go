@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/application/auth"
+	"github.com/socialos/backend/internal/application/scheduler"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/user"
 )
@@ -17,12 +18,12 @@ type Users struct{ db *DB }
 func NewUsers(db *DB) *Users { return &Users{db: db} }
 
 // password_hash is NULL for users who signed up through a provider; the domain sees "" (user.HasPassword).
-const userCols = `id, email, COALESCE(password_hash, ''), display_name, status, created_at, email_verified_at, plan, deleted_at, terms_accepted_at, terms_version`
+const userCols = `id, email, COALESCE(password_hash, ''), display_name, status, created_at, email_verified_at, plan, deleted_at, terms_accepted_at, terms_version, deletion_scheduled_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*user.User, error) {
 	var u user.User
 	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.CreatedAt,
-		&u.EmailVerifiedAt, &u.Plan, &u.DeletedAt, &u.TermsAcceptedAt, &u.TermsVersion); err != nil {
+		&u.EmailVerifiedAt, &u.Plan, &u.DeletedAt, &u.TermsAcceptedAt, &u.TermsVersion, &u.DeletionScheduledAt); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -124,4 +125,24 @@ func nullIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// BlockReason says why the user's due posts must not go out ("" when they may): the publisher's check (system). The row
+// is locked FOR SHARE, so a purge claim (UPDATE) waits for a publisher transaction that is already past the check.
+func (r *Users) BlockReason(ctx context.Context, id uuid.UUID) (string, error) {
+	var status string
+	var scheduled bool
+	err := r.db.q(ctx).QueryRow(ctx, `SELECT status, deletion_scheduled_at IS NOT NULL FROM users WHERE id = $1 FOR SHARE`, id).Scan(&status, &scheduled)
+	if errs.Is(mapErr(err, "user"), errs.NotFound) {
+		return scheduler.SkipAccountDeletion, nil
+	}
+	switch {
+	case err != nil:
+		return "", err
+	case status == string(user.StatusDisabled):
+		return scheduler.SkipOwnerDisabled, nil
+	case status != string(user.StatusActive) || scheduled:
+		return scheduler.SkipAccountDeletion, nil
+	}
+	return "", nil
 }

@@ -13,10 +13,7 @@ export interface OnboardingFacts {
 
 export interface OnboardingStep {
   id: 'network' | 'post' | 'agent' | 'approval';
-  title: string;
-  hint: string;
   href: string;
-  action: string;
   done: boolean;
   optional: boolean;
 }
@@ -31,37 +28,25 @@ export function onboardingSteps(f: OnboardingFacts, now: Date = new Date()): Onb
   return [
     {
       id: 'network',
-      title: 'Connect a network',
-      hint: 'Steerpost publishes to the accounts you connect. Pick LinkedIn, Telegram or another network.',
       href: '/accounts',
-      action: 'Connect account',
       done: f.connectedAccounts > 0,
       optional: false,
     },
     {
       id: 'post',
-      title: 'Write your first post',
-      hint: 'Save a draft or schedule it. Nothing is published until you say so.',
       href: '/compose',
-      action: 'Write a post',
       done: f.hasPost,
       optional: false,
     },
     {
       id: 'agent',
-      title: 'Connect an AI agent',
-      hint: 'Create an MCP connection or an API key so Claude or your own scripts can draft posts for you.',
       href: '/developer/mcp',
-      action: 'Connect agent',
       done: live(f.mcpConnections) || live(f.apiKeys),
       optional: false,
     },
     {
       id: 'approval',
-      title: 'Review an approval',
-      hint: 'When an agent asks to publish, delete or disconnect, the request waits here.',
       href: '/approvals',
-      action: 'Open approvals',
       done: f.hasApproval,
       optional: true,
     },

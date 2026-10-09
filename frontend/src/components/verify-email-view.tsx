@@ -5,13 +5,18 @@ import { useAuth } from '@/components/auth-provider';
 import { AuthShell } from '@/components/auth-shell';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/states';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
 import { ApiError, api } from '@/lib/api';
 import { forgetHashToken, takeHashToken } from '@/lib/hash-token';
 
 type State = 'loading' | 'success' | 'invalid' | 'error';
 
 export function VerifyEmailView() {
+  const t = useTranslations('auth.verifyEmail');
+  const ta = useTranslations('auth');
+  const tc = useTranslations('common');
+  const errorText = useErrorText();
   const { user, refresh } = useAuth();
   const [state, setState] = useState<State>('loading');
   const [message, setMessage] = useState('');
@@ -37,11 +42,11 @@ export function VerifyEmailView() {
         token.current = null;
         setState('invalid');
       } else {
-        setMessage(errorMessage(e));
+        setMessage(errorText(e));
         setState('error');
       }
     }
-  }, [refresh]);
+  }, [refresh, errorText]);
 
   useEffect(() => {
     if (started.current) return;
@@ -52,36 +57,36 @@ export function VerifyEmailView() {
 
   if (state === 'loading') {
     return (
-      <AuthShell title="Verifying your email">
+      <AuthShell title={t('title')}>
         <p role="status" className="text-sm text-muted-foreground">
-          One moment…
+          {t('moment')}
         </p>
       </AuthShell>
     );
   }
   if (state === 'success') {
     return (
-      <AuthShell title="Email verified" description="Your email is verified. Every feature is unlocked.">
+      <AuthShell title={t('doneTitle')} description={t('doneBody')}>
         <Button asChild className="w-full">
-          <Link href={user ? '/dashboard' : '/login'}>{user ? 'Go to the dashboard' : 'Sign in'}</Link>
+          <Link href={user ? '/dashboard' : '/login'}>{user ? t('toDashboard') : ta('signIn')}</Link>
         </Button>
       </AuthShell>
     );
   }
   if (state === 'error') {
     return (
-      <AuthShell title="Could not verify your email">
+      <AuthShell title={t('failTitle')}>
         <InlineError>{message}</InlineError>
         <Button className="mt-4 w-full" onClick={() => void run()}>
-          Try again
+          {tc('tryAgain')}
         </Button>
       </AuthShell>
     );
   }
   return (
-    <AuthShell title="This link no longer works" description="It may have expired or already been used. Links work once and last 48 hours.">
+    <AuthShell title={ta('linkInvalidTitle')} description={t('invalidBody')}>
       <Button asChild className="w-full">
-        <Link href={user ? '/settings' : '/login'}>{user ? 'Request a new link' : 'Sign in to request a new link'}</Link>
+        <Link href={user ? '/settings' : '/login'}>{user ? ta('requestNewLink') : t('signInToRequest')}</Link>
       </Button>
     </AuthShell>
   );

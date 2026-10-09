@@ -12,6 +12,7 @@ import { PreviewsPanel } from './previews-panel';
 import { ScheduleFields } from './schedule-fields';
 import { useComposerFields } from './use-composer-fields';
 import { useUnsavedGuard } from './use-unsaved-guard';
+import { useTranslations } from '@/i18n/use-translations';
 
 interface Props {
   accounts: SocialAccount[];
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function ComposerForm({ accounts, providers, edit }: Props) {
+  const t = useTranslations('composer');
   const [baseline, setBaseline] = useState<Baseline | null>(edit ?? null);
   const fields = useComposerFields(edit?.values ?? EMPTY_FORM);
   const { form, patch, state, timezone } = fields;
@@ -32,11 +34,11 @@ export function ComposerForm({ accounts, providers, edit }: Props) {
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-6">
-        <Field label="Title (optional)" htmlFor="post-title" hint="For your own reference; not published.">
+        <Field label={t('titleLabel')} htmlFor="post-title" hint={t('titleHint')}>
           <Input id="post-title" value={form.title} onChange={(e) => patch({ title: e.target.value })} maxLength={120} />
         </Field>
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold">Publish to</h2>
+          <h2 className="text-sm font-semibold">{t('publishTo')}</h2>
           <AccountChips accounts={accounts} selected={form.accountIds} onToggle={toggle} />
         </div>
         <ContentEditor
@@ -54,7 +56,7 @@ export function ComposerForm({ accounts, providers, edit }: Props) {
           timezone={timezone}
           onDate={(date) => patch({ date })}
           onTime={(time) => patch({ time })}
-          note={baseline?.post.status === 'scheduled' ? 'Leave the time as it is to keep the current schedule.' : undefined}
+          note={baseline?.post.status === 'scheduled' ? t('keepSchedule') : undefined}
         />
         {baseline ? (
           <EditActions fields={fields} baseline={baseline} onBaseline={setBaseline} onLeave={guard.allowLeave} accounts={accounts} providers={providers} />

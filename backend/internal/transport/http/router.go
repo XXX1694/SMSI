@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/socialos/backend/internal/application/account"
 	"github.com/socialos/backend/internal/application/accounts"
 	"github.com/socialos/backend/internal/application/analytics"
 	"github.com/socialos/backend/internal/application/approvals"
@@ -34,6 +35,8 @@ type Services struct {
 	Audit     *audit.Service
 	Approvals *approvals.Service
 	Quota     *quota.Service
+	Exports   *account.ExportService
+	Deletion  *account.DeletionService
 }
 
 // Options configure transport behaviour.
@@ -61,6 +64,8 @@ type Options struct {
 	MailLimiter *middleware.Limiter
 	// MailDelivery is the configured mail provider ("log" or "smtp"); /me and the mail endpoints report it.
 	MailDelivery string
+	// DeletionGraceDays is ACCOUNT_DELETION_GRACE_DAYS, shown to the owner before they ask for deletion.
+	DeletionGraceDays int
 	// RequireVerification mirrors auth.Deps.RequireVerification for /me.
 	RequireVerification bool
 	// TelegramWebhookSecret enables POST /webhooks/telegram (webhook intake
@@ -179,6 +184,11 @@ func (a *API) mountAuthenticated(r chi.Router) {
 	r.Get("/audit-logs", a.auditLogs)
 
 	r.Get("/account/usage", a.accountUsage)
+	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "export:")).Post("/account/exports", a.requestExport)
+	r.With(middleware.RateLimit(a.opt.AuthLimiter, a.trusted, a.opt.Metrics, "reauth:")).Post("/account/delete", a.requestDeletion)
+	r.Post("/account/delete/cancel", a.cancelDeletion)
+	r.Get("/account/exports", a.listExports)
+	r.Get("/account/exports/{id}", a.getExport)
 
 	r.Get("/approvals", a.listApprovals)
 	r.Get("/approvals/{id}", a.getApproval)

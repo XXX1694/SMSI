@@ -6,9 +6,13 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { ACCEPT_ATTR, validateMediaFile } from '@/lib/media';
 import type { Media } from '@/lib/types';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
 
 export function MediaSection({ media, onChange }: { media: Media[]; onChange: (m: Media[]) => void }) {
+  const t = useTranslations();
+  const tc = useTranslations('composer');
+  const errorText = useErrorText();
   const input = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -20,7 +24,7 @@ export function MediaSection({ media, onChange }: { media: Media[]; onChange: (m
     const added: Media[] = [];
     setBusy(true);
     for (const f of Array.from(files)) {
-      const problem = validateMediaFile(f);
+      const problem = validateMediaFile(f, t);
       if (problem) {
         errs.push(problem);
         continue;
@@ -28,7 +32,7 @@ export function MediaSection({ media, onChange }: { media: Media[]; onChange: (m
       try {
         added.push(await api.media.upload(f));
       } catch (e) {
-        errs.push(`${f.name}: ${errorMessage(e)}`);
+        errs.push(tc('uploadFailed', { name: f.name, reason: errorText(e) }));
       }
     }
     setBusy(false);
@@ -40,7 +44,7 @@ export function MediaSection({ media, onChange }: { media: Media[]; onChange: (m
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="mr-2 text-sm font-semibold">Media</h3>
+        <h3 className="mr-2 text-sm font-semibold">{tc('media')}</h3>
         <input
           ref={input}
           type="file"
@@ -48,17 +52,17 @@ export function MediaSection({ media, onChange }: { media: Media[]; onChange: (m
           accept={ACCEPT_ATTR}
           className="sr-only"
           id="media-upload"
-          aria-label="Upload media"
+          aria-label={tc('uploadMedia')}
           onChange={(e) => void onFiles(e.target.files)}
         />
         <Button variant="secondary" size="sm" disabled={busy} onClick={() => input.current?.click()}>
           <Paperclip className="h-3.5 w-3.5" aria-hidden />
-          {busy ? 'Uploading…' : 'Upload'}
+          {busy ? t('common.uploading') : t('common.upload')}
         </Button>
         <Button variant="secondary" size="sm" onClick={() => setLibOpen(true)}>
-          From library
+          {tc('fromLibrary')}
         </Button>
-        <span className="text-xs text-muted-foreground">JPEG, PNG, WebP, GIF up to 10 MB · MP4, MOV up to 100 MB</span>
+        <span className="text-xs text-muted-foreground">{tc('mediaLimits')}</span>
       </div>
       {errors.length > 0 ? (
         <ul role="alert" className="space-y-0.5 text-xs text-danger">
@@ -81,7 +85,7 @@ export function MediaSection({ media, onChange }: { media: Media[]; onChange: (m
               <button
                 type="button"
                 onClick={() => onChange(media.filter((x) => x.id !== m.id))}
-                aria-label={`Remove ${m.original_name}`}
+                aria-label={tc('removeMedia', { name: m.original_name })}
                 className="absolute right-0.5 top-0.5 rounded-full bg-background/90 p-0.5"
               >
                 <X className="h-3 w-3" aria-hidden />

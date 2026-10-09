@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { useTranslations } from '@/i18n/use-translations';
 import { cn } from '@/lib/utils';
 
 const field =
@@ -86,6 +87,7 @@ export function Field({
   htmlFor?: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations('common');
   const generated = React.useId();
   const id = htmlFor ?? generated;
   const showHint = Boolean(hint) && !error;
@@ -94,7 +96,7 @@ export function Field({
   return (
     <FieldContext.Provider value={value}>
       <div className="space-y-1.5">
-        <Label htmlFor={id}>{optional ? `${label} (optional)` : label}</Label>
+        <Label htmlFor={id}>{optional ? t('optionalLabel', { label }) : label}</Label>
         {children}
         {showHint ? <Hint id={`${id}-hint`}>{hint}</Hint> : null}
         {error ? <FieldError id={`${id}-error`}>{error}</FieldError> : null}

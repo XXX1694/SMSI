@@ -19,6 +19,7 @@ All endpoints are under `/api/v1`. Errors look like this:
 | Social | `GET /social/providers` · `GET /social/accounts` · `GET /social/accounts/{id}` · `GET /social/{provider}/connect` · `GET /social/{provider}/callback` · `POST /social/telegram/connect` (no body, returns a link code) · `GET /social/telegram/connect/{id}` (link status) · `DELETE /social/accounts/{id}` |
 | Posts | `POST /posts` · `GET /posts?status=&from=&to=&cursor=` · `GET /posts/{id}` · `PATCH /posts/{id}` · `DELETE /posts/{id}` · `POST /posts/{id}/publish` · `/schedule` · `/unschedule` · `/cancel` · `/retry` · `GET /posts/{id}/status` |
 | Media | `POST /media` (multipart; images ≤ 10 MB, video ≤ 100 MB; MIME sniffed) · `GET /media` · `GET /media/{id}` · `DELETE /media/{id}` |
+| Account | `GET /account/usage` · `POST /account/delete` · `POST /account/delete/cancel` · `POST /account/exports` · `GET /account/exports` · `GET /account/exports/{id}` (export and deletion are session only; see [ARCHITECTURE](ARCHITECTURE.md#account-data-export-d-018)) |
 | Insights | `GET /dashboard/summary` · `GET /analytics` · `GET /audit-logs` |
 | Developer | `GET/POST /developer/api-keys` · `DELETE /developer/api-keys/{id}` · `GET/POST /developer/mcp-connections` · `DELETE /developer/mcp-connections/{id}` · `GET /developer/usage` |
 | Ops | `GET /health` · `GET /ready` · `GET /metrics` |

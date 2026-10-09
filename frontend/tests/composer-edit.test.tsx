@@ -154,7 +154,7 @@ describe('ComposerView disabled states', () => {
   it.each([
     ['published', /already published/],
     ['publishing', /being published right now/],
-    ['cancelled', /was cancelled/],
+    ['cancelled', /was canceled/],
     ['failed', /This post is failed/],
   ] as const)('explains why a %s post cannot be edited and shows no form', async (status, reason) => {
     apiMock.posts.get.mockResolvedValue(scheduled({ status }));

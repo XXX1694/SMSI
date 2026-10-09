@@ -3,16 +3,18 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 
 	"github.com/socialos/backend/internal/application/port"
+	"github.com/socialos/backend/internal/domain/dataexport"
 )
 
-// Task types. TypeAccountPurge and TypeAccountExport are reserved for the
-// account-deletion and data-export work; only TypeMailSend has a handler yet.
+// Task types.
 const (
 	TypeMailSend      = "mail:send"
 	TypeAuthForgot    = "auth:forgot"
@@ -120,5 +122,96 @@ func ForgotHandler(process func(ctx context.Context, email string) error) func(c
 			return fmt.Errorf("bad payload: %w", asynq.SkipRetry)
 		}
 		return process(ctx, pl.Email)
+	}
+}
+
+// Export task options. The payload is only an id. MaxRetry is 0: a failed build is recorded on the export and the
+// user asks again, a blind retry would redo hours of work (D-018). Retention is 0 so a finished id can be queued again.
+const exportTimeout = dataexport.BuildTimeout
+
+type exportPayload struct {
+	ExportID uuid.UUID `json:"export_id"`
+}
+
+// ExportQueue implements account.ExportQueue on top of the Asynq client.
+type ExportQueue struct{ c *Client }
+
+// ExportQueue returns the account.ExportQueue backed by this client.
+func (c *Client) ExportQueue() *ExportQueue { return &ExportQueue{c: c} }
+
+// ExportQueueName is the queue of a main queue's export builds. It has its own Asynq server with concurrency 1, so a
+// build that runs for an hour never occupies a slot of the publishing workers (D-018).
+func ExportQueueName(main string) string { return main + "-exports" }
+
+// EnqueueExport schedules the build. No task id or uniqueness key: an archived task would keep its id and block the
+// sweep from ever queueing that export again, and a duplicate task is harmless because the build claims the row.
+func (q *ExportQueue) EnqueueExport(ctx context.Context, exportID uuid.UUID) error {
+	payload, err := json.Marshal(exportPayload{ExportID: exportID})
+	if err != nil {
+		return err
+	}
+	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountExport, payload), asynq.Queue(ExportQueueName(q.c.queue)),
+		asynq.MaxRetry(0), asynq.Retention(0), asynq.Timeout(exportTimeout))
+	if err != nil {
+		return fmt.Errorf("queue: enqueue export: %w", err)
+	}
+	return nil
+}
+
+// ExportHandler adapts the worker side of an export to an Asynq handler.
+func ExportHandler(build func(ctx context.Context, exportID uuid.UUID) error) func(context.Context, *asynq.Task) error {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var pl exportPayload
+		if err := json.Unmarshal(t.Payload(), &pl); err != nil || pl.ExportID == uuid.Nil {
+			return fmt.Errorf("bad payload: %w", asynq.SkipRetry)
+		}
+		return build(ctx, pl.ExportID)
+	}
+}
+
+// Purge task options. A purge runs on the maintenance queue (see ExportQueueName). It retries only twice: the hourly
+// sweep re-queues every account that is still due or half purged, so it is the outer retry loop (D-019). Unique is a
+// little shorter than the sweep period plus the retries' backoff, so a waiting or running purge is not queued twice.
+const (
+	purgeMaxRetry = 2
+	purgeTimeout  = 30 * time.Minute
+	purgeUnique   = 55 * time.Minute
+)
+
+type purgePayload struct {
+	UserID uuid.UUID `json:"user_id"`
+}
+
+// PurgeQueue implements account.PurgeQueue on top of the Asynq client.
+type PurgeQueue struct{ c *Client }
+
+// PurgeQueue returns the account.PurgeQueue backed by this client.
+func (c *Client) PurgeQueue() *PurgeQueue { return &PurgeQueue{c: c} }
+
+// EnqueuePurge schedules the purge of one account. A purge already queued for the same user is not queued twice.
+func (q *PurgeQueue) EnqueuePurge(ctx context.Context, userID uuid.UUID) error {
+	payload, err := json.Marshal(purgePayload{UserID: userID})
+	if err != nil {
+		return err
+	}
+	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountPurge, payload), asynq.Queue(ExportQueueName(q.c.queue)),
+		asynq.MaxRetry(purgeMaxRetry), asynq.Retention(0), asynq.Timeout(purgeTimeout), asynq.Unique(purgeUnique))
+	if errors.Is(err, asynq.ErrDuplicateTask) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("queue: enqueue purge: %w", err)
+	}
+	return nil
+}
+
+// PurgeHandler adapts the worker side of an account purge to an Asynq handler.
+func PurgeHandler(purge func(ctx context.Context, userID uuid.UUID) error) func(context.Context, *asynq.Task) error {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var pl purgePayload
+		if err := json.Unmarshal(t.Payload(), &pl); err != nil || pl.UserID == uuid.Nil {
+			return fmt.Errorf("bad payload: %w", asynq.SkipRetry)
+		}
+		return purge(ctx, pl.UserID)
 	}
 }

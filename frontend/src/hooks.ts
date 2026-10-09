@@ -2,7 +2,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { DEMO, DEMO_CHANGE_EVENT } from '@/lib/demo/config';
-import { friendlyMessage } from '@/lib/errors';
+import { enT } from '@/i18n/en';
+import { useTranslations } from '@/i18n/use-translations';
+import { describeErrorCode, friendlyMessage } from '@/lib/errors';
+import type { AppT } from '@/i18n/translate';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -30,7 +33,7 @@ export function useAsync<T>(fn: () => Promise<T>): AsyncState<T> {
       },
       (e: unknown) => {
         if (cancelled) return;
-        setError(e instanceof ApiError ? e : new ApiError(0, 'UNKNOWN', 'Something went wrong.'));
+        setError(e instanceof ApiError ? e : new ApiError(0, 'UNKNOWN', describeErrorCode('UNKNOWN', enT)));
         setLoading(false);
       },
     );
@@ -51,10 +54,17 @@ export function useAsync<T>(fn: () => Promise<T>): AsyncState<T> {
   return { data, error, loading, reload };
 }
 
-export function errorMessage(e: unknown, withRef = true): string {
+/** The sentence for any thrown value, with the support reference of an API error when there is one. */
+export function errorMessage(e: unknown, t: AppT, withRef = true): string {
   if (e instanceof ApiError) {
-    const text = friendlyMessage(e.code, e.message);
-    return withRef && e.requestId ? `${text} (ref ${e.requestId})` : text;
+    const text = friendlyMessage(e.code, e.message, t);
+    return withRef && e.requestId ? t('errors.withRef', { text, id: e.requestId }) : text;
   }
-  return friendlyMessage(null, e instanceof Error ? e.message : null);
+  return friendlyMessage(null, e instanceof Error ? e.message : null, t);
+}
+
+/** `errorMessage` bound to the active language: `const errorText = useErrorText(); errorText(err)`. */
+export function useErrorText(): (e: unknown, withRef?: boolean) => string {
+  const t = useTranslations();
+  return useCallback((e: unknown, withRef = true) => errorMessage(e, t, withRef), [t]);
 }

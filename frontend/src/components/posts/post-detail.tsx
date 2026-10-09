@@ -14,45 +14,45 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/input';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
-import { SCHEDULE_TOO_SOON } from '@/lib/composer';
-import { describeErrorCode, friendlyMessage, isTechnicalMessage } from '@/lib/errors';
+import { describeErrorCode, friendlyMessage, isEnglish, isTechnicalMessage } from '@/lib/errors';
 import { editHref } from '@/lib/demo/config';
-import { postLabel } from '@/lib/format';
+import { joinList, postLabel } from '@/lib/format';
 import { RetryPostDialog } from '@/components/posts/retry-post-dialog';
-import { providerLabel } from '@/lib/normalize';
+import { useProviderName } from '@/i18n/use-provider-name';
 import { editBlockedReason, postActions } from '@/lib/status';
-import { formatDateTime, zonedToUtcIso } from '@/lib/time';
+import { zonedToUtcIso } from '@/lib/time';
 import type { Post, PublicationAttempt } from '@/lib/types';
-import { errorMessage, useAsync } from '@/hooks';
+import { useAsync, useErrorText } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
+import { useFormat } from '@/i18n/use-format';
 
 function Targets({ post }: { post: Post }) {
-  const { timezone } = usePrefs();
+  const t = useTranslations();
+  const providerName = useProviderName();
+  const fmt = useFormat();
   return (
     <ul className="divide-y rounded-lg border">
-      {post.targets.map((t) => (
-        <li key={t.id} className="space-y-2 p-4">
+      {post.targets.map((tg) => (
+        <li key={tg.id} className="space-y-2 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium">{providerLabel(t.platform)}</p>
-            <TargetStatusBadge status={t.status} />
+            <p className="text-sm font-medium">{providerName(tg.platform)}</p>
+            <TargetStatusBadge status={tg.status} />
           </div>
-          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{t.content}</p>
-          {t.error_message ? (
+          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{tg.content}</p>
+          {tg.error_message ? (
             <Notice tone="danger">
-              <span className="font-medium">{describeErrorCode(t.error_code)}</span>
-              {isTechnicalMessage(t.error_message) ? null : <> {t.error_message}</>}
+              <span className="font-medium">{describeErrorCode(tg.error_code, t)}</span>
+              {isTechnicalMessage(tg.error_message) || !isEnglish(t) ? null : <> {tg.error_message}</>}
             </Notice>
           ) : null}
-          {t.status === 'needs_review' ? (
-            <Notice>Steerpost cannot confirm this went out. Check {providerLabel(t.platform)} before you retry, or it may post twice.</Notice>
-          ) : null}
+          {tg.status === 'needs_review' ? <Notice>{t('posts.unconfirmedNote', { network: providerName(tg.platform) })}</Notice> : null}
           <p className="text-xs text-muted-foreground">
-            {t.published_at ? `Published ${formatDateTime(t.published_at, timezone)} · ` : ''}
-            {t.attempt_count === 1 ? '1 attempt' : `${t.attempt_count} attempts`}
-            {t.external_url ? (
+            {t('posts.targetMeta', { hasDate: String(Boolean(tg.published_at)), when: tg.published_at ? fmt.dateTime(tg.published_at) : '', count: tg.attempt_count })}
+            {tg.external_url ? (
               <>
                 {' · '}
-                <a href={t.external_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
-                  View on {providerLabel(t.platform)} <ExternalLink className="h-3 w-3" aria-hidden />
+                <a href={tg.external_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
+                  {t('posts.viewOn', { network: providerName(tg.platform) })} <ExternalLink className="h-3 w-3" aria-hidden />
                 </a>
               </>
             ) : null}
@@ -64,30 +64,33 @@ function Targets({ post }: { post: Post }) {
 }
 
 function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Post }) {
-  const { timezone } = usePrefs();
-  const platformOf = (id: string) => providerLabel(post.targets.find((t) => t.id === id)?.platform ?? '');
-  if (attempts.length === 0) return <p className="text-sm text-muted-foreground">No publishing attempts yet.</p>;
+  const t = useTranslations();
+  const providerName = useProviderName();
+  const tp = useTranslations('posts');
+  const fmt = useFormat();
+  const platformOf = (id: string) => providerName(post.targets.find((x) => x.id === id)?.platform ?? '');
+  if (attempts.length === 0) return <p className="text-sm text-muted-foreground">{tp('noAttempts')}</p>;
   return (
-    <Table label="Publishing attempts">
+    <Table label={tp('attemptsTable')}>
       <Thead>
         <Tr>
-          <Th>Account</Th>
-          <Th>#</Th>
-          <Th>Started</Th>
-          <Th>Result</Th>
-          <Th>Error</Th>
+          <Th>{tp('colAccount')}</Th>
+          <Th>{tp('colNumber')}</Th>
+          <Th>{tp('colStarted')}</Th>
+          <Th>{tp('colResult')}</Th>
+          <Th>{tp('colError')}</Th>
         </Tr>
       </Thead>
       <Tbody>
         {attempts.map((a) => (
           <Tr key={a.id}>
-            <Td label="Account">{platformOf(a.post_target_id)}</Td>
-            <Td label="Attempt" className="tabular-nums">{a.attempt_no}</Td>
-            <Td label="Started" className="whitespace-nowrap">{formatDateTime(a.started_at, timezone)}</Td>
-            <Td label="Result">
+            <Td label={tp('colAccount')}>{platformOf(a.post_target_id)}</Td>
+            <Td label={tp('colAttempt')} className="tabular-nums">{a.attempt_no}</Td>
+            <Td label={tp('colStarted')} className="whitespace-nowrap">{fmt.dateTime(a.started_at)}</Td>
+            <Td label={tp('colResult')}>
               <AttemptStatusBadge status={a.status} />
             </Td>
-            <Td label="Error" className="text-muted-foreground max-md:text-foreground">{a.error_message ? friendlyMessage(null, a.error_message) : '—'}</Td>
+            <Td label={tp('colError')} className="text-muted-foreground max-md:text-foreground">{a.error_message ? friendlyMessage(a.error_code, a.error_message, t) : '—'}</Td>
           </Tr>
         ))}
       </Tbody>
@@ -96,7 +99,9 @@ function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Po
 }
 
 function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpenChange: (o: boolean) => void; onSubmit: (iso: string) => Promise<void> }) {
+  const t = useTranslations();
   const { timezone } = usePrefs();
+  const errorText = useErrorText();
   const [date, setDate] = useState('');
   const [time, setTime] = useState('09:00');
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +110,7 @@ function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpe
   async function go() {
     const iso = date ? zonedToUtcIso(date, time, timezone) : null;
     if (!iso || new Date(iso).getTime() < Date.now() + 60_000) {
-      setError(SCHEDULE_TOO_SOON);
+      setError(t('composer.v.tooSoon'));
       return;
     }
     setBusy(true);
@@ -113,7 +118,7 @@ function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpe
       await onSubmit(iso);
       onOpenChange(false);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -121,19 +126,19 @@ function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Schedule post" description={`Times are in ${timezone}.`}>
+      <DialogContent title={t('posts.scheduleTitle')} description={t('posts.scheduleBody', { timezone })}>
         <div className="flex gap-3">
-          <Field label="Date" htmlFor="s-date">
+          <Field label={t('composer.date')} htmlFor="s-date">
             <Input id="s-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
-          <Field label="Time" htmlFor="s-time">
+          <Field label={t('composer.time')} htmlFor="s-time">
             <Input id="s-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </Field>
         </div>
         {error ? <InlineError className="mt-3">{error}</InlineError> : null}
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => void go()} disabled={busy}>{busy ? 'Scheduling…' : 'Schedule'}</Button>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
+          <Button onClick={() => void go()} disabled={busy}>{busy ? t('posts.scheduling') : t('composer.scheduleAction')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -143,9 +148,11 @@ function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpe
 type Dlg = 'publish' | 'cancel' | 'delete' | 'retry' | 'schedule' | null;
 
 export function PostDetail({ id }: { id: string }) {
+  const t = useTranslations();
+  const providerName = useProviderName();
+  const fmt = useFormat();
   const router = useRouter();
   const toast = useToast();
-  const { timezone } = usePrefs();
   const load = useCallback(() => api.posts.get(id), [id]);
   const { data: post, error, loading, reload } = useAsync(load);
   const [dlg, setDlg] = useState<Dlg>(null);
@@ -154,12 +161,12 @@ export function PostDetail({ id }: { id: string }) {
   const inFlight = post?.status === 'publishing';
   useEffect(() => {
     if (!inFlight) return;
-    const t = window.setInterval(reload, 2000);
-    return () => window.clearInterval(t);
+    const timer = window.setInterval(reload, 2000);
+    return () => window.clearInterval(timer);
   }, [inFlight, reload]);
 
   if (loading && !post) return <LoadingRows rows={4} />;
-  if (error || !post) return <ErrorState title="Could not load this post" showRef={false} error={error} onRetry={reload} />;
+  if (error || !post) return <ErrorState title={t('composer.loadFailed')} showRef={false} error={error} onRetry={reload} />;
   const can = postActions(post.status);
 
   const act = (fn: () => Promise<unknown>, msg: string) => async () => {
@@ -171,43 +178,43 @@ export function PostDetail({ id }: { id: string }) {
   return (
     <>
       <PageHeader
-        title={postLabel(post)}
+        title={postLabel(post, t)}
         description={
           post.scheduled_at && post.status === 'scheduled'
-            ? `Scheduled for ${formatDateTime(post.scheduled_at, timezone)}`
-            : `Created ${formatDateTime(post.created_at, timezone)}${post.created_by === 'api_key' ? ' by an API key' : ''}`
+            ? t('posts.scheduledFor', { when: fmt.dateTime(post.scheduled_at) })
+            : t(post.created_by === 'api_key' ? 'posts.createdAtByKey' : 'posts.createdAt', { when: fmt.dateTime(post.created_at) })
         }
         actions={
           <>
             <PostStatusBadge status={post.status} />
             {can.edit ? (
               <Button size="sm" variant="secondary" asChild>
-                <Link href={editHref(post.id)}>Edit</Link>
+                <Link href={editHref(post.id)}>{t('common.edit')}</Link>
               </Button>
             ) : (
               <Button size="sm" variant="secondary" disabled aria-describedby="edit-blocked">
-                Edit
+                {t('common.edit')}
               </Button>
             )}
-            {can.publish ? <Button size="sm" onClick={() => setDlg('publish')}>Publish now</Button> : null}
-            {can.schedule ? <Button size="sm" variant="secondary" onClick={() => setDlg('schedule')}>Schedule</Button> : null}
-            {can.retry ? <Button size="sm" variant="secondary" onClick={() => setDlg('retry')}>Retry</Button> : null}
-            {can.cancel ? <Button size="sm" variant="secondary" onClick={() => setDlg('cancel')}>Cancel post</Button> : null}
-            {can.del ? <Button size="sm" variant="ghost" onClick={() => setDlg('delete')}>Delete</Button> : null}
+            {can.publish ? <Button size="sm" onClick={() => setDlg('publish')}>{t('composer.publishNow')}</Button> : null}
+            {can.schedule ? <Button size="sm" variant="secondary" onClick={() => setDlg('schedule')}>{t('composer.scheduleAction')}</Button> : null}
+            {can.retry ? <Button size="sm" variant="secondary" onClick={() => setDlg('retry')}>{t('common.retry')}</Button> : null}
+            {can.cancel ? <Button size="sm" variant="secondary" onClick={() => setDlg('cancel')}>{t('posts.cancelPost')}</Button> : null}
+            {can.del ? <Button size="sm" variant="ghost" onClick={() => setDlg('delete')}>{t('common.delete')}</Button> : null}
           </>
         }
       />
       {can.edit ? null : (
         <p id="edit-blocked" className="-mt-4 mb-6 text-sm text-muted-foreground">
-          {editBlockedReason(post.status)}
+          {editBlockedReason(post.status, t)}
         </p>
       )}
       <div className="space-y-10">
-        <Section title="Accounts">
+        <Section title={t('posts.sectionAccounts')}>
           <Targets post={post} />
         </Section>
         {post.media && post.media.length > 0 ? (
-          <Section title="Media">
+          <Section title={t('composer.media')}>
             <ul className="flex flex-wrap gap-2">
               {post.media.map((m) => (
                 <li key={m.id} className="rounded-md border bg-muted px-2 py-1 text-xs text-muted-foreground">
@@ -217,29 +224,29 @@ export function PostDetail({ id }: { id: string }) {
             </ul>
           </Section>
         ) : null}
-        <Section title="Attempt history">
+        <Section title={t('posts.sectionHistory')}>
           <Attempts attempts={post.attempts ?? []} post={post} />
         </Section>
       </div>
-      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title="Publish now?" description={`This posts to ${[...new Set(post.targets.map((t) => providerLabel(t.platform)))].join(', ')} now. Steerpost cannot undo it.`} confirmLabel="Publish now" onConfirm={act(() => api.posts.publish(id), 'Publishing started')} />
-      <RetryPostDialog postId={id} open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} onRetried={() => { toast.success('Retry started'); reload(); }} />
-      <ConfirmDialog open={dlg === 'cancel'} onOpenChange={(o) => !o && setDlg(null)} title="Cancel this post?" description="It will never publish, and this cannot be undone. To reuse the text, write a new post." confirmLabel="Cancel post" dismissLabel="Keep post" destructive onConfirm={act(() => api.posts.cancel(id), 'Post canceled')} />
+      <ConfirmDialog open={dlg === 'publish'} onOpenChange={(o) => !o && setDlg(null)} title={t('composer.publishConfirmTitle')} description={t('composer.publishConfirmBody', { accounts: joinList([...new Set(post.targets.map((x) => providerName(x.platform)))], t) })} confirmLabel={t('composer.publishNow')} onConfirm={act(() => api.posts.publish(id), t('composer.publishStarted'))} />
+      <RetryPostDialog postId={id} open={dlg === 'retry'} onOpenChange={(o) => !o && setDlg(null)} onRetried={() => { toast.success(t('posts.retryStarted')); reload(); }} />
+      <ConfirmDialog open={dlg === 'cancel'} onOpenChange={(o) => !o && setDlg(null)} title={t('posts.cancelTitle')} description={t('posts.cancelBody')} confirmLabel={t('posts.cancelPost')} dismissLabel={t('posts.keepPost')} destructive onConfirm={act(() => api.posts.cancel(id), t('posts.canceled'))} />
       <ConfirmDialog
         open={dlg === 'delete'}
         onOpenChange={(o) => !o && setDlg(null)}
-        title="Delete this post?"
-        description="It is removed from Steerpost. Copies already published on the networks stay there."
-        confirmLabel="Delete"
+        title={t('posts.deleteTitle')}
+        description={t('posts.deleteBody')}
+        confirmLabel={t('common.delete')}
         destructive
         onConfirm={async () => {
           await api.posts.remove(id);
-          toast.success('Post deleted');
+          toast.success(t('posts.deleted'));
           router.replace('/posts');
         }}
       />
       <ScheduleDialog open={dlg === 'schedule'} onOpenChange={(o) => !o && setDlg(null)} onSubmit={async (iso) => {
           await api.posts.schedule(id, iso);
-          toast.success('Post scheduled');
+          toast.success(t('composer.postScheduled'));
           reload();
         }}
       />

@@ -5,21 +5,25 @@ import { AuthShell } from "@/components/auth-shell";
 import { RevokeKeysOption } from "@/components/revoke-keys-option";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
-import { errorMessage } from "@/hooks";
+import { useErrorText } from "@/hooks";
+import { nodes } from "@/i18n/rich";
+import { useTranslations } from "@/i18n/use-translations";
+import type { AppT } from "@/i18n/translate";
 import { ApiError, api } from "@/lib/api";
 import { forgetHashToken, takeHashToken } from "@/lib/hash-token";
 import { InlineError } from '@/components/states';
 
 type State = "form" | "success" | "invalid";
 
-function validate(password: string, confirm: string): string | null {
-  if (password.length < 8 || password.length > 128)
-    return "Password must be 8 to 128 characters.";
-  if (password !== confirm) return "The two passwords do not match.";
+function validate(password: string, confirm: string, t: AppT): string | null {
+  if (password.length < 8 || password.length > 128) return t("auth.resetPassword.lengthError");
+  if (password !== confirm) return t("auth.resetPassword.mismatch");
   return null;
 }
 
 export function ResetPasswordView() {
+  const t = useTranslations();
+  const errorText = useErrorText();
   const [state, setState] = useState<State>("form");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -42,7 +46,7 @@ export function ResetPasswordView() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const problem = validate(password, confirm);
+    const problem = validate(password, confirm, t);
     setError(problem);
     if (problem) return;
     setBusy(true);
@@ -53,7 +57,7 @@ export function ResetPasswordView() {
     } catch (err) {
       // The password length is checked above, so a 400 here means the link is unknown, used or expired.
       if (err instanceof ApiError && err.status === 400) dropToken("invalid");
-      else setError(errorMessage(err));
+      else setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -77,40 +81,38 @@ export function ResetPasswordView() {
 }
 
 function ResetSuccess({ revoked }: { revoked: boolean }) {
+  const t = useTranslations("auth.resetPassword");
+  const ta = useTranslations("auth");
   return (
-    <AuthShell
-      title="Password updated"
-      description="Every browser session was signed out. Sign in with your new password."
-    >
+    <AuthShell title={t("doneTitle")} description={t("doneBody")}>
       <p className="mb-4 text-sm text-muted-foreground">
-        {revoked ? (
-          "Your API keys and MCP connections were revoked too."
-        ) : (
-          <>
-            Your API keys and MCP connections were <strong>not</strong> revoked.
-            If you think someone else had access, review them on the{" "}
-            <Link href="/developer" className="text-accent hover:underline">
-              Developer page
-            </Link>
-            .
-          </>
-        )}
+        {revoked
+          ? t("keysRevoked")
+          : nodes(
+              t.rich("keysKept", {
+                b: (c) => <strong>{c}</strong>,
+                link: (c) => (
+                  <Link href="/developer" className="text-accent hover:underline">
+                    {c}
+                  </Link>
+                ),
+              }),
+            )}
       </p>
       <Button asChild className="w-full">
-        <Link href="/login">Sign in</Link>
+        <Link href="/login">{ta("signIn")}</Link>
       </Button>
     </AuthShell>
   );
 }
 
 function ResetInvalid() {
+  const t = useTranslations("auth.resetPassword");
+  const ta = useTranslations("auth");
   return (
-    <AuthShell
-      title="This link no longer works"
-      description="It may have expired or already been used. Reset links work once and last 30 minutes."
-    >
+    <AuthShell title={ta("linkInvalidTitle")} description={t("invalidBody")}>
       <Button asChild className="w-full">
-        <Link href="/forgot-password">Request a new link</Link>
+        <Link href="/forgot-password">{ta("requestNewLink")}</Link>
       </Button>
     </AuthShell>
   );
@@ -129,16 +131,16 @@ type FormProps = {
 };
 
 function ResetPasswordForm(p: FormProps) {
+  const t = useTranslations("auth.resetPassword");
+  const ta = useTranslations("auth");
+  const tc = useTranslations("common");
   return (
-    <AuthShell
-      title="Choose a new password"
-      description="Every browser session will be signed out once you save it."
-    >
+    <AuthShell title={t("chooseTitle")} description={t("chooseBody")}>
       <form onSubmit={p.onSubmit} className="space-y-4" noValidate>
         <Field
-          label="New password"
+          label={ta("newPassword")}
           htmlFor="password"
-          hint="At least 8 characters."
+          hint={ta("passwordHint")}
         >
           <Input
             id="password"
@@ -149,7 +151,7 @@ function ResetPasswordForm(p: FormProps) {
             onChange={(e) => p.onPassword(e.target.value)}
           />
         </Field>
-        <Field label="Repeat the new password" htmlFor="confirm">
+        <Field label={ta("repeatPassword")} htmlFor="confirm">
           <Input
             id="confirm"
             type="password"
@@ -172,7 +174,7 @@ function ResetPasswordForm(p: FormProps) {
           className="w-full"
           disabled={p.busy || !p.password || !p.confirm}
         >
-          {p.busy ? "Saving…" : "Save password"}
+          {p.busy ? tc("saving") : t("save")}
         </Button>
       </form>
     </AuthShell>
