@@ -30,9 +30,8 @@ func scanToken(row interface{ Scan(...any) error }) (*emailtoken.Token, error) {
 func (r *EmailTokens) Create(ctx context.Context, t *emailtoken.Token) error {
 	return r.db.InTx(ctx, func(ctx context.Context) error {
 		q := r.db.q(ctx)
-		var locked uuid.UUID
-		if err := q.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 FOR UPDATE`, t.UserID).Scan(&locked); err != nil {
-			return mapErr(err, "user")
+		if err := lockUser(ctx, q, t.UserID); err != nil {
+			return err
 		}
 		if err := r.RetireAll(ctx, t.UserID, t.Purpose, t.CreatedAt); err != nil {
 			return err

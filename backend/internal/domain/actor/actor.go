@@ -51,6 +51,15 @@ func (a Actor) NeedsApproval() bool {
 	return a.Type == TypeAPIKey && a.DangerousPolicy != approval.PolicyTrusted
 }
 
+// FreshSessionWindow is how recently a session must have been issued to count as a recent sign-in: it stands in for a
+// password where the user has none (deleting the account, setting a first password; D-023).
+const FreshSessionWindow = 10 * time.Minute
+
+// SessionIsFresh reports whether the actor's session was issued within FreshSessionWindow of now.
+func (a Actor) SessionIsFresh(now time.Time) bool {
+	return !a.SessionCreatedAt.IsZero() && now.Sub(a.SessionCreatedAt) <= FreshSessionWindow
+}
+
 // IsSession reports whether the actor authenticated with a browser session.
 func (a Actor) IsSession() bool { return a.Type == TypeUser && a.SessionID != uuid.Nil }
 

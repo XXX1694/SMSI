@@ -111,17 +111,13 @@ func (s *DeletionService) Request(ctx context.Context, a actor.Actor, password, 
 	return &Schedule{PurgeAt: purgeAt}, nil
 }
 
-// FreshSessionWindow is how recently a user without a password must have signed in to delete the account: they have
-// no password to type, so a sign-in a moment ago stands in for it (D-023).
-const FreshSessionWindow = 10 * time.Minute
-
 // reauthenticate checks the password and the typed confirmation. Both failures are field errors, so the form can say
 // which one is wrong; a rate-limited hasher passes through unchanged. A user without a password (social sign-up) proves
-// it is them with a session signed in within FreshSessionWindow; an older one gets REAUTH_REQUIRED, so deletion stays
+// it is them with a session signed in within actor.FreshSessionWindow; an older one gets REAUTH_REQUIRED, so deletion stays
 // available (AGENTS section 7) by signing in again with the provider.
 func (s *DeletionService) reauthenticate(ctx context.Context, a actor.Actor, u *user.User, password, confirmEmail string) error {
 	if !u.HasPassword() {
-		if age := s.d.Clock.Now().Sub(a.SessionCreatedAt); a.SessionCreatedAt.IsZero() || age > FreshSessionWindow {
+		if !a.SessionIsFresh(s.d.Clock.Now()) {
 			return errs.New(errs.ReauthRequired, "sign in again to delete your account")
 		}
 		return confirmTyped(u, confirmEmail)

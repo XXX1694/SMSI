@@ -32,6 +32,7 @@ const (
 	ActionPasswordReset     = "user.password_reset"
 	ActionPasswordChanged   = "user.password_changed"
 	ActionIdentityLinked    = "user.identity_linked"
+	ActionIdentityUnlinked  = "user.identity_unlinked"
 	ActionAccountConnected  = "social_account.connected"
 	ActionAccountRemoved    = "social_account.disconnected"
 	ActionAccountExpired    = "social_account.expired"

@@ -32,6 +32,17 @@ type socialRig struct {
 
 func newSocialRig(t *testing.T, o envOpts) *socialRig {
 	t.Helper()
+	return newRig(t, o, true)
+}
+
+// newGitHubOnlyRig is the rig with Google switched off: the fake still runs, but the app does not offer it.
+func newGitHubOnlyRig(t *testing.T, o envOpts) *socialRig {
+	t.Helper()
+	return newRig(t, o, false)
+}
+
+func newRig(t *testing.T, o envOpts, withGoogle bool) *socialRig {
+	t.Helper()
 	gh, goog := githubfake.New(t), oidcfake.New(t)
 	ghAdapter, err := github.New(github.Config{ClientID: gh.ClientID, ClientSecret: gh.ClientSecret, AuthURL: gh.AuthURL(), TokenURL: gh.TokenURL(), APIURL: gh.APIURL()})
 	if err != nil {
@@ -42,7 +53,10 @@ func newSocialRig(t *testing.T, o envOpts) *socialRig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	o.signIn = []auth.IdentityProvider{googAdapter, ghAdapter}
+	o.signIn = []auth.IdentityProvider{ghAdapter}
+	if withGoogle {
+		o.signIn = []auth.IdentityProvider{googAdapter, ghAdapter}
+	}
 	return &socialRig{e: newEnv(t, o), gh: gh, google: goog}
 }
 
@@ -68,7 +82,19 @@ func (r *socialRig) start(t *testing.T, c *client, provider, next string) flow {
 	if res.status != http.StatusFound {
 		t.Fatalf("start %s: %d %s", provider, res.status, res.body)
 	}
-	loc, err := url.Parse(res.header.Get("Location"))
+	f := parseAuthorize(t, provider, res.header.Get("Location"))
+	for _, ck := range (&http.Response{Header: res.header}).Cookies() {
+		if ck.Name == stateCookie {
+			f.setCookie = ck
+		}
+	}
+	return f
+}
+
+// parseAuthorize reads what a provider's consent URL carries.
+func parseAuthorize(t *testing.T, provider, rawURL string) flow {
+	t.Helper()
+	loc, err := url.Parse(rawURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,11 +102,6 @@ func (r *socialRig) start(t *testing.T, c *client, provider, next string) flow {
 	f := flow{provider: provider, state: q.Get("state"), nonce: q.Get("nonce"), challenge: q.Get("code_challenge"), redirectURI: q.Get("redirect_uri")}
 	if f.state == "" || f.challenge == "" || q.Get("code_challenge_method") != "S256" {
 		t.Fatalf("authorize URL lacks state or S256 PKCE: %s", loc)
-	}
-	for _, ck := range (&http.Response{Header: res.header}).Cookies() {
-		if ck.Name == stateCookie {
-			f.setCookie = ck
-		}
 	}
 	return f
 }

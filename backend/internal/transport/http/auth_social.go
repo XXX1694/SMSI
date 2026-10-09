@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/socialos/backend/internal/application/auth"
 	"github.com/socialos/backend/internal/domain/actor"
@@ -89,8 +90,12 @@ func (a *API) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
+	var sessionUser uuid.UUID // a link flow finishes only in the browser session it was started in
+	if act := actorOf(r); act.IsSession() {
+		sessionUser = act.UserID
+	}
 	res := a.svc.Auth.SocialCallback(r.Context(), id, auth.CallbackInput{Code: q.Get("code"), State: q.Get("state"),
-		CookieState: cookieValue(r, oauthStateCookie), ProviderError: q.Get("error")}, middleware.ClientInfoFrom(r, a.trusted))
+		CookieState: cookieValue(r, oauthStateCookie), ProviderError: q.Get("error"), SessionUserID: sessionUser}, middleware.ClientInfoFrom(r, a.trusted))
 	if res.StateSpent {
 		a.clearOAuthCookie(w, oauthStateCookie)
 	}
@@ -142,5 +147,89 @@ func (a *API) oauthComplete(w http.ResponseWriter, r *http.Request) {
 	}
 	a.clearOAuthCookie(w, oauthTicketCookie)
 	a.setSessionCookies(w, sess)
-	httpx.JSON(w, http.StatusCreated, a.meFor(u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken))
+	a.writeMe(w, r, http.StatusCreated, u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken)
+}
+
+type identityDTO struct {
+	Provider    identity.Provider `json:"provider"`
+	Email       string            `json:"email"`
+	LinkedAt    time.Time         `json:"linked_at"`
+	LastLoginAt *time.Time        `json:"last_login_at"`
+}
+
+// listIdentities serves GET /auth/identities: the providers linked to the session user, and whether a password exists.
+func (a *API) listIdentities(w http.ResponseWriter, r *http.Request) {
+	m, err := a.svc.Auth.SignInMethods(r.Context(), actorOf(r))
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	out := make([]identityDTO, 0, len(m.Identities))
+	for _, i := range m.Identities {
+		out = append(out, identityDTO{Provider: i.Provider, Email: i.Email, LinkedAt: utc(i.LinkedAt), LastLoginAt: utcp(i.LastLoginAt)})
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"identities": out, "has_password": m.HasPassword})
+}
+
+// reauthReq is the body of link and unlink: users with a password confirm it, the others send nothing.
+type reauthReq struct {
+	CurrentPassword string `json:"current_password"`
+}
+
+// linkIdentity serves POST /auth/identities/{provider}/link: it sets the state cookie and returns the provider's consent
+// URL, which the web app navigates to. The provider then calls the ordinary OAuth callback.
+func (a *API) linkIdentity(w http.ResponseWriter, r *http.Request) {
+	id, err := providerParam(r)
+	var req reauthReq
+	if err == nil {
+		err = decode(r, &req)
+	}
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	res, err := a.svc.Auth.StartLink(r.Context(), actorOf(r), id, req.CurrentPassword)
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	a.setOAuthCookie(w, oauthStateCookie, res.State, oauthCookieMaxAge)
+	httpx.JSON(w, http.StatusOK, map[string]any{"authorize_url": res.URL})
+}
+
+// unlinkIdentity serves DELETE /auth/identities/{provider}.
+func (a *API) unlinkIdentity(w http.ResponseWriter, r *http.Request) {
+	id, err := providerParam(r)
+	var req reauthReq
+	if err == nil {
+		err = decode(r, &req)
+	}
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	if err := a.svc.Auth.Unlink(r.Context(), actorOf(r), id, req.CurrentPassword); err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type setPasswordReq struct {
+	NewPassword string `json:"new_password"`
+}
+
+// setPassword serves POST /auth/password/set: the first password of a user who signed up with a provider.
+func (a *API) setPassword(w http.ResponseWriter, r *http.Request) {
+	var req setPasswordReq
+	if err := decode(r, &req); err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	if err := a.svc.Auth.SetInitialPassword(r.Context(), actorOf(r), req.NewPassword); err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

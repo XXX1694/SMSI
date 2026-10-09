@@ -18,6 +18,9 @@ type Identities interface {
 	GetBySubject(ctx context.Context, p identity.Provider, subject string) (*identity.Identity, error)
 	// ListByUser returns the user's identities, oldest first. The result is bounded by the number of providers.
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]identity.Identity, error)
+	// LockUser serialises changes to one user's sign-in methods until the surrounding transaction ends. It must be
+	// called inside one.
+	LockUser(ctx context.Context, userID uuid.UUID) error
 	// Delete unlinks the user's identity for a provider. NOT_FOUND when the user has none (also for another user's).
 	Delete(ctx context.Context, userID uuid.UUID, p identity.Provider) error
 	// TouchLogin records a sign-in and refreshes the email the provider last reported.

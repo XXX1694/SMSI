@@ -6,6 +6,10 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- Manage sign-in methods, API side (D-023; the Settings screen comes next). `GET /auth/identities`, `POST /auth/identities/{provider}/link` (returns `authorize_url`; the provider calls the ordinary sign-in callback, which finishes the link and returns to `/settings`), `DELETE /auth/identities/{provider}` (refused with `409` when it is the last way to sign in) and `POST /auth/password/set` for accounts without a password (session younger than 10 minutes, else `403 REAUTH_REQUIRED`). `/me` gains `user.has_password` and `user.login_methods`. Linking and unlinking re-authenticate (`current_password`, or a session under 10 minutes old for users without a password), are audited and are mailed to the owner. A provider that is switched off does not count as the remaining way to sign in. The demo answers the new routes without pretending to link anything. Failed sign-in and link redirects carry `provider=<id>` (and, for sign-in, the sanitised `next`).
+
 ### Changed
 
 - Glass surfaces, step 3 of D-024: the sidebar and the mobile header are glass (the open mobile menu, which scrolls with the page, is not blurred), the active and hovered nav rows use the lagoon `secondary` colour (the accent bar stays, and forced colours get an outline), and counts are small neutral squares with tabular figures. Status tags replace the rounded pastel pills: a 5 px tag with a hairline border, the label in the text colour and a 12 px glyph that alone carries the colour, one shape per meaning (draft dashed ring, waiting half ring, scheduled clock, in progress arc, published filled check, partly published ringed check, failed triangle, needs attention ring with a bang, cancelled slashed ring; an approval that is allowed but not yet used shows the ringed check, one that was carried out the filled check). Quiet statuses (draft, pending, cancelled) keep a muted label. Tags without a status (risk, trust, actor) keep the tone on the label; unsupported capabilities are dashed and struck through.
@@ -14,6 +18,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Design tokens for the glass style (D-024, no visual change yet): `canvas`, the lagoon `secondary` colour, `info`, `chart-1` to `chart-4`, glass surfaces, blur and highlight, the background mesh, `--duration-hero` and `--ease-fill`, wired into Tailwind (`bg-secondary`, `text-info`, `bg-canvas`, `bg-chart-1`, `duration-hero`, `ease-fill`…; glass itself is only the `.glass-*` classes, so blur, tint, edge and fallbacks travel together). `tests/tokens.test.ts` checks the new text pairs and every text colour on each glass surface composited over the mesh at its strongest (AA).
 - CI is one workflow: `security.yml` is merged into `ci.yml`. A pull request that touches everything runs 9 jobs instead of 19; the scanners (govulncheck, `npm audit`, gitleaks, Trivy, CodeQL) keep their checks and SARIF categories. The new aggregator job **CI ok** is the single check a branch ruleset needs to require; jobs skipped because their paths did not change count as passed. The weekly scan now runs from `ci.yml`.
 - GitHub Pages moved into `ci.yml`: a `site` job builds the demo and the site, checks links and runs the browser smoke test on every pull request that touches `frontend/`, `site/`, `docs/` or the READMEs, so breakage no longer reaches `main`; a `pages` job deploys only after a push to `main`. `pages.yml` and its "is Pages enabled?" gate are gone.
+- The "provider connected" notice mail now says where to undo it (Settings, Sign-in methods) and no longer assumes an automatic link.
 
 ## [0.4.0] - 2026-10-09
 

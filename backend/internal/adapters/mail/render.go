@@ -22,8 +22,10 @@ const (
 	// AccountDeletionScheduled tells the owner that deletion was requested and how to cancel it.
 	AccountDeletionScheduled = "account_deletion_scheduled"
 	ExportReady              = "export_ready"
-	// IdentityLinked tells the owner that a sign-in provider was linked to the account automatically.
+	// IdentityLinked tells the owner that a sign-in provider was linked to the account.
 	IdentityLinked = "identity_linked"
+	// IdentityUnlinked tells the owner that a sign-in provider was disconnected.
+	IdentityUnlinked = "identity_unlinked"
 )
 
 //go:embed templates/*.tmpl
@@ -50,6 +52,7 @@ var subjects = map[string]string{
 	AccountDeleted:           "Your " + ProductName + " account was deleted",
 	AccountDeletionScheduled: "Your " + ProductName + " account will be deleted",
 	IdentityLinked:           "A sign-in method was added to your " + ProductName + " account",
+	IdentityUnlinked:         "A sign-in method was removed from your " + ProductName + " account",
 	ExportReady:              "Your " + ProductName + " data export is ready",
 }
 
