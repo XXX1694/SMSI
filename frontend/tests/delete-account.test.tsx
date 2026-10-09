@@ -33,7 +33,7 @@ import { DeletionBanner } from '@/components/deletion-banner';
 
 const me = (over: Partial<Me> = {}): Me => ({
   id: 'u1', email: 'owner@example.com', display_name: 'Owner', csrf_token: 'c', email_verified: true, verification_enforced: false,
-  mail_delivery: 'smtp', deletion_scheduled_at: null, deletion_grace_days: 7, ...over,
+  mail_delivery: 'smtp', deletion_scheduled_at: null, deletion_grace_days: 7, has_password: true, login_methods: ['password'], ...over,
 });
 
 beforeEach(() => {
@@ -60,11 +60,10 @@ describe('DeleteAccount', () => {
     expect(apiMock.account.requestDeletion).not.toHaveBeenCalled();
   });
 
-  it('keeps the button disabled until the email is typed exactly; the password is optional for sign-ups through Google or GitHub', async () => {
+  it('keeps the button disabled until the email is typed exactly', async () => {
     await openDialog();
     const submit = screen.getByRole('button', { name: 'Delete my account' });
     expect(submit).toBeDisabled();
-    expect(screen.getByText('Signed up with Google or GitHub? Leave this empty.')).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@exampl');
     expect(submit).toBeDisabled();
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'e.com');
@@ -91,9 +90,12 @@ describe('DeleteAccount', () => {
     expect(auth.endSession).not.toHaveBeenCalled();
   });
 
-  it('lets a password-less user delete with the email alone', async () => {
+  it('hides the password field for a password-less user, who deletes with the email alone', async () => {
+    auth.user = me({ has_password: false, login_methods: ['github'] });
     apiMock.account.requestDeletion.mockResolvedValue({ scheduled_for: '2026-10-16T12:00:00Z' });
     await openDialog();
+    expect(screen.queryByLabelText('Your password')).toBeNull();
+    expect(screen.queryByText(/Leave this empty/)).toBeNull();
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@example.com');
     await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
     await waitFor(() => expect(auth.endSession).toHaveBeenCalledWith('deleted'));
@@ -113,6 +115,17 @@ describe('DeleteAccount', () => {
     expect(screen.getByRole('link', { name: 'Sign in again with Google' })).toBeInTheDocument();
     expect(screen.queryByText('That is not your current password.')).toBeNull();
     expect(auth.endSession).not.toHaveBeenCalled();
+  });
+
+  it('limits "Sign in again with" to the providers the user is linked to', async () => {
+    auth.user = me({ has_password: false, login_methods: ['github'] });
+    apiMock.account.requestDeletion.mockRejectedValue(new ApiError(403, 'REAUTH_REQUIRED', 'sign in again'));
+    apiMock.auth.signInProviders.mockResolvedValue([{ id: 'github', name: 'GitHub' }, { id: 'google', name: 'Google' }]);
+    await openDialog();
+    await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'owner@example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
+    expect(await screen.findByRole('link', { name: 'Sign in again with GitHub' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Sign in again with Google' })).toBeNull();
   });
 
   it('shows any other failure and lets the user retry', async () => {

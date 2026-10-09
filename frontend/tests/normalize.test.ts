@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeMe, normalizeProvider, unwrapList } from '@/lib/normalize';
+import { normalizeMe, normalizeProvider, normalizeSignInMethods, unwrapList } from '@/lib/normalize';
 
 describe('normalizeProvider', () => {
   it('accepts PascalCase capabilities from the contract', () => {
@@ -54,5 +54,25 @@ describe('normalizeMe deletion fields', () => {
     const old = normalizeMe({ id: 'u', email: 'a@b.c', user: {} });
     expect(old.deletion_scheduled_at).toBeNull();
     expect(old.deletion_grace_days).toBe(7);
+  });
+});
+
+describe('sign-in method fields', () => {
+  it('reads has_password and login_methods from /me, and treats a server that does not say as having a password', () => {
+    const me = normalizeMe({ id: 'u', email: 'a@b.c', user: { has_password: false, login_methods: ['github', 7] } });
+    expect(me.has_password).toBe(false);
+    expect(me.login_methods).toEqual(['github']);
+    const old = normalizeMe({ id: 'u', email: 'a@b.c', user: {} });
+    expect(old.has_password).toBe(true);
+    expect(old.login_methods).toEqual([]);
+  });
+
+  it('keeps well-formed identities only', () => {
+    const r = normalizeSignInMethods({ has_password: false, identities: [{ provider: 'github', email: 'a@b.c', linked_at: '2026-10-01T09:00:00Z', last_login_at: null }, { provider: '' }, 'x', { email: 'no provider' }] });
+    expect(r).toEqual({ has_password: false, identities: [{ provider: 'github', email: 'a@b.c', linked_at: '2026-10-01T09:00:00Z', last_login_at: null }] });
+    // A link without a usable date would reach Intl as an invalid Date.
+    const dated = normalizeSignInMethods({ identities: [{ provider: 'github', linked_at: '' }, { provider: 'google' }, { provider: 'x', linked_at: 'not a date' }] });
+    expect(dated.identities).toEqual([]);
+    expect(normalizeSignInMethods(null)).toEqual({ has_password: true, identities: [] });
   });
 });

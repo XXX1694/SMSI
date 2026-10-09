@@ -65,6 +65,10 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
   from { opacity: 0; transform: translateY(var(--distance-enter)); }
   to { opacity: 1; transform: none; }
 }
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 @keyframes fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
@@ -155,17 +159,18 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
 .hero-overlay { position: fixed; inset: 0; z-index: 100; pointer-events: none; background: hsl(var(--accent)); }
 @media (forced-colors: active) { .hero-overlay { display: none; } }
 
-/* Page enter: the fallback for browsers without the View Transitions API (and for navigations that skip it). */
-.page-enter { animation: rise-in var(--duration-slow) var(--ease-enter) both; }
+/* Page enter: the fallback for browsers without the View Transitions API (and for navigations that skip it). Moving
+   between sections is frequent, so it is a short fade, never a slide (BRAND §7). */
+.page-enter { animation: fade-in var(--duration-fast) var(--ease-standard) both; }
 html[data-vt] .page-enter { animation: none; }
 
-/* View Transitions: the page content fades and slides a little; the title and the sidebar stay put. */
+/* View Transitions: the page content cross-fades; the title and the sidebar stay put. */
 /* The shell (sidebar included) is not cross-faded: the new frame replaces the old at once, so a stale highlight never
    shows over the new page. Only the page content (page-main) and the title animate. */
 ::view-transition-old(root) { animation: none; opacity: 0; }
 ::view-transition-new(root) { animation: none; opacity: 1; }
 ::view-transition-old(page-main) { animation: fade-out var(--duration-fast) var(--ease-exit) both; }
-::view-transition-new(page-main) { animation: rise-in var(--duration-slow) var(--ease-enter) both; }
+::view-transition-new(page-main) { animation: fade-in var(--duration-fast) var(--ease-standard) both; }
 
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
@@ -180,3 +185,16 @@ html[data-vt] .page-enter { animation: none; }
   .card-lift:hover { transform: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* Pause motion (Settings): the same as reduced motion, chosen in the app (D-024). The class is set before first paint. */
+html.motion-off *, html.motion-off ::before, html.motion-off ::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+html.motion-off .shimmer::after { display: none; }
+html.motion-off .card-lift:hover { transform: none; }
+html.motion-off::view-transition-group(*), html.motion-off::view-transition-old(*), html.motion-off::view-transition-new(*) { animation: none !important; }

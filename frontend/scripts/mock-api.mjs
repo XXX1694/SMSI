@@ -68,8 +68,9 @@ const users = new Map();
 const sessions = new Map();
 const db = { accounts: [], posts: [], media: [], keys: [], mcp: [], audit: [], usage: [], links: [], approvals: [], exports: [] };
 
+// `password` is null for an account made with a provider: it has none, and an empty string must never be accepted.
 function addUser(email, password, display_name) {
-  const u = { id: randomUUID(), email, password, display_name, verified: VERIFICATION !== 'enforced' };
+  const u = { id: randomUUID(), email, password: password || null, display_name, verified: VERIFICATION !== 'enforced', identities: [] };
   users.set(email, u);
   return u;
 }
@@ -142,7 +143,7 @@ const readBody = (req) => new Promise((resolve) => { const c = []; req.on('data'
 const sessionCookies = (s) => [`socialos_session=${s.token}; Path=/; HttpOnly; SameSite=Lax`, `socialos_csrf=${s.csrf}; Path=/; SameSite=Lax`];
 const meBody = (u, s) => ({
   id: u.id, email: u.email, display_name: u.display_name, csrf_token: s.csrf, scopes: ALL_SCOPES,
-  user: { id: u.id, email: u.email, display_name: u.display_name, email_verified: u.verified !== false, has_password: true, login_methods: ['password'], plan: 'free', deletion_scheduled_at: u.deletion_scheduled_at ?? null },
+  user: { id: u.id, email: u.email, display_name: u.display_name, email_verified: u.verified !== false, has_password: Boolean(u.password), login_methods: [...(u.password ? ['password'] : []), ...u.identities.map((i) => i.provider)], plan: 'free', deletion_scheduled_at: u.deletion_scheduled_at ?? null },
   deletion_grace_days: 7,
   verification_enforced: VERIFICATION === 'enforced', mail_delivery: VERIFICATION === 'enforced' ? 'smtp' : 'log',
 });
@@ -209,7 +210,7 @@ async function handle(req, res) {
   }
   if (path === '/auth/login' && m === 'POST') {
     const u = users.get(body.email);
-    if (!u || u.password !== body.password) return fail(res, 401, 'UNAUTHENTICATED', 'Invalid email or password');
+    if (!u || !u.password || u.password !== body.password) return fail(res, 401, 'UNAUTHENTICATED', 'Invalid email or password');
     const s = newSession(u);
     return send(res, 200, meBody(u, s), { 'Set-Cookie': sessionCookies(s) });
   }
@@ -234,8 +235,9 @@ async function handle(req, res) {
     if (!pending) return fail(res, 404, 'NOT_FOUND', 'no sign-up is waiting');
     if (body.accept_terms !== true) return fail(res, 400, 'VALIDATION_ERROR', 'You must accept the Terms and the Privacy Policy', { accept_terms: 'must be accepted' });
     pendingSignups.delete(ticket);
-    const u = users.get(pending.email) ?? addUser(pending.email, '', String(body.display_name ?? '').trim());
+    const u = users.get(pending.email) ?? addUser(pending.email, null, String(body.display_name ?? '').trim());
     u.verified = true;
+    if (!u.identities.some((i) => i.provider === pending.provider)) u.identities.push({ provider: pending.provider, email: pending.email, linked_at: new Date().toISOString(), last_login_at: new Date().toISOString() });
     const sess = newSession(u);
     return send(res, 201, meBody(u, sess), { 'Set-Cookie': [...sessionCookies(sess), 'socialos_oauth_ticket=; Path=/api/v1/auth/oauth; Max-Age=0'] });
   }
@@ -269,7 +271,8 @@ async function handle(req, res) {
   }
   if (path === '/account/delete' && m === 'POST') {
     if (user.deletion_scheduled_at) return fail(res, 409, 'CONFLICT', 'deletion of this account is already scheduled');
-    if (body.password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'the password is incorrect', { password: 'incorrect' });
+    // A password-less account confirms with the typed email alone; one with a password must send it.
+    if (user.password && body.password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'the password is incorrect', { password: 'incorrect' });
     if (String(body.confirm ?? '').trim().toLowerCase() !== user.email.toLowerCase()) return fail(res, 400, 'VALIDATION_ERROR', 'type your email address exactly to confirm', { confirm: 'does not match your email' });
     user.deletion_scheduled_at = new Date(Date.now() + 7 * 864e5).toISOString();
     sessions.delete(sess?.token);
@@ -280,12 +283,25 @@ async function handle(req, res) {
     user.deletion_scheduled_at = null;
     return send(res, 204);
   }
-  // No sign-in provider is configured here: nothing to link, and the user always has a password.
-  if (path === '/auth/identities' && m === 'GET') return send(res, 200, { identities: [], has_password: true });
-  if (/^\/auth\/identities\/[^/]+(\/link)?$/.test(path) && (m === 'POST' || m === 'DELETE')) return fail(res, 404, 'NOT_FOUND', 'sign-in method not available');
-  if (path === '/auth/password/set' && m === 'POST') return fail(res, 409, 'CONFLICT', 'you already have a password; change it instead');
+  // Sign-in methods. Linking needs a provider to visit, which this mock does not have: it answers 404 and never pretends.
+  if (path === '/auth/identities' && m === 'GET') return send(res, 200, { identities: user.identities, has_password: Boolean(user.password) });
+  if ((r = path.match(/^\/auth\/identities\/(\w+)\/link$/)) && m === 'POST') return fail(res, 404, 'NOT_FOUND', 'sign-in method not available');
+  if ((r = path.match(/^\/auth\/identities\/(\w+)$/)) && m === 'DELETE') {
+    if (user.password && body.current_password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'current password is incorrect', { current_password: 'incorrect' });
+    if (!user.identities.some((i) => i.provider === r[1])) return fail(res, 404, 'NOT_FOUND', 'that sign-in method is not connected');
+    if (!user.password && user.identities.length < 2) return fail(res, 409, 'CONFLICT', 'keep at least one way to sign in');
+    user.identities = user.identities.filter((i) => i.provider !== r[1]);
+    return send(res, 204);
+  }
+  if (path === '/auth/password/set' && m === 'POST') {
+    if (user.password) return fail(res, 409, 'CONFLICT', 'you already have a password; change it instead');
+    const next = String(body.new_password ?? '');
+    if (next.length < 8 || next.length > 128) return fail(res, 400, 'VALIDATION_ERROR', 'password must be 8-128 characters', { new_password: 'must be 8-128 characters' });
+    user.password = next;
+    return send(res, 204);
+  }
   if (path === '/auth/password/change' && m === 'POST') {
-    if (body.current_password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'current password is incorrect');
+    if (!user.password || body.current_password !== user.password) return fail(res, 400, 'VALIDATION_ERROR', 'current password is incorrect');
     if (String(body.new_password ?? '').length < 8) return fail(res, 400, 'VALIDATION_ERROR', 'password must be 8-128 characters');
     user.password = body.new_password;
     return send(res, 204);

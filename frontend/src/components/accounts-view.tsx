@@ -230,7 +230,7 @@ export function AccountsView() {
           )}
         </Notice>
       ) : null}
-      <ul className="stagger divide-y border-y">
+      <ul className="divide-y border-y">
         {providers.map((p) => (
           <ProviderRow
             key={p.id}

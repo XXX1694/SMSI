@@ -10,6 +10,7 @@ import type {
   Page,
   PendingSignup,
   Provider,
+  SignInMethodList,
   SignInProvider,
   SocialAccount,
   TelegramLink,
@@ -46,6 +47,22 @@ export function normalizeMe(raw: unknown): Me {
     mail_delivery: r.mail_delivery === 'log' ? 'log' : 'smtp',
     deletion_grace_days: typeof r.deletion_grace_days === 'number' && r.deletion_grace_days > 0 ? r.deletion_grace_days : 7,
     deletion_scheduled_at: typeof user.deletion_scheduled_at === 'string' ? user.deletion_scheduled_at : null,
+    // A server that predates D-023 does not say, and every account there has a password.
+    has_password: user.has_password !== false,
+    login_methods: Array.isArray(user.login_methods) ? user.login_methods.filter((m): m is string => typeof m === 'string') : [],
+  };
+}
+
+export function normalizeSignInMethods(raw: unknown): SignInMethodList {
+  const r = isRec(raw) ? raw : {};
+  const list = Array.isArray(r.identities) ? r.identities : [];
+  return {
+    has_password: r.has_password !== false,
+    identities: list.flatMap((i) =>
+      isRec(i) && typeof i.provider === 'string' && i.provider && !Number.isNaN(Date.parse(str(i.linked_at)))
+        ? [{ provider: i.provider, email: str(i.email), linked_at: str(i.linked_at), last_login_at: typeof i.last_login_at === 'string' ? i.last_login_at : null }]
+        : [],
+    ),
   };
 }
 
@@ -130,6 +147,8 @@ export function normalizeProvider(raw: unknown): Provider {
 
 const LABELS: Record<string, string> = {
   linkedin: 'LinkedIn',
+  github: 'GitHub',
+  google: 'Google',
   telegram: 'Telegram',
   mock: 'Test network',
   instagram: 'Instagram',
@@ -144,7 +163,7 @@ const LABELS: Record<string, string> = {
   bluesky: 'Bluesky',
 };
 
-/** Display name of a network id. An empty id gives an empty string; the caller supplies the "Unknown" text from the catalog. */
+/** Display name of a network or sign-in provider id (Google and GitHub too). An empty id gives an empty string; the caller supplies the "Unknown" text from the catalog. */
 export function providerLabel(id: string): string {
   return LABELS[id] ?? (id ? id.charAt(0).toUpperCase() + id.slice(1) : '');
 }

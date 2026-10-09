@@ -39,6 +39,20 @@ describe('runWithTransition', () => {
     expect(nav).toHaveBeenCalledTimes(1);
   });
 
+  it('skips the transition under the app\'s Pause motion', () => {
+    const start = vi.fn();
+    doc.startViewTransition = start;
+    document.documentElement.classList.add('motion-off');
+    const nav = vi.fn();
+    try {
+      expect(runWithTransition(nav)).toBe(false);
+    } finally {
+      document.documentElement.classList.remove('motion-off');
+    }
+    expect(start).not.toHaveBeenCalled();
+    expect(nav).toHaveBeenCalledTimes(1);
+  });
+
   it('runs inside a view transition and settles once the navigation is committed', async () => {
     let settled = false;
     doc.startViewTransition = vi.fn((update: () => Promise<void>) => {
@@ -60,7 +74,9 @@ describe('runWithTransition', () => {
       void update().then(() => (settled = true));
     });
     runWithTransition(() => {});
-    await vi.advanceTimersByTimeAsync(1100);
+    await vi.advanceTimersByTimeAsync(299);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(10);
     expect(settled).toBe(true);
   });
 });
@@ -128,6 +144,20 @@ describe('stylesheet guards', () => {
   it('defines the keyframes it uses by name and does not cross-fade the shell', () => {
     for (const name of ['rise-in', 'fade-out', 'shimmer']) expect(css).toContain(`@keyframes ${name}`);
     expect(css).toMatch(/::view-transition-old\(root\) \{ animation: none; opacity: 0; \}/);
+  });
+});
+
+describe('navigation motion', () => {
+  const css = readFileSync(`${__dirname}/../src/app/globals.css`, 'utf8');
+  it('moves between pages with a short fade, not a slide', () => {
+    expect(css).toMatch(/\.page-enter \{ animation: fade-in var\(--duration-fast\)/);
+    expect(css).toMatch(/::view-transition-new\(page-main\) \{ animation: fade-in var\(--duration-fast\)/);
+  });
+  it('Pause motion collapses animations like reduced motion does', () => {
+    const block = css.slice(css.indexOf('html.motion-off *'));
+    expect(block).toMatch(/animation-duration:\s*0\.01ms !important/);
+    expect(block).toMatch(/transition-duration:\s*0\.01ms !important/);
+    expect(block).toContain('html.motion-off::view-transition-old(*)');
   });
 });
 

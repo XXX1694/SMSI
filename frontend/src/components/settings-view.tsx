@@ -1,13 +1,16 @@
 'use client';
 import Link from 'next/link';
 import { useTranslations } from '@/i18n/use-translations';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
+import { LinkResultNotice } from '@/components/link-result-notice';
 import { PasswordForm } from '@/components/password-form';
+import { SignInMethods } from '@/components/sign-in-methods';
 import { Section } from '@/components/ui/card';
 import { YourData } from '@/components/your-data';
 import { UsageCard } from '@/components/usage-card';
+import { CheckboxField } from '@/components/ui/checkbox';
 import { Field, Select } from '@/components/ui/input';
 import { LanguageSelect } from '@/i18n/language-select';
 import { useFormat } from '@/i18n/use-format';
@@ -25,9 +28,33 @@ function tzOptions(current: string): string[] {
   return [...set].filter(isValidTimezone).sort();
 }
 
+function LegalSection() {
+  const t = useTranslations('settings');
+  return (
+    <Section title={t('legal')}>
+      <p className="text-sm text-muted-foreground">
+        {nodes(
+          t.rich('legalText', {
+            terms: (c) => (
+              <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
+                {c}
+              </Link>
+            ),
+            privacy: (c) => (
+              <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
+                {c}
+              </Link>
+            ),
+          }),
+        )}
+      </p>
+    </Section>
+  );
+}
+
 export function SettingsView() {
   const { user } = useAuth();
-  const { timezone, setTimezone, theme, setTheme } = usePrefs();
+  const { timezone, setTimezone, theme, setTheme, motionPaused, setMotionPaused } = usePrefs();
   const [zones] = useState(() => tzOptions(timezone));
   const tl = useTranslations('language');
   const t = useTranslations('settings');
@@ -35,6 +62,10 @@ export function SettingsView() {
 
   return (
     <div className="max-w-xl space-y-10">
+      {/* useSearchParams needs a boundary in the static export, as on the accounts page. */}
+      <Suspense>
+        <LinkResultNotice />
+      </Suspense>
       <Section title={t('profile')}>
         <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
           <dt className="text-muted-foreground">{t('name')}</dt>
@@ -72,30 +103,20 @@ export function SettingsView() {
               <option value="dark">{t('themeDark')}</option>
             </Select>
           </Field>
+          <CheckboxField id="pause-motion" label={t('pauseMotion')} description={t('pauseMotionHint')} checked={motionPaused} onCheckedChange={(c) => setMotionPaused(c === true)} />
         </div>
       </Section>
-      <Section title={t('password')}>
-        <PasswordForm />
+      <Section title={t('signIn.heading')}>
+        <SignInMethods />
       </Section>
+      {/* An account without a password has nothing to change: its first password is set under Sign-in methods. */}
+      {user?.has_password === false ? null : (
+        <Section title={t('password')}>
+          <PasswordForm />
+        </Section>
+      )}
       <YourData />
-      <Section title={t('legal')}>
-        <p className="text-sm text-muted-foreground">
-          {nodes(
-            t.rich('legalText', {
-              terms: (c) => (
-                <Link href="/terms" className="text-accent underline underline-offset-4 hover:no-underline">
-                  {c}
-                </Link>
-              ),
-              privacy: (c) => (
-                <Link href="/privacy" className="text-accent underline underline-offset-4 hover:no-underline">
-                  {c}
-                </Link>
-              ),
-            }),
-          )}
-        </p>
-      </Section>
+      <LegalSection />
     </div>
   );
 }
