@@ -29,6 +29,9 @@ func (s *Service) PublishNow(ctx context.Context, a actor.Actor, id uuid.UUID) (
 		if p.Status.Retryable() {
 			return nil, errs.Newf(errs.InvalidStateTransition, "post is %s; use retry", p.Status)
 		}
+		if err := s.requireQuota(ctx, p); err != nil {
+			return nil, err
+		}
 		if err := s.requirePublish(ctx, a, p); err != nil {
 			return nil, err
 		}
@@ -94,6 +97,9 @@ func (s *Service) Retry(ctx context.Context, a actor.Actor, id uuid.UUID, in Ret
 		}
 		if !p.Status.Retryable() {
 			return nil, errs.Newf(errs.InvalidStateTransition, "post in status %s cannot be retried", p.Status)
+		}
+		if err := s.requireQuota(ctx, p); err != nil {
+			return nil, err
 		}
 		if err := s.requireRetry(ctx, a, p, in); err != nil {
 			return nil, err

@@ -36,7 +36,7 @@ func collectJobs(rows pgx.Rows) ([]post.Job, error) {
 		}
 		out = append(out, *j)
 	}
-	return out, rows.Err()
+	return out, mapErr(rows.Err(), "scheduled job")
 }
 
 // Create inserts a job; the partial unique index allows one active job per target.

@@ -4,9 +4,9 @@ import type { DemoState } from './model';
 
 export const DEMO_LIMITS = { accounts: 5, postsPerMonth: 60, mediaBytes: 500 * 1024 * 1024, agentRpm: 120 } as const;
 
-/** A post counts once it has left draft; the real backend remembers it, the demo only looks at the status. */
-function counted(status: string): boolean {
-  return status !== 'draft' && status !== 'cancelled';
+/** A post counts once it was scheduled or published, and unscheduling does not give the slot back (as in the API). Seeded posts carry no flag, so their status decides. */
+function counted(p: { status: string; quota_counted?: boolean }): boolean {
+  return p.quota_counted ?? (p.status !== 'draft' && p.status !== 'cancelled');
 }
 
 export function demoUsage(s: DemoState, nowMs: number): UsageReport {
@@ -19,7 +19,7 @@ export function demoUsage(s: DemoState, nowMs: number): UsageReport {
     period_end: end.toISOString(),
     quotas: {
       connected_accounts: { used: s.accounts.length, limit: DEMO_LIMITS.accounts },
-      scheduled_posts_month: { used: s.posts.filter((p) => counted(p.status)).length, limit: DEMO_LIMITS.postsPerMonth },
+      scheduled_posts_month: { used: s.posts.filter(counted).length, limit: DEMO_LIMITS.postsPerMonth },
       media_bytes: { used: s.media.reduce((n, m) => n + m.size_bytes, 0), limit: DEMO_LIMITS.mediaBytes },
       agent_requests_per_minute: { limit: DEMO_LIMITS.agentRpm },
     },

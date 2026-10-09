@@ -44,3 +44,20 @@ describe('demo plan limits', () => {
     expect(status).toBe(403);
   });
 });
+
+describe('demo post counting', () => {
+  it('counts a post once it was scheduled and does not give the slot back when it is unscheduled', () => {
+    const { call } = rig();
+    const acc = call('GET', '/social/accounts').body.items[0].id;
+    const used = () => call('GET', '/account/usage').body.quotas.scheduled_posts_month.used as number;
+    const before = used();
+    const id = call('POST', '/posts', { content: 'x', social_account_ids: [acc] }).body.id;
+    expect(used()).toBe(before);
+    const at = new Date(NOW.getTime() + 86_400_000).toISOString();
+    expect(call('POST', `/posts/${id}/schedule`, { scheduled_at: at }).status).toBe(200);
+    expect(used()).toBe(before + 1);
+    // Back to draft by editing is not offered in the demo; cancelling must keep the count too.
+    call('POST', `/posts/${id}/cancel`);
+    expect(used()).toBe(before + 1);
+  });
+});

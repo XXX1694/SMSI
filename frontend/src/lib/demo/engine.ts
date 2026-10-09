@@ -641,6 +641,7 @@ export class DemoEngine {
       attempts: [],
       media_ids: mediaIds,
       settle_at: null,
+      quota_counted: wantSchedule,
     };
     s.posts.push(post);
     this.audit(this.user, 'post.created', 'post', post.id);
@@ -684,9 +685,12 @@ export class DemoEngine {
       return fail(409, 'INVALID_STATE_TRANSITION', `Cannot go from ${post.status} to ${to}`);
     }
     const now = this.now();
-    if ((act === 'schedule' || act === 'publish') && (post.status === 'draft' || post.status === 'cancelled')) {
+    // Seeded posts carry no flag: pin it from the status before anything changes it, so a later unschedule keeps the slot.
+    post.quota_counted ??= post.status !== 'draft' && post.status !== 'cancelled';
+    if (!post.quota_counted && (act === 'schedule' || act === 'publish' || act === 'retry')) {
       const full = demoQuotaError(this.state, 'scheduled_posts_month', 1, now);
       if (full) return fail(403, 'QUOTA_EXCEEDED', full);
+      post.quota_counted = true;
     }
     if (act === 'schedule') {
       const at = str(body.scheduled_at);

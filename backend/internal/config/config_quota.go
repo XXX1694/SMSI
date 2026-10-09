@@ -4,8 +4,8 @@ import (
 	"github.com/socialos/backend/internal/domain/quota"
 )
 
-// QuotaConfig holds the limits of the single "free" plan (D-014). -1 switches a limit off; self-hosters who do not want
-// limits set all four to -1.
+// QuotaConfig holds the limits of the single "free" plan (D-014). They are opt-in: the default -1 switches a limit off,
+// so an existing install is never capped by an update. A public instance sets positive numbers in its .env.
 type QuotaConfig struct {
 	QuotaAccounts      int
 	QuotaPostsPerMonth int
@@ -15,10 +15,10 @@ type QuotaConfig struct {
 
 func loadQuotaConfig() QuotaConfig {
 	return QuotaConfig{
-		QuotaAccounts:      envInt("QUOTA_ACCOUNTS", 5),
-		QuotaPostsPerMonth: envInt("QUOTA_POSTS_PER_MONTH", 60),
-		QuotaMediaMB:       envInt("QUOTA_MEDIA_MB", 500),
-		QuotaAgentRPM:      envInt("QUOTA_AGENT_RPM", 120),
+		QuotaAccounts:      envInt("QUOTA_ACCOUNTS", quota.Unlimited),
+		QuotaPostsPerMonth: envInt("QUOTA_POSTS_PER_MONTH", quota.Unlimited),
+		QuotaMediaMB:       envInt("QUOTA_MEDIA_MB", quota.Unlimited),
+		QuotaAgentRPM:      envInt("QUOTA_AGENT_RPM", quota.Unlimited),
 	}
 }
 
@@ -36,8 +36,7 @@ func (c *Config) validateQuota() []string {
 	for _, l := range []struct {
 		name string
 		v    int
-	}{{"QUOTA_ACCOUNTS", c.QuotaAccounts}, {"QUOTA_POSTS_PER_MONTH", c.QuotaPostsPerMonth},
-		{"QUOTA_MEDIA_MB", c.QuotaMediaMB}, {"QUOTA_AGENT_RPM", c.QuotaAgentRPM}} {
+	}{{"QUOTA_ACCOUNTS", c.QuotaAccounts}, {"QUOTA_POSTS_PER_MONTH", c.QuotaPostsPerMonth}, {"QUOTA_MEDIA_MB", c.QuotaMediaMB}, {"QUOTA_AGENT_RPM", c.QuotaAgentRPM}} {
 		if l.v < quota.Unlimited || l.v == 0 {
 			p = append(p, l.name+" must be -1 (unlimited) or a positive number")
 		}

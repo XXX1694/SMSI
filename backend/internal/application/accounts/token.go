@@ -47,6 +47,10 @@ func (s *Service) ConnectWithToken(ctx context.Context, a actor.Actor, providerN
 	if err != nil {
 		return nil, err
 	}
+	// Before the approval is spent and before any network call: at the limit, a new account cannot succeed.
+	if err := s.quota.PrecheckAccount(ctx, a.UserID, p.Name()); err != nil {
+		return nil, err
+	}
 	// Before the live check: nothing is sent to the network until the owner agreed. The approval is spent here, so a
 	// credential the network rejects needs a new approval.
 	if err := s.approvals.Require(ctx, a, connectRequest(s.fingerprintKey, p, clean)); err != nil {

@@ -19,6 +19,8 @@ type Usage interface {
 	LockUser(ctx context.Context, userID uuid.UUID) error
 	// CountAccounts counts non-revoked social accounts, leaving out the given identity.
 	CountAccounts(ctx context.Context, userID uuid.UUID, exceptProvider, exceptProviderAccountID string) (int64, error)
+	// HasProvider reports whether the user has a non-revoked account on the provider.
+	HasProvider(ctx context.Context, userID uuid.UUID, provider string) (bool, error)
 	// CountPostsSince counts posts that were counted against the monthly quota at or after t.
 	CountPostsSince(ctx context.Context, userID uuid.UUID, t time.Time) (int64, error)
 	// SumMediaBytes adds up the size of the user's media.
@@ -44,12 +46,6 @@ func NewService(u Usage, l quota.Limits, c port.Clock) *Service {
 // Limits returns the configured caps.
 func (s *Service) Limits() quota.Limits { return s.limits }
 
-// MonthStart is the first instant of t's UTC month.
-func MonthStart(t time.Time) time.Time {
-	t = t.UTC()
-	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
-}
-
 // EnforceAccount implements port.QuotaGate.
 func (s *Service) EnforceAccount(ctx context.Context, userID uuid.UUID, provider, providerAccountID string) error {
 	if s.limits.Accounts < 0 {
@@ -65,6 +61,21 @@ func (s *Service) EnforceAccount(ctx context.Context, userID uuid.UUID, provider
 	return quota.Check(quota.ConnectedAccounts, n, 1, int64(s.limits.Accounts))
 }
 
+// PrecheckAccount implements port.QuotaGate.
+func (s *Service) PrecheckAccount(ctx context.Context, userID uuid.UUID, provider string) error {
+	if s.limits.Accounts < 0 {
+		return nil
+	}
+	n, err := s.usage.CountAccounts(ctx, userID, "", "")
+	if err != nil || n < int64(s.limits.Accounts) {
+		return err
+	}
+	if has, err := s.usage.HasProvider(ctx, userID, provider); err != nil || has {
+		return err
+	}
+	return quota.Check(quota.ConnectedAccounts, n, 1, int64(s.limits.Accounts))
+}
+
 // EnforcePost implements port.QuotaGate.
 func (s *Service) EnforcePost(ctx context.Context, userID uuid.UUID) error {
 	if s.limits.PostsPerMonth < 0 {
@@ -73,7 +84,7 @@ func (s *Service) EnforcePost(ctx context.Context, userID uuid.UUID) error {
 	if err := s.usage.LockUser(ctx, userID); err != nil {
 		return err
 	}
-	n, err := s.usage.CountPostsSince(ctx, userID, MonthStart(s.clock.Now()))
+	n, err := s.usage.CountPostsSince(ctx, userID, quota.MonthStart(s.clock.Now()))
 	if err != nil {
 		return err
 	}
@@ -114,7 +125,7 @@ func (s *Service) Report(ctx context.Context, a actor.Actor) (*Report, error) {
 	if err := a.Require(apikey.AnalyticsRead); err != nil {
 		return nil, err
 	}
-	start := MonthStart(s.clock.Now())
+	start := quota.MonthStart(s.clock.Now())
 	plan, err := s.usage.Plan(ctx, a.UserID)
 	if err != nil {
 		return nil, err

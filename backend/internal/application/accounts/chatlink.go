@@ -175,6 +175,12 @@ func (s *Service) redeemLinkCode(ctx context.Context, p provider.Provider, linke
 		s.log.Debug("link code was redeemed concurrently", slog.String("provider", p.Name()), slog.String("link_id", rec.ID.String()))
 		return nil
 	}
+	if errs.Is(err, errs.QuotaExceeded) {
+		// Not transient: retrying cannot help, and returning it would make the shared poller stall every user's linking.
+		// The code stays unused (the transaction rolled back) and the dashboard keeps showing the link as pending.
+		s.log.Warn("chat link refused: the owner is at the connected accounts limit", slog.String("provider", p.Name()), slog.String("link_id", rec.ID.String()))
+		return nil
+	}
 	if err != nil {
 		return err
 	}

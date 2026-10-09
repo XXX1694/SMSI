@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/adapters/provider"
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/errs"
@@ -615,5 +616,28 @@ func TestChatLinkCompletionChecksTheOwnersVerification(t *testing.T) {
 	ls = r.start(t, alice)
 	if err := r.deliver("-100", "*", ls.Code); err != nil || r.accountsOf(alice) != 1 {
 		t.Fatalf("without a gate the link must work: err=%v accounts=%d", err, r.accountsOf(alice))
+	}
+}
+
+type fullQuota struct{ port.NoQuota }
+
+func (fullQuota) EnforceAccount(context.Context, uuid.UUID, string, string) error {
+	return errs.New(errs.QuotaExceeded, "connected accounts limit reached")
+}
+
+// A quota refusal is final for that message: returning it would make the shared poller retry (and stall) for everyone.
+func TestChatLinkAtTheAccountLimitIsDroppedNotRetried(t *testing.T) {
+	r, alice := newRig(t), uuid.New()
+	ls := r.start(t, alice)
+	r.svc.quota = fullQuota{}
+	if err := r.deliver("-100", "*", ls.Code); err != nil {
+		t.Fatalf("a quota refusal must not be returned to the poller: %v", err)
+	}
+	if r.accountsOf(alice) != 0 || r.links.byID[ls.ID].Used() {
+		t.Fatal("nothing may be connected and the code must stay unused")
+	}
+	r.svc.quota = port.NoQuota{}
+	if err := r.deliver("-100", "*", ls.Code); err != nil || r.accountsOf(alice) != 1 {
+		t.Fatalf("after freeing a slot the same code works: %v", err)
 	}
 }

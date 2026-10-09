@@ -87,7 +87,7 @@ export const readTools = [
     scope: "analytics:read",
     risk: "safe",
     description:
-      "Get the plan and what has been used against its limits this month: connected accounts, scheduled or published posts, media storage in bytes, and the agent request rate. A limit of -1 means unlimited. Check it before scheduling many posts or uploading media.",
+      "Get the plan and your usage against its limits: connected accounts, posts scheduled or published this month (UTC), media storage in bytes, plus the agent requests-per-minute limit (the limit only, not the current rate). A limit of -1 means unlimited. Use it before scheduling many posts or uploading media.",
     inputSchema: {},
     annotations: { title: "Get plan usage", ...readOnly },
     handler: (c) => c.request("GET", "/account/usage"),
