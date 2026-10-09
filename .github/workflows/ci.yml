@@ -285,6 +285,9 @@ jobs:
       - name: npm audit (production dependencies, high and above)
         working-directory: site
         run: npm audit --omit=dev --audit-level=high
+      - name: Test the site scripts
+        working-directory: site
+        run: npm test
       - name: Build the site
         working-directory: site
         env:

@@ -1,4 +1,6 @@
-@import '@fontsource-variable/inter';
+/* Onest for Latin and Cyrillic (D-024). Each subset downloads only when a page uses its characters (unicode-range). The Arabic,
+   Japanese and Chinese faces are separate chunks that i18n/script-fonts.ts loads for those locales only. */
+@import '@fontsource-variable/onest/wght.css';
 @import '../styles/tokens.css';
 @tailwind base;
 @tailwind components;
@@ -10,8 +12,12 @@
   html.dark { color-scheme: dark; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'cv11', 'ss01';
   }
+  /* The face after Onest in the sans stack. Scoped to <html lang>, so an endonym like 日本語 in the language menu of an
+     English page uses a system font and never downloads a script face. */
+  html:lang(ar) { --font-script: 'Noto Sans Arabic Variable'; }
+  html:lang(ja) { --font-script: 'Noto Sans JP Variable'; }
+  html:lang(zh-CN) { --font-script: 'Noto Sans SC Variable'; }
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
   /* CJK has no spaces: strict line breaking keeps 、。 and small kana off the start of a line; `overflow-wrap: anywhere` lets a long
      run shrink flex and grid items instead of overflowing. Dates that must stay whole carry `whitespace-nowrap` where they render. */

@@ -27,11 +27,12 @@
   <meta name="twitter:image" content="{{siteUrl}}{{base}}assets/brand/social-preview.png">
   <link rel="preload" href="{{base}}assets/video/hero-light.jpg" as="image" media="(prefers-color-scheme: light)" fetchpriority="high">
   <link rel="preload" href="{{base}}assets/video/hero-dark.jpg" as="image" media="(prefers-color-scheme: dark)" fetchpriority="high">
-  <link rel="preload" href="{{base}}assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{base}}assets/fonts/onest-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{base}}assets/fonts/onest.css">
   <link rel="stylesheet" href="{{base}}assets/tokens.css">
   <link rel="stylesheet" href="{{base}}assets/style.css">
   <link rel="stylesheet" href="{{base}}assets/landing.css">
-  <link rel="stylesheet" href="{{base}}assets/hero.css">
+  {{scriptFonts}}<link rel="stylesheet" href="{{base}}assets/hero.css">
   <link rel="stylesheet" href="{{base}}assets/route.css">
   <link rel="stylesheet" href="{{base}}assets/scroll.css">
 </head>
