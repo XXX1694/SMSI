@@ -1,4 +1,5 @@
 'use client';
+import { heroWipe } from '@/lib/hero';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -56,7 +57,7 @@ export function CreateActions({ state, title, accounts, providers, selected, onL
     setApiError(null);
     try {
       const post = await api.posts.create(buildInput(state, title, action));
-      if (action === 'publish') await api.posts.publish(post.id);
+      if (action === 'publish') await Promise.all([api.posts.publish(post.id), heroWipe()]);
       toast.success(tc(DONE[action]));
       onLeave();
       router.push(postHref(post.id));

@@ -150,6 +150,11 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
   body::before, body::after { display: none; }
 }
 
+/* Hero transitions (lib/hero.ts): one fixed accent layer above everything, animated with clip-path and opacity only.
+   It never takes the pointer, so it cannot block input; forced colours and reduced transparency drop it. */
+.hero-overlay { position: fixed; inset: 0; z-index: 100; pointer-events: none; background: hsl(var(--accent)); }
+@media (forced-colors: active) { .hero-overlay { display: none; } }
+
 /* Page enter: the fallback for browsers without the View Transitions API (and for navigations that skip it). */
 .page-enter { animation: rise-in var(--duration-slow) var(--ease-enter) both; }
 html[data-vt] .page-enter { animation: none; }

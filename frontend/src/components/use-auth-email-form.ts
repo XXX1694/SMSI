@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
+import { centerOf, heroFill } from '@/lib/hero';
 import { useAuth } from '@/components/auth-provider';
 import { useErrorText } from '@/hooks';
 import { useTranslations } from '@/i18n/use-translations';
@@ -94,7 +95,7 @@ export function useAuthEmailForm(mode: 'login' | 'register', next: string | null
     try {
       if (isLogin) await login(email.trim(), password);
       else await register(email.trim(), password, '', accepted);
-      router.replace(next ?? '/dashboard');
+      heroFill(centerOf(form.current?.querySelector('[type="submit"]')), () => router.replace(next ?? '/dashboard'));
     } catch (err) {
       const refused = err instanceof ApiError ? serverFieldErrors(err, t) : {};
       if (err instanceof ApiError && err.status === 409 && !isLogin) setDuplicate(true);
