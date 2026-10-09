@@ -1,5 +1,6 @@
 'use client';
 import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -14,9 +15,10 @@ import { Field, Input } from '@/components/ui/input';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { describeErrorCode, friendlyMessage, isTechnicalMessage } from '@/lib/errors';
+import { editHref } from '@/lib/demo/config';
 import { postLabel } from '@/lib/format';
 import { providerLabel } from '@/lib/normalize';
-import { postActions } from '@/lib/status';
+import { editBlockedReason, postActions } from '@/lib/status';
 import { formatDateTime, zonedToUtcIso } from '@/lib/time';
 import type { Post, PublicationAttempt } from '@/lib/types';
 import { errorMessage, useAsync } from '@/hooks';
@@ -176,6 +178,15 @@ export function PostDetail({ id }: { id: string }) {
         actions={
           <>
             <PostStatusBadge status={post.status} />
+            {can.edit ? (
+              <Button size="sm" variant="secondary" asChild>
+                <Link href={editHref(post.id)}>Edit</Link>
+              </Button>
+            ) : (
+              <Button size="sm" variant="secondary" disabled aria-describedby="edit-blocked">
+                Edit
+              </Button>
+            )}
             {can.publish ? <Button size="sm" onClick={() => setDlg('publish')}>Publish now</Button> : null}
             {can.schedule ? <Button size="sm" variant="secondary" onClick={() => setDlg('schedule')}>Schedule</Button> : null}
             {can.retry ? <Button size="sm" variant="secondary" onClick={() => setDlg('retry')}>Retry failed</Button> : null}
@@ -184,6 +195,11 @@ export function PostDetail({ id }: { id: string }) {
           </>
         }
       />
+      {can.edit ? null : (
+        <p id="edit-blocked" className="-mt-4 mb-6 text-sm text-muted-foreground">
+          {editBlockedReason(post.status)}
+        </p>
+      )}
       <div className="space-y-10">
         <Section title="Targets">
           <Targets post={post} />

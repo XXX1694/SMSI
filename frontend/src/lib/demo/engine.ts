@@ -569,7 +569,7 @@ export class DemoEngine {
     const base: Post = {
       id: p.id,
       title: p.title,
-      content: p.targets[0]?.content,
+      content: p.content ?? p.targets[0]?.content,
       status: p.status,
       scheduled_at: p.scheduled_at,
       published_at: p.published_at,
@@ -595,30 +595,9 @@ export class DemoEngine {
     const media = mediaIds.map((id) => s.media.find((x) => x.id === id));
     if (media.some((x) => !x)) return fail(400, 'VALIDATION_ERROR', 'media_ids must reference your media');
 
-    const targets: PostTarget[] = [];
-    for (const a of accounts) {
-      const override = overrides.find((o) => o.social_account_id === a.id);
-      const text = str(override?.content) || content;
-      const cap = this.provider(a.provider)?.capabilities;
-      const label = a.display_name || a.username;
-      if (a.status !== 'active') return fail(422, 'SOCIAL_ACCOUNT_EXPIRED', `${label}: authorization has expired. Reconnect it first.`);
-      if (cap && cap.max_text_length > 0 && Array.from(text).length > cap.max_text_length) {
-        return fail(400, 'VALIDATION_ERROR', `${label}: text is longer than the ${cap.max_text_length} character limit`);
-      }
-      if (cap && media.length > cap.max_media_count) return fail(400, 'VALIDATION_ERROR', `${label}: too many attachments`);
-      targets.push({
-        id: newUuid(),
-        social_account_id: a.id,
-        platform: a.provider,
-        content: text,
-        status: 'pending',
-        external_url: null,
-        published_at: null,
-        error_code: null,
-        error_message: null,
-        attempt_count: 0,
-      });
-    }
+    const built = this.buildTargets(accounts, content, overrides, media.length);
+    if (!Array.isArray(built)) return built;
+    const targets = built;
 
     const scheduleAt = str(body.scheduled_at);
     const wantSchedule = body.schedule === true && !!scheduleAt;
@@ -631,6 +610,7 @@ export class DemoEngine {
     const post: DemoPost = {
       id: newUuid(),
       title: str(body.title) || null,
+      content,
       status: wantSchedule ? 'scheduled' : 'draft',
       scheduled_at: wantSchedule ? new Date(scheduleAt).toISOString() : null,
       published_at: null,
@@ -650,15 +630,66 @@ export class DemoEngine {
     return ok(201, this.publicPost(post, true));
   }
 
+  /** One pending target per account: its override text or the base text, checked against the network's limits. */
+  private buildTargets(accounts: SocialAccount[], content: string, overrides: Record<string, unknown>[], mediaCount: number): PostTarget[] | DemoResponse {
+    const targets: PostTarget[] = [];
+    for (const a of accounts) {
+      const override = overrides.find((o) => o.social_account_id === a.id);
+      const text = str(override?.content) || content;
+      const cap = this.provider(a.provider)?.capabilities;
+      const label = a.display_name || a.username;
+      if (a.status !== 'active') return fail(422, 'SOCIAL_ACCOUNT_EXPIRED', `${label}: authorization has expired. Reconnect it first.`);
+      if (cap && cap.max_text_length > 0 && Array.from(text).length > cap.max_text_length) {
+        return fail(400, 'VALIDATION_ERROR', `${label}: text is longer than the ${cap.max_text_length} character limit`);
+      }
+      if (cap && mediaCount > cap.max_media_count) return fail(400, 'VALIDATION_ERROR', `${label}: too many attachments`);
+      targets.push({
+        id: newUuid(),
+        social_account_id: a.id,
+        platform: a.provider,
+        content: text,
+        status: 'pending',
+        external_url: null,
+        published_at: null,
+        error_code: null,
+        error_message: null,
+        attempt_count: 0,
+      });
+    }
+    return targets;
+  }
+
+  /** `PATCH /posts/{id}`: draft or scheduled only; absent fields stay as they are, like the real API. */
   private patchPost(post: DemoPost, body: Record<string, unknown>): DemoResponse {
     if (post.status !== 'draft' && post.status !== 'scheduled') {
-      return fail(409, 'INVALID_STATE_TRANSITION', `A ${post.status} post cannot be edited`);
+      return fail(409, 'INVALID_STATE_TRANSITION', `post in status ${post.status} cannot be edited`);
     }
-    if ('title' in body) post.title = str(body.title) || null;
-    if (typeof body.content === 'string' && body.content.trim()) {
-      const text = body.content;
-      for (const t of post.targets) t.content = text;
+    const s = this.state;
+    const content = typeof body.content === 'string' ? body.content : (post.content ?? post.targets[0]?.content ?? '');
+    const ids = Array.isArray(body.social_account_ids) ? strList(body.social_account_ids) : post.targets.map((t) => t.social_account_id);
+    const overrides = Array.isArray(body.targets) ? body.targets.filter(isRec) : post.targets.map((t) => ({ social_account_id: t.social_account_id, content: t.content }));
+    if (!content.trim() && overrides.every((o) => !str(o.content).trim())) return fail(400, 'VALIDATION_ERROR', 'content is required');
+    const accs = ids.map((id) => s.accounts.find((a) => a.id === id));
+    if (accs.length === 0 || accs.some((a) => !a)) return fail(400, 'VALIDATION_ERROR', 'social_account_ids must reference your accounts');
+    const mediaIds = Array.isArray(body.media_ids) ? strList(body.media_ids) : post.media_ids;
+    if (mediaIds.some((id) => !s.media.some((m) => m.id === id))) return fail(400, 'VALIDATION_ERROR', 'media_ids must reference your media');
+    let at: string | null = post.scheduled_at;
+    if (typeof body.scheduled_at === 'string') {
+      if (post.status !== 'scheduled') return fail(400, 'VALIDATION_ERROR', 'use POST /posts/{id}/schedule to schedule a draft');
+      if (!(Date.parse(body.scheduled_at) > this.now())) return fail(400, 'VALIDATION_ERROR', 'scheduled_at must be in the future');
+      at = new Date(body.scheduled_at).toISOString();
     }
+    const built = this.buildTargets(accs.filter((a): a is SocialAccount => !!a), content, overrides, mediaIds.length);
+    if (!Array.isArray(built)) return built;
+    for (const t of built) {
+      const old = post.targets.find((x) => x.social_account_id === t.social_account_id);
+      if (old) t.id = old.id;
+    }
+    if ('title' in body) post.title = str(body.title).trim() || null;
+    post.content = content;
+    post.targets = built;
+    post.media_ids = mediaIds;
+    post.scheduled_at = at;
     post.updated_at = this.iso();
     this.audit(this.user, 'post.updated', 'post', post.id);
     return ok(200, this.publicPost(post, true));
