@@ -59,32 +59,28 @@ type CompleteSignupInput struct {
 // ticket is touched, and the ticket is redeemed in the same transaction as the user: a refused or failed completion
 // rolls the redemption back, so the person can fix the form and try again. Two completions racing for one ticket, or
 // for an email or identity someone else just took, are stopped by the ticket's delete and by the unique constraints.
-func (s *Service) CompleteSignup(ctx context.Context, in CompleteSignupInput, ci ClientInfo) (*user.User, IssuedSession, string, error) {
+func (s *Service) CompleteSignup(ctx context.Context, in CompleteSignupInput, ci ClientInfo) (*user.User, IssuedSession, error) {
 	h, ok := ticketHash(in.Ticket)
 	if !ok || s.social == nil {
-		return nil, IssuedSession{}, "", errTicketGone()
+		return nil, IssuedSession{}, errTicketGone()
 	}
 	if !in.AcceptTerms {
-		return nil, IssuedSession{}, "", errs.Validationf("you must accept the Terms and the Privacy Policy").
+		return nil, IssuedSession{}, errs.Validationf("you must accept the Terms and the Privacy Policy").
 			WithField("accept_terms", "must be accepted")
 	}
 	name, err := user.ValidateDisplayName(in.DisplayName)
 	if err != nil {
-		return nil, IssuedSession{}, "", err
+		return nil, IssuedSession{}, err
 	}
 	now := s.clock.Now()
 	var u *user.User
 	var issued IssuedSession
-	var next string
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		fl, err := s.social.flows.ConsumeTicket(ctx, h, now)
 		if errs.Is(err, errs.NotFound) || (err == nil && fl.Pending == nil) {
 			return errTicketGone()
 		}
 		if err != nil {
-			return err
-		}
-		if err := s.refuseTakenIdentity(ctx, fl); err != nil {
 			return err
 		}
 		u = &user.User{Email: fl.Pending.Email, DisplayName: name, Status: user.StatusActive, Plan: user.DefaultPlan,
@@ -101,34 +97,13 @@ func (s *Service) CompleteSignup(ctx context.Context, in CompleteSignupInput, ci
 		if err := s.social.identities.Create(ctx, i); err != nil {
 			return conflictFor(err, "this provider account is already linked to another account")
 		}
-		next = fl.RedirectAfter
 		issued, err = s.startSession(ctx, u, ci, audit.ActionUserRegistered, map[string]any{"method": string(fl.Provider)})
 		return err
 	})
 	if err != nil {
-		return nil, IssuedSession{}, "", err
+		return nil, IssuedSession{}, err
 	}
-	return u, issued, next, nil
-}
-
-// refuseTakenIdentity stops a completion when the provider account got an owner after the ticket was issued (a second
-// browser finished first). Anything but a usable owner is refused as unavailable, never signed in.
-func (s *Service) refuseTakenIdentity(ctx context.Context, fl *identity.Flow) error {
-	i, err := s.social.identities.GetBySubject(ctx, fl.Provider, fl.Pending.Subject)
-	if errs.Is(err, errs.NotFound) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	owner, err := s.users.GetByID(ctx, i.UserID)
-	if err != nil {
-		return err
-	}
-	if !usable(owner) {
-		return errs.New(errs.Forbidden, "this account is not available")
-	}
-	return errs.New(errs.Conflict, "this provider account already has an account; sign in instead")
+	return u, issued, nil
 }
 
 // conflictFor turns a unique-constraint CONFLICT into a message the person can act on and keeps every other error.

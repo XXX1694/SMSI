@@ -217,11 +217,11 @@ func TestSocialProvidersListFollowsConfiguration(t *testing.T) {
 
 func TestCompleteSignupChecksTermsBeforeTouchingTheTicket(t *testing.T) {
 	r, _, _ := socialRig(t)
-	_, _, _, err := r.svc.CompleteSignup(context.Background(), CompleteSignupInput{Ticket: "t", DisplayName: "A"}, ClientInfo{})
+	_, _, err := r.svc.CompleteSignup(context.Background(), CompleteSignupInput{Ticket: "t", DisplayName: "A"}, ClientInfo{})
 	if e, ok := errs.As(err); !ok || e.Code != errs.Validation || e.Fields["accept_terms"] == "" {
 		t.Fatalf("%v", err)
 	}
-	if _, _, _, err := r.svc.CompleteSignup(context.Background(), CompleteSignupInput{AcceptTerms: true}, ClientInfo{}); !errs.Is(err, errs.NotFound) {
+	if _, _, err := r.svc.CompleteSignup(context.Background(), CompleteSignupInput{AcceptTerms: true}, ClientInfo{}); !errs.Is(err, errs.NotFound) {
 		t.Fatalf("no ticket: %v", err)
 	}
 	if _, err := r.svc.PendingSignup(context.Background(), strings.Repeat("a", 500)); !errs.Is(err, errs.NotFound) {

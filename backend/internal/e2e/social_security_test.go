@@ -224,9 +224,8 @@ func TestSocialRefusesDisabledAndDeletingUsers(t *testing.T) {
 	}
 
 	for name, set := range map[string]string{
-		"disabled":           `UPDATE users SET status = 'disabled' WHERE email = 'dora@example.com'`,
-		"deleted":            `UPDATE users SET status = 'deleted' WHERE email = 'dora@example.com'`,
-		"deletion scheduled": `UPDATE users SET status = 'active', deletion_scheduled_at = now() WHERE email = 'dora@example.com'`,
+		"disabled": `UPDATE users SET status = 'disabled' WHERE email = 'dora@example.com'`,
+		"deleted":  `UPDATE users SET status = 'deleted' WHERE email = 'dora@example.com'`,
 	} {
 		exec(set)
 		loc, c := signIn()
@@ -234,6 +233,17 @@ func TestSocialRefusesDisabledAndDeletingUsers(t *testing.T) {
 			t.Fatalf("%s: got %q", name, got)
 		}
 	}
+
+	// A scheduled deletion does not lock a password-less owner out: they sign in and can cancel (nothing else works).
+	exec(`UPDATE users SET status = 'active', deletion_scheduled_at = now() WHERE email = 'dora@example.com'`)
+	loc, c := signIn()
+	if errorOf(loc) != "" || !hasSessionCookie(c, r.e) {
+		t.Fatalf("deletion scheduled: %s", loc)
+	}
+	me := c.must("GET", "/api/v1/me", nil, 200)
+	c.csrf, _ = me["csrf_token"].(string)
+	c.must("POST", "/api/v1/account/delete/cancel", nil, 204)
+
 	// Back to normal: the same sign-in works again.
 	exec(`UPDATE users SET status = 'active', deletion_scheduled_at = NULL WHERE email = 'dora@example.com'`)
 	if loc, _ := signIn(); errorOf(loc) != "" {
@@ -244,7 +254,7 @@ func TestSocialRefusesDisabledAndDeletingUsers(t *testing.T) {
 	vic := r.e.browser()
 	vic.register("lina@example.com")
 	exec(`UPDATE users SET email_verified_at = now(), status = 'disabled' WHERE email = 'lina@example.com'`)
-	c := r.e.browser()
+	c = r.e.browser()
 	if got := errorOf(r.githubSignIn(t, c, 1202, "lina", "lina@example.com", "")); got != "account_unavailable" {
 		t.Fatalf("disabled local account: %q", got)
 	}
@@ -298,7 +308,7 @@ func TestSocialCompleteRefusesWhenTheWorldChangedMeanwhile(t *testing.T) {
 		t.Fatalf("users: %d", n)
 	}
 
-	// ...and when that provider account's owner is leaving, it is unavailable rather than a conflict.
+	// ...and when that provider account already belongs to a leaving account it is a conflict too, never a sign-in.
 	d := pending(1304, "hana", "hana@example.com")
 	if _, err := r.e.app.DB.Pool.Exec(ctx, `INSERT INTO users (email, display_name, status, deletion_scheduled_at) VALUES ('other@example.com', '', 'active', now())`); err != nil {
 		t.Fatal(err)
@@ -306,7 +316,7 @@ func TestSocialCompleteRefusesWhenTheWorldChangedMeanwhile(t *testing.T) {
 	if _, err := r.e.app.DB.Pool.Exec(ctx, `INSERT INTO user_identities (user_id, provider, subject, linked_at) SELECT id, 'github', '1304', now() FROM users WHERE email = 'other@example.com'`); err != nil {
 		t.Fatal(err)
 	}
-	if res := d.do("POST", apiOAuth+"complete", accept); res.status != 403 || hasSessionCookie(d, r.e) {
+	if res := d.do("POST", apiOAuth+"complete", accept); res.status != 409 || hasSessionCookie(d, r.e) {
 		t.Fatalf("identity of a deleting account: %d %s", res.status, res.body)
 	}
 }

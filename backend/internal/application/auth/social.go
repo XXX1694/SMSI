@@ -217,19 +217,13 @@ func (s *Service) finishFlow(ctx context.Context, p IdentityProvider, fl *identi
 		s.logSocial(ctx, id, "code exchange failed", err)
 		return failed(ErrProviderError)
 	}
-	// A second attempt covers a concurrent sign-in that created the same identity or user between our lookups and our
-	// writes: the unique constraints stop it, and the retry then sees the winner.
-	for attempt := 0; ; attempt++ {
-		res, err := s.decide(ctx, fl, claims, ci)
-		if errs.Is(err, errs.Conflict) && attempt == 0 {
-			continue
-		}
-		if err != nil {
-			s.logSocial(ctx, id, "sign-in failed", err)
-			return failed(ErrProviderError)
-		}
-		return res
+	// A lost race with a concurrent sign-in (the unique constraints stop the loser) ends like any other failure.
+	res, err := s.decide(ctx, fl, claims, ci)
+	if err != nil {
+		s.logSocial(ctx, id, "sign-in failed", err)
+		return failed(ErrProviderError)
 	}
+	return res
 }
 
 func (s *Service) exchange(ctx context.Context, p IdentityProvider, fl *identity.Flow, code string) (identity.Claims, error) {

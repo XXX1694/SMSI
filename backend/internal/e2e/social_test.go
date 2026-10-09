@@ -6,7 +6,9 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 	"github.com/socialos/backend/internal/testutil/githubfake"
 )
@@ -36,8 +38,8 @@ func TestSocialProvidersAreListedOnlyWhenConfigured(t *testing.T) {
 	}
 }
 
-// New user: start, callback to the Terms form, complete, /me.
-func TestSocialNewUserCompletesSignUp(t *testing.T) {
+// /start sets the state cookie, and stores only hashes and the encrypted PKCE verifier.
+func TestSocialStartBindsTheBrowserAndStoresNoSecrets(t *testing.T) {
 	r := newSocialRig(t, envOpts{})
 	ctx := context.Background()
 	c := r.e.browser().stopRedirects()
@@ -61,6 +63,14 @@ func TestSocialNewUserCompletesSignUp(t *testing.T) {
 	if strings.Contains(verifierEnc, f.state) {
 		t.Fatal("the verifier column must be ciphertext")
 	}
+}
+
+// New user: callback to the Terms form, complete, /me.
+func TestSocialNewUserCompletesSignUp(t *testing.T) {
+	r := newSocialRig(t, envOpts{})
+	ctx := context.Background()
+	c := r.e.browser().stopRedirects()
+	f := r.start(t, c, "github", "/posts?draft=1")
 
 	loc := r.callback(t, c, "github", r.githubCode(f, 1001, "gina", "Gina@Example.com"), f.state)
 	if loc.Path != "/signup/complete" || loc.RawQuery != "" {
@@ -225,5 +235,47 @@ func TestSocialProviderWithoutAVerifiedAddressIsRefused(t *testing.T) {
 	}
 	if n := r.countRows(`SELECT count(*) FROM users`); n != 0 {
 		t.Fatalf("users: %d", n)
+	}
+}
+
+// An automatic link mails the owner (the alarm if it was someone else); a refused one does not.
+func TestSocialAutoLinkSendsANoticeMail(t *testing.T) {
+	cm := &captureMailer{}
+	r := newSocialRig(t, envOpts{startWorker: true, mailer: cm})
+	ctx := context.Background()
+	r.e.browser().register("lena@example.com")
+	if _, err := r.e.app.DB.Pool.Exec(ctx, `UPDATE users SET email_verified_at = now() WHERE email = 'lena@example.com'`); err != nil {
+		t.Fatal(err)
+	}
+	r.e.browser().register("mona@example.com") // unverified: refused, no mail
+
+	if got := errorOf(r.githubSignIn(t, r.e.browser(), 1701, "mona", "mona@example.com", "")); got != "account_exists" {
+		t.Fatalf("%q", got)
+	}
+	if loc := r.githubSignIn(t, r.e.browser(), 1702, "lena", "lena@example.com", ""); errorOf(loc) != "" {
+		t.Fatal(loc)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	var linked []port.Message
+	for time.Now().Before(deadline) && len(linked) == 0 {
+		cm.mu.Lock()
+		for _, m := range cm.got {
+			if m.Template == "identity_linked" {
+				linked = append(linked, m)
+			}
+		}
+		cm.mu.Unlock()
+		time.Sleep(50 * time.Millisecond)
+	}
+	if len(linked) != 1 || linked[0].To != "lena@example.com" || !strings.Contains(linked[0].Text, "GitHub") {
+		t.Fatalf("identity_linked mails: %+v", linked)
+	}
+	time.Sleep(300 * time.Millisecond)
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	for _, m := range cm.got {
+		if m.Template == "identity_linked" && m.To != "lena@example.com" {
+			t.Fatalf("notice sent to %s", m.To)
+		}
 	}
 }

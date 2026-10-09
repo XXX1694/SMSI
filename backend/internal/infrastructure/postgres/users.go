@@ -86,8 +86,8 @@ func NewSessions(db *DB) *Sessions { return &Sessions{db: db} }
 func (r *Sessions) Create(ctx context.Context, s *auth.Session) error {
 	return mapErr(r.db.q(ctx).QueryRow(ctx,
 		`INSERT INTO sessions (user_id, token_hash, csrf_token, expires_at, user_agent, ip, created_at)
-		 VALUES ($1,$2,$3,$4,$5,$6, COALESCE($7, now())) RETURNING id`,
-		s.UserID, s.TokenHash, s.CSRFToken, s.ExpiresAt, s.UserAgent, s.IP, nullTime(s.CreatedAt)).Scan(&s.ID), "session")
+		 VALUES ($1,$2,$3,$4,$5,$6, $7) RETURNING id`,
+		s.UserID, s.TokenHash, s.CSRFToken, s.ExpiresAt, s.UserAgent, s.IP, s.CreatedAt).Scan(&s.ID), "session")
 }
 
 // GetByTokenHash finds a session by token hash.
@@ -118,14 +118,6 @@ func (r *Sessions) DeleteExpired(ctx context.Context, now time.Time) (int64, err
 func (r *Sessions) DeleteAllForUser(ctx context.Context, userID, except uuid.UUID) (int64, error) {
 	tag, err := r.db.q(ctx).Exec(ctx, `DELETE FROM sessions WHERE user_id = $1 AND id <> $2`, userID, except)
 	return tag.RowsAffected(), mapErr(err, "session")
-}
-
-// nullTime maps the zero time to SQL NULL, so a column default applies.
-func nullTime(t time.Time) *time.Time {
-	if t.IsZero() {
-		return nil
-	}
-	return &t
 }
 
 // nullIfEmpty maps "" to SQL NULL.

@@ -22,7 +22,7 @@ const (
 	oauthStateCookie  = "socialos_oauth"
 	oauthTicketCookie = "socialos_oauth_ticket"
 	oauthCookiePath   = "/api/v1/auth/oauth"
-	oauthCookieMaxAge = int(auth.FlowTTL / 1e9)
+	oauthCookieMaxAge = int(auth.FlowTTL / time.Second)
 )
 
 func (a *API) setOAuthCookie(w http.ResponseWriter, name, value string, maxAge int) {
@@ -134,7 +134,7 @@ func (a *API) oauthComplete(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	u, sess, _, err := a.svc.Auth.CompleteSignup(r.Context(), auth.CompleteSignupInput{Ticket: cookieValue(r, oauthTicketCookie),
+	u, sess, err := a.svc.Auth.CompleteSignup(r.Context(), auth.CompleteSignupInput{Ticket: cookieValue(r, oauthTicketCookie),
 		DisplayName: req.DisplayName, AcceptTerms: req.AcceptTerms}, middleware.ClientInfoFrom(r, a.trusted))
 	if err != nil {
 		httpx.Error(w, r, err)

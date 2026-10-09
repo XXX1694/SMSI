@@ -121,7 +121,7 @@ const FreshSessionWindow = 10 * time.Minute
 // available (AGENTS section 7) by signing in again with the provider.
 func (s *DeletionService) reauthenticate(ctx context.Context, a actor.Actor, u *user.User, password, confirmEmail string) error {
 	if !u.HasPassword() {
-		if age := s.d.Clock.Now().Sub(a.SessionCreatedAt); a.SessionCreatedAt.IsZero() || age > FreshSessionWindow || age < -time.Minute {
+		if age := s.d.Clock.Now().Sub(a.SessionCreatedAt); a.SessionCreatedAt.IsZero() || age > FreshSessionWindow {
 			return errs.New(errs.ReauthRequired, "sign in again to delete your account")
 		}
 		return confirmTyped(u, confirmEmail)

@@ -50,9 +50,19 @@ func TestSocialUserWithoutPasswordCanDeleteTheAccount(t *testing.T) {
 	if n := r.countRows(`SELECT count(*) FROM users WHERE deletion_scheduled_at IS NOT NULL`); n != 1 {
 		t.Fatalf("deletion not scheduled: %d", n)
 	}
-	// The account is leaving: the provider no longer signs it in.
-	if got := errorOf(r.githubSignIn(t, r.e.browser(), 1501, "pat", email, "")); got != "account_unavailable" {
-		t.Fatalf("sign-in during the grace period: %q", got)
+	// The account is leaving, but the owner can still sign in with the provider to cancel (no password to fall back on).
+	back := r.e.browser()
+	if loc := r.githubSignIn(t, back, 1501, "pat", email, ""); errorOf(loc) != "" {
+		t.Fatalf("sign-in during the grace period: %s", loc)
+	}
+	me = back.must("GET", "/api/v1/me", nil, 200)
+	back.csrf, _ = me["csrf_token"].(string)
+	if me["user"].(map[string]any)["deletion_scheduled_at"] == nil {
+		t.Fatal("/me must show the pending deletion")
+	}
+	back.must("POST", "/api/v1/account/delete/cancel", nil, 204)
+	if n := r.countRows(`SELECT count(*) FROM users WHERE deletion_scheduled_at IS NOT NULL`); n != 0 {
+		t.Fatal("deletion not cancelled")
 	}
 }
 

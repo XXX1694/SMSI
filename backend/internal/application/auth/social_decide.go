@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/socialos/backend/internal/adapters/mail"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/identity"
@@ -35,8 +36,8 @@ func (s *Service) decide(ctx context.Context, fl *identity.Flow, c identity.Clai
 	}
 }
 
-// usable is false for disabled, deleted and deletion-scheduled accounts: a pending deletion is a decision to leave,
-// so a provider sign-in must not quietly reopen the account (D-019).
+// usable is false for disabled, deleted and deletion-scheduled accounts. It guards new links by email match: an
+// account that is leaving must not gain a sign-in method (D-019).
 func usable(u *user.User) bool { return u.Status == user.StatusActive && u.DeletionScheduledAt == nil }
 
 func (s *Service) ownerByIdentity(ctx context.Context, c identity.Claims) (*identity.Owner, *user.User, error) {
@@ -51,7 +52,9 @@ func (s *Service) ownerByIdentity(ctx context.Context, c identity.Claims) (*iden
 	if err != nil {
 		return nil, nil, err
 	}
-	return &identity.Owner{UserID: u.ID, Active: usable(u), EmailVerified: u.EmailVerified()}, u, nil
+	// Only the status counts here: a known identity may sign in while its account waits for deletion, so the owner can
+	// reach the cancel banner (the session of such an account can do nothing else, see Actor.RequireNotDeleting).
+	return &identity.Owner{UserID: u.ID, Active: u.Status == user.StatusActive, EmailVerified: u.EmailVerified()}, u, nil
 }
 
 func (s *Service) ownerByEmail(ctx context.Context, c identity.Claims) (*identity.Owner, *user.User, error) {
@@ -78,9 +81,6 @@ func (s *Service) signInKnown(ctx context.Context, fl *identity.Flow, c identity
 		issued, err = s.startSession(ctx, u, ci, audit.ActionUserLogin, map[string]any{"method": string(c.Provider)})
 		return err
 	})
-	if errs.Is(err, errs.NotFound) {
-		return CallbackResult{}, errs.New(errs.Conflict, "the identity was unlinked meanwhile") // retried once by the caller
-	}
 	if err != nil {
 		return CallbackResult{}, err
 	}
@@ -106,7 +106,20 @@ func (s *Service) linkAndSignIn(ctx context.Context, fl *identity.Flow, c identi
 	if err != nil {
 		return CallbackResult{}, err
 	}
+	s.notifyIdentityLinked(ctx, u, c.Provider)
 	return CallbackResult{Redirect: fl.RedirectAfter, Session: &issued}, nil
+}
+
+// notifyIdentityLinked tells the owner, after the commit, that a provider was linked by email match: the mail is the
+// alarm if someone else did it. A failure is logged and never fails the sign-in.
+func (s *Service) notifyIdentityLinked(ctx context.Context, u *user.User, p identity.Provider) {
+	msg, err := mail.Render(mail.IdentityLinked, u.Email, mail.Data{Provider: providerNames[p], Link: s.webURL + "/settings"})
+	if err == nil {
+		err = s.mail.Enqueue(ctx, msg)
+	}
+	if err != nil {
+		s.log.WarnContext(ctx, "identity-linked mail not queued", slog.String("user_id", u.ID.String()), slog.Any("error", err))
+	}
 }
 
 // startSignup keeps what the provider vouched for behind a one-time ticket. No user exists yet: the account is created
@@ -116,19 +129,12 @@ func (s *Service) startSignup(ctx context.Context, fl *identity.Flow, c identity
 	if err != nil {
 		return CallbackResult{}, err
 	}
-	name, _ := user.ValidateDisplayName(truncateRunes(c.DisplayName, 100))
+	name := strings.TrimSpace(truncate(c.DisplayName, 100))
 	pending := identity.PendingSignup{Subject: c.Subject, Email: c.Email, DisplayName: name}
 	if err := s.social.flows.SetPending(ctx, fl.ID, crypto.SHA256Hex(ticket), s.clock.Now().Add(TicketTTL), pending); err != nil {
 		return CallbackResult{}, err
 	}
 	return CallbackResult{Redirect: SignupCompletePath, Ticket: ticket}, nil
-}
-
-func truncateRunes(s string, n int) string {
-	if r := []rune(strings.TrimSpace(s)); len(r) > n {
-		return string(r[:n])
-	}
-	return strings.TrimSpace(s)
 }
 
 // logSocial logs a failed step. The error is the adapter's own text, which carries no token or address.

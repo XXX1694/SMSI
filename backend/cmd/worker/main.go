@@ -56,7 +56,6 @@ func run() error {
 	bg.Go(func() { serveHealth(ctx, a, cfg.WorkerHTTPAddr, log) })
 	bg.Go(func() { purgeApprovals(ctx, a, cfg.ApprovalRetention, log) })
 	bg.Go(func() { sweepAccountData(ctx, a, log) })
-	bg.Go(func() { purgeOAuthFlows(ctx, a, log) })
 	startTelegramIntake(ctx, bg, a, cfg, log)
 	log.Info("worker started", slog.String("queue", cfg.QueueName), slog.Int("concurrency", cfg.WorkerConc))
 	<-ctx.Done()
@@ -92,7 +91,8 @@ func purgeApprovals(ctx context.Context, a *app.App, retention time.Duration, lo
 }
 
 // sweepAccountData runs the owner-rights sweeps once an hour until ctx ends: it deletes expired export archives and
-// repairs stuck export rows, and queues the purge of accounts whose deletion grace period is over.
+// repairs stuck export rows, queues the purge of accounts whose deletion grace period is over, and deletes expired
+// sign-in flows.
 func sweepAccountData(ctx context.Context, a *app.App, log *slog.Logger) {
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
@@ -105,20 +105,7 @@ func sweepAccountData(ctx context.Context, a *app.App, log *slog.Logger) {
 		} else if n > 0 {
 			log.InfoContext(ctx, "account purges queued", slog.Int("count", n))
 		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-	}
-}
-
-// purgeOAuthFlows deletes social sign-in flows (state, nonce, PKCE verifier, sign-up tickets) whose state and ticket have
-// both expired, once an hour, until ctx ends. They hold nothing after that, so keeping them only grows the table.
-func purgeOAuthFlows(ctx context.Context, a *app.App, log *slog.Logger) {
-	t := time.NewTicker(time.Hour)
-	defer t.Stop()
-	for {
+		// Expired sign-in flows (state, nonce, PKCE verifier, sign-up tickets) hold nothing once both have expired.
 		if n, err := a.Services.Auth.PurgeExpiredOAuthFlows(ctx); err != nil {
 			log.WarnContext(ctx, "sign-in flow purge failed", slog.Any("error", err))
 		} else if n > 0 {
