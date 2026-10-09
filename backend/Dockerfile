@@ -17,9 +17,9 @@
 
 # go.mod states the minimum Go version (1.26.0); images are built with the latest patch of that line so that they carry
 # the current standard-library security fixes. Keep GO_VERSION in .github/workflows/ci.yml on the same minor version.
-ARG GO_VERSION=1.26
-
-FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS build
+# Base images are pinned by digest, so a registry or mirror cannot hand a release a different or stale image for the
+# tag; Dependabot (docker ecosystem) bumps the digests weekly.
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:c95332c2af86b6d89b91bd0500f4b9529ccbd090a0d1855c6d1ceaa142ae8615 AS build
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src
@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
       go build -trimpath -ldflags="-s -w" -o "/out/${cmd}" "./cmd/${cmd}"; \
     done
 
-FROM gcr.io/distroless/static-debian12:nonroot AS runtime
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS runtime
 WORKDIR /app
 COPY --from=build /out/api /out/worker /out/migrate /out/telegram /app/
 # Migrations are embedded in the binaries; nothing else is needed at runtime.
