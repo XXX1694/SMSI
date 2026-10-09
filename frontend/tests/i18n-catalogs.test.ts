@@ -1,9 +1,9 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ENABLED_LOCALES, LOCALES } from '@/i18n/locales';
 import { createTranslator } from '@/i18n/translate';
-import { catalogBundles, flatten, layoutProblems, listBundles, listSources, literals, problems, readLocale, usedKeys } from '../scripts/i18n-lib.mjs';
+import { catalogBundles, flatten, indexBundles, layoutProblems, listBundles, listSources, literals, problems, readLocale, usedKeys } from '../scripts/i18n-lib.mjs';
 import en from '@/i18n/en-all';
 import meta from '../messages/meta.json';
 
@@ -28,7 +28,13 @@ describe('real catalogs', () => {
     expect(readdirSync(join(root, 'messages')).filter((f) => f.endsWith('.json'))).toEqual(['meta.json']);
     const bundles = Object.fromEntries(LOCALES.map((l) => [l, listBundles(join(root, 'messages', l))]));
     const catalog = catalogBundles(readFileSync(join(root, 'src/i18n/catalog.ts'), 'utf8'));
-    expect(layoutProblems({ bundles, catalog })).toEqual([]);
+    const indexes = Object.fromEntries(
+      LOCALES.filter((l) => l !== 'en').map((l) => {
+        const file = join(root, 'src/i18n/catalogs', `${l}.ts`);
+        return [l, existsSync(file) ? indexBundles(readFileSync(file, 'utf8'), l) : null];
+      }),
+    );
+    expect(layoutProblems({ bundles, catalog, indexes })).toEqual([]);
   });
 
   // Scaffold for the extraction PRs: as soon as code calls t('...') with a literal, English must define it.
@@ -113,11 +119,11 @@ describe('bundle layout', () => {
   const catalog = { list: ['nav', 'posts'], typed: ['nav', 'posts'] };
 
   it('accepts a locale with some of the bundles, or none', () => {
-    expect(layoutProblems({ bundles: { en: ['nav', 'posts'], ru: ['nav'], ar: [] }, catalog })).toEqual([]);
+    expect(layoutProblems({ bundles: { en: ['nav', 'posts'], ru: ['nav'], ar: [] }, catalog, indexes: { ru: ['nav'], ar: [] } })).toEqual([]);
   });
 
   it('rejects a bundle file that English lacks', () => {
-    expect(layoutProblems({ bundles: { en: ['nav', 'posts'], ru: ['nav', 'extra'] }, catalog })).toEqual(['messages/ru/extra.json: English has no extra.json']);
+    expect(layoutProblems({ bundles: { en: ['nav', 'posts'], ru: ['nav', 'extra'] }, catalog, indexes: { ru: ['nav', 'extra'] } })).toEqual(['messages/ru/extra.json: English has no extra.json']);
   });
 
   it('rejects a catalog.ts list that differs from messages/en/ in either direction', () => {
@@ -131,6 +137,21 @@ describe('bundle layout', () => {
   it('rejects a Messages type that differs from messages/en/', () => {
     const errors = layoutProblems({ bundles: { en: ['nav', 'posts'] }, catalog: { list: ['nav', 'posts'], typed: ['nav'] } });
     expect(errors).toEqual(['messages/en/posts.json is not in the Messages type (src/i18n/catalog.ts)']);
+  });
+
+  it('rejects a locale index that misses a file, imports a missing one, or does not exist', () => {
+    const bundles = { en: ['nav', 'posts'], ru: ['nav', 'posts'], de: ['nav'], fr: ['nav'] };
+    const errors = layoutProblems({ bundles, catalog, indexes: { ru: ['nav', 'gone'], de: ['nav'], fr: null } });
+    expect(errors).toEqual([
+      'src/i18n/catalogs/ru.ts does not import messages/ru/posts.json',
+      'src/i18n/catalogs/ru.ts imports messages/ru/gone.json, which does not exist',
+      'src/i18n/catalogs/fr.ts is missing (it imports the files of messages/fr/)',
+    ]);
+  });
+
+  it('reads the files a locale index imports', () => {
+    const src = "import nav from '../../../messages/pt-BR/nav.json';\nimport posts from '../../../messages/pt-BR/posts.json';\nimport x from '../../../messages/ru/x.json';";
+    expect(indexBundles(src, 'pt-BR')).toEqual(['nav', 'posts']);
   });
 
   it('reads both lists out of catalog.ts source', () => {

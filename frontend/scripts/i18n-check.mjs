@@ -6,10 +6,10 @@
  *             ENABLED locale, code that asks for a key English lacks.
  *   warnings: unused keys, keys without a meta.json description.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { catalogBundles, layoutProblems, listBundles, listSources, problems, readJson, readLocale } from './i18n-lib.mjs';
+import { catalogBundles, indexBundles, layoutProblems, listBundles, listSources, problems, readJson, readLocale } from './i18n-lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'messages');
@@ -33,7 +33,12 @@ for (const l of known) {
   catalogs[l] = readLocale(join(dir, l));
   bundles[l] = listBundles(join(dir, l));
 }
-errors.push(...layoutProblems({ bundles, catalog: catalogBundles(readFileSync(join(root, 'src/i18n/catalog.ts'), 'utf8')) }));
+const indexes = {};
+for (const l of known) {
+  const file = join(root, 'src/i18n/catalogs', `${l}.ts`);
+  if (l !== 'en') indexes[l] = existsSync(file) ? indexBundles(readFileSync(file, 'utf8'), l) : null;
+}
+errors.push(...layoutProblems({ bundles, indexes, catalog: catalogBundles(readFileSync(join(root, 'src/i18n/catalog.ts'), 'utf8')) }));
 
 const sources = listSources(join(root, 'src')).map((p) => readFileSync(p, 'utf8'));
 const res = problems({ catalogs, enabled, meta: readJson(join(dir, 'meta.json')), sources });

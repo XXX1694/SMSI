@@ -224,14 +224,31 @@ export function catalogBundles(source) {
   return { list, typed };
 }
 
+/** The bundle ids a locale index (`src/i18n/catalogs/{locale}.ts`) imports from `messages/{locale}/`. */
+export function indexBundles(source, locale) {
+  const re = new RegExp(`from '\\.\\./\\.\\./\\.\\./messages/${locale.replace(/[-]/g, '\\-')}/([^']+)\\.json'`, 'g');
+  return [...source.matchAll(re)].map((m) => m[1]);
+}
+
 /**
  * Checks the file layout against English and `src/i18n/catalog.ts`.
- * @param {{ bundles: Record<string, string[]>, catalog: { list: string[], typed: string[] } }} input
- * `bundles` maps a locale to the bundle ids it has a file for; `catalog` is the result of `catalogBundles`.
+ * @param {{ bundles: Record<string, string[]>, catalog: { list: string[], typed: string[] }, indexes?: Record<string, string[] | null> }} input
+ * `bundles` maps a locale to the bundle ids it has a file for; `catalog` is the result of `catalogBundles`; `indexes` maps
+ * a non-English locale to the ids its `catalogs/{locale}.ts` imports (null: no such module).
  * @returns {string[]} errors
  */
-export function layoutProblems({ bundles, catalog }) {
+export function layoutProblems({ bundles, catalog, indexes = {} }) {
   const errors = [];
+  for (const [locale, ids] of Object.entries(bundles)) {
+    if (locale === 'en') continue;
+    const imported = indexes[locale];
+    if (!imported) {
+      errors.push(`src/i18n/catalogs/${locale}.ts is missing (it imports the files of messages/${locale}/)`);
+      continue;
+    }
+    for (const id of ids) if (!imported.includes(id)) errors.push(`src/i18n/catalogs/${locale}.ts does not import messages/${locale}/${id}.json`);
+    for (const id of imported) if (!ids.includes(id)) errors.push(`src/i18n/catalogs/${locale}.ts imports messages/${locale}/${id}.json, which does not exist`);
+  }
   const en = bundles.en ?? [];
   for (const [locale, ids] of Object.entries(bundles)) {
     if (locale === 'en') continue;
