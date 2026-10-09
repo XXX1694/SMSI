@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { usePrefs } from '@/components/prefs-provider';
-import { ErrorState, LoadingRows, Notice, PageHeader, Section } from '@/components/states';
+import { ErrorState, InlineError, LoadingRows, Notice, PageHeader, Section } from '@/components/states';
 import { AttemptStatusBadge, PostStatusBadge, TargetStatusBadge } from '@/components/status-badge';
 import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/input';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { describeErrorCode, friendlyMessage, isTechnicalMessage } from '@/lib/errors';
 import { postLabel } from '@/lib/format';
 import { providerLabel } from '@/lib/normalize';
 import { postActions } from '@/lib/status';
@@ -32,7 +33,8 @@ function Targets({ post }: { post: Post }) {
           <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{t.content}</p>
           {t.error_message ? (
             <Notice tone="danger">
-              <span className="font-medium">{t.error_code ?? 'Error'}:</span> {t.error_message}
+              <span className="font-medium">{describeErrorCode(t.error_code)}</span>
+              {isTechnicalMessage(t.error_message) ? null : <> {t.error_message}</>}
             </Notice>
           ) : null}
           {t.status === 'needs_review' ? (
@@ -80,7 +82,7 @@ function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Po
             <Td label="Result">
               <AttemptStatusBadge status={a.status} />
             </Td>
-            <Td label="Error" className="text-muted-foreground max-md:text-foreground">{a.error_message ?? '—'}</Td>
+            <Td label="Error" className="text-muted-foreground max-md:text-foreground">{a.error_message ? friendlyMessage(null, a.error_message) : '—'}</Td>
           </Tr>
         ))}
       </Tbody>
@@ -123,7 +125,7 @@ function ScheduleDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpe
             <Input id="s-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </Field>
         </div>
-        {error ? <p role="alert" className="mt-3 text-sm text-danger">{error}</p> : null}
+        {error ? <InlineError className="mt-3">{error}</InlineError> : null}
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => void go()} disabled={busy}>{busy ? 'Scheduling…' : 'Schedule'}</Button>
@@ -152,7 +154,7 @@ export function PostDetail({ id }: { id: string }) {
   }, [inFlight, reload]);
 
   if (loading && !post) return <LoadingRows rows={4} />;
-  if (error || !post) return <ErrorState error={error} onRetry={reload} />;
+  if (error || !post) return <ErrorState title="Could not load this post" showRef={false} error={error} onRetry={reload} />;
   const can = postActions(post.status);
 
   const act = (fn: () => Promise<unknown>, msg: string) => async () => {

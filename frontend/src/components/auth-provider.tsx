@@ -1,11 +1,15 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, setCsrfToken } from '@/lib/api';
+import { api, ApiError, setCsrfToken } from '@/lib/api';
 import type { Me } from '@/lib/types';
 
 interface AuthState {
   user: Me | null;
   loading: boolean;
+  /** /me failed for a reason other than "not signed in" (server down, offline). The user is NOT signed out. */
+  error: unknown;
+  /** Re-runs the /me check after such a failure. */
+  retry: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -18,6 +22,8 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   const adopt = useCallback((me: Me | null) => {
     setCsrfToken(me?.csrf_token ?? null);
@@ -26,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     api.auth.me().then(
       (me) => {
         if (!cancelled) {
@@ -33,17 +41,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         }
       },
-      () => {
-        if (!cancelled) {
-          adopt(null);
-          setLoading(false);
-        }
+      (e: unknown) => {
+        if (cancelled) return;
+        // Only a 401 means "signed out". A 500 or a dropped connection must not look like one.
+        if (e instanceof ApiError && e.status === 401) adopt(null);
+        else setError(e);
+        setLoading(false);
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [adopt]);
+  }, [adopt, attempt]);
+
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -74,8 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [adopt]);
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, refresh }),
-    [user, loading, login, register, logout, refresh],
+    () => ({ user, loading, error, retry, login, register, logout, refresh }),
+    [user, loading, error, retry, login, register, logout, refresh],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

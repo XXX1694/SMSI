@@ -1,6 +1,7 @@
 import { AlertCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/hooks';
 
@@ -14,17 +15,31 @@ export function LoadingRows({ rows = 3 }: { rows?: number }) {
   );
 }
 
-export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+export function ErrorState({ error, onRetry, title = 'Could not load this', showRef = true }: { error: unknown; onRetry?: () => void; title?: string; showRef?: boolean }) {
   return (
     <div role="alert" className="flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-sm">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
       <div className="flex-1">
-        <p className="font-medium text-danger">Could not load this</p>
-        <p className="text-muted-foreground">{errorMessage(error)}</p>
+        <p className="font-medium text-danger">{title}</p>
+        <p className="text-muted-foreground">{errorMessage(error, showRef)}</p>
       </div>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
           Retry
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** A compact error line for forms, dialogs and "load more" failures. Optional retry button. */
+export function InlineError({ children, onRetry, retryLabel = 'Try again', retryDisabled, className }: { children: ReactNode; onRetry?: () => void; retryLabel?: string; retryDisabled?: boolean; className?: string }) {
+  return (
+    <div role="alert" className={cn('flex flex-wrap items-center justify-between gap-3 text-sm text-danger', className)}>
+      <span>{children}</span>
+      {onRetry ? (
+        <Button variant="secondary" size="sm" onClick={onRetry} disabled={retryDisabled}>
+          {retryLabel}
         </Button>
       ) : null}
     </div>

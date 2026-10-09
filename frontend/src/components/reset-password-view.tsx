@@ -8,6 +8,7 @@ import { Field, Input } from "@/components/ui/input";
 import { errorMessage } from "@/hooks";
 import { ApiError, api } from "@/lib/api";
 import { forgetHashToken, takeHashToken } from "@/lib/hash-token";
+import { InlineError } from '@/components/states';
 
 type State = "form" | "success" | "invalid";
 
@@ -164,9 +165,7 @@ function ResetPasswordForm(p: FormProps) {
           onChange={p.onRevokeKeys}
         />
         {p.error ? (
-          <p role="alert" className="text-sm text-danger">
-            {p.error}
-          </p>
+          <InlineError>{p.error}</InlineError>
         ) : null}
         <Button
           type="submit"

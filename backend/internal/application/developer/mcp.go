@@ -61,9 +61,13 @@ func (s *Service) CreateMCPConnection(ctx context.Context, a actor.Actor, in Cre
 	return &out, nil
 }
 
+// MCPRemotePackage is the only npm package a generated config may run, pinned to an exact version. SocialOS has no npm
+// package of its own: never emit `npx -y <unpublished name>`, whoever registers it would receive the users' keys.
+const MCPRemotePackage = "mcp-remote@0.14.3"
+
 // mcpConfig builds ready-to-paste client configuration for the new key.
 //   - http: Streamable HTTP clients (Claude Code, Cursor, …)
-//   - stdio: local clients that spawn the server (Claude Desktop)
+//   - stdio: Claude Desktop bridge (`mcp-remote`, pinned) that spawns a local process and talks HTTP to the server
 //   - mcpServers: same as http, so the whole object can be pasted as-is
 //   - claude_code: one-line `claude mcp add` command
 func (s *Service) mcpConfig(raw string) map[string]any {
@@ -80,8 +84,8 @@ func (s *Service) mcpConfig(raw string) map[string]any {
 		"mcpServers": map[string]any{
 			"socialos": map[string]any{
 				"command": "npx",
-				"args":    []string{"-y", "socialos-mcp", "--stdio"},
-				"env":     map[string]string{"SOCIALOS_API_KEY": raw, "SOCIALOS_API_URL": s.apiPublicURL},
+				"args":    []string{"-y", MCPRemotePackage, s.mcpPublicURL, "--header", "Authorization:${SOCIALOS_AUTH_HEADER}"},
+				"env":     map[string]string{"SOCIALOS_AUTH_HEADER": "Bearer " + raw},
 			},
 		},
 	}

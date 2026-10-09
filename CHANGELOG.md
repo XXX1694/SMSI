@@ -6,9 +6,9 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
-### Changed
+### Security
 
-- Password hashing is bounded in memory: at most `PASSWORD_HASH_CONCURRENCY` (default 2) hashes run at once within `PASSWORD_HASH_MEMORY_MIB` (default 48) of argon2 memory, new hashes use argon2id m=19 MiB, t=2, p=1 (OWASP), and existing hashes are upgraded at the next successful login. Under a burst, logins and registrations may get `429 RATE_LIMITED` and should retry.
+- The generated Claude Desktop config no longer runs `npx -y socialos-mcp`: that npm package does not exist, and whoever registered the name would have received users' API keys. Configs, the MCP connections page and the docs now use Claude Desktop connectors or the `mcp-remote` bridge pinned to an exact version, and a regression test rejects `socialos-mcp` and unpinned `npx` packages.
 
 ### Added
 
@@ -27,6 +27,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Changed
 
+- Password hashing is bounded in memory: at most `PASSWORD_HASH_CONCURRENCY` (default 2) hashes run at once within `PASSWORD_HASH_MEMORY_MIB` (default 48) of argon2 memory, new hashes use argon2id m=19 MiB, t=2, p=1 (OWASP), and existing hashes are upgraded at the next successful login. Under a burst, logins and registrations may get `429 RATE_LIMITED` and should retry.
 - The SSRF guard also blocks site-local `fec0::/10`, IPv4-compatible `::/96` and local-use NAT64 `64:ff9b:1::/48` (the whole range is blocked).
 - Browser sessions now hold ten scopes (the new `social:connect`); the "Dangerous" list in the dashboard shows it.
 - Host-proxy mode: memory caps rebalanced to fit the slice (backend and worker 160m with `GOMEMLIMIT=100MiB`, frontend 160m, postgres 112m, minio 80m, mcp 56m, redis 32m, migrate 64m). Automatic updates do not deploy while the guard has shed load.
@@ -35,6 +36,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 - The Posts date filter now uses the timezone chosen in Settings instead of the browser's, so "From" and "To" cover whole days where you expect them.
 - Colour contrast: unsupported-network badges and the dark-mode "Scheduled" badge now meet WCAG AA (axe `color-contrast` is clean in light and dark). The dark accent is slightly lighter, in the app and on the site.
+- A failed load no longer looks like an empty list: Posts, post detail and the audit log show a titled error with a retry button, "Load more" failures keep the list on screen, and error messages are plain English (no raw codes, JSON or stack traces).
 
 ### Changed
 

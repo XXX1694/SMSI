@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePrefs } from '@/components/prefs-provider';
-import { EmptyState, ErrorState, LoadingRows } from '@/components/states';
+import { EmptyState, ErrorState, InlineError, LoadingRows } from '@/components/states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
@@ -67,16 +67,20 @@ export function AuditView() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [moreError, setMoreError] = useState<string | null>(null);
 
   const load = useCallback(async (after?: string) => {
     setLoading(true);
     setError(null);
+    setMoreError(null);
     try {
       const p = await api.audit.list(25, after, filter === 'agents' ? TOOL_CALL_ACTION : undefined);
       setItems((cur) => (after ? [...cur, ...p.items] : p.items));
       setCursor(p.next_cursor);
     } catch (e) {
-      setError(errorMessage(e));
+      // A failed next page keeps the rows already shown; only a failed first page replaces the list.
+      if (after) setMoreError(errorMessage(e));
+      else setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -89,7 +93,7 @@ export function AuditView() {
   }, [load]);
 
   let body: ReactNode;
-  if (error) body = <ErrorState error={new Error(error)} onRetry={() => void load()} />;
+  if (error) body = <ErrorState title="Could not load the audit log" error={new Error(error)} onRetry={() => void load()} />;
   else if (loading && items.length === 0) body = <LoadingRows rows={3} />;
   else if (items.length === 0) {
     body =
@@ -126,7 +130,11 @@ export function AuditView() {
           ))}
         </Tbody>
       </Table>
-      {cursor ? (
+      {moreError ? (
+        <InlineError onRetry={() => void load(cursor ?? undefined)} retryDisabled={loading} className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2">
+          Could not load more events. {moreError}
+        </InlineError>
+      ) : cursor ? (
         <Button variant="secondary" onClick={() => void load(cursor)} disabled={loading}>
           {loading ? 'Loading…' : 'Load more'}
         </Button>
