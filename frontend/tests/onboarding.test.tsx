@@ -10,10 +10,10 @@ const apiMock = vi.hoisted(() => ({
 vi.mock('@/lib/api', async () => ({ ...(await vi.importActual<typeof import('@/lib/api')>('@/lib/api')), api: apiMock }));
 
 import { OnboardingChecklist } from '@/components/onboarding-checklist';
-import { ONBOARDING_DISMISSED_KEY, onboardingSteps, requiredDone } from '@/lib/onboarding';
+import { ONBOARDING_COMPLETE_KEY, ONBOARDING_DISMISSED_KEY, onboardingSteps, requiredDone } from '@/lib/onboarding';
 
 const empty = { items: [], next_cursor: null };
-const live = { revoked_at: null };
+const live = { revoked_at: null, expires_at: null };
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -31,7 +31,11 @@ describe('onboardingSteps', () => {
     expect(requiredDone(steps)).toBe(false);
   });
   it('ignores revoked keys and connections', () => {
-    const steps = onboardingSteps({ ...base, apiKeys: [{ revoked_at: 'x' }], mcpConnections: [{ revoked_at: 'y' }] });
+    const steps = onboardingSteps({ ...base, apiKeys: [{ revoked_at: 'x', expires_at: null }], mcpConnections: [{ revoked_at: 'y' }] });
+    expect(steps[2]?.done).toBe(false);
+  });
+  it('ignores an expired key', () => {
+    const steps = onboardingSteps({ ...base, apiKeys: [{ revoked_at: null, expires_at: '2020-01-01T00:00:00Z' }] }, new Date('2026-01-01'));
     expect(steps[2]?.done).toBe(false);
   });
   it('counts a live key or a live connection as an agent', () => {
@@ -72,11 +76,45 @@ describe('OnboardingChecklist', () => {
     expect(await screen.findByRole('heading', { name: 'You are set up' })).toBeInTheDocument();
   });
 
-  it('stays hidden when the data cannot be read', async () => {
+  it('keeps a next step and logs the cause when the data cannot be read and there is no account', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     apiMock.developer.apiKeys.mockRejectedValue(new Error('down'));
     render(<OnboardingChecklist connectedAccounts={0} />);
-    await waitFor(() => expect(apiMock.developer.apiKeys).toHaveBeenCalled());
+    expect(await screen.findByRole('link', { name: 'Go to accounts' })).toHaveAttribute('href', '/accounts');
     expect(screen.queryByRole('heading', { name: 'Get started' })).not.toBeInTheDocument();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('stays hidden, and logs, when the data cannot be read but an account exists', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    apiMock.developer.apiKeys.mockRejectedValue(new Error('down'));
+    render(<OnboardingChecklist connectedAccounts={1} />);
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: 'Get started' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Go to accounts' })).not.toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it('remembers completion and stops fetching', async () => {
+    apiMock.posts.list.mockResolvedValue({ items: [{ id: 'p1' }], next_cursor: null });
+    apiMock.developer.mcpConnections.mockResolvedValue([live]);
+    const { unmount } = render(<OnboardingChecklist connectedAccounts={1} />);
+    await screen.findByRole('heading', { name: 'You are set up' });
+    expect(window.localStorage.getItem(ONBOARDING_COMPLETE_KEY)).toBe('1');
+    unmount();
+    apiMock.posts.list.mockClear();
+    render(<OnboardingChecklist connectedAccounts={1} />);
+    expect(await screen.findByRole('button', { name: 'Show setup checklist' })).toBeInTheDocument();
+    expect(apiMock.posts.list).not.toHaveBeenCalled();
+  });
+
+  it('shows the checklist again on request', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, '1');
+    render(<OnboardingChecklist connectedAccounts={1} />);
+    await user.click(await screen.findByRole('button', { name: 'Show setup checklist' }));
+    expect(await screen.findByRole('heading', { name: 'Get started' })).toBeInTheDocument();
   });
 
   it('dismisses and remembers it', async () => {

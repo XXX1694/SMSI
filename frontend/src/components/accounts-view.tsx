@@ -208,8 +208,7 @@ export function AccountsView() {
       {result ? <Notice tone={result.tone}>{result.text}</Notice> : null}
       {data.accounts.length === 0 ? (
         <Notice tone="info">
-          No account connected yet. Connect one below, then <Link href="/compose" className="underline underline-offset-4">write your first post</Link>. The{' '}
-          <Link href="/dashboard" className="underline underline-offset-4">setup checklist</Link> shows what is left.
+          No account connected yet. Connect one below, then <Link href="/compose" className="underline underline-offset-4">write your first post</Link>.
         </Notice>
       ) : null}
       <ul className="stagger divide-y border-y">

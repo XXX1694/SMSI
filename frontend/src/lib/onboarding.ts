@@ -5,7 +5,7 @@ export interface OnboardingFacts {
   connectedAccounts: number;
   /** Any post at all (draft, scheduled or published). */
   hasPost: boolean;
-  apiKeys: Pick<ApiKey, 'revoked_at'>[];
+  apiKeys: Pick<ApiKey, 'revoked_at' | 'expires_at'>[];
   mcpConnections: Pick<McpConnection, 'revoked_at'>[];
   /** Any approval request, pending or decided. */
   hasApproval: boolean;
@@ -22,9 +22,12 @@ export interface OnboardingStep {
 }
 
 export const ONBOARDING_DISMISSED_KEY = 'socialos_onboarding_dismissed';
+/** Set once every required step was seen done, so the dashboard stops asking the API. */
+export const ONBOARDING_COMPLETE_KEY = 'socialos_onboarding_complete';
 
-export function onboardingSteps(f: OnboardingFacts): OnboardingStep[] {
-  const live = <T extends { revoked_at: string | null }>(xs: T[]) => xs.some((x) => !x.revoked_at);
+export function onboardingSteps(f: OnboardingFacts, now: Date = new Date()): OnboardingStep[] {
+  const live = <T extends { revoked_at: string | null; expires_at?: string | null }>(xs: T[]) =>
+    xs.some((x) => !x.revoked_at && !(x.expires_at && Date.parse(x.expires_at) <= now.getTime()));
   return [
     {
       id: 'network',

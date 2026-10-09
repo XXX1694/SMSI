@@ -124,7 +124,7 @@ export function PostsView() {
         >
           {filtered ? undefined : (
             <>
-              Posts go to the accounts you connect. <Link href="/accounts" className="underline underline-offset-4">Connect an account</Link> or see the <Link href="/dashboard" className="underline underline-offset-4">setup checklist</Link>.
+              Posts go to the accounts you connect. <Link href="/accounts" className="underline underline-offset-4">Connect an account</Link>.
             </>
           )}
         </EmptyState>

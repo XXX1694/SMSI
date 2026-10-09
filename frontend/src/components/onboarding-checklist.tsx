@@ -7,18 +7,28 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAsync } from '@/hooks';
 import { api } from '@/lib/api';
-import { ONBOARDING_DISMISSED_KEY, onboardingSteps, requiredDone, type OnboardingFacts } from '@/lib/onboarding';
+import { ONBOARDING_COMPLETE_KEY, ONBOARDING_DISMISSED_KEY, onboardingSteps, requiredDone, type OnboardingFacts } from '@/lib/onboarding';
+import { cn } from '@/lib/utils';
 import { readStorage, writeStorage } from '@/lib/storage';
 
-/** Dismissal is a UI preference, so it lives in this browser only. */
-function useDismissed(): [boolean | null, () => void] {
-  const [dismissed, setDismissed] = useState<boolean | null>(null); // null until storage is read: no flash
-  useEffect(() => setDismissed(readStorage(ONBOARDING_DISMISSED_KEY) === '1'), []);
+/** Dismissed and complete are UI preferences, so they live in this browser only. null until storage is read: no flash. */
+function usePrefsFlags() {
+  const [flags, setFlags] = useState<{ dismissed: boolean; complete: boolean } | null>(null);
+  useEffect(
+    () => setFlags({ dismissed: readStorage(ONBOARDING_DISMISSED_KEY) === '1', complete: readStorage(ONBOARDING_COMPLETE_KEY) === '1' }),
+    [],
+  );
   const dismiss = useCallback(() => {
     writeStorage(ONBOARDING_DISMISSED_KEY, '1');
-    setDismissed(true);
+    setFlags((f) => (f ? { ...f, dismissed: true } : f));
   }, []);
-  return [dismissed, dismiss];
+  const markComplete = useCallback(() => writeStorage(ONBOARDING_COMPLETE_KEY, '1'), []);
+  const reset = useCallback(() => {
+    writeStorage(ONBOARDING_DISMISSED_KEY, '0');
+    writeStorage(ONBOARDING_COMPLETE_KEY, '0');
+    setFlags({ dismissed: false, complete: false });
+  }, []);
+  return { flags, dismiss, markComplete, reset };
 }
 
 /** Every screen has a next step: a dismissed checklist must not leave a brand-new account with nothing to do. */
@@ -42,13 +52,24 @@ function NoAccountYet() {
  * API keys, MCP connections and approvals. If the extra data cannot be read the checklist stays hidden instead of guessing.
  */
 export function OnboardingChecklist({ connectedAccounts }: { connectedAccounts: number }) {
-  const [dismissed, dismiss] = useDismissed();
-  if (dismissed === null) return null;
-  if (dismissed) return connectedAccounts === 0 ? <NoAccountYet /> : null;
-  return <Checklist connectedAccounts={connectedAccounts} onDismiss={dismiss} />;
+  const { flags, dismiss, markComplete, reset } = usePrefsFlags();
+  if (!flags) return null;
+  if (flags.dismissed || flags.complete) {
+    return (
+      <>
+        {connectedAccounts === 0 ? <NoAccountYet /> : null}
+        <div className="text-right">
+          <Button variant="ghost" size="sm" onClick={reset}>
+            Show setup checklist
+          </Button>
+        </div>
+      </>
+    );
+  }
+  return <Checklist connectedAccounts={connectedAccounts} onDismiss={dismiss} onComplete={markComplete} />;
 }
 
-function Checklist({ connectedAccounts, onDismiss }: { connectedAccounts: number; onDismiss: () => void }) {
+function Checklist({ connectedAccounts, onDismiss, onComplete }: { connectedAccounts: number; onDismiss: () => void; onComplete: () => void }) {
   const load = useCallback(async (): Promise<Omit<OnboardingFacts, 'connectedAccounts'>> => {
     const [posts, apiKeys, mcpConnections, approvals] = await Promise.all([
       api.posts.list({ limit: 1 }),
@@ -58,11 +79,18 @@ function Checklist({ connectedAccounts, onDismiss }: { connectedAccounts: number
     ]);
     return { hasPost: posts.items.length > 0, apiKeys, mcpConnections, hasApproval: approvals.items.length > 0 };
   }, []);
-  const { data } = useAsync(load);
+  const { data, error } = useAsync(load);
+  const steps = data ? onboardingSteps({ ...data, connectedAccounts }) : null;
+  const complete = steps ? requiredDone(steps) : false;
+  useEffect(() => {
+    if (complete) onComplete();
+  }, [complete, onComplete]);
+  useEffect(() => {
+    if (error) console.error('onboarding checklist: could not load its data', error);
+  }, [error]);
 
-  if (!data) return null;
-  const steps = onboardingSteps({ ...data, connectedAccounts });
-  const complete = requiredDone(steps);
+  if (error && connectedAccounts === 0) return <NoAccountYet />;
+  if (!steps) return null;
   const doneCount = steps.filter((s) => s.done).length;
   const nextId = steps.find((s) => !s.done && !s.optional)?.id;
 
@@ -86,7 +114,7 @@ function Checklist({ connectedAccounts, onDismiss }: { connectedAccounts: number
           <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3" data-done={s.done}>
             <span
               aria-hidden
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${s.done ? 'border-accent bg-accent text-accent-foreground' : 'border-input'}`}
+              className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full border', s.done ? 'border-accent bg-accent text-accent-foreground' : 'border-input')}
             >
               {s.done ? <Check className="h-3 w-3" /> : null}
             </span>
