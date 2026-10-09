@@ -19,10 +19,10 @@ export function DialogContent({
   const t = useTranslations('common');
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-overlay bg-foreground/40 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-overlay bg-foreground/30 backdrop-blur-sm data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out" />
       <DialogPrimitive.Content
         className={cn(
-          'fixed left-1/2 top-1/2 z-overlay max-h-[90vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out',
+          'fixed left-1/2 top-1/2 z-overlay max-h-[90vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border glass-panel p-6 data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out',
           className,
         )}
         {...props}
