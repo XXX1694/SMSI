@@ -28,6 +28,7 @@ import type {
   SocialAccount,
   TelegramLink,
   TelegramLinkState,
+  UsageReport,
   UsageSummary,
 } from './types';
 
@@ -236,6 +237,11 @@ export const api = {
     },
     async remove(id: string): Promise<void> {
       await request(`/media/${enc(id)}`, { method: 'DELETE' });
+    },
+  },
+  account: {
+    async usage(): Promise<UsageReport> {
+      return (await request('/account/usage')) as UsageReport;
     },
   },
   dashboard: {

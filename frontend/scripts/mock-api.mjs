@@ -369,6 +369,21 @@ async function handle(req, res) {
     return send(res, 200, x);
   }
 
+  // ---- plan usage (same shape as GET /account/usage; the mock does not enforce the limits)
+  if (path === '/account/usage' && m === 'GET') {
+    const d = new Date();
+    const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+    return send(res, 200, {
+      plan: 'free', period_start: start.toISOString(), period_end: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString(),
+      quotas: {
+        connected_accounts: { used: mine(db.accounts).length, limit: 5 },
+        scheduled_posts_month: { used: mine(db.posts).filter((p) => p.status !== 'draft' && p.status !== 'cancelled').length, limit: 60 },
+        media_bytes: { used: mine(db.media).reduce((n, x) => n + (x.size_bytes ?? 0), 0), limit: 500 * 1024 * 1024 },
+        agent_requests_per_minute: { limit: 120 },
+      },
+    });
+  }
+
   // ---- dashboard / analytics / audit
   if (path === '/dashboard/summary') {
     const ps = mine(db.posts); const month = now().slice(0, 7);

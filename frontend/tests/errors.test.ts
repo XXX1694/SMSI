@@ -40,3 +40,11 @@ describe('technical messages', () => {
     expect(describeErrorCode('failed')).toBe('Something went wrong. Please try again.');
   });
 });
+
+describe('quota errors', () => {
+  it('keeps the readable server message and has a sentence for the bare code', async () => {
+    const { friendlyMessage } = await import('@/lib/errors');
+    expect(friendlyMessage('QUOTA_EXCEEDED', 'connected accounts limit reached (5 of 5 used).')).toBe('connected accounts limit reached (5 of 5 used).');
+    expect(friendlyMessage('QUOTA_EXCEEDED', 'QUOTA_EXCEEDED')).toMatch(/limit of your plan/);
+  });
+});
