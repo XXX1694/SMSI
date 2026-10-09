@@ -54,6 +54,11 @@
   --mesh-2: hsl(162 58% 60% / 0.24);
   --mesh-3: hsl(202 77% 71% / 0.24);
   --noise-opacity: 0.035;
+  /* How strongly the app shows the mesh behind plain page content. Kept low enough that a control outline on the mesh still
+     meets 3:1 and text stays AA without a glass layer (tests/tokens.test.ts); the landing may use more. */
+  --mesh-strength: 0.45;
+  /* Behind dialogs: a plain dim, no blur. Dark mode dims with black instead of hazing with the light foreground. */
+  --scrim: hsl(205 32% 11% / 0.4);
   --shadow-glass: 0 1px 2px hsl(205 32% 11% / 0.04), 0 12px 32px -14px hsl(191 88% 27% / 0.22);
   --shadow-glass-strong: 0 1px 2px hsl(205 32% 11% / 0.06), 0 24px 56px -20px hsl(205 32% 11% / 0.3);
   --shadow-pop: 0 1px 2px hsl(205 32% 11% / 0.05), 0 18px 40px -18px hsl(205 32% 11% / 0.22);
@@ -157,6 +162,7 @@
   --mesh-2: hsl(166 64% 34% / 0.18);
   --mesh-3: hsl(207 67% 33% / 0.24);
   --noise-opacity: 0.05;
+  --scrim: hsl(0 0% 0% / 0.6);
   --shadow-glass: 0 1px 2px hsl(0 0% 0% / 0.4), 0 16px 40px -18px hsl(0 0% 0% / 0.7);
   --shadow-glass-strong: 0 1px 2px hsl(0 0% 0% / 0.5), 0 28px 64px -20px hsl(0 0% 0% / 0.8);
   --shadow-pop: 0 1px 2px hsl(0 0% 0% / 0.4), 0 18px 40px -18px hsl(0 0% 0% / 0.7);

@@ -35,6 +35,8 @@ const config: Config = {
           strong: 'hsl(var(--secondary-strong) / <alpha-value>)',
         },
         canvas: 'hsl(var(--canvas) / <alpha-value>)',
+        // A complete colour with its alpha built in: the dim behind dialogs.
+        scrim: 'var(--scrim)',
         chart: {
           1: 'hsl(var(--chart-1) / <alpha-value>)',
           2: 'hsl(var(--chart-2) / <alpha-value>)',

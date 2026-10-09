@@ -120,6 +120,26 @@ describe('text on glass', () => {
   }
 });
 
+// Plain page content sits on the canvas with the mesh at --mesh-strength (globals.css): text stays AA and control outlines
+// keep 3:1 there without any glass.
+describe('content on the app mesh', () => {
+  for (const [name, theme] of [['light', light], ['dark', { ...light, ...dark }]] as const) {
+    const canvas = rgbOf(theme.canvas ?? '');
+    const strength = parseFloat(theme['mesh-strength'] ?? '1');
+    const backdrops = [canvas, ...['mesh-1', 'mesh-2', 'mesh-3'].map((k) => {
+      const m = hslaOf(theme[k] ?? '');
+      return over({ rgb: m.rgb, alpha: m.alpha * strength }, canvas);
+    })];
+    const worst = (fg: string) => Math.min(...backdrops.map((b) => ratio(rgbOf(theme[fg] ?? ''), b)));
+    it.each(['foreground', 'muted-foreground', 'accent', 'success', 'warning', 'danger', 'info'])(`%s on the mesh meets AA in the ${name} theme`, (fg) => {
+      expect(worst(fg)).toBeGreaterThanOrEqual(4.5);
+    });
+    it(`input outlines on the mesh meet 3:1 in the ${name} theme`, () => {
+      expect(worst('input')).toBeGreaterThanOrEqual(3);
+    });
+  }
+});
+
 function toHex(channels: string): string {
   return `#${rgbOf(channels).map((c) => Math.round(255 * c).toString(16).padStart(2, '0')).join('')}`;
 }
@@ -127,8 +147,9 @@ function toHex(channels: string): string {
 describe('brand hex values', () => {
   it('match the HSL tokens they mirror (manifest, theme-color)', () => {
     const darkTheme = { ...light, ...dark };
-    expect(BRAND_HEX.light).toEqual({ background: toHex(light.background ?? ''), accent: toHex(light.accent ?? '') });
-    expect(BRAND_HEX.dark).toEqual({ background: toHex(darkTheme.background ?? ''), accent: toHex(darkTheme.accent ?? '') });
+    for (const [hex, theme] of [[BRAND_HEX.light, light], [BRAND_HEX.dark, darkTheme]] as const) {
+      expect(hex).toEqual({ background: toHex(theme.background ?? ''), canvas: toHex(theme.canvas ?? ''), accent: toHex(theme.accent ?? '') });
+    }
   });
 });
 

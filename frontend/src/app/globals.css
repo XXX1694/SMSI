@@ -11,7 +11,27 @@
   html { color-scheme: light; }
   html.dark { color-scheme: dark; }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-canvas text-foreground antialiased;
+  }
+  /* The mesh behind every glass surface (D-024): one fixed layer, painted once and never scrolled, plus a faint grain. */
+  body::before,
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  body::before {
+    opacity: var(--mesh-strength);
+    background:
+      radial-gradient(42rem 32rem at 8% 0%, var(--mesh-1), transparent 70%),
+      radial-gradient(36rem 30rem at 92% 18%, var(--mesh-3), transparent 70%),
+      radial-gradient(40rem 34rem at 60% 100%, var(--mesh-2), transparent 70%);
+  }
+  body::after {
+    opacity: var(--noise-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   /* The face after Onest in the sans stack. Scoped to <html lang>, so an endonym like 日本語 in the language menu of an
      English page uses a system font and never downloads a script face. */
@@ -62,6 +82,35 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
 }
 
 @layer components {
+  /* Glass (D-024). chrome: sidebar and headers. card: translucent panels, no blur (the mesh behind is already soft).
+     float: popovers, menus, toasts. panel: dialogs, a solid fill with the glass edge, over a plain scrim (no blur). At most two blurred layers on
+     screen, and never on anything that scrolls under the pointer. */
+  .glass-chrome {
+    background-color: var(--glass-chrome);
+    -webkit-backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-chrome)) saturate(var(--glass-saturate));
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-highlight);
+  }
+  .glass-card {
+    background-color: var(--glass-card);
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-highlight), var(--shadow-glass);
+  }
+  .glass-float {
+    background-color: var(--glass-strong);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-highlight), var(--shadow-glass-strong);
+  }
+  /* Solid fill: without a blur behind it, any translucency would let the page's text show through the dialog's. */
+  .glass-panel {
+    background-color: hsl(var(--background));
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-highlight), var(--shadow-glass-strong);
+  }
+
   /* First-load list stagger: children rise in one after another (capped, so long lists do not crawl). */
   .stagger > * { animation: rise-in var(--duration-slow) var(--ease-enter) backwards; }
   .stagger > :nth-child(2) { animation-delay: calc(var(--stagger-step) * 1); }
@@ -86,6 +135,19 @@ html[data-demo] [data-app-header] { top: calc(1.75rem + env(safe-area-inset-top)
     background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
     animation: shimmer var(--duration-shimmer) var(--ease-standard) infinite;
   }
+}
+
+/* Glass fallbacks: no backdrop-filter (old engines), reduced transparency, and forced colours (Windows high contrast). */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-chrome, .glass-float { background-color: hsl(var(--surface)); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-chrome, .glass-card, .glass-float, .glass-panel { background-color: hsl(var(--background)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body::before, body::after { display: none; }
+}
+@media (forced-colors: active) {
+  .glass-chrome, .glass-card, .glass-float, .glass-panel { background-color: Canvas; border-color: CanvasText; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body::before, body::after { display: none; }
 }
 
 /* Page enter: the fallback for browsers without the View Transitions API (and for navigations that skip it). */
