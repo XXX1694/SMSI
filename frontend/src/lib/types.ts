@@ -47,6 +47,10 @@ export interface Me {
   verification_enforced: boolean;
   /** "log" means mail is only written to the server log, so nobody receives it. */
   mail_delivery: 'log' | 'smtp';
+  /** When the account will be deleted for good; null unless the owner asked and has not cancelled. */
+  deletion_scheduled_at: string | null;
+  /** Days between asking for deletion and the data going. */
+  deletion_grace_days: number;
 }
 
 export interface Capabilities {
@@ -312,4 +316,22 @@ export interface Approval {
   expires_at: string;
   decided_at: string | null;
   created_at: string;
+}
+
+export type DataExportStatus = 'pending' | 'running' | 'ready' | 'failed' | 'expired';
+
+/** One account data export (`/account/exports`). `expires_at` is when a ready ZIP is deleted. */
+export interface DataExport {
+  id: string;
+  status: DataExportStatus;
+  size_bytes: number;
+  error_code: string | null;
+  created_at: string;
+  expires_at: string | null;
+}
+
+/** `GET /account/exports/{id}` for a ready export: a download URL that works for `url_expires_at` only. */
+export interface DataExportLink extends DataExport {
+  url: string;
+  url_expires_at: string;
 }

@@ -6,10 +6,16 @@ import { Select } from '@/components/ui/input';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { metricLabel, summarizeMetrics } from '@/lib/analytics';
-import { providerLabel } from '@/lib/normalize';
+import { joinList } from '@/lib/format';
+import { useProviderName } from '@/i18n/use-provider-name';
 import { useAsync } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
+import { useFormat } from '@/i18n/use-format';
 
 export function AnalyticsView() {
+  const t = useTranslations();
+  const providerName = useProviderName();
+  const fmt = useFormat();
   const [days, setDays] = useState(30);
   const load = useCallback(async () => {
     const to = new Date();
@@ -27,40 +33,40 @@ export function AnalyticsView() {
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-3">
         <label className="space-y-1.5 text-sm font-medium">
-          <span>Period</span>
+          <span>{t('analytics.period')}</span>
           <Select value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-40 font-normal">
-            <option value={7}>Last 7 days</option>
-            <option value={30}>Last 30 days</option>
-            <option value={90}>Last 90 days</option>
+            {[7, 30, 90].map((d) => (
+              <option key={d} value={d}>
+                {t('analytics.lastDays', { days: d })}
+              </option>
+            ))}
           </Select>
         </label>
       </div>
       {withAnalytics.length === 0 ? (
-        <Notice tone="info">
-          None of the connected networks report analytics yet.
-        </Notice>
+        <Notice tone="info">{t('analytics.none')}</Notice>
       ) : (
-        <p className="text-sm text-muted-foreground">Analytics supported by: {withAnalytics.map((p) => providerLabel(p.id)).join(', ')}.</p>
+        <p className="text-sm text-muted-foreground">{t('analytics.supportedBy', { networks: joinList(withAnalytics.map((p) => providerName(p.id)), t) })}</p>
       )}
       {data.metrics.length === 0 ? (
-        <EmptyState title="No analytics data in this period">Metrics will appear here once a connected network reports them.</EmptyState>
+        <EmptyState title={t('analytics.emptyTitle')}>{t('analytics.emptyBody')}</EmptyState>
       ) : (
-        <Table label="Metrics">
+        <Table label={t('analytics.tableLabel')}>
           <Thead>
             <Tr>
-              <Th>Metric</Th>
-              <Th align="right">Latest</Th>
-              <Th align="right">Total</Th>
-              <Th>Trend</Th>
+              <Th>{t('analytics.colMetric')}</Th>
+              <Th align="right">{t('analytics.colLatest')}</Th>
+              <Th align="right">{t('analytics.colTotal')}</Th>
+              <Th>{t('analytics.colTrend')}</Th>
             </Tr>
           </Thead>
           <Tbody>
             {data.metrics.map((m) => (
               <Tr key={m.metric}>
-                <Td label="Metric">{metricLabel(m.metric)}</Td>
-                <Td label="Latest" align="right" className="tabular-nums">{m.latest.toLocaleString()}</Td>
-                <Td label="Total" align="right" className="tabular-nums">{m.total.toLocaleString()}</Td>
-                <Td label="Trend"><Sparkline values={m.series} label={`${metricLabel(m.metric)} trend`} /></Td>
+                <Td label={t('analytics.colMetric')}>{metricLabel(m.metric, t)}</Td>
+                <Td label={t('analytics.colLatest')} align="right" className="tabular-nums">{fmt.number(m.latest)}</Td>
+                <Td label={t('analytics.colTotal')} align="right" className="tabular-nums">{fmt.number(m.total)}</Td>
+                <Td label={t('analytics.colTrend')}><Sparkline values={m.series} label={t('analytics.trend', { metric: metricLabel(m.metric, t) })} /></Td>
               </Tr>
             ))}
           </Tbody>

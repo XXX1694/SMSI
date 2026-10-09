@@ -19,6 +19,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
+import { DeletionBanner } from '@/components/deletion-banner';
 import { Logo } from '@/components/brand/logo';
 import { EmailBanner } from '@/components/email-banner';
 import { PageTransition } from '@/components/page-transition';
@@ -56,6 +57,7 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
   const t = useTranslations('nav');
+  const ts = useTranslations('shell');
   return (
     <TransitionLink
       href={item.href}
@@ -70,8 +72,8 @@ function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () =>
       {t(item.labelKey)}
       {badge ? (
         <span className="ml-auto rounded-full bg-warning-soft px-1.5 text-xs font-medium text-warning">
-          {badge > 99 ? '99+' : badge}
-          <span className="sr-only"> waiting</span>
+          <span aria-hidden>{ts('navBadge', { count: badge, over: String(badge > 99) })}</span>
+          <span className="sr-only">{ts('navWaiting', { count: badge })}</span>
         </span>
       ) : null}
     </TransitionLink>
@@ -125,18 +127,20 @@ function useEscapeToClose(open: boolean, setOpen: (v: boolean) => void, returnFo
 
 /** First tab stop: jumps over the sidebar to the page content. */
 function SkipLink() {
+  const t = useTranslations('shell');
   return (
     <a
       href="#main"
       className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-3 focus-visible:top-10 focus-visible:z-toast focus-visible:rounded-md focus-visible:border focus-visible:bg-background focus-visible:px-4 focus-visible:py-2.5 focus-visible:text-sm focus-visible:font-medium"
     >
-      Skip to content
+      {t('skipToContent')}
     </a>
   );
 }
 
 function SidebarFooter({ email, name, onSignOut }: { email?: string; name?: string; onSignOut: () => void }) {
   const { available } = useLocaleSettings();
+  const t = useTranslations('shell');
   return (
     <>
       <LegalLinks className="mt-3 px-2.5" />
@@ -149,7 +153,7 @@ function SidebarFooter({ email, name, onSignOut }: { email?: string; name?: stri
         <span className="truncate text-xs text-muted-foreground" title={email}>
           {name || email}
         </span>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onSignOut} aria-label="Sign out">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onSignOut} aria-label={t('signOut')}>
           <LogOut className="h-4 w-4" aria-hidden />
         </Button>
       </div>
@@ -158,6 +162,7 @@ function SidebarFooter({ email, name, onSignOut }: { email?: string; name?: stri
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const t = useTranslations('shell');
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -180,11 +185,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header data-app-header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:hidden">
         <Logo animate />
         {pending ? (
-          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center rounded-full bg-warning-soft px-3 text-xs font-medium text-warning">
-            {pending === 1 ? '1 request waits for you' : `${pending} requests wait for you`}
+          <TransitionLink href="/approvals" className="ml-auto mr-2 inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-warning-soft px-3 text-xs font-medium text-warning">
+            <span aria-hidden className="inline-flex items-center gap-1 sm:hidden">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {pending}
+            </span>
+            <span className="sr-only sm:not-sr-only">{t('requestsWaiting', { count: pending })}</span>
           </TransitionLink>
         ) : null}
-        <Button ref={toggle} variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="sidebar">
+        <Button ref={toggle} variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? t('closeMenu') : t('openMenu')} aria-expanded={open} aria-controls="sidebar">
           {open ? <X className="h-4 w-4" aria-hidden /> : <Menu className="h-4 w-4" aria-hidden />}
         </Button>
       </header>
@@ -198,7 +207,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mb-4 hidden px-2.5 pt-1 md:block">
           <Logo animate />
         </div>
-        <nav ref={nav} aria-label="Main" data-indicator={box ? 'on' : 'off'} className="group/nav relative flex flex-1 flex-col gap-0.5">
+        <nav ref={nav} aria-label={t('mainNav')} data-indicator={box ? 'on' : 'off'} className="group/nav relative flex flex-1 flex-col gap-0.5">
           <span
             aria-hidden
             data-testid="nav-indicator"
@@ -221,6 +230,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SidebarFooter email={user?.email} name={user?.display_name} onSignOut={signOut} />
       </aside>
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
+        <DeletionBanner />
         <EmailBanner />
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">
           <PageTransition>{children}</PageTransition>

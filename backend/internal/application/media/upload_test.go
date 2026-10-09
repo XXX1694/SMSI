@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/png"
 	"io"
 	"runtime"
 	"sync"
@@ -335,4 +337,32 @@ func TestUploadOneSlotPerUser(t *testing.T) {
 	if _, err := svc.Upload(context.Background(), alice, UploadInput{File: &stream{head: mp4Header, pad: 100}}); err != nil {
 		t.Fatalf("slot leaked after a rejected upload: %v", err)
 	}
+}
+
+// failingRepo refuses the row like the database does for an owner who is being deleted.
+type failingRepo struct{ fakeRepo }
+
+func (r *failingRepo) Create(context.Context, *domain.Media) error {
+	return errs.New(errs.Forbidden, "account is not active")
+}
+
+// The purge may sweep the storage prefix between the Put and the insert; when the insert is refused, the object that
+// the upload stored must be removed again.
+func TestUploadRemovesTheObjectWhenTheOwnerIsNoLongerActive(t *testing.T) {
+	st := newSink()
+	svc := NewService(&failingRepo{}, st, noAudit{}, fixedClock{})
+	_, err := svc.Upload(context.Background(), owner(), UploadInput{File: bytes.NewReader(tinyPNG(t)), OriginalName: "a.png"})
+	_ = wantCode(t, err, errs.Forbidden)
+	if st.count() != 0 || len(st.deleted) == 0 {
+		t.Fatalf("objects left = %d, deleted = %v; the stored object must be removed", st.count(), st.deleted)
+	}
+}
+
+func tinyPNG(t *testing.T) []byte {
+	t.Helper()
+	var b bytes.Buffer
+	if err := png.Encode(&b, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
+		t.Fatal(err)
+	}
+	return b.Bytes()
 }

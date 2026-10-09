@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addDays, addMonths, monthGrid, shift, startOfWeek, visibleRange, weekDays } from '@/lib/calendar';
 import { formatBytes, validateMediaFile } from '@/lib/media';
 import { summarizeMetrics } from '@/lib/analytics';
+import { enT } from '@/i18n/en';
 
 describe('calendar math', () => {
   it('starts weeks on Monday', () => {
@@ -28,19 +29,19 @@ describe('calendar math', () => {
 
 describe('media validation', () => {
   it('accepts allowed types within limits', () => {
-    expect(validateMediaFile({ name: 'a.png', type: 'image/png', size: 1000 })).toBeNull();
-    expect(validateMediaFile({ name: 'a.mp4', type: 'video/mp4', size: 50 * 1024 * 1024 })).toBeNull();
+    expect(validateMediaFile({ name: 'a.png', type: 'image/png', size: 1000 }, enT)).toBeNull();
+    expect(validateMediaFile({ name: 'a.mp4', type: 'video/mp4', size: 50 * 1024 * 1024 }, enT)).toBeNull();
   });
   it('rejects wrong types and oversize files', () => {
-    expect(validateMediaFile({ name: 'a.pdf', type: 'application/pdf', size: 1 })).toMatch(/unsupported/);
-    expect(validateMediaFile({ name: 'big.jpg', type: 'image/jpeg', size: 11 * 1024 * 1024 })).toMatch(/too large/);
-    expect(validateMediaFile({ name: 'big.mov', type: 'video/quicktime', size: 101 * 1024 * 1024 })).toMatch(/too large/);
-    expect(validateMediaFile({ name: 'e.png', type: 'image/png', size: 0 })).toMatch(/empty/);
+    expect(validateMediaFile({ name: 'a.pdf', type: 'application/pdf', size: 1 }, enT)).toMatch(/unsupported/);
+    expect(validateMediaFile({ name: 'big.jpg', type: 'image/jpeg', size: 11 * 1024 * 1024 }, enT)).toMatch(/too large/);
+    expect(validateMediaFile({ name: 'big.mov', type: 'video/quicktime', size: 101 * 1024 * 1024 }, enT)).toMatch(/too large/);
+    expect(validateMediaFile({ name: 'e.png', type: 'image/png', size: 0 }, enT)).toMatch(/empty/);
   });
   it('formats bytes', () => {
-    expect(formatBytes(512)).toBe('512 B');
-    expect(formatBytes(2048)).toBe('2 KB');
-    expect(formatBytes(5 * 1024 * 1024)).toBe('5.0 MB');
+    expect(formatBytes(512, enT)).toBe('512 B');
+    expect(formatBytes(2048, enT)).toBe('2 KB');
+    expect(formatBytes(5 * 1024 * 1024, enT)).toBe('5.0 MB');
   });
 });
 

@@ -408,6 +408,109 @@ and story sweep (WCAG 2.2.2); it is not offered under reduced motion, where noth
 from the `mermaid` npm package (MIT, 3.5 MB, loaded only on pages with diagrams) instead of jsDelivr, so the site makes no
 third-party request.
 
+## D-018: Account data export is a ZIP streamed by the worker into the user's S3 prefix (2026-10-09)
+
+**Context.** The Privacy Policy promised export "later". An export has to include media files, so it cannot be one JSON
+response, and the production caps (backend 160m, worker 160m, D-015) rule out building an archive in memory or on the
+container's layer.
+
+**Decision.**
+- A browser session (never an API key) asks `POST /account/exports`. The API inserts a `data_exports` row (`pending`) and
+  enqueues `account:export {export_id}` with `MaxRetry(0)` and `Retention(0)` (no task id: an archived task would keep its id and block re-queueing; a duplicate task is harmless because the build claims the row). A
+  failed build is recorded on the row (`failed` plus a short `error_code`) and the user asks again; retrying blindly would
+  redo hours of work. Migration 00003's partial unique index allows one `pending|running` export per user (`409`).
+  A successful export blocks the next request for 24 hours (`429` with `Retry-After`); when a new one is made the old
+  ZIP is expired and deleted, so each user holds at most one archive.
+- Exports run on their own queue (`<queue>-exports`) served by a second Asynq server with concurrency 1: one build at a
+  time per worker, and a long build never takes a slot from publishing. The worker claims the row atomically (`pending` to
+  `running`; a second delivery finds nothing to claim). The ZIP is written into an `io.Pipe` that `Storage.Put` reads with unknown size, which
+  D-015 already made a bounded 5 MiB part upload: no temp file, no whole-archive buffer. JSON is deflated and read from
+  Postgres in keyset batches of 200 rows (`id > after`, `(user_id, id)` indexes in migration 00005); media files are
+  copied from S3 through a 32 KiB buffer and stored uncompressed. Worker memory is the batch plus one part, independent
+  of the account size.
+- Each dataset is one SQL statement with an explicit column list that renders JSON in the database, so no password hash,
+  token hash, key hash, encrypted credential, session or CSRF value is selected at all, and a column added later is not
+  exported until someone adds it. Contents: `profile`, `social_accounts` (no credentials), `posts` (with targets and
+  attempts), `media` and `media/<id><ext>`, `api_keys` and `mcp_connections` (prefix only), `approvals`, `audit_logs`,
+  `README.txt`. An unreadable media object is listed in `media/MISSING.txt`; any other failure fails the export and the
+  object is deleted.
+- The archive lives at `users/<uid>/exports/<id>.zip`. `GET /account/exports/{id}` (session, tenant-scoped, audited)
+  returns a presigned URL valid for 5 minutes, only while the export is `ready` and before `expires_at`
+  (`EXPORT_RETENTION_DAYS`, default 7, at most 30). An hourly worker sweep deletes expired archives, fails a `running`
+  export older than 2 hours (a crashed worker) and re-enqueues a `pending` one older than 10 minutes (a lost task) and fails one older than 2 hours.
+- Audit: `account.export_requested`, `account.export_ready`, `account.export_failed`, `account.export_downloaded`.
+
+**Alternatives.** A synchronous JSON response: no media, and a request that holds memory. Proxying the download through
+the API: the API's 160m would carry multi-hundred-megabyte transfers; a presigned URL sends the bytes from S3 directly (the
+same as media URLs). A temp file then `Put` with the known size: needs disk the containers do not have. An email with the
+link: mail may be off (`MAIL_PROVIDER=log`) and the link would sit in a mailbox for days; the Settings page polls instead.
+
+**Consequences.** A presigned URL is a bearer link for five minutes; anyone who gets it can download the archive in that
+window, which is why it is short and why `GET` is audited. The 5 MiB part size caps an archive at about 50 GB on S3, far
+above the per-user media quota. The partial unique index means a crash that leaves a row `running` blocks the user until
+the sweep fails it (at most 2 hours plus the sweep interval).
+
+Accepted for now: with concurrency 1, an export queued behind others for more than 2 hours is failed by the sweep while
+still `pending` (`export.go`, `runningLimit`), and the user asks again. A build also needs its `MarkReady` to find the row
+`running`; if the sweep failed it first, the archive is deleted and the failure stands. On shutdown the export server waits
+only `ExportShutdownTimeout` (5 s by default) in parallel with the publish server, so a build in flight is marked
+`interrupted`; the upload itself is bounded by the build budget (90 minutes), not the 30 minutes of an ordinary upload.
+
+## D-019: Account deletion has a grace period, an explicit cancel, and a batched purge by the worker (2026-10-09)
+
+**Context.** The Privacy Policy said deletion would exist "later". Deleting an account is irreversible and removes rows in
+a dozen tables plus S3 objects; a stolen session must not be able to destroy data at once, the worker has 160m, and a
+single `DELETE FROM users` would run one huge transaction and could trip `post_media.media_id ... ON DELETE RESTRICT`.
+
+**Decision.**
+- `POST /account/delete {password, confirm}` needs a browser session (an API key gets `403`), the **current password**
+  (wrong: `400` with `fields.password`; the hasher's `429` passes through) and the account's **email typed** as
+  confirmation (`fields.confirm`). It is rate-limited like password change (`reauth:`).
+- Success schedules the deletion `ACCOUNT_DELETION_GRACE_DAYS` ahead (default 7, 1 to 30; `users.deletion_scheduled_at`,
+  migration 00006) and answers `202 {status:"scheduled", scheduled_for}`. In one transaction every session is deleted, every
+  API key and MCP connection is revoked, an `account_deletions` record is written and `account.deletion_scheduled` is
+  audited; after the commit, every scheduled post goes back to a draft (queue tasks removed), and the publisher skips
+  whatever is still due (a scheduled post becomes a draft the same way; a publishing one fails its target with
+  `ACCOUNT_DELETION_SCHEDULED` and can be retried after a cancel), so nothing is published during the grace period. The owner gets a mail (`account_deletion_scheduled`) that says how to cancel, which is also the alarm when
+  someone else did it. The cookies are cleared.
+- The account stays `active` during the grace period. Signing in works, `/me` carries `user.deletion_scheduled_at`, the web
+  app shows a banner with **Cancel deletion** (`POST /account/delete/cancel`, session, `409` when nothing is scheduled), and
+  export still works. Cancelling clears the schedule and the record; sessions and keys stay revoked and posts stay drafts.
+  Signing in alone does **not** cancel: an accidental sign-in must not undo a decision, and the banner makes the state visible.
+- The hourly worker sweep queues `account:purge {user_id}` (on the maintenance queue `<queue>-exports`, one at a time, Asynq `Unique(55m)`, `MaxRetry(2)`; the hourly sweep is the outer retry loop) for accounts whose date
+  has passed, and for accounts a previous purge left half done. The purge: (1) **claims** the account atomically
+  (`status='deleted'`, `deleted_at`; from then on login, sessions and keys fail on their own); a cancelled, unknown or
+  not-yet-due account is a no-op; (2) fails with a retryable error while a post is `publishing` or an export is being built;
+  (3) stores row counts once; (4) deletes in batches of 200, in this order: `posts` (cascades to targets, media links, jobs,
+  attempts), `audit_logs`, `analytics`, `action_approvals`; (5) per batch of media, the S3 objects first, then the rows;
+  (6) export archives; (7) one transaction deletes the user row (cascades to sessions, accounts and their encrypted
+  credentials, keys, MCP connections, link codes, tokens, export rows) and stamps `account_deletions.purged_at`;
+  (8) mails `account_deleted`. Every step deletes only what is still there, so a retry or a concurrent run is safe.
+- Posts go before media (`RESTRICT`) and before social accounts (`post_targets` has no cascade). Migration 00007 adds, concurrently, the
+  missing indexes on `scheduled_jobs(post_target_id)` and `analytics(post_target_id)`, which the cascades would otherwise
+  scan per deleted target.
+- What stays: `account_deletions(user_id, requested_at, purged_at, counts)`: numbers and ids, no email, no content, no foreign
+  key. The audit log is deleted with the account (it is the user's data); the durable evidence is this record.
+- Credentials of connected networks are **not** destroyed at request time: that would make cancelling a lie. They go with
+  the purge.
+
+**Alternatives.** Immediate irreversible deletion (the first plan): one stolen session, or one mis-click, loses everything.
+A cancel that happens on sign-in: simpler, but silent. Soft delete forever: not deletion. One `DELETE FROM users` cascade:
+a long transaction in the 160m worker, and the `RESTRICT` ordering risk. Anonymising the audit log instead of deleting it:
+it is still personal data about the user's actions and an agent's, and an anonymised log helps nobody.
+
+**Consequences.** Data lives up to the grace period plus an hour after a request, and backups keep it as long as the
+operator keeps them (the Privacy Policy says so). The email address is unavailable for registration until the purge ends.
+Counts are those of the first purge attempt. A post stuck `publishing` delays a purge until the reconciler settles it.
+
+Addendum (review): the legal version is bumped to 2026-10-10 because the Privacy Policy now describes export and
+deletion, which changes its meaning. As D-016 says, a bump only affects new accounts; existing users are not asked to
+accept again. While a deletion is scheduled the account refuses scheduling and publishing (`409`, `RequireNotDeleting`,
+set at authentication), the publisher skips due jobs of such accounts (the post goes back to a draft, audited as
+`post.unscheduled` with reason `account_deletion`), access is revoked in the same transaction that sets the schedule
+(posts are unscheduled right after, and again by the purge after it claims the account), and the purge removes every
+object under `users/<uid>/` (S3 listing) after the keys it knows, so failed-export leftovers go too.
+
 ## D-020: The product is renamed Steerpost; stored and host identifiers keep the `socialos` name (2026-10-09)
 
 **Decision.** The product, the MCP server, the generated client configs, the images, the npm packages and the Go module are
@@ -462,6 +565,7 @@ message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for
 **Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
 hint outside `en` until field codes exist. A release is blocked by missing keys or failed checks, not by draft status.
 Localized emails need a later decision built on `users.locale`.
+The English catalog (about 10.5 kB gzipped) is statically imported, so it adds 13 to 16 kB to first-load JS on every app and auth route (for example `/login` 131 to 147 kB); loading a catalog per namespace so auth pages fetch only nav/common/errors/auth/legal is a planned follow-up.
 
 ## D-022: Steerpost is licensed under the AGPL-3.0 (2026-10-09)
 

@@ -26,9 +26,7 @@ func TestMigration00004ApprovesExistingKeysAndRollsBack(t *testing.T) {
 
 	// A key that exists before the migration must come out with the safe policy. Roll back to 00003, i.e. undo 00004
 	// and everything above it.
-	if err := postgres.MigrateDownTo(ctx, url, 3, testutil.Logger()); err != nil {
-		t.Fatalf("down to 00003: %v", err)
-	}
+	downTo(t, url, 3)
 	if tbl, col := has(); tbl || col {
 		t.Fatalf("down: table=%v column=%v", tbl, col)
 	}

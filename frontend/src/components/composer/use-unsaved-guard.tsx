@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { useTranslations } from '@/i18n/use-translations';
 
 function internalTarget(e: MouseEvent): string | null {
   if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return null;
@@ -21,6 +22,7 @@ function internalTarget(e: MouseEvent): string | null {
  * inside the app (the App Router has no route-blocking API). Call `allowLeave()` right before navigating after a save.
  */
 export function useUnsavedGuard(dirty: boolean) {
+  const t = useTranslations('composer');
   const router = useRouter();
   const [href, setHref] = useState<string | null>(null);
   const allowed = useRef(false);
@@ -52,9 +54,9 @@ export function useUnsavedGuard(dirty: boolean) {
     <ConfirmDialog
       open={href !== null}
       onOpenChange={(o) => !o && setHref(null)}
-      title="Discard unsaved changes?"
-      description="You have changes that are not saved. If you leave now, they are lost."
-      confirmLabel="Discard changes"
+      title={t('discardTitle')}
+      description={t('discardBody')}
+      confirmLabel={t('discardConfirm')}
       destructive
       onConfirm={async () => {
         allowed.current = true;

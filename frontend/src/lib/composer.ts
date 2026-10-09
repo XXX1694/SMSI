@@ -1,3 +1,4 @@
+import type { AppT } from '@/i18n/translate';
 import type { Media, Provider, SocialAccount } from './types';
 
 export interface ComposerState {
@@ -30,27 +31,28 @@ export function validateComposer(
   state: ComposerState,
   accounts: SocialAccount[],
   providers: Provider[],
+  t: AppT,
   opts: { requireSchedule?: boolean; now?: Date } = {},
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   if (state.accountIds.length === 0) {
-    issues.push({ accountId: null, message: 'Select at least one account.' });
+    issues.push({ accountId: null, message: t('composer.v.selectAccount') });
   }
   const hasMedia = state.media.length > 0;
   for (const id of state.accountIds) {
     const account = accounts.find((a) => a.id === id);
     if (!account) {
-      issues.push({ accountId: id, message: 'Selected account no longer exists.' });
+      issues.push({ accountId: id, message: t('composer.v.accountGone') });
       continue;
     }
     const label = account.display_name || account.username;
     if (account.status !== 'active') {
-      issues.push({ accountId: id, message: `${label} needs reconnecting. Reconnect it in Accounts.` });
+      issues.push({ accountId: id, message: t('composer.v.needsReconnect', { account: label }) });
     }
     const provider = providers.find((p) => p.id === account.provider);
     const text = effectiveContent(state, id);
     if (text.trim() === '' && !hasMedia) {
-      issues.push({ accountId: id, message: `${label}: add text.` });
+      issues.push({ accountId: id, message: t('composer.v.addText', { account: label }) });
     }
     if (!provider) continue;
     const caps = provider.capabilities;
@@ -58,35 +60,32 @@ export function validateComposer(
     if (caps.maxTextLength > 0 && len > caps.maxTextLength) {
       issues.push({
         accountId: id,
-        message: `${label}: ${len - caps.maxTextLength === 1 ? '1 character' : `${len - caps.maxTextLength} characters`} over the ${provider.name} limit of ${caps.maxTextLength}.`,
+        message: t('composer.v.overLimit', { account: label, over: len - caps.maxTextLength, network: provider.name, limit: caps.maxTextLength }),
       });
     }
     if (caps.maxMediaCount >= 0 && state.media.length > caps.maxMediaCount) {
       issues.push({
         accountId: id,
-        message: caps.maxMediaCount === 1 ? `${label}: ${provider.name} allows 1 attachment at most.` : `${label}: ${provider.name} allows ${caps.maxMediaCount} attachments at most.`,
+        message: t('composer.v.mediaMax', { account: label, network: provider.name, max: caps.maxMediaCount }),
       });
     }
     if (state.media.some((m) => m.kind === 'image') && !caps.canPublishImage) {
-      issues.push({ accountId: id, message: `${label}: ${provider.name} does not support images here.` });
+      issues.push({ accountId: id, message: t('composer.v.noImages', { account: label, network: provider.name }) });
     }
     if (state.media.some((m) => m.kind === 'video') && !caps.canPublishVideo) {
-      issues.push({ accountId: id, message: `${label}: ${provider.name} does not support video here.` });
+      issues.push({ accountId: id, message: t('composer.v.noVideo', { account: label, network: provider.name }) });
     }
   }
   if (opts.requireSchedule) {
     const now = opts.now ?? new Date();
     if (!state.scheduledAtUtc) {
-      issues.push({ accountId: null, message: 'Choose a valid date and time to schedule.' });
+      issues.push({ accountId: null, message: t('composer.v.chooseTime') });
     } else if (new Date(state.scheduledAtUtc).getTime() <= now.getTime() + 60_000) {
-      issues.push({ accountId: null, message: SCHEDULE_TOO_SOON });
+      issues.push({ accountId: null, message: t('composer.v.tooSoon') });
     }
   }
   return issues;
 }
-
-/** One message for one rule: the composer and the post page both use it. */
-export const SCHEDULE_TOO_SOON = 'Choose a time at least 1 minute from now.';
 
 export function counterTone(len: number, max: number): 'ok' | 'warn' | 'over' {
   if (max <= 0) return 'ok';

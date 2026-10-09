@@ -1,7 +1,7 @@
 /** Version of the Terms and the Privacy Policy. The backend stores its own copy (backend/internal/domain/terms) and a Go test keeps them equal. */
-export const LEGAL_VERSION = '2026-10-09';
+export const LEGAL_VERSION = '2026-10-10';
 /** The day the current texts took effect. */
-export const LEGAL_EFFECTIVE_DATE = '2026-10-09';
+export const LEGAL_EFFECTIVE_DATE = '2026-10-10';
 
 export const OPERATOR_NAME_PLACEHOLDER = 'the operator of this Steerpost instance (name not set; the operator sets OPERATOR_NAME)';
 export const OPERATOR_CONTACT_PLACEHOLDER = 'not set; the operator sets OPERATOR_CONTACT';

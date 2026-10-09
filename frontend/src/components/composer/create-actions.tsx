@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { validateComposer, type ComposerState, type ValidationIssue } from '@/lib/composer';
 import { postHref } from '@/lib/demo/config';
+import { joinList } from '@/lib/format';
 import type { CreatePostInput, Provider, SocialAccount } from '@/lib/types';
-import { errorMessage } from '@/hooks';
+import { useErrorText } from '@/hooks';
 import { Feedback } from './issue-list';
+import { useTranslations } from '@/i18n/use-translations';
 
 type Action = 'draft' | 'schedule' | 'publish';
 
@@ -36,9 +38,12 @@ interface Props {
   selected: SocialAccount[];
 }
 
-const DONE: Record<Action, string> = { draft: 'Draft saved', schedule: 'Post scheduled', publish: 'Publishing started' };
+const DONE = { draft: 'draftSaved', schedule: 'postScheduled', publish: 'publishStarted' } as const satisfies Record<Action, string>;
 
 export function CreateActions({ state, title, accounts, providers, selected, onLeave }: Props) {
+  const t = useTranslations();
+  const tc = useTranslations('composer');
+  const errorText = useErrorText();
   const router = useRouter();
   const toast = useToast();
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
@@ -52,18 +57,18 @@ export function CreateActions({ state, title, accounts, providers, selected, onL
     try {
       const post = await api.posts.create(buildInput(state, title, action));
       if (action === 'publish') await api.posts.publish(post.id);
-      toast.success(DONE[action]);
+      toast.success(tc(DONE[action]));
       onLeave();
       router.push(postHref(post.id));
     } catch (e) {
-      setApiError(errorMessage(e));
+      setApiError(errorText(e));
       setBusy(false);
       throw e;
     }
   }
 
   async function submit(action: Action) {
-    const found = validateComposer(state, accounts, providers, { requireSchedule: action === 'schedule' });
+    const found = validateComposer(state, accounts, providers, t, { requireSchedule: action === 'schedule' });
     setIssues(found);
     if (found.length > 0) return;
     if (action === 'publish') {
@@ -82,21 +87,21 @@ export function CreateActions({ state, title, accounts, providers, selected, onL
       <Feedback issues={issues} apiError={apiError} />
       <div className="flex flex-wrap gap-2 border-t pt-6">
         <Button variant="secondary" disabled={busy} onClick={() => void submit('draft')}>
-          Save draft
+          {tc('saveDraft')}
         </Button>
         <Button variant="secondary" disabled={busy} onClick={() => void submit('schedule')}>
-          Schedule
+          {tc('scheduleAction')}
         </Button>
         <Button disabled={busy} onClick={() => void submit('publish')}>
-          Publish now
+          {tc('publishNow')}
         </Button>
       </div>
       <ConfirmDialog
         open={confirmPublish}
         onOpenChange={setConfirmPublish}
-        title="Publish now?"
-        description={`This posts to ${selected.map((a) => a.display_name || a.username).join(', ')} now. Steerpost cannot undo it.`}
-        confirmLabel="Publish now"
+        title={tc('publishConfirmTitle')}
+        description={tc('publishConfirmBody', { accounts: joinList(selected.map((a) => a.display_name || a.username), t) })}
+        confirmLabel={tc('publishNow')}
         onConfirm={() => run('publish')}
       />
     </>

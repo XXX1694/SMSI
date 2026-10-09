@@ -3,6 +3,7 @@ import type {
   ApiKey,
   Approval,
   AuditLog,
+  DataExport,
   McpConnection,
   Media,
   Post,
@@ -16,6 +17,8 @@ export interface DemoUser {
   email: string;
   password: string;
   display_name: string;
+  /** Set after "Delete account"; signing in shows it and the owner can cancel. */
+  deletion_scheduled_at?: string | null;
 }
 
 /** A post as stored: the public `Post` plus fields the server keeps but never returns. */
@@ -49,6 +52,8 @@ export interface DemoState {
   mcp_connections: McpConnection[];
   audit: AuditLog[];
   approvals: Approval[];
+  /** Data exports; absent in a copy saved before exports existed. */
+  exports?: DataExport[];
   links: DemoLink[];
   /** Request counts per key / connection id, shown on the usage panel. */
   usage: Record<string, number>;

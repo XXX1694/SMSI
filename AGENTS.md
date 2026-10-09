@@ -140,6 +140,9 @@ function means scrolling the file; imports from many layers at the top; two func
   labels on inputs, contrast AA.
 - **Privacy by default**: collect the minimum, no third-party trackers, export and deletion are always available.
 - UI copy, code, commits and docs are in English. Short sentences; one term per concept across UI, API and docs.
+- UI text lives in `frontend/messages/en.json` (ICU, with a note for translators in `meta.json`), never in JSX or `lib` code;
+  `npm run i18n:literals` fails the build on hard-coded strings. Counts and states are `plural` / `select` messages, never
+  string concatenation. See [translation-process](docs/copy/translation-process.md).
 - Design follows the repo's design language; new screens reuse existing components and tokens. Design skills
   (frontend-design, design-taste, web-design-guidelines, ui-ux-pro-max, …) inform choices but never override this file.
 

@@ -5,8 +5,9 @@ import type en from '../../messages/en.json';
 type Messages = typeof en;
 /** Dotted paths of every string in a catalog: `nav.dashboard`. */
 type Paths<T> = T extends string ? never : { [K in keyof T & string]: T[K] extends string ? K : `${K}.${Paths<T[K]>}` }[keyof T & string];
-/** Dotted paths of every object node in a catalog: `nav`. */
-export type Namespace = Exclude<{ [K in keyof Messages & string]: Messages[K] extends string ? never : K }[keyof Messages & string], never>;
+type ObjectKeys<T> = { [K in keyof T & string]: T[K] extends string ? never : K }[keyof T & string];
+/** Dotted paths of the object nodes of a catalog, one or two levels deep: `nav`, `developer.mcp`. */
+export type Namespace = ObjectKeys<Messages> | { [K in ObjectKeys<Messages>]: `${K}.${ObjectKeys<Messages[K]>}` }[ObjectKeys<Messages>];
 type Sub<T, P extends string> = P extends `${infer H}.${infer R}` ? (H extends keyof T ? Sub<T[H], R> : never) : P extends keyof T ? T[P] : never;
 export type KeysOf<N extends Namespace | undefined> = N extends Namespace ? Paths<Sub<Messages, N>> : Paths<Messages>;
 
@@ -14,6 +15,8 @@ export type Values = Record<string, IcuValue>;
 
 export interface Translator<K extends string = string> {
   (key: K, values?: Values): string;
+  /** The locale this translator formats for (`en`, `ru`, `en-XA`). */
+  readonly locale: string;
   /** Like `t`, but tag handlers (`<b>…</b>`) may return any value, e.g. a React element. */
   rich<R>(key: K, values: Record<string, IcuValue | ((chunks: R[]) => R)>): (string | R)[];
 }
@@ -38,6 +41,9 @@ function lookup(messages: Catalog, path: string): string | undefined {
   }
   return typeof cur === 'string' ? cur : undefined;
 }
+
+/** The root translator (full dotted keys). `lib/*` functions take one so they stay pure and testable. */
+export type AppT = Translator<KeysOf<undefined>>;
 
 export function createTranslator<N extends Namespace | undefined = undefined>(config: TranslatorConfig, ns?: N): Translator<KeysOf<N>> {
   const prefix = ns ? `${ns}.` : '';
@@ -69,5 +75,5 @@ export function createTranslator<N extends Namespace | undefined = undefined>(co
   };
   const t = (key: string, values: Values = {}) => run(key, values).join('');
   const rich = (key: string, values: FormatContext<unknown>['values']) => run(key, values);
-  return Object.assign(t, { rich }) as unknown as Translator<KeysOf<N>>;
+  return Object.assign(t, { rich, locale: config.locale }) as unknown as Translator<KeysOf<N>>;
 }

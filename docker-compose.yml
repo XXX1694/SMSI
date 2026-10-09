@@ -54,6 +54,10 @@ x-backend-env: &backend-env
   QUOTA_POSTS_PER_MONTH: ${QUOTA_POSTS_PER_MONTH:--1}
   QUOTA_MEDIA_MB: ${QUOTA_MEDIA_MB:--1}
   QUOTA_AGENT_RPM: ${QUOTA_AGENT_RPM:--1}
+  # Days a finished data export stays downloadable before the worker deletes it (D-018).
+  EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-7}
+  # Days an account stays recoverable after its owner asked for deletion (D-019).
+  ACCOUNT_DELETION_GRACE_DAYS: ${ACCOUNT_DELETION_GRACE_DAYS:-7}
 
 services:
   postgres:

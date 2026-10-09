@@ -19,6 +19,8 @@ import type {
 } from '../types';
 import { decide, findApproval, visibleApprovals } from './approvals';
 import { svgThumb } from './art';
+import { cancelDeletion, DEMO_GRACE_DAYS, requestDeletion } from './deletion';
+import { handleExports } from './exports';
 import type { DemoLink, DemoPost, DemoRequest, DemoResponse, DemoState, WireProvider } from './model';
 import { PROVIDERS } from './providers';
 import { demoQuotaError, demoUsage } from './quota';
@@ -354,6 +356,18 @@ export class DemoEngine {
 
     // ---- dashboard, analytics, audit
     if (path === '/account/usage' && m === 'GET') return ok(200, demoUsage(s, this.now()));
+    if (path === '/account/delete' && m === 'POST') {
+      const res = requestDeletion(s, body, this.now());
+      if (res.status === 202) this.touch();
+      return res;
+    }
+    if (path === '/account/delete/cancel' && m === 'POST') {
+      const res = cancelDeletion(s);
+      if (res.status === 204) this.touch();
+      return res;
+    }
+    const exported = handleExports(s, m, path, this.now(), () => this.touch());
+    if (exported) return exported;
     if (path === '/dashboard/summary' && m === 'GET') return ok(200, this.summary());
     if (path === '/analytics' && m === 'GET') return ok(200, { items: this.analytics(query) });
     if (path === '/audit-logs' && m === 'GET') return ok(200, paginate(query?.action ? s.audit.filter((a) => a.action === query.action) : s.audit, query));
@@ -406,8 +420,8 @@ export class DemoEngine {
     // The demo user is always verified and nothing is restricted.
     return {
       id, email, display_name, csrf_token: 'demo', scopes: ALL_SCOPES,
-      user: { id, email, display_name, email_verified: true, plan: 'free' },
-      verification_enforced: false, mail_delivery: 'log',
+      user: { id, email, display_name, email_verified: true, plan: 'free', deletion_scheduled_at: this.state.user.deletion_scheduled_at ?? null },
+      verification_enforced: false, mail_delivery: 'log', deletion_grace_days: DEMO_GRACE_DAYS,
     };
   }
 

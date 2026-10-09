@@ -47,7 +47,7 @@ func run() error {
 	defer a.Close()
 
 	srv := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: cfg.WorkerConc,
-		ShutdownTimeout: cfg.WorkerShutdownTimeout, Mailer: a.Mailer, Auth: a.Services.Auth}, a.Publisher, log)
+		ShutdownTimeout: cfg.WorkerShutdownTimeout, Mailer: a.Mailer, Auth: a.Services.Auth, Exports: a.Services.Exports, Purge: a.Services.Deletion}, a.Publisher, log)
 	if err := srv.Start(); err != nil {
 		return err
 	}
@@ -55,6 +55,7 @@ func run() error {
 	bg.Go(func() { a.Reconciler.Loop(ctx, cfg.ReconcileEvery) })
 	bg.Go(func() { serveHealth(ctx, a, cfg.WorkerHTTPAddr, log) })
 	bg.Go(func() { purgeApprovals(ctx, a, cfg.ApprovalRetention, log) })
+	bg.Go(func() { sweepAccountData(ctx, a, log) })
 	startTelegramIntake(ctx, bg, a, cfg, log)
 	log.Info("worker started", slog.String("queue", cfg.QueueName), slog.Int("concurrency", cfg.WorkerConc))
 	<-ctx.Done()
@@ -80,6 +81,28 @@ func purgeApprovals(ctx context.Context, a *app.App, retention time.Duration, lo
 			log.WarnContext(ctx, "approval retention failed", slog.Any("error", err))
 		} else if n > 0 {
 			log.InfoContext(ctx, "old approvals deleted", slog.Int64("count", n))
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
+}
+
+// sweepAccountData runs the owner-rights sweeps once an hour until ctx ends: it deletes expired export archives and
+// repairs stuck export rows, and queues the purge of accounts whose deletion grace period is over.
+func sweepAccountData(ctx context.Context, a *app.App, log *slog.Logger) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		if err := a.Services.Exports.Sweep(ctx); err != nil {
+			log.WarnContext(ctx, "export sweep failed", slog.Any("error", err))
+		}
+		if n, err := a.Services.Deletion.Sweep(ctx); err != nil {
+			log.WarnContext(ctx, "account deletion sweep failed", slog.Any("error", err))
+		} else if n > 0 {
+			log.InfoContext(ctx, "account purges queued", slog.Int("count", n))
 		}
 		select {
 		case <-ctx.Done():

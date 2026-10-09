@@ -8,15 +8,17 @@ import { api } from '@/lib/api';
 import type { Media } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAsync } from '@/hooks';
+import { useTranslations } from '@/i18n/use-translations';
 
 function Body({ selected, onDone }: { selected: Media[]; onDone: (m: Media[]) => void }) {
+  const t = useTranslations('media');
   const load = useCallback(() => api.media.list(), []);
   const { data, error, loading, reload } = useAsync(load);
   const [picked, setPicked] = useState<Media[]>(selected);
 
   if (loading) return <LoadingRows rows={2} />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
-  if (data.length === 0) return <p className="text-sm text-muted-foreground">Your library is empty. Upload a file first.</p>;
+  if (data.length === 0) return <p className="text-sm text-muted-foreground">{t('libraryEmpty')}</p>;
   const toggle = (m: Media) =>
     setPicked((cur) => (cur.some((x) => x.id === m.id) ? cur.filter((x) => x.id !== m.id) : [...cur, m]));
 
@@ -47,7 +49,7 @@ function Body({ selected, onDone }: { selected: Media[]; onDone: (m: Media[]) =>
         })}
       </ul>
       <DialogFooter>
-        <Button onClick={() => onDone(picked)}>{picked.length === 1 ? 'Attach 1 file' : `Attach ${picked.length} files`}</Button>
+        <Button onClick={() => onDone(picked)}>{t('attach', { count: picked.length })}</Button>
       </DialogFooter>
     </>
   );
@@ -64,9 +66,10 @@ export function MediaLibraryDialog({
   selected: Media[];
   onSelect: (m: Media[]) => void;
 }) {
+  const t = useTranslations('media');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Media library" description="Choose files to attach to this post.">
+      <DialogContent title={t('libraryTitle')} description={t('libraryBody')}>
         {open ? (
           <Body
             selected={selected}

@@ -1,5 +1,6 @@
 'use client';
 import { Field, Input } from '@/components/ui/input';
+import { useTranslations } from '@/i18n/use-translations';
 
 interface Props {
   date: string;
@@ -12,20 +13,20 @@ interface Props {
 }
 
 export function ScheduleFields({ date, time, timezone, onDate, onTime, note }: Props) {
+  const t = useTranslations('composer');
   return (
     <fieldset className="space-y-2">
-      {/* Translator note: "Schedule" here is a noun (section title). The button "Schedule" is a verb: use two keys. */}
-      <legend className="text-sm font-semibold">Schedule</legend>
+      <legend className="text-sm font-semibold">{t('schedule')}</legend>
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="Date" htmlFor="sched-date">
+        <Field label={t('date')} htmlFor="sched-date">
           <Input id="sched-date" type="date" value={date} onChange={(e) => onDate(e.target.value)} className="w-40" />
         </Field>
-        <Field label="Time" htmlFor="sched-time">
+        <Field label={t('time')} htmlFor="sched-time">
           <Input id="sched-time" type="time" value={time} onChange={(e) => onTime(e.target.value)} className="w-32" />
         </Field>
       </div>
       <p className="text-xs text-muted-foreground">
-        Time zone: {timezone}. Change it in Settings.
+        {t('timezoneNote', { timezone })}
         {note ? ` ${note}` : ''}
       </p>
     </fieldset>

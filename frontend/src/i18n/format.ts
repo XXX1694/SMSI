@@ -1,6 +1,7 @@
 /**
- * Intl-based formatting that honours the locale and the Settings timezone. These are the only formatters the UI should
- * use; `lib/time.ts` and `lib/calendar.ts` still hard-code `en-GB` until the formatting PR moves them over.
+ * Intl-based formatting that honours the locale and the Settings timezone. These are the only date and number formatters
+ * the UI should use (components get them bound to the user's settings from `useFormat`); `lib/time.ts` keeps the
+ * zone arithmetic and `lib/calendar.ts` the calendar grid, and both take the locale from here (`formatTag`).
  */
 import { formatTag } from '@/i18n/locales';
 

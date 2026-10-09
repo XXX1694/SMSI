@@ -1,23 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { accountStatusView, attemptStatusView, postActions, postStatusView, targetStatusView } from '@/lib/status';
+import { enT } from '@/i18n/en';
 
 describe('state to badge mapping', () => {
   it('maps post statuses', () => {
-    expect(postStatusView('draft')).toEqual({ label: 'Draft', tone: 'neutral' });
-    expect(postStatusView('scheduled').tone).toBe('accent');
-    expect(postStatusView('published').tone).toBe('success');
-    expect(postStatusView('partially_published')).toEqual({ label: 'Partially published', tone: 'warning' });
-    expect(postStatusView('failed').tone).toBe('danger');
+    expect(postStatusView('draft', enT)).toEqual({ label: 'Draft', tone: 'neutral' });
+    expect(postStatusView('scheduled', enT).tone).toBe('accent');
+    expect(postStatusView('published', enT).tone).toBe('success');
+    expect(postStatusView('partially_published', enT)).toEqual({ label: 'Partially published', tone: 'warning' });
+    expect(postStatusView('failed', enT).tone).toBe('danger');
   });
   it('maps target, account and attempt statuses', () => {
-    expect(targetStatusView('needs_review').tone).toBe('warning');
-    expect(accountStatusView('expired').tone).toBe('warning');
-    expect(accountStatusView('expired').label).toBe('Needs reconnecting');
-    expect(targetStatusView('needs_review').label).toBe('Unconfirmed');
-    expect(attemptStatusView('unknown').label).toBe('Unconfirmed');
+    expect(targetStatusView('needs_review', enT).tone).toBe('warning');
+    expect(accountStatusView('expired', enT).tone).toBe('warning');
+    expect(accountStatusView('expired', enT).label).toBe('Needs reconnecting');
+    expect(targetStatusView('needs_review', enT).label).toBe('Unconfirmed');
+    expect(attemptStatusView('unknown', enT).label).toBe('Unconfirmed');
   });
   it('falls back for unknown values', () => {
-    expect(postStatusView('weird')).toEqual({ label: 'weird', tone: 'neutral' });
+    expect(postStatusView('weird', enT)).toEqual({ label: 'weird', tone: 'neutral' });
   });
 });
 

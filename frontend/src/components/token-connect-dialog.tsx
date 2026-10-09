@@ -8,7 +8,9 @@ import { Field, Input } from '@/components/ui/input';
 import { SecretInput } from '@/components/ui/secret-input';
 import { useTokenConnect } from '@/components/use-token-connect';
 import { integrationDocsUrl, isSecretField } from '@/lib/token-connect';
+import type { AppT } from '@/i18n/translate';
 import type { ConnectField, Provider, SocialAccount } from '@/lib/types';
+import { useTranslations } from '@/i18n/use-translations';
 
 function FormField({
   field,
@@ -42,6 +44,7 @@ function FormField({
 }
 
 function TokenConnectForm({ provider, onConnected, onCancel }: { provider: Provider; onConnected: (a: SocialAccount) => void; onCancel: () => void }) {
+  const t = useTranslations();
   const prefix = useId();
   const form = useTokenConnect(provider, onConnected, prefix);
   const { notes, connectFields } = provider.capabilities;
@@ -62,9 +65,9 @@ function TokenConnectForm({ provider, onConnected, onCancel }: { provider: Provi
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1 text-sm underline underline-offset-2"
       >
-        How to connect {provider.name}
+        {t('accounts.tokenConnect.howTo', { network: provider.name })}
         <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-        <span className="sr-only">(opens in a new tab)</span>
+        <span className="sr-only">{t('accounts.tokenConnect.newTab')}</span>
       </a>
       {connectFields.map((f) => (
         <FormField
@@ -79,10 +82,10 @@ function TokenConnectForm({ provider, onConnected, onCancel }: { provider: Provi
       {form.formError ? <InlineError>{form.formError}</InlineError> : null}
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={form.busy}>
-          {form.busy ? 'Connecting…' : `Connect ${provider.name}`}
+          {form.busy ? t('accounts.tokenConnect.connecting') : t('accounts.tokenConnect.connectNetwork', { network: provider.name })}
         </Button>
       </DialogFooter>
     </form>
@@ -91,11 +94,9 @@ function TokenConnectForm({ provider, onConnected, onCancel }: { provider: Provi
 
 /** "Connect with a token": a form built entirely from the provider's `connect_fields`. Closing it discards every value. */
 /** The HTTPS promise is made only when this page is served over HTTPS; local installs use http://localhost. */
-function storageNote(): string {
+function storageNote(t: AppT): string {
   const https = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  return https
-    ? 'Steerpost receives these details over HTTPS, stores them encrypted and never shows them again.'
-    : 'Steerpost stores these details encrypted and never shows them again.';
+  return t(https ? 'accounts.tokenConnect.noteHttps' : 'accounts.tokenConnect.noteHttp');
 }
 
 export function TokenConnectDialog({
@@ -109,9 +110,10 @@ export function TokenConnectDialog({
   onOpenChange: (open: boolean) => void;
   onConnected: (account: SocialAccount) => void;
 }) {
+  const t = useTranslations();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title={`Connect ${provider.name}`} description={storageNote()}>
+      <DialogContent title={t('accounts.tokenConnect.connectNetwork', { network: provider.name })} description={storageNote(t)}>
         <TokenConnectForm provider={provider} onConnected={onConnected} onCancel={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

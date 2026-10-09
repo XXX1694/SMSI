@@ -2,6 +2,7 @@
 import { Eye, EyeOff } from 'lucide-react';
 import * as React from 'react';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from '@/i18n/use-translations';
 import { cn } from '@/lib/utils';
 
 type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'autoComplete'> & {
@@ -14,6 +15,7 @@ type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'autoCom
  * the browser are told not to store or suggest it, and it starts hidden every time it is mounted.
  */
 export const SecretInput = React.forwardRef<HTMLInputElement, Props>(({ className, label, ...props }, ref) => {
+  const t = useTranslations('common');
   const [shown, setShown] = React.useState(false);
   return (
     <div className="relative">
@@ -33,7 +35,7 @@ export const SecretInput = React.forwardRef<HTMLInputElement, Props>(({ classNam
         type="button"
         onClick={() => setShown((s) => !s)}
         aria-pressed={shown}
-        aria-label={`${shown ? 'Hide' : 'Show'} ${label}`}
+        aria-label={t(shown ? 'hideField' : 'showField', { label })}
         className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground hover:text-foreground"
       >
         {shown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
