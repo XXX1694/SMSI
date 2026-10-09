@@ -20,12 +20,12 @@ export function PostRow({ post, onRetry }: RowProps) {
   const fmt = useFormat();
   const title = postLabel(post, t);
   return (
-    <li className="flex min-w-0 items-center gap-2 pr-1 sm:pr-3">
+    <li className="flex min-w-0 flex-wrap items-center gap-2 pr-1 sm:flex-nowrap sm:pr-3">
       <Link
         href={postHref(post.id)}
-        className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 py-3 transition-colors hover:bg-muted/60 sm:px-3"
+        className="flex min-w-0 flex-1 basis-48 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 py-3 transition-colors hover:bg-muted/60 sm:px-3"
       >
-        <div className="min-w-0 flex-1">
+        <div className="min-w-32 flex-1">
           <p className="truncate text-sm font-medium">{title}</p>
           <p className="text-xs text-muted-foreground">
             {postPlatforms(post, t)} · {fmt.dateTime(postTime(post))}
@@ -34,7 +34,7 @@ export function PostRow({ post, onRetry }: RowProps) {
         <PostStatusBadge status={post.status} />
       </Link>
       {postActions(post.status).edit ? (
-        <Button asChild size="sm" variant="ghost" className="w-12 shrink-0 px-0">
+        <Button asChild size="sm" variant="ghost" className="min-w-12 shrink-0 px-2">
           <Link href={editHref(post.id)} aria-label={t('posts.editLabel', { title })}>
             {t('common.edit')}
           </Link>

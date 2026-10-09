@@ -47,6 +47,8 @@ type meResp struct {
 	VerificationEnforced bool `json:"verification_enforced"`
 	// MailDelivery is "smtp" when mail really leaves the server and "log" when it is only logged.
 	MailDelivery string `json:"mail_delivery"`
+	// DeletionGraceDays is how long an account stays recoverable after deletion was requested.
+	DeletionGraceDays int `json:"deletion_grace_days"`
 
 	ID          string `json:"id"`
 	Email       string `json:"email"`
@@ -61,7 +63,7 @@ type keyBrief struct {
 func (a *API) meFor(u *user.User, act actor.Actor, csrf string) meResp {
 	resp := meResp{User: toUser(u), AuthType: "session", Scopes: apikey.Strings(act.EffectiveScopes()),
 		ID: u.ID.String(), Email: u.Email, DisplayName: u.DisplayName,
-		VerificationEnforced: a.opt.RequireVerification, MailDelivery: a.opt.MailDelivery}
+		VerificationEnforced: a.opt.RequireVerification, MailDelivery: a.opt.MailDelivery, DeletionGraceDays: a.opt.DeletionGraceDays}
 	if csrf != "" && act.Type != actor.TypeAPIKey {
 		resp.CSRFToken = &csrf
 	}

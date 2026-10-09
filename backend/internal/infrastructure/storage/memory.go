@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -60,6 +61,19 @@ func (m *Memory) Delete(_ context.Context, key string) error {
 	delete(m.objects, key)
 	delete(m.types, key)
 	m.mu.Unlock()
+	return nil
+}
+
+// DeletePrefix removes every object whose key starts with prefix.
+func (m *Memory) DeletePrefix(_ context.Context, prefix string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for k := range m.objects {
+		if strings.HasPrefix(k, prefix) {
+			delete(m.objects, k)
+			delete(m.types, k)
+		}
+	}
 	return nil
 }
 

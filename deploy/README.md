@@ -156,7 +156,7 @@ docker compose run --rm -T migrate /app/migrate down     # revert the LAST migra
 Keep migrations backward compatible with the previous release (add columns/tables first, remove them one release later). A
 rollback restarts the old images **against the already migrated database**; it does not undo migrations.
 
-`CREATE INDEX CONCURRENTLY` (migration 00005) that fails or is cancelled halfway leaves an **INVALID** index behind, and the
+`CREATE INDEX CONCURRENTLY` (migrations 00005 and 00007) that fails or is cancelled halfway leaves an **INVALID** index behind, and the
 `IF NOT EXISTS` of a rerun then skips it, so the migration "succeeds" with an index Postgres never uses. After a failed
 migration check `docker compose exec postgres psql -U "${POSTGRES_USER:-socialos}" -d "${POSTGRES_DB:-socialos}" -c
 "SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid"`; for each index listed, `DROP INDEX CONCURRENTLY <name>;`

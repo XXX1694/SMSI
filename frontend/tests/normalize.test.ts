@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeProvider, unwrapList } from '@/lib/normalize';
+import { normalizeMe, normalizeProvider, unwrapList } from '@/lib/normalize';
 
 describe('normalizeProvider', () => {
   it('accepts PascalCase capabilities from the contract', () => {
@@ -43,5 +43,16 @@ describe('normalizeProvider connect fields', () => {
   it('has no fields for providers that do not use a token', () => {
     const p = normalizeProvider({ provider: 'linkedin', capabilities: { can_publish_text: true, connect_method: 'oauth' } });
     expect(p.capabilities).toMatchObject({ connectMethod: 'oauth', connectFields: [] });
+  });
+});
+
+describe('normalizeMe deletion fields', () => {
+  it('reads the schedule and the grace period, with safe defaults for older servers', () => {
+    const now = normalizeMe({ id: 'u', email: 'a@b.c', user: { deletion_scheduled_at: '2026-10-16T12:00:00Z' }, deletion_grace_days: 14 });
+    expect(now.deletion_scheduled_at).toBe('2026-10-16T12:00:00Z');
+    expect(now.deletion_grace_days).toBe(14);
+    const old = normalizeMe({ id: 'u', email: 'a@b.c', user: {} });
+    expect(old.deletion_scheduled_at).toBeNull();
+    expect(old.deletion_grace_days).toBe(7);
   });
 });
