@@ -12,6 +12,7 @@ import (
 
 	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/transport/httpx"
@@ -69,6 +70,9 @@ func writeAudit(rec port.AuditRecorder, log *slog.Logger, r *http.Request, sr *s
 		meta["client"] = a.Label
 		meta["credential_id"] = a.APIKeyID.String()
 		_, meta["via_gateway"] = gatewayIP(r.Context())
+		if id, ok := approval.IDFrom(r.Context()); ok {
+			meta["approval_id"] = id.String()
+		}
 		if c := codes.Code(); c != "" {
 			meta["error_code"] = string(c)
 		}

@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"crypto/rand"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -27,6 +28,8 @@ type Service struct {
 	enc             port.Encryptor
 	redirectBaseURL string
 	gate            OwnerGate
+	approvals       port.ApprovalGate
+	fingerprintKey  []byte
 }
 
 // Deps bundles dependencies.
@@ -44,6 +47,12 @@ type Deps struct {
 	RedirectBaseURL string
 	// Gate, when set, is consulted before any account is stored (see OwnerGate).
 	Gate OwnerGate
+	// Approvals asks the owner to approve dangerous actions of API keys; nil refuses them (fail closed).
+	Approvals port.ApprovalGate
+	// FingerprintKey keys the fingerprint of a token-connect approval (an HKDF subkey of ENCRYPTION_KEY), so the stored
+	// value cannot be used to test guesses of the credential. Empty: a random per-process key (approvals then do not
+	// survive a restart).
+	FingerprintKey []byte
 }
 
 // NewService creates the service.
@@ -52,8 +61,15 @@ func NewService(d Deps) *Service {
 	if log == nil {
 		log = slog.Default()
 	}
+	if d.Approvals == nil {
+		d.Approvals = port.FailClosedGate{}
+	}
+	if len(d.FingerprintKey) == 0 {
+		d.FingerprintKey = make([]byte, 32)
+		_, _ = rand.Read(d.FingerprintKey) // crypto/rand.Read never fails on supported platforms
+	}
 	return &Service{repo: d.Repo, states: d.States, links: d.Links, log: log, vault: NewVault(d.Repo, d.Enc), registry: d.Registry,
-		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL, gate: d.Gate}
+		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL, gate: d.Gate, approvals: d.Approvals, fingerprintKey: d.FingerprintKey}
 }
 
 // Vault exposes credential storage to other use cases (scheduler).
@@ -102,9 +118,12 @@ func (s *Service) Disconnect(ctx context.Context, a actor.Actor, id uuid.UUID) e
 	if err := a.Require(apikey.SocialDisconnect); err != nil {
 		return err
 	}
-	return s.tx.InTx(ctx, func(ctx context.Context) error {
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		acc, err := s.repo.Get(ctx, a.UserID, id)
 		if err != nil {
+			return err
+		}
+		if err := s.approvals.Require(ctx, a, disconnectRequest(acc)); err != nil {
 			return err
 		}
 		if err := s.repo.SetStatus(ctx, a.UserID, id, socialaccount.StatusRevoked); err != nil {
@@ -116,6 +135,7 @@ func (s *Service) Disconnect(ctx context.Context, a actor.Actor, id uuid.UUID) e
 		return s.audit.Record(ctx, a, audit.ActionAccountRemoved, "social_account", id.String(),
 			map[string]any{"provider": acc.Provider, "username": acc.Username})
 	})
+	return port.OpenIfNeeded(ctx, s.approvals, err)
 }
 
 // MarkExpired flags an account whose tokens no longer work.

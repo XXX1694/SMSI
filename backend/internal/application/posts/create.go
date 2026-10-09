@@ -66,6 +66,11 @@ func (s *Service) Create(ctx context.Context, a actor.Actor, in CreateInput) (*p
 		p.Targets[i].PostID = p.ID
 	}
 	err = s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
+		if schedule {
+			if err := s.requireSoonCreate(ctx, a, p, mediaList, *in.ScheduledAt); err != nil {
+				return nil, err
+			}
+		}
 		if err := s.repo.Create(ctx, p); err != nil {
 			return nil, err
 		}
@@ -120,7 +125,15 @@ func (s *Service) Update(ctx context.Context, a actor.Actor, id uuid.UUID, in Up
 		if in.ScheduledAt != nil && p.Status != post.StatusScheduled {
 			return nil, errs.Validationf("use POST /posts/{id}/schedule to schedule a draft").WithField("scheduled_at", "post is not scheduled")
 		}
+		if in.ScheduledAt != nil {
+			if err := s.validateScheduleTime(*in.ScheduledAt); err != nil {
+				return nil, err
+			}
+		}
 		if err := s.applyUpdate(ctx, p, in); err != nil {
+			return nil, err
+		}
+		if err := s.requireEditApproval(ctx, a, p, in); err != nil {
 			return nil, err
 		}
 		if err := s.audit.Record(ctx, a, audit.ActionPostUpdated, "post", p.ID.String(), nil); err != nil {
@@ -131,9 +144,6 @@ func (s *Service) Update(ctx context.Context, a actor.Actor, id uuid.UUID, in Up
 		}
 		runAt := *p.ScheduledAt
 		if in.ScheduledAt != nil {
-			if err := s.validateScheduleTime(*in.ScheduledAt); err != nil {
-				return nil, err
-			}
 			runAt = *in.ScheduledAt
 		}
 		return s.reschedule(ctx, p, runAt)
@@ -142,6 +152,20 @@ func (s *Service) Update(ctx context.Context, a actor.Actor, id uuid.UUID, in Up
 		return nil, err
 	}
 	return s.repo.Get(ctx, a.UserID, id)
+}
+
+// requireEditApproval asks a key for approval when the edit leaves a scheduled post running within the minimum lead,
+// whether or not it moved the time. It runs after the edit so that the approval covers the post as it will be; a 428
+// rolls the edit back.
+func (s *Service) requireEditApproval(ctx context.Context, a actor.Actor, p *post.Post, in UpdateInput) error {
+	if p.Status != post.StatusScheduled || p.ScheduledAt == nil {
+		return nil
+	}
+	runAt := *p.ScheduledAt
+	if in.ScheduledAt != nil {
+		runAt = *in.ScheduledAt
+	}
+	return s.requireSoonAfterEdit(ctx, a, p, runAt)
 }
 
 func (s *Service) applyUpdate(ctx context.Context, p *post.Post, in UpdateInput) error {

@@ -1,13 +1,8 @@
 import { z } from "zod";
-import { defineTool, requireConfirm, seg } from "./types.js";
+import { approvalId, defineTool, seg } from "./types.js";
 
 const id = (what: string) => z.string().min(1).max(128).describe(what);
 const when = (what: string) => z.iso.datetime({ offset: true }).describe(what);
-const confirm = z
-  .boolean()
-  .optional()
-  .describe("Must be exactly true. Only set after the user has explicitly approved this specific action.");
-
 const perPlatform = z
   .record(z.string(), z.string().min(1))
   .describe(
@@ -64,16 +59,17 @@ export const writeTools = [
       social_account_ids: z.array(z.string().min(1)).min(1).optional(),
       media_ids: z.array(z.string().min(1)).optional(),
       per_platform_content: perPlatform.optional(),
-      scheduled_at: when("New RFC 3339 schedule time (only for scheduled posts)").optional(),
+      scheduled_at: when("New RFC 3339 schedule time (only for scheduled posts); closer than the server's minimum lead (default 5 minutes) needs the owner's approval").optional(),
+      approval_id: approvalId,
     },
     annotations: { title: "Update post", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {
-      const { post_id, per_platform_content, ...rest } = a;
+      const { post_id, per_platform_content, approval_id, ...rest } = a;
       const body = { ...rest, targets: toTargets(per_platform_content, rest.social_account_ids) };
       if (Object.values(body).every((v) => v === undefined)) {
         throw new Error("VALIDATION_ERROR: pass at least one field to update");
       }
-      return c.request("PATCH", `/posts/${seg(post_id)}`, { body });
+      return c.request("PATCH", `/posts/${seg(post_id)}`, { body, approvalId: approval_id });
     },
   }),
   defineTool({
@@ -82,10 +78,15 @@ export const writeTools = [
     scope: "posts:schedule",
     risk: "medium",
     description:
-      "Schedule a draft to be published automatically at scheduled_at (RFC 3339, must be in the future). The post WILL go public at that time unless cancelled with cancel_scheduled_post.",
-    inputSchema: { post_id: id("Post id"), scheduled_at: when("Publish time, RFC 3339 e.g. 2026-11-01T09:00:00Z") },
+      "Schedule a draft to be published automatically at scheduled_at (RFC 3339, must be in the future). The post WILL go public at that time unless cancelled with cancel_scheduled_post. A time closer than the server's minimum lead (default 5 minutes) counts as publishing now and needs the owner's approval (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+    inputSchema: {
+      post_id: id("Post id"),
+      scheduled_at: when("Publish time, RFC 3339 e.g. 2026-11-01T09:00:00Z"),
+      approval_id: approvalId,
+    },
     annotations: { title: "Schedule post", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    handler: (c, a) => c.request("POST", `/posts/${seg(a.post_id)}/schedule`, { body: { scheduled_at: a.scheduled_at } }),
+    handler: (c, a) =>
+      c.request("POST", `/posts/${seg(a.post_id)}/schedule`, { body: { scheduled_at: a.scheduled_at }, approvalId: a.approval_id }),
   }),
   defineTool({
     name: "cancel_scheduled_post",
@@ -104,12 +105,11 @@ export const writeTools = [
     scope: "posts:publish",
     risk: "sensitive",
     description:
-      "SENSITIVE: publishes the post to the live social networks immediately and cannot be undone by this API. Requires confirm: true; only call after the user has explicitly approved publishing this exact post. Returns immediately; poll get_post_status for the outcome.",
-    inputSchema: { post_id: id("Post id"), confirm },
+      "SENSITIVE: publishes the post to the live social networks immediately and cannot be undone by this API. The owner must approve it in SocialOS first: the first call answers APPROVAL_REQUIRED with an approval_id and nothing is published; once the owner approved, repeat the identical call with approval_id. Returns immediately; poll get_post_status for the outcome.",
+    inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Publish post now", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     handler: (c, a) => {
-      requireConfirm(a.confirm, "Publishing a post");
-      return c.request("POST", `/posts/${seg(a.post_id)}/publish`);
+      return c.request("POST", `/posts/${seg(a.post_id)}/publish`, { approvalId: a.approval_id });
     },
   }),
   defineTool({
@@ -118,12 +118,11 @@ export const writeTools = [
     scope: "posts:delete",
     risk: "sensitive",
     description:
-      "SENSITIVE: deletes a post in SocialOS (soft delete). It does not remove already-published copies from the social networks. Requires confirm: true after explicit user approval.",
-    inputSchema: { post_id: id("Post id"), confirm },
+      "SENSITIVE: deletes a post in SocialOS (soft delete). It does not remove already-published copies from the social networks. The owner must approve it in SocialOS first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+    inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Delete post", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {
-      requireConfirm(a.confirm, "Deleting a post");
-      return c.request("DELETE", `/posts/${seg(a.post_id)}`);
+      return c.request("DELETE", `/posts/${seg(a.post_id)}`, { approvalId: a.approval_id });
     },
   }),
   defineTool({
@@ -132,12 +131,11 @@ export const writeTools = [
     scope: "social:disconnect",
     risk: "critical",
     description:
-      "CRITICAL: disconnects a social account and discards its stored credentials; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. Requires confirm: true after explicit user approval.",
-    inputSchema: { account_id: id("Social account id"), confirm },
+      "CRITICAL: disconnects a social account and discards its stored credentials; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. The owner must approve it in SocialOS first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+    inputSchema: { account_id: id("Social account id"), approval_id: approvalId },
     annotations: { title: "Disconnect social account", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {
-      requireConfirm(a.confirm, "Disconnecting an account");
-      return c.request("DELETE", `/social/accounts/${seg(a.account_id)}`);
+      return c.request("DELETE", `/social/accounts/${seg(a.account_id)}`, { approvalId: a.approval_id });
     },
   }),
 ];

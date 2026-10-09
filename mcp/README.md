@@ -20,7 +20,7 @@ npm test
 docker build -t socialos-local-mcp . && docker run -p 3333:3333 -e SOCIALOS_API_URL=http://api:8080 socialos-local-mcp
 ```
 
-Dangerous tools (`publish_post`, `delete_post`, `disconnect_account`) need `confirm: true`; grant their scopes
+Dangerous tools (`publish_post`, `delete_post`, `disconnect_account`, and scheduling or editing a post that runs within the server's minimum lead, default 5 minutes) need the owner's approval in SocialOS: the first call answers `APPROVAL_REQUIRED` with an `approval_id` and does nothing, the owner approves under **Approvals**, and the agent repeats the identical call with `approval_id`. Grant their scopes
 (`posts:publish`, `posts:delete`, `social:disconnect`) only to keys you trust.
 
 ## Client configuration

@@ -207,11 +207,14 @@ type apiKeyDTO struct {
 	RevokedAt  *time.Time `json:"revoked_at"`
 	LastUsedAt *time.Time `json:"last_used_at"`
 	CreatedAt  time.Time  `json:"created_at"`
+	// DangerousPolicy: "approve" asks the owner before publish, delete and disconnect; "trusted" does not.
+	DangerousPolicy string `json:"dangerous_policy"`
 }
 
 func toKey(k *apikey.Key) apiKeyDTO {
 	return apiKeyDTO{ID: k.ID, Name: k.Name, Prefix: k.Prefix, Scopes: apikey.Strings(k.Scopes), ExpiresAt: utcp(k.ExpiresAt),
-		RevokedAt: utcp(k.RevokedAt), LastUsedAt: utcp(k.LastUsedAt), CreatedAt: utc(k.CreatedAt)}
+		RevokedAt: utcp(k.RevokedAt), LastUsedAt: utcp(k.LastUsedAt), CreatedAt: utc(k.CreatedAt),
+		DangerousPolicy: k.DangerousPolicy}
 }
 
 type mcpDTO struct {

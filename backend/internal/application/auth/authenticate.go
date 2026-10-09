@@ -67,6 +67,7 @@ func (s *Service) AuthenticateAPIKey(ctx context.Context, raw string, ci ClientI
 	return actor.Actor{
 		UserID: k.UserID, Type: actor.TypeAPIKey, ID: k.ID.String(), Label: k.Name,
 		Scopes: k.Scopes, APIKeyID: k.ID, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u),
+		DangerousPolicy: k.DangerousPolicy,
 	}, nil
 }
 

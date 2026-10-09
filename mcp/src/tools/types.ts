@@ -1,5 +1,5 @@
 import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
-import type { z, ZodRawShape } from "zod";
+import { z, type ZodRawShape } from "zod";
 import type { SocialOSClient } from "../api-client.js";
 
 export type Scope =
@@ -37,14 +37,13 @@ export function jsonResult(data: unknown): CallToolResult {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 }
 
-export class ConfirmationRequired extends Error {}
-
-export function requireConfirm(confirm: boolean | undefined, action: string): void {
-  if (confirm !== true) {
-    throw new ConfirmationRequired(
-      `CONFIRMATION_REQUIRED: ${action} is irreversible or publicly visible. Ask the user for explicit approval, then call again with "confirm": true.`,
-    );
-  }
-}
+/**
+ * The owner's approval for one dangerous call. The first call answers APPROVAL_REQUIRED with an approval_id; once the
+ * owner approved it in SocialOS, repeat the identical call with that id (D-013). It works once.
+ */
+export const approvalId = z
+  .uuid()
+  .optional()
+  .describe("approval_id from an earlier APPROVAL_REQUIRED answer, after the owner approved it in SocialOS. Repeat the identical call with it. Works once.");
 
 export const seg = (id: string): string => encodeURIComponent(id);

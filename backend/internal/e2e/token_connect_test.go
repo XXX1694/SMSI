@@ -134,7 +134,7 @@ func TestTokenConnectNeedsTheCriticalScopeForKeys(t *testing.T) {
 	if n := len(c.must("GET", "/api/v1/social/accounts", nil, 200)["items"].([]any)); n != 0 {
 		t.Fatalf("a forbidden connect created %d accounts", n)
 	}
-	k := e.apiKeyClient(c.createKey("connector", "social:read", "social:connect"))
+	k := e.apiKeyClient(c.createTrustedKey("connector", "social:read", "social:connect")) // approvals have their own tests
 	acc := k.must("POST", tokenPath, tokenBody(goodKey), 201)
 	if strings.Contains(string(mustMarshal(acc)), goodKey) {
 		t.Fatal("response leaks the credential")

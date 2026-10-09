@@ -87,6 +87,7 @@ type tokenRig struct {
 	repo  *credRepo
 	audit *auditRec
 	enc   *crypto.Cipher
+	gate  *recGate
 }
 
 func newTokenRig(t *testing.T) *tokenRig {
@@ -99,9 +100,10 @@ func newTokenRig(t *testing.T) *tokenRig {
 		Metadata: map[string]any{"host": "social.example.com"}}}
 	repo := &credRepo{memRepo: memRepo{accs: map[uuid.UUID]*socialaccount.Account{}}, creds: map[uuid.UUID]EncryptedCredentials{}}
 	rec := &auditRec{}
+	gate := &recGate{}
 	svc := NewService(Deps{Repo: repo, Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Registry: provider.NewRegistry(prov),
-		Tx: &memTx{audit: rec}, Audit: rec, Clock: &fixedClock{t: time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)}, Enc: enc})
-	return &tokenRig{svc: svc, prov: prov, repo: repo, audit: rec, enc: enc}
+		Tx: &memTx{audit: rec}, Audit: rec, Clock: &fixedClock{t: time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)}, Enc: enc, Approvals: gate})
+	return &tokenRig{svc: svc, prov: prov, repo: repo, audit: rec, enc: enc, gate: gate}
 }
 
 func validFields() map[string]string {

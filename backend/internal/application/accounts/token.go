@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/socialos/backend/internal/adapters/provider"
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/actor"
 	"github.com/socialos/backend/internal/domain/apikey"
 	"github.com/socialos/backend/internal/domain/errs"
@@ -45,6 +46,11 @@ func (s *Service) ConnectWithToken(ctx context.Context, a actor.Actor, providerN
 	clean, err := validateConnectFields(p.Capabilities().ConnectFields, fields)
 	if err != nil {
 		return nil, err
+	}
+	// Before the live check: nothing is sent to the network until the owner agreed. The approval is spent here, so a
+	// credential the network rejects needs a new approval.
+	if err := s.approvals.Require(ctx, a, connectRequest(s.fingerprintKey, p, clean)); err != nil {
+		return nil, port.OpenIfNeeded(ctx, s.approvals, err)
 	}
 	vctx, cancel := context.WithTimeout(ctx, VerifyTimeout)
 	defer cancel()

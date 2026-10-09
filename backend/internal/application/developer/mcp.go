@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/actor"
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/audit"
 	"github.com/socialos/backend/internal/domain/errs"
 )
@@ -42,7 +43,7 @@ func (s *Service) CreateMCPConnection(ctx context.Context, a actor.Actor, in Cre
 	}
 	var out MCPCreated
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
-		key, raw, err := s.insertKey(ctx, a, "MCP: "+name, scopes, nil)
+		key, raw, err := s.insertKey(ctx, a, "MCP: "+name, scopes, nil, approval.PolicyApprove)
 		if err != nil {
 			return err
 		}

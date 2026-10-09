@@ -4,11 +4,13 @@ package port
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/domain/actor"
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/domain/errs"
 )
 
@@ -112,4 +114,51 @@ func Paginate[T any](items []T, limit int, key func(T) Cursor) Result[T] {
 	}
 	items = items[:limit]
 	return Result[T]{Items: items, NextCursor: key(items[len(items)-1]).Encode()}
+}
+
+// ApprovalNeeded is the error a use case gets from ApprovalGate.Require when an API key attempts a dangerous action
+// that no matching approval covers. It carries what to ask the owner. Nothing is stored yet: the use case's
+// transaction rolls back first, then OpenIfNeeded turns it into a pending approval and the 428 answer. Doing it
+// after the rollback (a) keeps the row, which a rollback would erase, and (b) needs no second database connection
+// while the first is held, which could exhaust the pool under load (D-013).
+type ApprovalNeeded struct {
+	Actor   actor.Actor
+	Request approval.Request
+}
+
+func (n *ApprovalNeeded) Error() string { return "approval needed for " + string(n.Request.Action) }
+
+// ApprovalGate decides whether an actor may perform a dangerous action now. Require returns nil for browser sessions,
+// background actors and trusted keys; for any other API key it consumes a matching approved approval carried in ctx
+// (inside the caller's transaction) or returns *ApprovalNeeded. Open records the pending approval (outside any
+// transaction of the caller) and returns the errs.ApprovalRequired answer (D-013).
+type ApprovalGate interface {
+	Require(ctx context.Context, a actor.Actor, req approval.Request) error
+	Open(ctx context.Context, n *ApprovalNeeded) error
+}
+
+// OpenIfNeeded converts an *ApprovalNeeded found in err into the 428 answer; any other error passes through. Call it
+// where a use case returns, after its transaction ended.
+func OpenIfNeeded(ctx context.Context, g ApprovalGate, err error) error {
+	var n *ApprovalNeeded
+	if errors.As(err, &n) {
+		return g.Open(ctx, n)
+	}
+	return err
+}
+
+// FailClosedGate is the gate used when none is wired: agents that need approval are refused.
+type FailClosedGate struct{}
+
+// Require implements ApprovalGate.
+func (FailClosedGate) Require(_ context.Context, a actor.Actor, _ approval.Request) error {
+	if a.NeedsApproval() {
+		return errs.New(errs.Internal, "approval gate is not configured")
+	}
+	return nil
+}
+
+// Open implements ApprovalGate.
+func (FailClosedGate) Open(context.Context, *ApprovalNeeded) error {
+	return errs.New(errs.Internal, "approval gate is not configured")
 }

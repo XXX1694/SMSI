@@ -58,7 +58,7 @@
 
 - An MCP server with 13 tools, over Streamable HTTP or stdio.
 - Keys carry only the scopes you tick. Tools outside a key's scope are not even listed, and the API checks every call again.
-- `publish_post`, `delete_post` and `disconnect_account` are off by default and need `confirm: true`.
+- `publish_post`, `delete_post` and `disconnect_account` are off by default, and every call needs your approval in SocialOS before it runs.
 - Every agent action is in the audit log, with an "Agent actions" filter.
 
 **Self-hosting**
@@ -119,9 +119,9 @@ config. The MCP endpoint is `https://mcp.<your-domain>/mcp` on a server and `htt
 | `create_draft`, `update_post` | `posts:write` | safe / low |
 | `cancel_scheduled_post` | `posts:write` | medium |
 | `schedule_post` | `posts:schedule` | medium |
-| `publish_post` | `posts:publish` | **sensitive**, requires `confirm: true` |
-| `delete_post` | `posts:delete` | **sensitive**, requires `confirm: true` |
-| `disconnect_account` | `social:disconnect` | **critical**, requires `confirm: true` |
+| `publish_post` | `posts:publish` | **sensitive**, needs the owner's approval |
+| `delete_post` | `posts:delete` | **sensitive**, needs the owner's approval |
+| `disconnect_account` | `social:disconnect` | **critical**, needs the owner's approval |
 
 Revoking a connection invalidates its key at once. Keys can never create keys or change account security. Replace
 `mcp.example.com` and `sk_live_...` below with your own values.

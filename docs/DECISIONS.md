@@ -222,3 +222,40 @@ peak, the OOM kill hits SocialOS inside its slice, never the other service. Unde
 of the CPU. A shed stops publishing (posts go out late) and, at level 2, the UI and MCP until the host has been calm for
 10 minutes or more; autoupdate pauses meanwhile. The read cap is a placeholder until the disk is measured. Standalone mode
 is unchanged. Not solved here (the other service's owner): `caddy.service` has `Restart=no`, and journald has no size cap.
+
+## D-013: Dangerous actions by API keys need the owner's approval, enforced in the API (2026-10-09)
+
+**Context.** Until now an agent was asked to pass `confirm: true` for publish, delete and disconnect. The flag is an
+argument the agent writes itself, so it proves nothing, and it only existed in the MCP server: a plain REST call with the
+key skipped it.
+
+**Decision.** The application layer decides. When a request authenticated by an API key attempts a dangerous action
+(publish now, retry now, delete a post, disconnect an account, connect with a pasted token (D-009), or schedule less than
+`AGENT_MIN_SCHEDULE_LEAD` (5 m) ahead, which is publish-now in disguise) and the key's `dangerous_policy` is `approve`
+(the default for every new and existing key), the API answers `428 APPROVAL_REQUIRED` with an `approval_id` and stores a
+pending approval. Only a browser session can approve or deny it. The agent then repeats the identical call with the
+header `X-Approval-Id`. An approval belongs to one user and key, covers one action on one target with one payload
+(fingerprint: post id and `updated_at`, the requested time, a hash of the whole create body or of the connect fields),
+expires after `APPROVAL_TTL` (10 m) and is spent in the same transaction as the action, so a failed action does not burn
+it and two racing calls cannot both use it. The scope check still comes first. The `confirm` flag is gone from MCP.
+Sessions, the scheduler and system actors never need approval; `dangerous_policy: trusted` (chosen when the owner creates
+the key) skips it for that key on purpose. Anything that does not match gets a fresh `428` and no hint why (no oracle on
+other tenants' ids); an approval the owner denied gets `403` so the agent stops. A repeated ask returns the open
+approval; at most 10 are open per key (a noisy key cannot block the others), checked and inserted under a per-key lock
+so parallel calls cannot overshoot. The gate answers in two steps: inside the use case's transaction `Require` consumes
+a matching approval or returns `ApprovalNeeded`; after the transaction rolled back, `Open` stores the pending row and
+answers 428. A row written inside the transaction would be erased by that rollback, and a second connection opened
+meanwhile could exhaust the pool under load. An edit of a post is approved as the post it will become (not as the
+field the key named), and any key edit of a post running within the lead needs approval. The owner sees the full text,
+per-network texts and media. A token connect is fingerprinted with an HMAC under an HKDF subkey of the encryption key.
+Decided and expired approvals are purged after 30 days. Created, approved, denied and used are audited.
+
+**Alternatives.** A server-minted confirmation token: the agent can fetch and present it itself, so it proves no more than
+`confirm: true`. A per-key allow flag only: no per-action guarantee. Enforcing in the MCP server: bypassed by curl.
+Approval id in the body: DELETE has none, a header works for every route.
+
+**Consequences.** Breaking for API-key integrations: dangerous calls now take two steps and a human, so unattended
+publishing needs a `trusted` key (opt-in, shown as such) or a scheduled post at least 5 minutes ahead. The approval is
+spent before the live check of a token connect, so a rejected credential needs a new approval. Whoever holds the owner's
+browser session can approve. `trusted` is visible: the key list shows it as a badge, and choosing it at creation needs a separate explicit
+confirmation under the "Dangerous" heading. Changing the policy of an existing key and an OAuth-grant policy come later.

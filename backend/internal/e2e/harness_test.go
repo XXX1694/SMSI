@@ -80,7 +80,8 @@ func newEnv(t *testing.T, o envOpts) *env {
 		APIPublicURL:  base, WebBaseURL: "http://web.test", MCPPublicURL: "http://mcp.test/mcp",
 		CORSOrigins: []string{"http://web.test"}, SessionTTL: time.Hour, MockProviders: true,
 		RateLimitRPS: 1000, RateLimitBurst: 1000, AuthRateRPS: 1000, AuthRateBurst: 1000, StorageDriver: "memory",
-		TelegramToken: "", LinkedInVersion: "202606", MetricsToken: o.metricsToken,
+		ApprovalConfig: config.ApprovalConfig{AgentMinScheduleLead: 5 * time.Minute, ApprovalTTL: 10 * time.Minute, ApprovalMaxPending: 10},
+		TelegramToken:  "", LinkedInVersion: "202606", MetricsToken: o.metricsToken,
 	}
 	if o.rateBurst > 0 {
 		cfg.RateLimitRPS, cfg.RateLimitBurst = o.rateRPS, o.rateBurst
@@ -174,7 +175,10 @@ func (r resp) errCode(t *testing.T) string {
 	return code
 }
 
-func (c *client) do(method, path string, body any) resp {
+func (c *client) do(method, path string, body any) resp { return c.doWith(method, path, body, nil) }
+
+// doWith is do with extra request headers (e.g. X-Approval-Id).
+func (c *client) doWith(method, path string, body any, headers map[string]string) resp {
 	c.e.t.Helper()
 	var rd io.Reader
 	if body != nil {
@@ -187,6 +191,9 @@ func (c *client) do(method, path string, body any) resp {
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 	return c.send(req)
 }
@@ -292,6 +299,13 @@ func (c *client) connectMock() string {
 	}
 	c.e.t.Fatal("mock account not connected")
 	return ""
+}
+
+// createTrustedKey mints a key whose dangerous actions skip the owner's approval (dangerous_policy "trusted").
+func (c *client) createTrustedKey(name string, scopes ...string) string {
+	c.e.t.Helper()
+	m := c.must("POST", "/api/v1/developer/api-keys", map[string]any{"name": name, "scopes": scopes, "dangerous_policy": "trusted"}, 201)
+	return m["key"].(string)
 }
 
 func (c *client) createKey(name string, scopes ...string) string {

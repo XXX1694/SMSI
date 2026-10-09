@@ -3,6 +3,7 @@ package posts
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/socialos/backend/internal/adapters/provider"
@@ -23,7 +24,10 @@ type Service struct {
 	tx       port.TxRunner
 	audit    port.AuditRecorder
 	clock    port.Clock
+	gate     port.ApprovalGate
 	log      *slog.Logger
+	// minAgentLead is how far ahead an API key may schedule without approval.
+	minAgentLead time.Duration
 }
 
 // Deps bundles dependencies.
@@ -37,7 +41,13 @@ type Deps struct {
 	Tx       port.TxRunner
 	Audit    port.AuditRecorder
 	Clock    port.Clock
-	Log      *slog.Logger
+	// Gate asks the owner to approve dangerous actions of API keys; nil refuses them (fail closed).
+	Gate port.ApprovalGate
+	// MinAgentLead is how far ahead a key may schedule without approval (DefaultMinAgentLead when 0).
+	MinAgentLead time.Duration
+	// NoAgentLead switches the lead rule off (AGENT_MIN_SCHEDULE_LEAD=0).
+	NoAgentLead bool
+	Log         *slog.Logger
 }
 
 // NewService creates the posts service.
@@ -45,8 +55,18 @@ func NewService(d Deps) *Service {
 	if d.Log == nil {
 		d.Log = slog.Default()
 	}
+	if d.Gate == nil {
+		d.Gate = port.FailClosedGate{}
+	}
+	lead := d.MinAgentLead
+	if lead <= 0 {
+		lead = DefaultMinAgentLead
+	}
+	if d.NoAgentLead {
+		lead = 0
+	}
 	return &Service{repo: d.Repo, jobs: d.Jobs, queue: d.Queue, accounts: d.Accounts, media: d.Media,
-		registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, log: d.Log}
+		registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, gate: d.Gate, minAgentLead: lead, log: d.Log}
 }
 
 // Detail is a post with its publication attempts.

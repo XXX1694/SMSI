@@ -62,7 +62,7 @@ func TestAPIKeyScopes(t *testing.T) {
 		t.Fatalf("key minted a key: %d %s", r.status, r.body)
 	}
 	// A key with posts:publish may publish.
-	pub := e.apiKeyClient(c.createKey("publisher", "posts:publish", "posts:read"))
+	pub := e.apiKeyClient(c.createTrustedKey("publisher", "posts:publish", "posts:read")) // approvals have their own tests
 	pub.must("POST", "/api/v1/posts/"+postID+"/publish", map[string]any{"confirm": true}, 202)
 
 	// Every API-key request is audited with actor api_key.
@@ -493,5 +493,51 @@ func TestTokenAccountIsolation(t *testing.T) {
 	if err := e.app.DB.Pool.QueryRow(context.Background(),
 		`SELECT count(*) FROM oauth_credentials WHERE access_token_enc LIKE '%' || $1 || '%'`, secret).Scan(&plain); err != nil || plain != 0 {
 		t.Fatalf("clear-text credentials in the database: %d %v", plain, err)
+	}
+}
+
+// An approval is tenant data: another user can neither see nor decide it, and their key cannot spend it.
+func TestApprovalsAreTenantScoped(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice-approvals@tenant.test")
+	bob.register("bob-approvals@tenant.test")
+	accA, accB := alice.connectMock(), bob.connectMock()
+	scopes := []string{"posts:read", "posts:write", "posts:publish"}
+	ak, bk := e.apiKeyClient(alice.createKey("alice agent", scopes...)), e.apiKeyClient(bob.createKey("bob agent", scopes...))
+	postA := alice.must("POST", "/api/v1/posts", map[string]any{"content": "alice", "social_account_ids": []string{accA}}, 201)["id"].(string)
+	postB := bob.must("POST", "/api/v1/posts", map[string]any{"content": "bob", "social_account_ids": []string{accB}}, 201)["id"].(string)
+
+	id := needApproval(t, ak.do("POST", "/api/v1/posts/"+postA+"/publish", nil), "post.publish")
+	alice.must("POST", "/api/v1/approvals/"+id+"/approve", nil, 200)
+
+	if n := len(bob.must("GET", "/api/v1/approvals?status=all", nil, 200)["items"].([]any)); n != 0 {
+		t.Fatalf("bob lists %d of alice's approvals", n)
+	}
+	for _, path := range []string{"", "/approve", "/deny"} {
+		method := "POST"
+		if path == "" {
+			method = "GET"
+		}
+		if r := bob.do(method, "/api/v1/approvals/"+id+path, nil); r.status != http.StatusNotFound {
+			t.Errorf("bob %s approvals/{id}%s: want 404, got %d %s", method, path, r.status, r.body)
+		}
+	}
+	// Bob's key presenting alice's approved id gets a fresh request on his own post and 404 on hers, never a publish.
+	if bobsID := needApproval(t, bk.doWith("POST", "/api/v1/posts/"+postB+"/publish", nil, withApproval(id)), "post.publish"); bobsID == id {
+		t.Fatal("bob was handed alice's approval")
+	}
+	if r := bk.doWith("POST", "/api/v1/posts/"+postA+"/publish", nil, withApproval(id)); r.status != http.StatusNotFound {
+		t.Fatalf("bob's key on alice's post: want 404, got %d %s", r.status, r.body)
+	}
+	if st := bob.must("GET", "/api/v1/posts/"+postB+"/status", nil, 200); st["status"] != "draft" {
+		t.Fatalf("bob's post was published with alice's approval: %v", st)
+	}
+	if st := alice.must("GET", "/api/v1/approvals/"+id, nil, 200); st["status"] != "approved" {
+		t.Fatalf("alice's approval was spent by bob: %v", st)
+	}
+	// Alice's own key can still use it.
+	if r := ak.doWith("POST", "/api/v1/posts/"+postA+"/publish", nil, withApproval(id)); r.status != http.StatusAccepted {
+		t.Fatalf("alice's approved publish: %d %s", r.status, r.body)
 	}
 }

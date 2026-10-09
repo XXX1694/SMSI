@@ -410,9 +410,8 @@ func TestCSRFMatrix(t *testing.T) {
 	if r := k.req("POST", "/api/v1/posts", map[string]any{"content": "from key"}); r.status != 201 {
 		t.Fatalf("bearer POST: %d %s", r.status, r.body)
 	}
-	if r := k.req("DELETE", "/api/v1/posts/"+pid, nil); r.status != 204 {
-		t.Fatalf("bearer DELETE: %d %s", r.status, r.body)
-	}
+	// (a delete by a key is a dangerous action: it answers 428 and waits for the owner, never 403 for a missing CSRF token)
+	k.req("DELETE", "/api/v1/posts/"+pid, nil).apiErr(t, 428, "APPROVAL_REQUIRED")
 	// ...and cookies are ignored once a bearer credential is present (no confused deputy).
 	mixed := h.anon()
 	mixed.hc.Jar.SetCookies(mustParse(t, h.srv.URL), owner.hc.Jar.Cookies(mustParse(t, h.srv.URL)))

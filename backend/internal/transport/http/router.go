@@ -10,6 +10,7 @@ import (
 
 	"github.com/socialos/backend/internal/application/accounts"
 	"github.com/socialos/backend/internal/application/analytics"
+	"github.com/socialos/backend/internal/application/approvals"
 	"github.com/socialos/backend/internal/application/audit"
 	"github.com/socialos/backend/internal/application/auth"
 	"github.com/socialos/backend/internal/application/developer"
@@ -30,6 +31,7 @@ type Services struct {
 	Developer *developer.Service
 	Analytics *analytics.Service
 	Audit     *audit.Service
+	Approvals *approvals.Service
 }
 
 // Options configure transport behaviour.
@@ -101,7 +103,7 @@ func NewRouter(svc Services, opt Options) http.Handler {
 			r.Post("/webhooks/telegram", a.telegramWebhook)
 		}
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Gateway(opt.GatewaySecret), middleware.Authenticate(svc.Auth, a.trusted), middleware.APIKeyAudit(svc.Audit, opt.Logger),
+			r.Use(middleware.Gateway(opt.GatewaySecret), middleware.Authenticate(svc.Auth, a.trusted), middleware.ApprovalID, middleware.APIKeyAudit(svc.Audit, opt.Logger),
 				middleware.RateLimit(opt.APILimiter, a.trusted, opt.Metrics, "api:"), middleware.CSRF)
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RateLimit(opt.AuthLimiter, a.trusted, opt.Metrics, "auth:"))
@@ -169,6 +171,11 @@ func (a *API) mountAuthenticated(r chi.Router) {
 	r.Get("/analytics", a.analytics)
 	r.Get("/dashboard/summary", a.dashboard)
 	r.Get("/audit-logs", a.auditLogs)
+
+	r.Get("/approvals", a.listApprovals)
+	r.Get("/approvals/{id}", a.getApproval)
+	r.Post("/approvals/{id}/approve", a.approveApproval)
+	r.Post("/approvals/{id}/deny", a.denyApproval)
 
 	r.Get("/developer/api-keys", a.listKeys)
 	r.Post("/developer/api-keys", a.createKey)

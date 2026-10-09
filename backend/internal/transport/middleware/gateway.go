@@ -6,6 +6,9 @@ import (
 	"net/netip"
 	"strings"
 
+	"github.com/google/uuid"
+
+	"github.com/socialos/backend/internal/domain/approval"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 )
 
@@ -44,4 +47,19 @@ func Gateway(secret string) func(http.Handler) http.Handler {
 func gatewayIP(ctx context.Context) (string, bool) {
 	ip, ok := ctx.Value(gatewayIPKey{}).(string)
 	return ip, ok
+}
+
+// ApprovalHeader carries the id of an approval the owner granted (D-013).
+const ApprovalHeader = "X-Approval-Id"
+
+// ApprovalID passes a well-formed X-Approval-Id to the use cases through the context. A malformed value is dropped:
+// the call then simply needs a new approval. The id is not a secret and proves nothing alone: the use case checks
+// tenant, key, action, target and payload against the stored row.
+func ApprovalID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if id, err := uuid.Parse(r.Header.Get(ApprovalHeader)); err == nil {
+			r = r.WithContext(approval.WithID(r.Context(), id))
+		}
+		next.ServeHTTP(w, r)
+	})
 }

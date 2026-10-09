@@ -96,11 +96,21 @@ const draft = parse(await client.callTool({ name: "create_draft", arguments: {
 assert(draft.status === "draft", `draft status ${draft.status}`);
 step(`create_draft → post ${draft.id}`);
 
-// 13. schedule_post a few seconds ahead
-const at = new Date(Date.now() + 4000).toISOString();
-const scheduled = parse(await client.callTool({ name: "schedule_post", arguments: { post_id: draft.id, scheduled_at: at } }));
+// 13. schedule_post a few seconds ahead: that is publish-now in disguise, so the owner must approve it first (D-013)
+const at = new Date(Date.now() + 8000).toISOString();
+const sched = { name: "schedule_post", arguments: { post_id: draft.id, scheduled_at: at } };
+const refused = await client.callTool(sched);
+const refusal = refused.content[0].text;
+assert(refused.isError && refusal.includes("APPROVAL_REQUIRED"), `near-term schedule without approval: ${refusal}`);
+const approvalId = /approval_id: ([0-9a-f-]{36})/.exec(refusal)?.[1];
+assert(approvalId, `no approval_id in: ${refusal}`);
+step("schedule_post a few seconds ahead answers APPROVAL_REQUIRED and does nothing");
+res = await browser("POST", `/api/v1/approvals/${approvalId}/approve`, undefined, csrf);
+assert(res.status === 200, `owner approval returned ${res.status}`);
+step("owner approved it in the browser session");
+const scheduled = parse(await client.callTool({ ...sched, arguments: { ...sched.arguments, approval_id: approvalId } }));
 assert(scheduled.status === "scheduled", `schedule status ${scheduled.status}`);
-step(`schedule_post at ${at}`);
+step(`schedule_post at ${at} with the approval`);
 
 // 14. worker publishes at the right time
 let status;
