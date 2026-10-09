@@ -7,6 +7,7 @@ vi.mock('@/components/auth-provider', () => ({ useAuth: () => ({ user: { email: 
 vi.mock('@/components/approvals/use-pending-approvals', () => ({ usePendingApprovals: () => 3 }));
 vi.mock('@/i18n/locale-provider', async () => ({ ...(await vi.importActual<typeof import('@/i18n/locale-provider')>('@/i18n/locale-provider')), useLocaleSettings: () => ({ available: ['en'] }) }));
 vi.mock('@/components/email-banner', () => ({ EmailBanner: () => null }));
+vi.mock('@/components/deletion-banner', () => ({ DeletionBanner: () => null }));
 
 import { AppShell } from '@/components/app-shell';
 

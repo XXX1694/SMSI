@@ -128,6 +128,12 @@
       "resetTitle": "Reset the demo?",
       "resetBody": "Everything you changed in this demo is removed and the sample data comes back.",
       "resetConfirm": "Reset demo"
+    },
+    "deletionBanner": {
+      "heading": "Your account will be deleted on {date}.",
+      "body": "All your data goes then and cannot be recovered. Your API keys were revoked and scheduled posts are drafts. You can still download your data in Settings.",
+      "cancel": "Cancel deletion",
+      "cancelling": "Cancelling…"
     }
   },
   "legal": {
@@ -190,7 +196,8 @@
       "failTitle": "Could not verify your email",
       "invalidBody": "It may have expired or already been used. Links work once and last 48 hours.",
       "signInToRequest": "Sign in to request a new link"
-    }
+    },
+    "deletedNotice": "Deletion of your account is scheduled. Your sessions and API keys were signed out. Sign in before the grace period ends to see the date and cancel it."
   },
   "posts": {
     "editBlockedPublishing": "This post is being published right now, so it cannot be changed.",
@@ -297,6 +304,21 @@
       "requestNew": "Request a new export",
       "request": "Request export",
       "cooldown": "A new export can be requested 24 hours after the last one."
+    },
+    "exportHeading": "Export",
+    "deleteAccount": {
+      "heading": "Delete account",
+      "intro": "Deletes your account, posts, media, connected accounts, API keys and audit log. It happens {days, plural, one {# day} other {# days}} after you confirm. Until then you can sign in and cancel; scheduled posts are set back to drafts and every session and API key is signed out right away. Download your data first if you want a copy.",
+      "open": "Delete account…",
+      "dialogTitle": "Delete your account?",
+      "dialogBody": "Everything you own in Steerpost is deleted after the grace period. This cannot be undone.",
+      "formLabel": "Delete account",
+      "password": "Your password",
+      "confirmLabel": "Type {email} to confirm",
+      "yourEmail": "your email",
+      "wrongPassword": "That is not your current password.",
+      "wrongConfirm": "Type your email address exactly as shown.",
+      "submit": "Delete my account"
     }
   },
   "dashboard": {

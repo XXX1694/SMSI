@@ -19,6 +19,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
+import { DeletionBanner } from '@/components/deletion-banner';
 import { Logo } from '@/components/brand/logo';
 import { EmailBanner } from '@/components/email-banner';
 import { PageTransition } from '@/components/page-transition';
@@ -229,6 +230,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SidebarFooter email={user?.email} name={user?.display_name} onSignOut={signOut} />
       </aside>
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
+        <DeletionBanner />
         <EmailBanner />
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-10 md:py-12">
           <PageTransition>{children}</PageTransition>

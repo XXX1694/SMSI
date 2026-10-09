@@ -57,3 +57,35 @@ func TestMediaQuotaHoldsAcrossConcurrentTransactions(t *testing.T) {
 		t.Fatalf("ok=%d refused=%d other=%d used=%d err=%v; want 3 ok, 5 refused, 3 MiB used", ok.Load(), refused.Load(), other.Load(), used, err)
 	}
 }
+
+// An upload authorised just before the account purge can finish after it. The row must not be written for an owner who
+// is no longer active (the service then deletes the object it stored), or the object would be orphaned for good.
+func TestMediaCreateRefusesAnOwnerWhoIsNotActive(t *testing.T) {
+	db := testutil.OpenDB(t)
+	ctx := context.Background()
+	repo := postgres.NewMedia(db)
+	mk := func(owner uuid.UUID) *media.Media {
+		return &media.Media{ID: uuid.New(), UserID: owner, Kind: media.KindImage, MimeType: "image/png", SizeBytes: 10,
+			Status: media.StatusReady, StorageKey: "users/" + owner.String() + "/media/" + uuid.NewString() + ".png"}
+	}
+	count := func(owner uuid.UUID) int {
+		return scalar[int](t, db, `SELECT count(*) FROM media WHERE user_id = '`+owner.String()+`'`)
+	}
+
+	active := newUser(t, db, "media-active@example.com")
+	if err := repo.Create(ctx, mk(active.ID)); err != nil || count(active.ID) != 1 {
+		t.Fatalf("active owner: err=%v rows=%d", err, count(active.ID))
+	}
+
+	gone := newUser(t, db, "media-gone@example.com")
+	if _, err := db.Pool.Exec(ctx, `UPDATE users SET status = 'deleted' WHERE id = $1`, gone.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Create(ctx, mk(gone.ID)); !errs.Is(err, errs.Forbidden) || count(gone.ID) != 0 {
+		t.Fatalf("deleted owner: err=%v rows=%d, want FORBIDDEN and no row", err, count(gone.ID))
+	}
+
+	if err := repo.Create(ctx, mk(uuid.New())); !errs.Is(err, errs.Forbidden) {
+		t.Fatalf("missing owner: err=%v, want FORBIDDEN", err)
+	}
+}

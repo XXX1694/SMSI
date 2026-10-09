@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/socialos/backend/internal/domain/dataexport"
 )
 
-// Task types. TypeAccountPurge is reserved for the account-deletion work.
+// Task types.
 const (
 	TypeMailSend      = "mail:send"
 	TypeAuthForgot    = "auth:forgot"
@@ -165,5 +166,52 @@ func ExportHandler(build func(ctx context.Context, exportID uuid.UUID) error) fu
 			return fmt.Errorf("bad payload: %w", asynq.SkipRetry)
 		}
 		return build(ctx, pl.ExportID)
+	}
+}
+
+// Purge task options. A purge runs on the maintenance queue (see ExportQueueName). It retries only twice: the hourly
+// sweep re-queues every account that is still due or half purged, so it is the outer retry loop (D-019). Unique is a
+// little shorter than the sweep period plus the retries' backoff, so a waiting or running purge is not queued twice.
+const (
+	purgeMaxRetry = 2
+	purgeTimeout  = 30 * time.Minute
+	purgeUnique   = 55 * time.Minute
+)
+
+type purgePayload struct {
+	UserID uuid.UUID `json:"user_id"`
+}
+
+// PurgeQueue implements account.PurgeQueue on top of the Asynq client.
+type PurgeQueue struct{ c *Client }
+
+// PurgeQueue returns the account.PurgeQueue backed by this client.
+func (c *Client) PurgeQueue() *PurgeQueue { return &PurgeQueue{c: c} }
+
+// EnqueuePurge schedules the purge of one account. A purge already queued for the same user is not queued twice.
+func (q *PurgeQueue) EnqueuePurge(ctx context.Context, userID uuid.UUID) error {
+	payload, err := json.Marshal(purgePayload{UserID: userID})
+	if err != nil {
+		return err
+	}
+	_, err = q.c.client.EnqueueContext(ctx, asynq.NewTask(TypeAccountPurge, payload), asynq.Queue(ExportQueueName(q.c.queue)),
+		asynq.MaxRetry(purgeMaxRetry), asynq.Retention(0), asynq.Timeout(purgeTimeout), asynq.Unique(purgeUnique))
+	if errors.Is(err, asynq.ErrDuplicateTask) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("queue: enqueue purge: %w", err)
+	}
+	return nil
+}
+
+// PurgeHandler adapts the worker side of an account purge to an Asynq handler.
+func PurgeHandler(purge func(ctx context.Context, userID uuid.UUID) error) func(context.Context, *asynq.Task) error {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var pl purgePayload
+		if err := json.Unmarshal(t.Payload(), &pl); err != nil || pl.UserID == uuid.Nil {
+			return fmt.Errorf("bad payload: %w", asynq.SkipRetry)
+		}
+		return purge(ctx, pl.UserID)
 	}
 }
