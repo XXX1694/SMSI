@@ -218,10 +218,14 @@ await step('landing nav stays on one line and covers what scrolls under it', asy
             const b = hd.getBoundingClientRect();
             const x0 = Math.max(r.left, b.left), x1 = Math.min(r.right, b.right), y0 = Math.max(r.top, b.top), y1 = Math.min(r.bottom, b.bottom);
             if (x1 - x0 < 4 || y1 - y0 < 2) continue;
-            // text may scroll under the header only if the header is opaque there
+            // text may scroll under the header only if the header is opaque there, or it is chrome glass (D-024): at least
+            // 0.66 alpha over a 20 px backdrop blur, which smears the text behind it past reading
             const top = document.elementFromPoint((x0 + x1) / 2, (y0 + y1) / 2);
             const alpha = Number((getComputedStyle(hd).backgroundColor.match(/[\d.]+/g) ?? [])[3] ?? 1);
-            if (!(top && hd.contains(top)) || alpha < 0.9) out.push(`${el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
+            const cs = getComputedStyle(hd);
+            const blur = parseFloat((cs.backdropFilter.match(/blur\(([\d.]+)px\)/) ?? [])[1] ?? 0);
+            const glass = alpha >= 0.66 && blur >= 20;
+            if (!(top && hd.contains(top)) || (alpha < 0.9 && !glass)) out.push(`${el.tagName} "${el.textContent.trim().slice(0, 24)}"`);
           }
         }
         return out;
