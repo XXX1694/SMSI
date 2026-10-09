@@ -7,6 +7,7 @@ interface ToastItem {
   id: number;
   kind: ToastKind;
   text: string;
+  leaving?: boolean;
 }
 interface ToastApi {
   success: (text: string) => void;
@@ -16,12 +17,22 @@ interface ToastApi {
 const ToastContext = createContext<ToastApi | null>(null);
 let counter = 0;
 
+/** Exit animation length, read from the --duration-fast token so the toast is removed when the animation ends. */
+function exitMs(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--duration-fast').trim();
+  const ms = raw.endsWith('ms') ? parseFloat(raw) : raw.endsWith('s') ? parseFloat(raw) * 1000 : NaN;
+  return Number.isFinite(ms) ? ms : 150;
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const push = useCallback((kind: ToastKind, text: string) => {
     const id = ++counter;
     setItems((cur) => [...cur, { id, kind, text }]);
-    window.setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), kind === 'error' ? 7000 : 4000);
+    // Mark as leaving first so the exit animation can play, then drop it.
+    const life = kind === 'error' ? 7000 : 4000;
+    window.setTimeout(() => setItems((cur) => cur.map((t) => (t.id === id ? { ...t, leaving: true } : t))), life);
+    window.setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), life + exitMs());
   }, []);
   const api = useMemo<ToastApi>(
     () => ({ success: (t) => push('success', t), error: (t) => push('error', t) }),
@@ -40,6 +51,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={t.kind === 'error' ? 'alert' : 'status'}
             className={cn(
               'pointer-events-auto rounded-md border bg-background px-4 py-3 text-sm shadow-md',
+              t.leaving ? 'animate-toast-out' : 'animate-toast-in',
               t.kind === 'error' ? 'border-danger/40 text-danger' : 'text-foreground',
             )}
           >

@@ -31,6 +31,7 @@ const browser = await launch();
 try {
   for (const scheme of ['light', 'dark']) {
     const ctx = await browser.newContext({ viewport: VIEWPORT, colorScheme: scheme, locale: 'en-GB', timezoneId: 'UTC', deviceScaleFactor: 2 });
+    await ctx.addInitScript(() => localStorage.setItem('socialos_mail_notice_dismissed', '1'));
     const page = await ctx.newPage();
     await page.clock.setFixedTime(NOW);
     const errors = [];
@@ -71,6 +72,10 @@ try {
     // Scroll past LinkedIn so the shot ends with the networks that are not available yet.
     await page.evaluate(() => window.scrollTo(0, 395));
     await shot('accounts');
+
+    await open('/approvals/', { role: 'heading', name: 'Approvals', exact: true });
+    await page.getByRole('button', { name: /^Approve/ }).first().waitFor();
+    await shot('approvals');
 
     await open('/developer/mcp/', { role: 'heading', name: 'Connect an AI agent' });
     await page.getByLabel('Connection name').fill('Claude Desktop');

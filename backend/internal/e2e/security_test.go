@@ -143,13 +143,13 @@ func TestCSRFAndAuthErrors(t *testing.T) {
 	c.csrf = token
 	c.must("POST", "/api/v1/posts", map[string]any{"content": "draft without accounts"}, 201)
 
-	if r := c.do("POST", "/api/v1/auth/register", map[string]any{"email": "csrf@example.com", "password": "another long password"}); r.status != 409 {
+	if r := c.do("POST", "/api/v1/auth/register", map[string]any{"email": "csrf@example.com", "password": "another long password", "accept_terms": true}); r.status != 409 {
 		t.Fatalf("duplicate email: %d %s", r.status, r.body)
 	}
 	if r := anon.do("POST", "/api/v1/auth/login", map[string]any{"email": "csrf@example.com", "password": "wrong password!!"}); r.status != 401 {
 		t.Fatalf("bad login: %d", r.status)
 	}
-	if r := anon.do("POST", "/api/v1/auth/register", map[string]any{"email": "bad", "password": "short"}); r.status != 400 || r.errCode(t) != "VALIDATION_ERROR" {
+	if r := anon.do("POST", "/api/v1/auth/register", map[string]any{"email": "bad", "password": "short", "accept_terms": true}); r.status != 400 || r.errCode(t) != "VALIDATION_ERROR" {
 		t.Fatalf("validation: %d %s", r.status, r.body)
 	}
 	c.must("POST", "/api/v1/auth/logout", nil, 204)

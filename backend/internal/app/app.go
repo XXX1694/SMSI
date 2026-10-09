@@ -194,7 +194,8 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 		Posts: posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
 			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc, Quota: quotaSvc,
 			MinAgentLead: cfg.AgentMinScheduleLead, NoAgentLead: cfg.AgentMinScheduleLead == 0}),
-		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk).WithQuota(quotaSvc, db),
+		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk,
+			media.WithUploadLimit(cfg.MediaUploadConcurrency, media.DefaultUploadWait)).WithQuota(quotaSvc, db),
 		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
 			Tx: db, Audit: auditSvc, Clock: clk, MCPPublicURL: cfg.MCPPublicURL, APIPublicURL: cfg.APIPublicURL}),
 	}
@@ -236,7 +237,7 @@ func (a *App) Router() http.Handler {
 	}
 	return transport.NewRouter(a.Services, transport.Options{
 		WebBaseURL: a.Cfg.WebBaseURL, CORSOrigins: a.Cfg.CORSOrigins, CookieSecure: a.Cfg.CookieSecure,
-		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, GatewaySecret: a.Cfg.GatewaySecret,
+		CookieDomain: a.Cfg.CookieDomain, TrustedProxies: a.Cfg.TrustedProxies, MetricsToken: a.Cfg.MetricsToken, UploadMinKBps: a.Cfg.UploadMinKBps, GatewaySecret: a.Cfg.GatewaySecret,
 		Logger: a.Log, Metrics: a.Metrics, APILimiter: a.APILimiter, AuthLimiter: a.AuthLimit,
 		MailLimiter: a.MailLimit, MailDelivery: mailDelivery(a.Cfg), RequireVerification: requireVerification(a.Cfg),
 		TelegramWebhookSecret: webhookSecret,

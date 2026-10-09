@@ -46,6 +46,8 @@ type Options struct {
 	// header is ignored and the TCP peer is the client.
 	TrustedProxies []netip.Prefix
 	MetricsToken   string
+	// UploadMinKBps is the speed floor of a media upload (UPLOAD_MIN_KBPS, D-015); 0 = 32.
+	UploadMinKBps int
 	// GatewaySecret is MCP_GATEWAY_SECRET: with it, X-SocialOS-Client-IP from the MCP server is believed. Empty = never.
 	GatewaySecret string
 	Logger        *slog.Logger

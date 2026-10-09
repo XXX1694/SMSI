@@ -253,3 +253,19 @@ dialog.diagram .close { position: sticky; top: 0; float: right; z-index: 1; }
   .cta-band { padding: 1.5rem; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ---------- page transitions ----------
+   Cross-document View Transitions (Chrome, Edge, Safari 18.2+): the header and the brand mark stay put and morph between
+   the floating landing nav and the docs bar, the page body fades and rises. Browsers without support navigate normally. */
+@view-transition { navigation: auto; }
+.site-header { view-transition-name: site-nav; }
+.brand .mark { view-transition-name: brand-mark; }
+main { view-transition-name: page-main; }
+::view-transition-group(site-nav) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+::view-transition-old(page-main) { animation: vt-out 0.18s ease-in both; }
+::view-transition-new(page-main) { animation: vt-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}

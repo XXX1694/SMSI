@@ -138,7 +138,7 @@ Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also miss
 Pagination: `?limit=&cursor=` → `{"items":[…],"next_cursor":null|"…"}`. Times are RFC 3339 UTC.
 
 ### Auth
-`POST /auth/register {email,password,display_name}` · `POST /auth/login` · `POST /auth/logout` · `GET /me`
+`POST /auth/register {email,password,display_name,accept_terms}` (`accept_terms` must be `true`, else `400 VALIDATION_ERROR` with `fields.accept_terms`; the current terms version and the time are stored in `users.terms_version` / `terms_accepted_at`, D-016) · `POST /auth/login` · `POST /auth/logout` · `GET /me`
 
 Email verification and password recovery (mail goes through the queued mail port, D-006; links carry the token in the URL fragment, `{WEB_BASE_URL}/verify-email#token=…` and `/reset-password#token=…`):
 
@@ -204,7 +204,7 @@ Security properties: user B cannot connect user A's channel without posting a co
 `POST /posts/{id}/publish` · `POST /posts/{id}/schedule {scheduled_at}` · `POST /posts/{id}/cancel` · `POST /posts/{id}/retry` · `GET /posts/{id}/status`
 
 ### Media
-`POST /media` (multipart `file`; ≤ 100 MB video / 10 MB image; MIME sniffed server-side; allow-list jpeg/png/webp/gif, mp4/quicktime) · `GET /media` · `GET /media/{id}` (includes short-lived `url`) · `DELETE /media/{id}`
+`POST /media` (multipart `file`; ≤ 100 MB video / 10 MB image; MIME sniffed server-side from the first bytes; allow-list jpeg/png/webp/gif, mp4/quicktime; the body is streamed to S3 in 5 MiB parts, size enforced while streaming, at most `MEDIA_UPLOAD_CONCURRENCY` (2) at once, then `429 RATE_LIMITED` + `Retry-After`; the web UI posts it directly to the API host, see D-015) · `GET /media` · `GET /media/{id}` (includes short-lived `url`) · `DELETE /media/{id}`
 
 ### Analytics & dashboard
 `GET /analytics?from=&to=` · `GET /dashboard/summary` → `{connected_accounts, scheduled_posts, drafts, published_this_month, failed, upcoming:[…], recent:[…]}`
@@ -217,7 +217,7 @@ One `free` plan; the limits come from env and are **off by default** (`-1` = unl
 |---|---|---|---|
 | `connected_accounts` | `QUOTA_ACCOUNTS` (e.g. 5) | non-revoked social accounts; reconnecting one you have is free | `accounts.connectAccount` (OAuth, token and chat connects); an early `PrecheckAccount` (no lock) runs before an OAuth start and before a token connect spends its approval; a chat link refused at the limit is dropped, not retried |
 | `scheduled_posts_month` | `QUOTA_POSTS_PER_MONTH` (e.g. 60) | posts whose `quota_counted_at` is in the current UTC month; set when a post is scheduled or published, and set again (counted anew) when it is scheduled or published in a later month. Drafts are free, unschedule then schedule within the month does not count twice, deleting does not give it back | `posts.scheduleLocked`, `posts.startPublishing`; checked before the approval, so the owner is not asked about an action the plan refuses |
-| `media_bytes` | `QUOTA_MEDIA_MB` (e.g. 500) | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (early refusal before the object is stored, authoritative check with the insert) |
+| `media_bytes` | `QUOTA_MEDIA_MB` (e.g. 500) | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (checked with the streamed byte count in the transaction of the insert; a refused upload's object is deleted) |
 
 `GET /account/usage` (scope `analytics:read`) → `{plan, period_start, period_end, quotas:{connected_accounts:{used,limit}, scheduled_posts_month:{used,limit}, media_bytes:{used,limit}}}`; `limit` -1 = unlimited.
 
@@ -284,7 +284,7 @@ Dangerous tools carry no `confirm` flag any more: the REST API answers `APPROVAL
 3. `cancel` before run: target/jobs → `cancelled`, Asynq task deleted; worker also re-checks status so a late job is a no-op.
 4. **Reconciler** (worker, every minute): finds `scheduled_jobs` `pending|enqueued` with `run_at < now() - 1m` without a live task and re-enqueues; also recovers `publishing` targets stuck > 15 min.
 
-**Lock order (#38).** Every transaction that locks rows takes the **post first, then its targets**, then anything else (`scheduled_jobs`, `publication_attempts`, `action_approvals`, user-level advisory rows). The `users` row taken for the quota (`FOR NO KEY UPDATE`, D-014) is locked last, after the post and its targets. The API (`cancel`, `unschedule`, `publish`, `retry`, `schedule`, edits, approval consumption inside them) starts with `GetForUpdate(post)`. The worker follows the same order: `LockTarget` (used by `begin` and the reconciler's `lockedRun`) reads the target's post id, locks the post, and only then locks the target; `relock` locks the post, then the target. The post lock is the gate: while it is held nobody else can lock that post's targets or jobs, so the lower rows cannot deadlock. A path must never take a post lock while holding a target, job or approval lock. Postgres deadlock (`40P01`) and serialization (`40001`) errors are mapped to `CONFLICT` with a `Retry-After: 1` header (other conflicts, such as duplicates, carry no `Retry-After`) instead of a 500 as a safety net.
+**Lock order (#38).** Every transaction that locks rows takes the **post first, then its targets**, then anything else (`scheduled_jobs`, `publication_attempts`, `action_approvals`, user-level advisory rows). The `users` row taken for the quota (`FOR NO KEY UPDATE`, D-014) is locked after the post (the post lock is always first), not necessarily after its targets: `Retry` takes it before resetting targets and `Create` before inserting the post. The API (`cancel`, `unschedule`, `publish`, `retry`, `schedule`, edits, approval consumption inside them) starts with `GetForUpdate(post)`. The worker follows the same order: `LockTarget` (used by `begin` and the reconciler's `lockedRun`) reads the target's post id, locks the post, and only then locks the target; `relock` locks the post, then the target. The post lock is the gate: while it is held nobody else can lock that post's targets or jobs, so the lower rows cannot deadlock. A path must never take a post lock while holding a target, job or approval lock. Postgres deadlock (`40P01`) and serialization (`40001`) errors are mapped to `CONFLICT` with a `Retry-After: 1` header (other conflicts, such as duplicates, carry no `Retry-After`) instead of a 500 as a safety net.
 
 ## 7. OAuth flow
 ```

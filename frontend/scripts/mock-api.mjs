@@ -194,6 +194,7 @@ async function handle(req, res) {
   if (path === '/health') return send(res, 200, { status: 'ok' });
   if (path === '/auth/register' && m === 'POST') {
     if (!body.email || !body.password || String(body.password).length < 8) return fail(res, 400, 'VALIDATION_ERROR', 'Email and a password of 8+ characters are required');
+    if (body.accept_terms !== true) return fail(res, 400, 'VALIDATION_ERROR', 'You must accept the Terms and the Privacy Policy');
     if (users.has(body.email)) return fail(res, 409, 'CONFLICT', 'Email already registered');
     const u = addUser(body.email, body.password, body.display_name || body.email);
     const s = newSession(u);

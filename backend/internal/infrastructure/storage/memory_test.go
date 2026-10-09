@@ -76,3 +76,14 @@ func TestMemoryPresign(t *testing.T) {
 		t.Fatalf("expiry %v %v", exp, err)
 	}
 }
+
+// Size -1 means "unknown length": the store reads to the end (video uploads stream this way).
+func TestMemoryPutUnknownSize(t *testing.T) {
+	m := NewMemory()
+	if err := m.Put(context.Background(), "k", strings.NewReader("streamed"), -1, "video/mp4"); err != nil || !m.Has("k") {
+		t.Fatalf("put: %v", err)
+	}
+	if err := m.Put(context.Background(), "short", strings.NewReader("abc"), 5, "x"); err == nil || m.Has("short") {
+		t.Fatalf("a wrong known size must still fail: %v", err)
+	}
+}
