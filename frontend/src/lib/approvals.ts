@@ -66,6 +66,11 @@ function sentence(key: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** `linkedin · @alex` -> `LinkedIn · @alex`: the server sends network ids. */
+function named(account: string): string {
+  return account.replace(/^[a-z0-9_]+(?= · )/, providerLabel);
+}
+
 function isLong(value: string): boolean {
   return value.length > CLAMP_CHARS || value.split('\n').length > CLAMP_LINES;
 }
@@ -98,11 +103,11 @@ export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
     const raw = a.summary[key];
     if (key === 'platforms' && Array.isArray(a.summary.accounts)) continue; // the accounts line says it with names
     if (key === 'targets' && Array.isArray(raw)) {
-      for (const t of raw) if (isRec(t)) add(`Text on ${asText(t.account) || providerLabel(asText(t.platform))}`, asText(t.content));
+      for (const t of raw) if (isRec(t)) add(`Text on ${named(asText(t.account)) || providerLabel(asText(t.platform))}`, asText(t.content));
     } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw));
     else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone));
-    else if (key === 'platforms' || key === 'provider') add(label, asText(raw).split(', ').map(providerLabel).join(', '));
-    else if (key === 'accounts' && Array.isArray(raw)) add(label, raw.map((x) => String(x).replace(/^[a-z0-9_]+(?= · )/, providerLabel)).join(', '));
+    else if ((key === 'platforms' || key === 'provider') && asText(raw)) add(label, asText(raw).split(', ').map(providerLabel).join(', '));
+    else if (key === 'accounts' && Array.isArray(raw)) add(label, raw.map((x) => named(String(x))).join(', '));
     else add(label, asText(raw));
   }
   for (const key of Object.keys(a.summary)) if (!KNOWN.some(([k]) => k === key)) add(sentence(key), asText(a.summary[key]));

@@ -42,7 +42,7 @@ describe('approvals helpers', () => {
     expect(summaryLines(a, 'UTC')).toEqual([
       { label: 'Title', value: 'Launch', long: false },
       { label: 'Text', value: 'Hello', long: false },
-      { label: 'Networks', value: 'linkedin, telegram', long: false },
+      { label: 'Networks', value: 'LinkedIn, Telegram', long: false },
       { label: 'Scheduled for', value: expect.stringContaining('12:02'), long: false },
       { label: 'Instance url', value: 'social.example.com', long: false },
     ]);
@@ -57,7 +57,7 @@ describe('approvals helpers', () => {
     );
     expect(lines).toEqual([
       { label: 'Text', value: long, long: true },
-      { label: 'Text on telegram', value: 'short one', long: false },
+      { label: 'Text on Telegram', value: 'short one', long: false },
       { label: 'Media', value: '2 images, 1 video', long: false },
     ]);
     expect(summaryLines({ ...base, summary: { content: 'a\nb\nc\nd\ne' } }, 'UTC')[0]!.long).toBe(true);
@@ -75,8 +75,8 @@ describe('approvals helpers', () => {
       },
       'UTC',
     );
-    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on linkedin · @alex', 'Text on linkedin · @team', 'Accounts']);
-    expect(lines.at(-1)!.value).toBe('linkedin · @alex, linkedin · @team');
+    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on LinkedIn · @alex', 'Text on LinkedIn · @team', 'Accounts']);
+    expect(lines.at(-1)!.value).toBe('LinkedIn · @alex, LinkedIn · @team');
   });
 });
 

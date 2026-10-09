@@ -58,7 +58,7 @@ describe('ApprovalsView', () => {
     expect(screen.getByText('MCP: Claude Desktop')).toBeInTheDocument();
     expect(screen.getByText('Launch day')).toBeInTheDocument();
     expect(screen.getByText('We are live.')).toBeInTheDocument();
-    expect(screen.getByText('linkedin, telegram')).toBeInTheDocument();
+    expect(screen.getByText('LinkedIn, Telegram')).toBeInTheDocument();
     expect(screen.getByText('Disconnect account')).toBeInTheDocument();
     expect(screen.getAllByText('8 min left')).toHaveLength(2);
     expect(apiMock.approvals.list).toHaveBeenCalledWith('pending', 50);
@@ -133,8 +133,8 @@ describe('ApprovalsView', () => {
     };
     apiMock.approvals.list.mockResolvedValue(page([same]));
     render(<ApprovalsView />);
-    expect(await screen.findByText('Text on linkedin · @alex')).toBeInTheDocument();
-    expect(screen.getByText('Text on linkedin · @team')).toBeInTheDocument();
+    expect(await screen.findByText('Text on LinkedIn · @alex')).toBeInTheDocument();
+    expect(screen.getByText('Text on LinkedIn · @team')).toBeInTheDocument();
     expect(screen.getByText('for alex')).toBeInTheDocument();
     expect(screen.getByText('for team')).toBeInTheDocument();
   });
@@ -150,7 +150,7 @@ describe('ApprovalsView', () => {
     const toggle = await screen.findByRole('button', { name: 'Show full text' });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText(long.trim())).toHaveClass('line-clamp-4');
-    expect(screen.getByText('Text on telegram')).toBeInTheDocument();
+    expect(screen.getByText('Text on Telegram')).toBeInTheDocument();
     expect(screen.getByText('<b>raw</b> text')).toBeInTheDocument(); // shown as text, never as markup
     expect(screen.getByText('1 image')).toBeInTheDocument();
     await userEvent.click(toggle);
