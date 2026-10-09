@@ -39,11 +39,11 @@ export function jsonResult(data: unknown): CallToolResult {
 
 /**
  * The owner's approval for one dangerous call. The first call answers APPROVAL_REQUIRED with an approval_id; once the
- * owner approved it in SocialOS, repeat the identical call with that id (D-013). It works once.
+ * owner approved it in Steerpost, repeat the identical call with that id (D-013). It works once.
  */
 export const approvalId = z
   .uuid()
   .optional()
-  .describe("approval_id from an earlier APPROVAL_REQUIRED answer, after the owner approved it in SocialOS. Repeat the identical call with it. Works once.");
+  .describe("approval_id from an earlier APPROVAL_REQUIRED answer, after the owner approved it in Steerpost. Repeat the identical call with it. Works once.");
 
 export const seg = (id: string): string => encodeURIComponent(id);

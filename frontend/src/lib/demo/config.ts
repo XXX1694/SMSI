@@ -24,7 +24,7 @@ export function wipeDemoStorage(): void {
   }
 }
 
-export const DEMO_EMAIL = 'demo@socialos.dev';
+export const DEMO_EMAIL = 'demo@example.com';
 export const DEMO_PASSWORD = 'demo12345';
 
 /** Fired on `window` when the simulated scheduler changed data in the background. */
@@ -33,4 +33,9 @@ export const DEMO_CHANGE_EVENT = 'socialos:demo-change';
 /** Where a post lives. The demo is a static export, so it cannot serve unknown `/posts/<id>` paths. */
 export function postHref(id: string): string {
   return DEMO ? `/posts/view?id=${encodeURIComponent(id)}` : `/posts/${id}`;
+}
+
+/** The composer prefilled with an existing post (draft or scheduled). A query string, so it also works in the static demo. */
+export function editHref(id: string): string {
+  return `/compose?post=${encodeURIComponent(id)}`;
 }

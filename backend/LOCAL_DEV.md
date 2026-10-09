@@ -36,7 +36,7 @@ API_PUBLIC_URL=http://localhost:8080  WEB_BASE_URL=http://localhost:3000  CORS_A
 Without `make`, export the same variables yourself, e.g.
 `set -a; . ./.env; set +a`.
 
-## Commands (run in `/home/claude/SMSI/backend`)
+## Commands (run in the `backend/` directory of the repository)
 
 ```bash
 make build              # bin/api bin/worker bin/migrate bin/telegram (static, CGO off)

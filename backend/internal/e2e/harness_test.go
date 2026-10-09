@@ -60,6 +60,8 @@ type envOpts struct {
 	logger *slog.Logger
 	// clock replaces the system clock (tests that cross a month boundary).
 	clock port.Clock
+	// exportTasks replaces the export builder of the worker (tests that need a slow or failing build).
+	exportTasks queue.ExportTasks
 	// realMailLimit keeps the production mail-endpoint limiter; by default tests get a permissive one.
 	realMailLimit bool
 }
@@ -113,7 +115,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 	t.Cleanup(e.srv.Close)
 	if o.startWorker {
 		w := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: 4, DelayedCheck: 200 * time.Millisecond,
-			RetryDelay: o.retryDelay, Mailer: a.Mailer, Auth: a.Services.Auth, Exports: a.Services.Exports, Purge: a.Services.Deletion}, a.Publisher, testutil.Logger())
+			RetryDelay: o.retryDelay, Mailer: a.Mailer, Auth: a.Services.Auth, Exports: exportTasksOf(o, a), Purge: a.Services.Deletion}, a.Publisher, testutil.Logger())
 		if err := w.Start(); err != nil {
 			t.Fatalf("start worker: %v", err)
 		}
@@ -346,3 +348,10 @@ func auditActions(t *testing.T, c *client) map[string]int {
 func fmtTime(t time.Time) string { return t.UTC().Format(time.RFC3339) }
 
 var _ = fmt.Sprintf
+
+func exportTasksOf(o envOpts, a *app.App) queue.ExportTasks {
+	if o.exportTasks != nil {
+		return o.exportTasks
+	}
+	return a.Services.Exports
+}

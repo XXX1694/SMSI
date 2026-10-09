@@ -63,7 +63,7 @@ func (a *API) analytics(w http.ResponseWriter, r *http.Request) {
 		rows[i] = metricDTO{Platform: m.Platform, Metric: m.Metric, Day: utc(m.Day), CapturedAt: utc(m.Day), Value: m.Value}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"from": utc(rep.From), "to": utc(rep.To), "totals": rep.Totals, "items": rows, "series": rows,
-		"note": "Network-side analytics are not available for current providers; series contains SocialOS publishing counters."})
+		"note": "Network-side analytics are not available for current providers; series contains Steerpost publishing counters."})
 }
 
 func (a *API) auditLogs(w http.ResponseWriter, r *http.Request) {

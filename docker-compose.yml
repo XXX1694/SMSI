@@ -1,4 +1,4 @@
-# SocialOS local development stack: `docker compose up` (or `make up`).
+# Steerpost local development stack: `docker compose up` (or `make up`).
 # Configuration comes from .env (copy .env.example; `make env` does it and generates ENCRYPTION_KEY).
 # Every long-running service has a healthcheck, so `docker compose up -d --wait` blocks until the stack is
 # usable: postgres, redis, minio and worker are defined below; backend, mcp and frontend use the HEALTHCHECK
@@ -136,6 +136,8 @@ services:
   mcp:
     build: ./mcp
     environment:
+      # Both names: the server reads STEERPOST_* first, SOCIALOS_* keeps an older image working after a rollback (D-020).
+      STEERPOST_API_URL: http://backend:8080
       SOCIALOS_API_URL: http://backend:8080
       PORT: "3333"
       MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-}

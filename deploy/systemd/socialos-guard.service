@@ -1,9 +1,9 @@
-# Watches the shared host and sheds SocialOS load (never anything else) when the host is under pressure:
+# Watches the shared host and sheds Steerpost load (never anything else) when the host is under pressure:
 # host-proxy/socialos-guard.sh. Started by socialos-guard.timer. Install: README, "Sharing a host safely".
-# It runs in system.slice, outside socialos.slice, so it still gets CPU and memory when the SocialOS slice is at its caps.
+# It runs in system.slice, outside socialos.slice, so it still gets CPU and memory when the Steerpost slice is at its caps.
 # Root: it needs the Docker socket (root-equivalent anyway) and reads /opt/socialos/.env (mode 600) for GUARD_* settings.
 [Unit]
-Description=SocialOS guard: shed SocialOS load when the shared host is under pressure
+Description=Steerpost guard: shed Steerpost load when the shared host is under pressure
 After=docker.service
 ConditionPathExists=/opt/socialos/host-proxy/socialos-guard.sh
 

@@ -351,3 +351,21 @@ func TestShutdownMidBuildFailsTheExportAsInterrupted(t *testing.T) {
 		t.Fatal("partial archive kept")
 	}
 }
+
+func TestSweepFailsAPendingExportWhoseTaskNeverRan(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	e, _ := r.svc.Request(ctx, r.session())
+	r.queue.ids = nil
+	r.clock.t = r.clock.t.Add(3 * time.Hour)
+	if err := r.svc.Sweep(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := r.repo.Get(ctx, r.owner, e.ID)
+	if got.Status != dataexport.StatusFailed || got.ErrorCode != dataexport.ErrTimedOut || len(r.queue.ids) != 0 {
+		t.Fatalf("pending export after 3h: %+v, queued %v", got, r.queue.ids)
+	}
+	if _, err := r.svc.Request(ctx, r.session()); err != nil {
+		t.Fatalf("user still blocked: %v", err)
+	}
+}

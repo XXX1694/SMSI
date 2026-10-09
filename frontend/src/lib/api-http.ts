@@ -1,4 +1,4 @@
-/** The HTTP core of the API client: base URLs, CSRF, the request function. The typed endpoints are in api.ts. */
+/** The HTTP core of the API client: base URLs, CSRF, the request function. Only api.ts imports it (ESLint enforces that). */
 import { ApiError, parseErrorBody } from './api-error';
 
 export const API_BASE = '/api/v1';

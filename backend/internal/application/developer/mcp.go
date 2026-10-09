@@ -62,7 +62,7 @@ func (s *Service) CreateMCPConnection(ctx context.Context, a actor.Actor, in Cre
 	return &out, nil
 }
 
-// MCPRemotePackage is the only npm package a generated config may run, pinned to an exact version. SocialOS has no npm
+// MCPRemotePackage is the only npm package a generated config may run, pinned to an exact version. Steerpost has no npm
 // package of its own: never emit `npx -y <unpublished name>`, whoever registers it would receive the users' keys.
 const MCPRemotePackage = "mcp-remote@0.14.3"
 
@@ -74,7 +74,7 @@ const MCPRemotePackage = "mcp-remote@0.14.3"
 func (s *Service) mcpConfig(raw string) map[string]any {
 	http := map[string]any{
 		"mcpServers": map[string]any{
-			"socialos": map[string]any{
+			"steerpost": map[string]any{
 				"type":    "http",
 				"url":     s.mcpPublicURL,
 				"headers": map[string]string{"Authorization": "Bearer " + raw},
@@ -83,7 +83,7 @@ func (s *Service) mcpConfig(raw string) map[string]any {
 	}
 	stdio := map[string]any{
 		"mcpServers": map[string]any{
-			"socialos": map[string]any{
+			"steerpost": map[string]any{
 				"command": "npx",
 				"args":    []string{"-y", MCPRemotePackage, s.mcpPublicURL, "--header", "Authorization:${SOCIALOS_AUTH_HEADER}"},
 				"env":     map[string]string{"SOCIALOS_AUTH_HEADER": "Bearer " + raw},
@@ -94,7 +94,7 @@ func (s *Service) mcpConfig(raw string) map[string]any {
 		"http":       http,
 		"stdio":      stdio,
 		"mcpServers": http["mcpServers"],
-		"claude_code": "claude mcp add --transport http socialos " + s.mcpPublicURL +
+		"claude_code": "claude mcp add --transport http steerpost " + s.mcpPublicURL +
 			` --header "Authorization: Bearer ` + raw + `"`,
 	}
 }

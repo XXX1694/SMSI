@@ -26,12 +26,7 @@ const batchSize = 200
 // failure is recorded on the export (the user can ask again) and is not returned, so the queue does not retry a
 // build that would only repeat the same work; only an unknown or already claimed export is silently skipped.
 func (s *ExportService) Build(ctx context.Context, id uuid.UUID) error {
-	select {
-	case s.slot <- struct{}{}:
-		defer func() { <-s.slot }()
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	// One build at a time per worker is the queue's job: exports run on their own queue with concurrency 1.
 	e, err := s.d.Exports.Claim(ctx, id)
 	if errs.Is(err, errs.NotFound) {
 		return nil
@@ -50,7 +45,7 @@ func (s *ExportService) Build(ctx context.Context, id uuid.UUID) error {
 	}
 	expires := s.d.Clock.Now().Add(s.d.Retention)
 	if err := s.d.Exports.MarkReady(done, e.ID, key, size, expires); err != nil {
-		_ = s.d.Store.Delete(done, key)
+		s.removeArchive(done, key)
 		return err
 	}
 	return s.d.Audit.Record(done, a, audit.ActionExportReady, "data_export", e.ID.String(), map[string]any{"size_bytes": size})
@@ -62,7 +57,7 @@ func (s *ExportService) fail(ctx context.Context, a actor.Actor, e *dataexport.E
 		code = dataexport.ErrInterrupted
 	}
 	s.d.Log.ErrorContext(ctx, "export failed", slog.String("export_id", e.ID.String()), slog.String("user_id", e.UserID.String()), slog.Any("error", cause))
-	_ = s.d.Store.Delete(ctx, key) // a failed Put leaves nothing, a failed archive may have been fully stored
+	s.removeArchive(ctx, key) // a failed Put leaves nothing, a failed archive may have been fully stored
 	if err := s.d.Exports.MarkFailed(ctx, e.ID, code); err != nil {
 		s.d.Log.ErrorContext(ctx, "export not marked failed", slog.String("export_id", e.ID.String()), slog.Any("error", err))
 	}
@@ -202,4 +197,11 @@ func writeArray(ctx context.Context, zw *zip.Writer, name string, now time.Time,
 	}
 	_, err = io.WriteString(fw, "\n]\n")
 	return err
+}
+
+// removeArchive deletes a partial or orphaned archive; a failure is logged, the hourly sweep cannot find it (no row has its key).
+func (s *ExportService) removeArchive(ctx context.Context, key string) {
+	if err := s.d.Store.Delete(ctx, key); err != nil {
+		s.d.Log.ErrorContext(ctx, "export object not deleted", slog.String("key", key), slog.Any("error", err))
+	}
 }

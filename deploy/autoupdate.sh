@@ -5,7 +5,8 @@
 #   ./autoupdate.sh              check the latest release and deploy it if it is new
 #   ./autoupdate.sh --dry-run    only say what would happen
 #
-# Reads from .env: AUTOUPDATE (false/0/no/off = do nothing), GITHUB_REPO (default XXX1694/SMSI).
+# Reads from .env: AUTOUPDATE (false/0/no/off = do nothing), GITHUB_REPO (<owner>/<repo>, default XXX1694/SMSI; the API follows
+# the redirect GitHub answers with after a repository rename).
 # Asks https://api.github.com/repos/<repo>/releases/latest (no token). Only a tag shaped vX.Y.Z is accepted; the image tag
 # is the same without the "v" (that is how release.yml names it), and the deployed tag is what deploy.sh recorded in
 # .deploy/current_tag. Only a STRICTLY NEWER version is deployed: an older or equal release is refused and logged, and when
@@ -17,7 +18,7 @@
 # A tag whose deploy failed is remembered in .deploy/autoupdate_failed and not tried again until a newer release appears
 # (delete that file to retry; a manual `./deploy.sh <tag>` that succeeds makes it irrelevant). Output goes to the journal:
 #   journalctl -u socialos-autoupdate
-# It updates the three SocialOS images only. The files in this directory (compose files, scripts) are not touched.
+# It updates the three Steerpost images only. The files in this directory (compose files, scripts) are not touched.
 # While .deploy/guard/shed exists (the host guard shed load because the host is under pressure) it deploys nothing.
 set -Eeuo pipefail
 
@@ -28,7 +29,7 @@ RETRY_DELAY=${AUTOUPDATE_RETRY_DELAY:-900} # seconds to wait after "nothing was 
 
 log() { printf 'autoupdate: %s\n' "$*"; }
 warn() { printf 'autoupdate: %s\n' "$*" >&2; }
-usage() { sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # image_state NAME VERSION: is ghcr.io/<owner>/socialos-NAME:VERSION there? Anonymously, as `docker pull` of a public package
 # does it. Prints ready, missing (no such tag), denied (private or unknown package: not visible without a login) or error.
@@ -128,14 +129,14 @@ case "$(printf '%s' "$enabled" | tr '[:upper:]' '[:lower:]')" in
     ;;
 esac
 
-# A deploy pulls and unpacks images: the heaviest thing SocialOS does to a host. Not while the guard is shedding load
+# A deploy pulls and unpacks images: the heaviest thing Steerpost does to a host. Not while the guard is shedding load
 # because the host is under pressure (host-proxy/socialos-guard.sh); it resumes by itself or with --resume.
 if [ -e "$STATE_DIR/guard/shed" ]; then
-  log "skipping: the host guard has shed SocialOS load (level $(cat "$STATE_DIR/guard/shed" 2>/dev/null || true)); see host-proxy/socialos-guard.sh --status"
+  log "skipping: the host guard has shed Steerpost load (level $(cat "$STATE_DIR/guard/shed" 2>/dev/null || true)); see host-proxy/socialos-guard.sh --status"
   exit 0
 fi
 
-repo=$(env_get GITHUB_REPO)
+repo=${GITHUB_REPO:-$(env_get GITHUB_REPO)}
 repo=${repo:-XXX1694/SMSI}
 [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
   warn "GITHUB_REPO in .env is not <owner>/<repo>: $repo"
@@ -161,13 +162,13 @@ flock -n 8 || {
 # ---- what is the latest release? -------------------------------------------------------------------------------------
 body=$(mktemp)
 trap 'rm -f "$body"' EXIT
-code=$(curl -sS --max-time 30 -o "$body" -w '%{http_code}' \
+code=$(curl -sS -L --proto-redir =https --max-redirs 3 --max-time 30 -o "$body" -w '%{http_code}' \
   -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' -H 'User-Agent: socialos-autoupdate' \
   "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null || true)
 case "$code" in
   200) ;;
   404)
-    log "no published release in $repo yet"
+    warn "no published release found for $repo (HTTP 404): wrong GITHUB_REPO, or no release yet; will try again"
     exit 0
     ;;
   *)

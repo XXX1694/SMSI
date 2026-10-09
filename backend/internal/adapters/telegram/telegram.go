@@ -74,7 +74,7 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 		CanPublishText: true, CanPublishImage: true, CanPublishVideo: true, CanDelete: true,
 		MaxTextLength: MaxTextLength, MaxCaptionLength: MaxCaptionLength, MaxMediaCount: MaxMedia,
 		ConnectMethod: provider.ConnectTelegram,
-		Notes: "Add the SocialOS bot as an admin with 'Post messages' to your channel or group, then post the one-time code " +
-			"SocialOS gives you there to prove you control it. Captions with media are limited to 1024 characters; videos ≤ 50 MB.",
+		Notes: "Add the Steerpost bot as an admin with 'Post messages' to your channel or group, then post the one-time code " +
+			"Steerpost gives you there to prove you control it. Captions with media are limited to 1024 characters; videos ≤ 50 MB.",
 	}
 }

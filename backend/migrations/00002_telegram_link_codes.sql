@@ -1,5 +1,5 @@
 -- +goose Up
--- One-time codes that prove a SocialOS user controls a Telegram channel/group:
+-- One-time codes that prove a Steerpost user controls a Telegram channel/group:
 -- the user posts the code in the chat, the bot sees it and links the chat to
 -- the code's owner. Only the SHA-256 of the code is stored.
 CREATE TABLE telegram_link_codes (

@@ -419,8 +419,9 @@ container's layer.
   redo hours of work. Migration 00003's partial unique index allows one `pending|running` export per user (`409`).
   A successful export blocks the next request for 24 hours (`429` with `Retry-After`); when a new one is made the old
   ZIP is expired and deleted, so each user holds at most one archive.
-- The worker claims the row atomically (`pending` to `running`; a second delivery finds nothing to claim) and builds one
-  archive at a time per process. The ZIP is written into an `io.Pipe` that `Storage.Put` reads with unknown size, which
+- Exports run on their own queue (`<queue>-exports`) served by a second Asynq server with concurrency 1: one build at a
+  time per worker, and a long build never takes a slot from publishing. The worker claims the row atomically (`pending` to
+  `running`; a second delivery finds nothing to claim). The ZIP is written into an `io.Pipe` that `Storage.Put` reads with unknown size, which
   D-015 already made a bounded 5 MiB part upload: no temp file, no whole-archive buffer. JSON is deflated and read from
   Postgres in keyset batches of 200 rows (`id > after`, `(user_id, id)` indexes in migration 00005); media files are
   copied from S3 through a 32 KiB buffer and stored uncompressed. Worker memory is the batch plus one part, independent
@@ -434,7 +435,7 @@ container's layer.
 - The archive lives at `users/<uid>/exports/<id>.zip`. `GET /account/exports/{id}` (session, tenant-scoped, audited)
   returns a presigned URL valid for 5 minutes, only while the export is `ready` and before `expires_at`
   (`EXPORT_RETENTION_DAYS`, default 7, at most 30). An hourly worker sweep deletes expired archives, fails a `running`
-  export older than 2 hours (a crashed worker) and re-enqueues a `pending` one older than 10 minutes (a lost task).
+  export older than 2 hours (a crashed worker) and re-enqueues a `pending` one older than 10 minutes (a lost task) and fails one older than 2 hours.
 - Audit: `account.export_requested`, `account.export_ready`, `account.export_failed`, `account.export_downloaded`.
 
 **Alternatives.** A synchronous JSON response: no media, and a request that holds memory. Proxying the download through
@@ -492,3 +493,20 @@ it is still personal data about the user's actions and an agent's, and an anonym
 **Consequences.** Data lives up to the grace period plus an hour after a request, and backups keep it as long as the
 operator keeps them (the Privacy Policy says so). The email address is unavailable for registration until the purge ends.
 Counts are those of the first purge attempt. A post stuck `publishing` delays a purge until the reconciler settles it.
+
+## D-020: The product is renamed Steerpost; stored and host identifiers keep the `socialos` name (2026-10-09)
+
+**Decision.** The product, the MCP server, the generated client configs, the images, the npm packages and the Go module are
+now called Steerpost / `steerpost` ("the human steers, the agent posts"). The GitHub repository moves from SMSI to steerpost. Names that name
+stored state or a host resource stay `socialos`: session/CSRF cookies, `X-SocialOS-*` headers, Redis keys, the Bluesky rkey
+salt and the Mastodon idempotency prefix, the S3 rule and default bucket, metrics, localStorage keys, the compose project, DB names,
+`/opt/socialos`, systemd units, `socialos.slice`, Caddy snippets and backup paths. The MCP server reads `STEERPOST_*` and falls back to
+`SOCIALOS_*`. Images are published under both names until every server pulls `steerpost-*`. `autoupdate.sh` follows redirects.
+
+**Alternatives.** Rename everything at once: a prod migration on a shared host, a forced logout, duplicate posts on retry,
+new empty volumes. Rename the copy only: users would still see `socialos` in images, configs and the MCP server name.
+
+**Consequences.** Two names coexist, and `deploy/README.md` (section 15.2) lists the legacy identifiers. The old Pages URL `/SMSI/` returns 404 (no
+redirect). Never create a repo named SMSI again. Dual-publish and the env fallback are removed once every known server pulls `steerpost-*`.
+The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*` GHCR packages start private; the owner makes them public
+(deploy/README.md, section 15.1). The shims (env fallback, dual publish, `curl -L` in `autoupdate.sh`) land and are deployed before the repository is renamed.

@@ -17,9 +17,25 @@ it("stdio mode uses SOCIALOS_API_KEY and lists scoped tools", async () => {
   });
   const client = new Client({ name: "t", version: "0" });
   await client.connect(transport);
+  expect(client.getServerVersion()?.name).toBe("steerpost");
+  expect(client.getInstructions()).toContain("Steerpost");
   expect((await client.listTools()).tools.map((t) => t.name).sort()).toEqual(["get_post", "get_post_status", "list_posts"]);
   await client.callTool({ name: "get_post", arguments: { post_id: "p9" } });
   expect(api.calls.at(-1)?.path).toBe("/posts/p9");
   expect(api.calls.at(-1)?.headers.authorization).toBe(`Bearer ${VALID_KEY}`);
+  await client.close();
+});
+
+it("stdio mode accepts the STEERPOST_* names", async () => {
+  api.keys.set(VALID_KEY, ["posts:read"]);
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["--import", "tsx", "src/index.ts", "--stdio"],
+    env: { PATH: process.env.PATH ?? "", STEERPOST_API_URL: api.url, STEERPOST_API_KEY: VALID_KEY },
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "t", version: "0" });
+  await client.connect(transport);
+  expect((await client.listTools()).tools.length).toBeGreaterThan(0);
   await client.close();
 });

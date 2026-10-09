@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # Runs right before the host's Caddy starts (systemd/socialos-caddy-precheck.service: Before=caddy.service, pulled in by a
-# weak Wants=). Its only job: a broken SocialOS snippet must never keep Caddy, and with it the host's other sites, from
+# weak Wants=). Its only job: a broken Steerpost snippet must never keep Caddy, and with it the host's other sites, from
 # starting, after a reboot, a `systemctl restart caddy` or a Caddy package upgrade.
 #
-#   1. no SocialOS snippet in /opt/socialos/caddy: nothing to do (an import glob that matches nothing is fine for Caddy);
+#   1. no Steerpost snippet in /opt/socialos/caddy: nothing to do (an import glob that matches nothing is fine for Caddy);
 #   2. `caddy validate` of the host Caddyfile passes: nothing to do;
-#   3. it fails: the SocialOS snippets move to /opt/socialos/caddy/quarantine/<UTC time>/ (not matched by the import glob)
+#   3. it fails: the Steerpost snippets move to /opt/socialos/caddy/quarantine/<UTC time>/ (not matched by the import glob)
 #      and Caddy is validated again. Valid now: they stay there, an alert is left in .deploy/guard/alerts/caddy-quarantine,
-#      and Caddy starts without the SocialOS sites. Still invalid: the problem is not ours, so the snippets go back and
+#      and Caddy starts without the Steerpost sites. Still invalid: the problem is not ours, so the snippets go back and
 #      nothing else is changed.
 # A run interrupted while the snippets were aside (marker .in-progress in their quarantine folder) is undone by the next
 # run before anything else; a quarantine that has no alert gets one.
-# It always exits 0 and is time-limited, so it can never block or delay Caddy for long. To bring the SocialOS sites back:
+# It always exits 0 and is time-limited, so it can never block or delay Caddy for long. To bring the Steerpost sites back:
 # fix the cause, then host-proxy/render-caddy.sh and host-proxy/install-caddy-import.sh (which validates before it reloads).
 # Tunables: SOCIALOS_DIR (/opt/socialos), CADDYFILE (/etc/caddy/Caddyfile), CADDY_BIN (caddy), VALIDATE_TIMEOUT (15 s).
 set -Euo pipefail # no -e: every failure is handled, and the script must reach its exit 0
@@ -63,7 +63,7 @@ recover() {
         quarantine_alert "snippets of an interrupted run left in $dir"
       fi
     elif [ -n "$(find "$dir" -maxdepth 1 -name '*.caddy' -print -quit)" ] && [ ! -e "$ALERT_DIR/caddy-quarantine" ]; then
-      quarantine_alert "SocialOS Caddy snippet quarantined in $dir"
+      quarantine_alert "Steerpost Caddy snippet quarantined in $dir"
     fi
   done
 }
@@ -71,7 +71,7 @@ recover() {
 recover
 snippets=("$SNIPPET_DIR"/*.caddy)
 if [ "${#snippets[@]}" -eq 0 ]; then
-  log "no SocialOS snippet is imported: nothing to check"
+  log "no Steerpost snippet is imported: nothing to check"
   exit 0
 fi
 out=$(mktemp) || exit 0
@@ -80,7 +80,7 @@ trap 'rm -f "$out"' EXIT
 validate "$out"
 rc=$?
 if [ "$rc" -eq 0 ]; then
-  log "the Caddyfile with the SocialOS snippet(s) is valid"
+  log "the Caddyfile with the Steerpost snippet(s) is valid"
   exit 0
 elif [ "$rc" -eq 124 ]; then
   error "caddy validate timed out after ${VALIDATE_TIMEOUT}s: leaving everything as it is"
@@ -90,22 +90,22 @@ fi
 quarantine=$SNIPPET_DIR/quarantine/$(date -u +%Y%m%dT%H%M%SZ)
 if ! mkdir -p "$quarantine" || ! chmod 700 "$quarantine" || ! touch "$quarantine/.in-progress" ||
   ! mv -f "${snippets[@]}" "$quarantine/"; then
-  error "the Caddyfile is invalid and the SocialOS snippets could not be moved aside: Caddy may fail to start"
+  error "the Caddyfile is invalid and the Steerpost snippets could not be moved aside: Caddy may fail to start"
   tail -n 5 "$out"
   exit 0
 fi
 
 if validate "$out"; then
-  error "the SocialOS snippet(s) made the Caddyfile invalid: moved to $quarantine, Caddy starts without the SocialOS sites"
-  quarantine_alert "SocialOS Caddy snippet quarantined in $quarantine"
+  error "the Steerpost snippet(s) made the Caddyfile invalid: moved to $quarantine, Caddy starts without the Steerpost sites"
+  quarantine_alert "Steerpost Caddy snippet quarantined in $quarantine"
   rm -f "$quarantine/.in-progress"
   exit 0
 fi
 
 if ! mv -f "$quarantine"/*.caddy "$SNIPPET_DIR/" || ! rm -f "$quarantine/.in-progress" || ! rmdir "$quarantine"; then
-  error "could not put the SocialOS snippets back from $quarantine"
+  error "could not put the Steerpost snippets back from $quarantine"
   quarantine_alert "snippets could not be put back from $quarantine"
 fi
-error "the Caddyfile is invalid even without the SocialOS snippets: not ours to fix, left as it was. caddy validate said:"
+error "the Caddyfile is invalid even without the Steerpost snippets: not ours to fix, left as it was. caddy validate said:"
 tail -n 5 "$out"
 exit 0

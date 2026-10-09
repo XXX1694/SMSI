@@ -40,7 +40,7 @@ function CreatedPanel({ created, onDone }: { created: CreatedMcpConnection; onDo
             <p>
               <strong>Connector (no install):</strong> Settings, Customize, Connectors, Add custom connector, enter the MCP URL, choose “No sign-in” and add{' '}
               <code>Authorization: Bearer &lt;key&gt;</code> under Request headers. Request headers are a beta that not every plan has yet, and the URL must be
-              reachable from the internet over HTTPS. OAuth sign-in is not available for SocialOS yet.
+              reachable from the internet over HTTPS. OAuth sign-in is not available for Steerpost yet.
             </p>
             <p>
               <strong>Bridge:</strong> paste this into <code>claude_desktop_config.json</code> and restart Claude Desktop. It runs the community package{' '}

@@ -24,7 +24,7 @@ export const ALL_SCOPES = [
 
 export const VALID_KEY = "sk_live_testkey123";
 
-/** A fake SocialOS REST API. Keys map to scopes; unknown keys get 401. */
+/** A fake Steerpost REST API. Keys map to scopes; unknown keys get 401. */
 export class FakeApi {
   server!: Server;
   url = "";

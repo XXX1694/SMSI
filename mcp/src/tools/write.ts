@@ -105,7 +105,7 @@ export const writeTools = [
     scope: "posts:publish",
     risk: "sensitive",
     description:
-      "SENSITIVE: publishes the post to the live social networks immediately and cannot be undone by this API. The owner must approve it in SocialOS first: the first call answers APPROVAL_REQUIRED with an approval_id and nothing is published; once the owner approved, repeat the identical call with approval_id. Returns immediately; poll get_post_status for the outcome.",
+      "SENSITIVE: publishes the post to the live social networks immediately and cannot be undone by this API. The owner must approve it in Steerpost first: the first call answers APPROVAL_REQUIRED with an approval_id and nothing is published; once the owner approved, repeat the identical call with approval_id. Returns immediately; poll get_post_status for the outcome.",
     inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Publish post now", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     handler: (c, a) => {
@@ -118,7 +118,7 @@ export const writeTools = [
     scope: "posts:delete",
     risk: "sensitive",
     description:
-      "SENSITIVE: deletes a post in SocialOS (soft delete). It does not remove already-published copies from the social networks. The owner must approve it in SocialOS first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "SENSITIVE: deletes a post in Steerpost (soft delete). It does not remove already-published copies from the social networks. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: { post_id: id("Post id"), approval_id: approvalId },
     annotations: { title: "Delete post", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {
@@ -131,7 +131,7 @@ export const writeTools = [
     scope: "social:disconnect",
     risk: "critical",
     description:
-      "CRITICAL: disconnects a social account and discards its stored credentials; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. The owner must approve it in SocialOS first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
+      "CRITICAL: disconnects a social account and discards its stored credentials; the user must redo the OAuth flow to reconnect, and pending scheduled posts for it will fail. The owner must approve it in Steerpost first (APPROVAL_REQUIRED, then repeat the call with approval_id).",
     inputSchema: { account_id: id("Social account id"), approval_id: approvalId },
     annotations: { title: "Disconnect social account", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (c, a) => {

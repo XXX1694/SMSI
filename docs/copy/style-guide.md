@@ -1,4 +1,4 @@
-# SocialOS copy style guide
+# Steerpost copy style guide
 
 This guide covers UI, emails, the landing page, docs, MCP tool descriptions and API error messages. Terms come from
 [glossary.csv](glossary.csv): one term per concept in UI, API and docs (AGENTS.md section 7). When this guide and the
@@ -6,7 +6,7 @@ glossary disagree, the glossary wins for a term and this guide wins for everythi
 
 ## 1. Voice
 
-SocialOS sounds like a careful senior engineer who respects your time.
+Steerpost sounds like a careful senior engineer who respects your time.
 
 | Trait | Do | Don't |
 |---|---|---|
@@ -15,7 +15,7 @@ SocialOS sounds like a careful senior engineer who respects your time.
 | Competent | "Retried 3 times. LinkedIn is still returning errors." | "We're on it!" |
 | Honest | "Instagram is not available yet: it needs a Meta review." | "Instagram coming soon!" |
 
-- Address the reader as **you**. The product is **SocialOS**, not "we". Exception: emails and docs may say "we" for the
+- Address the reader as **you**. The product is **Steerpost**, not "we". Exception: emails and docs may say "we" for the
   maintainers, and nowhere else.
 - Name the actor. "Claude Desktop scheduled this post" beats "This post was scheduled". Agent actions must always be
   traceable to an agent.
@@ -30,8 +30,8 @@ SocialOS sounds like a careful senior engineer who respects your time.
 | Success | short, past tense, no praise | "Draft saved" |
 | Something is running | present progressive plus an ellipsis | "Publishing…" |
 | Error the user can fix | neutral, then the fix | "Password is too short. Use at least 8 characters." |
-| Error the user cannot fix | own it, then give a next step | "SocialOS could not reach LinkedIn. It will retry in 2 minutes." |
-| Dangerous action | precise about consequences | "This posts to LinkedIn and Telegram now. SocialOS cannot undo it." |
+| Error the user cannot fix | own it, then give a next step | "Steerpost could not reach LinkedIn. It will retry in 2 minutes." |
+| Dangerous action | precise about consequences | "This posts to LinkedIn and Telegram now. Steerpost cannot undo it." |
 | Empty | helpful, one next step | "No drafts yet. Write a post" |
 | Agent activity | factual and attributable | "Claude Desktop called `publish_post` (confirmed)" |
 
@@ -40,7 +40,7 @@ SocialOS sounds like a careful senior engineer who respects your time.
 - **US English** spelling: customize, color, canceled. The API status `cancelled` is a code identifier and stays as it
   is. UI copy today mixes in "customised" and "recognised"; fix them when you touch them.
 - **Sentence case everywhere**: titles, buttons, tabs, nav, badges, menus and email subjects. Proper nouns keep their own
-  case (LinkedIn, Dev.to, VK, SocialOS).
+  case (LinkedIn, Dev.to, VK, Steerpost).
 - Short sentences: aim for 15 words or fewer, never more than 25. One idea per sentence.
 - **Contractions**: positive ones are fine ("you'll", "it's"). Write negatives in full ("cannot", "do not"); they are read
   and translated more reliably.
@@ -83,7 +83,7 @@ Pattern: **What happened. What to do.** One or two sentences. The request refere
 
 - Field errors go under the field and say the rule. Form-level errors go above the buttons.
 - Errors from a network carry the network's name and its reason in plain words, when the reason is safe to show.
-- Avoid "Oops", "Sorry" (unless SocialOS is at fault), "Please" as filler and "Something went wrong" with no next step.
+- Avoid "Oops", "Sorry" (unless Steerpost is at fault), "Please" as filler and "Something went wrong" with no next step.
 
 ## 6. Empty states
 
@@ -108,10 +108,10 @@ permission**.
    - whether it can be undone;
    - what stays (for example, published copies stay on the network).
 3. **Confirm button**: the same verb, in danger style. **Dismiss**: "Cancel" (or "Keep …").
-4. Irreversible and wide in scope (deleting the SocialOS account, revoking a key that agents use) → the user types the
+4. Irreversible and wide in scope (deleting the Steerpost account, revoking a key that agents use) → the user types the
    name or email to confirm.
 5. For agents: MCP tools require `confirm: true`, and tool descriptions say "only after the user approved this exact
-   action". Until server-side approval ships (ROADMAP goal 5), UI copy must not imply that SocialOS checks the human's
+   action". Until server-side approval ships (ROADMAP goal 5), UI copy must not imply that Steerpost checks the human's
    answer. Write "The agent must send a confirmation flag", not "You will be asked to approve".
 6. Approval copy for later: "{agent} wants to publish “{post}” to {accounts} now." [Approve] [Reject]
 
@@ -158,7 +158,7 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 ## 10. Capitalization
 
 - Sentence case for all UI and email subjects ("Create API key", not "Create API Key").
-- Keep official casing: SocialOS, LinkedIn, Telegram, Bluesky, Mastodon, Misskey, Dev.to, VK, X, Discord, Slack, MCP,
+- Keep official casing: Steerpost, LinkedIn, Telegram, Bluesky, Mastodon, Misskey, Dev.to, VK, X, Discord, Slack, MCP,
   OAuth, API, JSON, Claude Desktop, Claude Code, Cursor.
 - Never use ALL CAPS for emphasis, including MCP descriptions ("SENSITIVE:"). The `[risk: …]` prefix already carries it.
 - Badges and statuses are in sentence case too: "Partially published", "Needs reconnecting".
@@ -207,7 +207,7 @@ Note: CLDR prints the kk unit as "10 MБ", with a Latin M and a Cyrillic Б. Che
 
 | Term | Rule |
 |---|---|
-| SocialOS | never translated, transliterated or declined with an attached ending (kk, tr: restructure the sentence) |
+| Steerpost | never translated, transliterated or declined with an attached ending (kk, tr: restructure the sentence) |
 | MCP, API, REST, OAuth, OAuth 2.1, JSON, HTTP, stdio, CSRF | always Latin, as is |
 | webhook | Latin in every language (de capitalizes it as a noun: "Webhook") |
 | API key | keep **API** in Latin. Translate **key** with the fixed glossary word: «API-ключ», «API-Schlüssel», 「APIキー」, «clave de API». An English "key" inside a Russian sentence fails the no-English check and reads as a bug; all major developer products translate it. |

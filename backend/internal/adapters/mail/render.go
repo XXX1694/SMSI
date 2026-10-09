@@ -11,7 +11,7 @@ import (
 )
 
 // ProductName is shown in every message.
-const ProductName = "SocialOS"
+const ProductName = "Steerpost"
 
 // Template names.
 const (

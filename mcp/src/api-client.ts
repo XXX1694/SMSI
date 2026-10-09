@@ -43,7 +43,7 @@ export interface ClientOptions {
 
 const TOOL_NAME = /^[a-z_]{1,64}$/;
 
-/** Typed client for the SocialOS REST API, authenticated with the caller's API key. */
+/** Typed client for the Steerpost REST API, authenticated with the caller's API key. */
 export class SocialOSClient {
   readonly requestId: string;
   private readonly fetchImpl: typeof fetch;
@@ -89,7 +89,7 @@ export class SocialOSClient {
       throw new ApiError(
         timedOut ? 504 : 503,
         timedOut ? "UPSTREAM_TIMEOUT" : "UPSTREAM_UNAVAILABLE",
-        timedOut ? "The SocialOS API timed out" : "The SocialOS API is unreachable",
+        timedOut ? "The Steerpost API timed out" : "The Steerpost API is unreachable",
         this.requestId,
       );
     }
@@ -108,7 +108,7 @@ export class SocialOSClient {
       throw new ApiError(
         res.status,
         e?.code ?? defaultCode(res.status),
-        e?.message ?? `SocialOS API returned HTTP ${res.status}`,
+        e?.message ?? `Steerpost API returned HTTP ${res.status}`,
         e?.request_id ?? res.headers.get("x-request-id") ?? this.requestId,
         stringFields(e?.fields),
       );

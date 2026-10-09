@@ -1,4 +1,4 @@
-# Caddy: automatic HTTPS (Let's Encrypt) and reverse proxy for SocialOS.
+# Caddy: automatic HTTPS (Let's Encrypt) and reverse proxy for Steerpost.
 # Environment (set on the caddy container by docker-compose.prod.yml): DOMAIN, ACME_EMAIL, S3_SITE.
 # Requirements: DNS A/AAAA records for app., api., mcp. (and s3. with the bundled MinIO) pointing at this
 # server, and ports 80 and 443 (tcp) / 443 (udp) open. Certificates live in the caddy-data volume.

@@ -52,7 +52,7 @@ export const PROVIDERS: readonly WireProvider[] = [
       max_text_length: 4096,
       max_media_count: 10,
       notes:
-        "Add the SocialOS bot as an admin with 'Post messages' to your channel or group, then post the one-time code SocialOS gives you there to prove you control it.",
+        "Add the Steerpost bot as an admin with 'Post messages' to your channel or group, then post the one-time code Steerpost gives you there to prove you control it.",
     }),
   },
   {
@@ -108,7 +108,7 @@ export const PROVIDERS: readonly WireProvider[] = [
     can_delete: true,
     max_text_length: 300,
     max_media_count: 4,
-    notes: 'Text up to 300 characters, up to 4 images of 2 MB each without alt text. Links and hashtags become clickable; mentions are not linked. Uses an app password. SocialOS schedules; Bluesky has no native scheduling.',
+    notes: 'Text up to 300 characters, up to 4 images of 2 MB each without alt text. Links and hashtags become clickable; mentions are not linked. Uses an app password. Steerpost schedules; Bluesky has no native scheduling.',
   }, [
     { name: 'handle', label: 'Handle', kind: 'text', required: true, placeholder: 'name.bsky.social', help: 'Your Bluesky handle, for example name.bsky.social.' },
     {

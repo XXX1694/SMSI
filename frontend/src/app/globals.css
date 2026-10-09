@@ -35,6 +35,14 @@ html[data-demo] .min-h-screen { min-height: calc(100vh - 1.75rem); }
   to { transform: translateX(100%); }
 }
 
+/* The logo draws itself once on first paint: the path eases in, then the tip settles. Opt-in via <Logo animate>. */
+@keyframes logo-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes logo-tip { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .logo-draw .logo-path { stroke-dasharray: 1; animation: logo-draw var(--duration-path) var(--ease-steer) both; }
+  .logo-draw .logo-tip { animation: logo-tip var(--duration-slow) var(--ease-enter) calc(var(--duration-path) * 0.7) both; }
+}
+
 @layer components {
   /* First-load list stagger: children rise in one after another (capped, so long lists do not crawl). */
   .stagger > * { animation: rise-in var(--duration-slow) var(--ease-enter) backwards; }

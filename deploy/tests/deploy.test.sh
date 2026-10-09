@@ -128,12 +128,12 @@ assert_eq "host-proxy, another placeholder: refused" 1 "$rc"
 assert_has "host-proxy, another placeholder: listed" "$out" "POSTGRES_PASSWORD=..."
 assert_lacks "host-proxy, another placeholder: ACME_EMAIL is not listed" "$out" "ACME_EMAIL=..."
 
-# 9. image cleanup touches SocialOS images only: every prune carries a SocialOS label filter, never a bare prune
+# 9. image cleanup touches Steerpost images only: every prune carries a Steerpost label filter, never a bare prune
 setup
 run 1.0.0
 assert_eq "deploy for the prune check: exit" 0 "$rc"
 assert_has "prune: it does clean up" "$(calls)" ":: image prune"
-assert_eq "prune: no call without a SocialOS label filter" 0 \
+assert_eq "prune: no call without a Steerpost label filter" 0 \
   "$(calls | grep ' :: image prune' | grep -vc 'label=org.opencontainers.image.title=socialos-' || true)"
 
 # 10. after a manual rollback the operator is told the timer would undo it

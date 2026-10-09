@@ -168,17 +168,17 @@ export const MCP_REMOTE_PACKAGE = 'mcp-remote@0.14.3';
 
 /**
  * `stdio` is the Claude Desktop bridge: Desktop spawns `mcp-remote`, which talks HTTP to our server.
- * There is no SocialOS npm package (do not invent one: whoever registered the name would receive the keys).
+ * There is no Steerpost npm package (do not invent one: whoever registered the name would receive the keys).
  */
 export function buildMcpConfig(rawKey: string, mcpUrl: string): McpConfigSnippets {
   const http = {
     mcpServers: {
-      socialos: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${rawKey}` } },
+      steerpost: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${rawKey}` } },
     },
   };
   const stdio = {
     mcpServers: {
-      socialos: {
+      steerpost: {
         command: 'npx',
         args: ['-y', MCP_REMOTE_PACKAGE, mcpUrl, '--header', 'Authorization:${SOCIALOS_AUTH_HEADER}'],
         env: { SOCIALOS_AUTH_HEADER: `Bearer ${rawKey}` },

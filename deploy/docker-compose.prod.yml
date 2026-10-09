@@ -1,4 +1,4 @@
-# SocialOS production stack for a single server: Caddy (automatic HTTPS) in front of the published GHCR images.
+# Steerpost production stack for a single server: Caddy (automatic HTTPS) in front of the published GHCR images.
 #
 #   cd /opt/socialos && ./deploy.sh sha-1a2b3c4      # normal path: pull, migrate, restart, health-check, roll back on failure
 #   docker compose -f docker-compose.prod.yml ps     # plain compose works too: configuration comes from ./.env
@@ -21,7 +21,7 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "5"
 
-# Hardening shared by the SocialOS containers (not applied to postgres/redis/minio/caddy, which need their defaults).
+# Hardening shared by the Steerpost containers (not applied to postgres/redis/minio/caddy, which need their defaults).
 x-app: &app
   restart: unless-stopped
   logging: *default-logging
@@ -202,6 +202,8 @@ services:
     <<: *app
     image: ghcr.io/${GHCR_OWNER:-xxx1694}/socialos-mcp:${IMAGE_TAG:-main}
     environment:
+      # Both names: the server reads STEERPOST_* first, SOCIALOS_* keeps an older image working after a rollback (D-020).
+      STEERPOST_API_URL: http://backend:8080
       SOCIALOS_API_URL: http://backend:8080
       PORT: "3333"
       MCP_GATEWAY_SECRET: ${MCP_GATEWAY_SECRET:-}

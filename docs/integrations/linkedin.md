@@ -1,20 +1,20 @@
 # LinkedIn setup guide
 
-For the owner of a SocialOS instance. You create one LinkedIn developer app per deployment; every user then connects their own profile
+For the owner of a Steerpost instance. You create one LinkedIn developer app per deployment; every user then connects their own profile
 through it. Steps match the LinkedIn Developer Portal as documented in October 2026.
 
 ## What you get
 
-| Capability | Needs | SocialOS status |
+| Capability | Needs | Steerpost status |
 |---|---|---|
 | Sign in + read profile (name, picture, email) | Product **Sign In with LinkedIn using OpenID Connect** (self-serve) | works |
 | Post text and images to a **personal profile** | Product **Share on LinkedIn** (self-serve) | works |
-| Post to a **Company Page** | Community Management API, vetted by LinkedIn | shown as **requires LinkedIn approval**; SocialOS does not request `w_organization_social` |
+| Post to a **Company Page** | Community Management API, vetted by LinkedIn | shown as **requires LinkedIn approval**; Steerpost does not request `w_organization_social` |
 
 ## Steps
 
 1. **Have a LinkedIn Company Page.** A developer app must be associated with a Page. If you have none, create a Page first
-   (a placeholder Page is accepted for the self-serve products). The Page is only the app's owner of record: SocialOS posts to the
+   (a placeholder Page is accepted for the self-serve products). The Page is only the app's owner of record: Steerpost posts to the
    connecting member's profile, not to this Page.
 2. Open <https://www.linkedin.com/developers/apps> and click **Create app**. Give it a name without "LinkedIn" or "In" logos, select
    the Page, add a privacy policy URL and a logo, accept the API terms.
@@ -35,7 +35,7 @@ through it. Steps match the LinkedIn Developer Portal as documented in October 2
 7. Put them in the server's `.env` (see below), then `docker compose up -d` so the containers pick them up.
 8. Connect an account in the UI (**Accounts > Connect > LinkedIn**), approve the consent screen, publish a test post.
 
-## What SocialOS requests (from the code)
+## What Steerpost requests (from the code)
 
 - Scopes: `openid profile email w_member_social` (default in `backend/internal/adapters/linkedin/linkedin.go`, `New`).
 - Authorization URL `https://www.linkedin.com/oauth/v2/authorization`, token URL `https://www.linkedin.com/oauth/v2/accessToken`,
@@ -58,7 +58,7 @@ product, not self-serve. LinkedIn requires:
 - a **new app dedicated to it**: the Development-tier request is greyed out for apps that already hold other products, and a rejected app cannot re-apply (create a new one);
 - Development tier first (low rate limits), then Standard tier with a screencast of every use case.
 
-SocialOS marks LinkedIn as `requires_approval` and states in the capability notes that company pages are not available yet. Do not
+Steerpost marks LinkedIn as `requires_approval` and states in the capability notes that company pages are not available yet. Do not
 promise Company Page posting to users until this review is done and the adapter requests the extra scope.
 
 ## Token lifetime and reconnecting
@@ -66,7 +66,7 @@ promise Company Page posting to users until this review is done and the adapter 
 - Access tokens last **60 days** (`expires_in`, 5184000 s). There is no way to extend them without the member.
 - **Programmatic refresh tokens (365 days) are only for approved Marketing Developer Platform partners.** A self-serve app gets
   no `refresh_token`.
-- Behaviour in SocialOS: the worker refreshes shortly before expiry only if a refresh token exists
+- Behaviour in Steerpost: the worker refreshes shortly before expiry only if a refresh token exists
   (`application/scheduler/execute.go`, `freshToken`). Otherwise the adapter returns `NO_REFRESH_TOKEN`/`TOKEN_EXPIRED`, the
   account is marked **expired**, the post target fails with "account must be reconnected", and the user clicks **Reconnect**.
 - The UI should therefore tell users honestly: "LinkedIn asks you to reconnect about every 60 days". Reconnecting while still logged

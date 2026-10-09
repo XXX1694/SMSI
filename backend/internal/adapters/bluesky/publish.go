@@ -168,7 +168,7 @@ func readImages(ctx context.Context, media []provider.MediaFile) ([]image, error
 	out := make([]image, 0, len(media))
 	for _, m := range media {
 		if m.Kind != "image" {
-			return nil, &provider.Error{Kind: provider.KindUnsupported, Provider: Name, Code: "UNSUPPORTED_MEDIA", Message: "Bluesky posts support images only in SocialOS", Err: provider.ErrUnsupported}
+			return nil, &provider.Error{Kind: provider.KindUnsupported, Provider: Name, Code: "UNSUPPORTED_MEDIA", Message: "Bluesky posts support images only in Steerpost", Err: provider.ErrUnsupported}
 		}
 		if m.Size > MaxImageBytes {
 			return nil, permanent("IMAGE_TOO_LARGE", "Bluesky images must be 2 MB or smaller")

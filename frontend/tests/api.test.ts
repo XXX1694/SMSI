@@ -73,8 +73,8 @@ describe('request layer', () => {
     mockFetch(201, { connection: { id: 'c1', name: 'Claude', scopes: [] }, raw_key: 'sk_live_abc' });
     const c = await api.developer.createMcpConnection({ name: 'Claude', scopes: ['posts:read'] });
     expect(c.rawKey).toBe('sk_live_abc');
-    expect(JSON.parse(c.config.http).mcpServers.socialos.headers.Authorization).toBe('Bearer sk_live_abc');
-    expect(JSON.parse(c.config.stdio).mcpServers.socialos.env.SOCIALOS_AUTH_HEADER).toBe("Bearer sk_live_abc");
+    expect(JSON.parse(c.config.http).mcpServers.steerpost.headers.Authorization).toBe('Bearer sk_live_abc');
+    expect(JSON.parse(c.config.stdio).mcpServers.steerpost.env.SOCIALOS_AUTH_HEADER).toBe("Bearer sk_live_abc");
   });
 });
 
