@@ -93,7 +93,7 @@ export function AuditView() {
   }, [load]);
 
   let body: ReactNode;
-  if (error) body = <ErrorState error={new Error(error)} onRetry={() => void load()} />;
+  if (error) body = <ErrorState title="Could not load the audit log" error={new Error(error)} onRetry={() => void load()} />;
   else if (loading && items.length === 0) body = <LoadingRows rows={3} />;
   else if (items.length === 0) {
     body =
