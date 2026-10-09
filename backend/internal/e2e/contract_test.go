@@ -46,7 +46,7 @@ func TestMeShape(t *testing.T) {
 		if me["id"] != user["id"] || me["email"] != user["email"] || me["display_name"] != "Tester" {
 			t.Errorf("%s: flat user fields must mirror user: %v", name, me)
 		}
-		if len(me["scopes"].([]any)) != 9 {
+		if len(me["scopes"].([]any)) != 10 {
 			t.Errorf("%s: sessions hold every scope, got %v", name, me["scopes"])
 		}
 	}
@@ -489,7 +489,7 @@ func TestEndpointContract(t *testing.T) {
 		if strings.Contains(string(c.do("GET", "/api/v1/developer/api-keys", nil).body), raw) {
 			t.Fatal("raw key listed after creation")
 		}
-		if scopes := list["available_scopes"].([]any); len(scopes) != 9 {
+		if scopes := list["available_scopes"].([]any); len(scopes) != 10 {
 			t.Errorf("available_scopes: %v", scopes)
 		}
 		dangerous := 0
@@ -498,13 +498,13 @@ func TestEndpointContract(t *testing.T) {
 				dangerous++
 			}
 		}
-		if dangerous != 3 {
-			t.Errorf("expected 3 dangerous scopes, got %d", dangerous)
+		if dangerous != 4 {
+			t.Errorf("expected 4 dangerous scopes, got %d", dangerous)
 		}
 		// Default scopes never include dangerous ones.
 		def := c.must("POST", "/api/v1/developer/api-keys", map[string]any{"name": "defaults"}, 201)["api_key"].(map[string]any)
 		for _, s := range def["scopes"].([]any) {
-			if strings.Contains("posts:publish posts:delete social:disconnect", s.(string)) {
+			if strings.Contains("posts:publish posts:delete social:disconnect social:connect", s.(string)) {
 				t.Errorf("default scopes include %v", s)
 			}
 		}

@@ -129,3 +129,36 @@ self-hoster without SMTP).
 the same as most sign-up forms). Existing users are unverified and must verify once mail is switched on. The rendered
 mail, with its link, sits in Redis until the worker sends it (D-006), and the forgot task holds the address until
 it runs. The mail limiter is in memory and per instance.
+
+## D-009: Connect with a pasted token needs the critical `social:connect` scope (2026-10-09)
+
+**Context.** Webhook URLs, app passwords and API keys are bearer secrets. Networks that use them (Discord, Mastodon,
+Bluesky, Slack, Dev.to, VK) need one generic way to connect. Per-provider endpoints mean N handlers and N forms, and
+metadata cannot hold the secret because the account API returns it.
+
+**Decision.** One port and one route. A provider declares `connect_method: token` and its form (`connect_fields`);
+`POST /social/accounts/token` validates the fields, calls the adapter's `Verify` (live whoami, 10 s) and stores the
+credential in the encrypted vault, reusing the OAuth upsert and audit path. The scope `social:connect` is **critical**
+and never part of a default set: an agent that can connect accounts can attach a credential it chose, so it is granted
+on purpose. Browser sessions always may connect. Once server-side approvals exist, a key-initiated connect should need
+the owner's approval like other dangerous actions. MCP gets no connect tool.
+
+**Alternatives.** An endpoint per provider (rejected: duplication). Secrets in `metadata` (rejected: returned by the
+API). Allowing sessions only (rejected: it blocks the API-key testing flow in PLATFORMS).
+
+**Consequences.** Static tokens are never refreshed; a revoked one marks the account `expired` and the user repeats the
+POST. Adapters must keep secrets out of the profile; the use case refuses a profile that contains them.
+
+## D-010: User-supplied hosts are fetched through an SSRF-safe client (2026-10-09)
+
+**Context.** Mastodon, Misskey and WordPress take a host from the user, so the server would fetch a user-chosen URL.
+
+**Decision.** Such adapters use `safehttp.NewSafeClient`: https only; the client resolves the host itself, refuses
+loopback, private, link-local (including the 169.254.169.254 metadata address), CGNAT, multicast, unspecified and other
+reserved addresses in IPv4, IPv6 and IPv4-mapped/NAT64/6to4 forms, dials the vetted address (no second DNS lookup, so
+no rebinding) and re-checks it in the dialer `Control`; redirects only to the same host, at most three; responses over
+1 MB fail instead of being truncated; no proxy environment variables; timeouts on dial, TLS, headers and the whole
+request. Adapters with a fixed host set `AllowedHosts` instead. Every adapter takes an injected `http.Client` for tests.
+
+**Consequences.** A self-hosted instance on a private network cannot be connected. Accepted: SocialOS runs on a shared
+host next to other services (D-001).

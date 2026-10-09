@@ -28,7 +28,7 @@ const LINK_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const now = () => new Date().toISOString();
 const inFuture = (h) => new Date(Date.now() + h * 3600_000).toISOString();
 const inPast = (h) => new Date(Date.now() - h * 3600_000).toISOString();
-const ALL_SCOPES = ['social:read', 'posts:read', 'posts:write', 'posts:schedule', 'posts:publish', 'posts:delete', 'social:disconnect', 'media:write', 'analytics:read'];
+const ALL_SCOPES = ['social:read', 'posts:read', 'posts:write', 'posts:schedule', 'posts:publish', 'posts:delete', 'social:disconnect', 'social:connect', 'media:write', 'analytics:read'];
 
 const caps = (o) => ({
   can_publish_text: false, can_publish_image: false, can_publish_video: false, can_schedule: false,

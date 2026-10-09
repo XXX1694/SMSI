@@ -13,13 +13,21 @@ func TestDefaultScopesAreSafe(t *testing.T) {
 			t.Fatalf("default scope %s is dangerous", s)
 		}
 	}
-	for _, s := range []Scope{PostsPublish, PostsDelete, SocialDisconnect} {
+	for _, s := range []Scope{PostsPublish, PostsDelete, SocialDisconnect, SocialConnect} {
 		if !s.Dangerous() {
 			t.Fatalf("%s should be dangerous", s)
 		}
 	}
 	if RiskOf(SocialDisconnect) != RiskCritical {
 		t.Fatal("disconnect must be critical")
+	}
+	if RiskOf(SocialConnect) != RiskCritical {
+		t.Fatal("connect must be critical")
+	}
+	for _, s := range DefaultScopes() {
+		if s == SocialConnect {
+			t.Fatal("social:connect must never be a default scope")
+		}
 	}
 }
 

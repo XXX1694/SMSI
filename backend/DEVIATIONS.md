@@ -39,7 +39,7 @@ server or product).
 - **Post limits**: title 200, content 10 000 characters, 20 accounts, 20 media, `scheduled_at` at most 366 days ahead. Per-network limits come from the provider capabilities.
 - **Malformed ids in a path** (`/posts/not-a-uuid`) are `404 NOT_FOUND`, not 400, so id shapes cannot be probed. Another tenant's id is also 404, never 403.
 - **Revoking** an API key or MCP connection is idempotent (204 on repeat); revoked and expired keys answer 401.
-- **Default API-key scopes** (when `scopes` is omitted) exclude `posts:publish`, `posts:delete` and `social:disconnect`.
+- **Default API-key scopes** (when `scopes` is omitted) exclude `posts:publish`, `posts:delete`, `social:disconnect` and `social:connect`.
 - **Scheduled publishing latency**: the worker promotes due tasks every 1 s (Asynq default is 5 s), so a post goes out within about a second of `scheduled_at`.
 - **CORS**: `CORS_ALLOWED_ORIGINS` must list explicit origins. `*` is rejected at startup and an empty list disables CORS (the library default would be a wildcard with credentials).
 - **Reconciler** (every minute, `RECONCILE_INTERVAL`) re-enqueues overdue jobs that have no live task, recovers `publishing` targets stuck longer than 15 minutes, and sends exhausted targets whose last attempt is `started`/`unknown` to `needs_review` (`OUTCOME_UNKNOWN`) instead of failing them, as the contract prefers a missed post over a duplicate. A `started` attempt younger than 5 minutes (`InFlightWindow`) is treated as owned by a live worker; one provider call is bounded to 3 minutes.
