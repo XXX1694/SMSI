@@ -25,6 +25,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 - Plural forms in the UI come from ICU messages: "1 requests per minute" for agents is now "1 request per minute", and the same rule covers attempts, accounts, attachments and characters.
 - A failed publishing attempt whose server message is only a code shows the sentence for the attempt's error code (before: the generic "Something went wrong").
 - Outside English the UI never shows the server's English error text; it shows the sentence for the error code from the catalog (field-level messages of the token form are mapped to catalog keys).
+- Pages no longer scroll slightly on notched iPhones: the safe-area body padding is now subtracted from the `min-h-screen` and `md:h-screen` heights (dynamic viewport units, so the mobile browser bars are accounted for); desktop and Android, with zero insets, are unchanged.
 - The completed setup checklist collapses to a "Set up" line with a "Show steps" button; the Approvals tab is kept in the URL (`?tab=history`); stacked table rows (Developer on phones) are more compact.
 - Calendar month view no longer scrolls sideways at 768 to 1280 px; event chips are at least 24 px tall with a gap between them.
 - Approval cards no longer break labels on phones and show network and status names (LinkedIn, Telegram, Draft) instead of codes.
