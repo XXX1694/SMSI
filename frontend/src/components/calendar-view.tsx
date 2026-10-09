@@ -80,8 +80,10 @@ function DayCell({ day, month, posts, today, timezone, onOpenDay }: { day: strin
         ) : null}
       </div>
       {posts.length > 0 ? (
-        <button type="button" onClick={() => onOpenDay(day)} className="inline-flex min-h-11 items-center text-xs text-muted-foreground sm:hidden">
-          <span aria-hidden>{t('postCount', { count: posts.length })}</span>
+        <button type="button" onClick={() => onOpenDay(day)} className="flex min-h-11 w-full items-center justify-center text-xs text-muted-foreground sm:hidden">
+          {/* Cells are about 40 px wide at 320 px: only the number fits in languages with long nouns ("publicaciones"); the full text returns once the row has room. */}
+          <span aria-hidden className="min-[480px]:hidden">{fmt.number(posts.length)}</span>
+          <span aria-hidden className="max-[479px]:hidden">{t('postCount', { count: posts.length })}</span>
           <span className="sr-only">{t('postsOnDay', { count: posts.length, day: dayLabel })}</span>
         </button>
       ) : null}

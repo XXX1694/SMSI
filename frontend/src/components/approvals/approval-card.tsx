@@ -88,7 +88,7 @@ export function ApprovalCard({ approval, now, busy, onApprove, onDeny }: Props) 
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {open ? timeLeft(approval.expires_at, tr, now) : approval.decided_at ? fmt.dateTime(approval.decided_at) : fmt.dateTime(approval.created_at)}
+          {open ? timeLeft(approval.expires_at, tr, now) : <span className="whitespace-nowrap">{approval.decided_at ? fmt.dateTime(approval.decided_at) : fmt.dateTime(approval.created_at)}</span>}
         </span>
       </div>
       <Summary approval={approval} />

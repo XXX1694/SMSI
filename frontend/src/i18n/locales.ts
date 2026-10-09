@@ -6,7 +6,7 @@ export const LOCALES = ['en', 'ru', 'es', 'pt-BR', 'de', 'fr', 'id', 'ja', 'zh-C
 export type Locale = (typeof LOCALES)[number];
 
 /** Locales whose catalog is complete. Add one here in the PR that finishes its catalog. */
-export const ENABLED_LOCALES: readonly Locale[] = ['en'];
+export const ENABLED_LOCALES: readonly Locale[] = ['en', 'ru', 'es', 'pt-BR', 'de', 'fr', 'id', 'ja', 'zh-CN'];
 
 /** Review state per locale (docs/copy/review/{locale}.md). Anything not `native-reviewed` shows "Beta translation". */
 export type ReviewState = 'source' | 'machine-draft' | 'native-reviewed';
