@@ -39,3 +39,33 @@ type OAuthFlows interface {
 	// DeleteExpired removes flows whose state and ticket have both expired.
 	DeleteExpired(ctx context.Context, now time.Time) (int64, error)
 }
+
+// AuthorizeRequest is what a provider needs to build its consent URL.
+type AuthorizeRequest struct {
+	State string
+	// Nonce is the raw nonce; only its hash is stored, and the ID token must echo it (OIDC providers).
+	Nonce string
+	// CodeVerifier is the raw PKCE verifier; the provider sends its S256 challenge.
+	CodeVerifier string
+	RedirectURI  string
+}
+
+// ExchangeRequest is what a provider needs to turn the callback's code into verified claims.
+type ExchangeRequest struct {
+	Code         string
+	CodeVerifier string
+	RedirectURI  string
+	// NonceHash is hex SHA-256 of the nonce sent in AuthorizeRequest (crypto.SHA256Hex). OIDC providers compare it
+	// to the ID token's nonce and reject a mismatch. Providers without ID tokens ignore it.
+	NonceHash string
+}
+
+// IdentityProvider is one external sign-in provider (Google, GitHub). It talks to the provider and reduces the answer
+// to Claims; whether those claims may sign anyone in is decided by identity.Decide.
+type IdentityProvider interface {
+	ID() identity.Provider
+	AuthorizeURL(r AuthorizeRequest) string
+	// Exchange redeems the code and verifies what the provider returned. Every failure is a PROVIDER_ERROR whose
+	// cause (kept out of client messages) says what was wrong. The provider's access token is discarded.
+	Exchange(ctx context.Context, r ExchangeRequest) (identity.Claims, error)
+}

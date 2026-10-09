@@ -85,6 +85,7 @@ type Config struct {
 
 	ApprovalConfig // approvals and the agent schedule lead (config_approvals.go)
 	QuotaConfig    // plan limits (config_quota.go)
+	SignInConfig   // social sign-in credentials (config_signin.go)
 	WorkerConfig   // worker shutdown and health address (config_worker.go)
 	ExportConfig   // data export retention (config_export.go)
 	DeletionConfig // account deletion grace period (config_deletion.go)
@@ -167,6 +168,7 @@ func Load() (*Config, error) {
 	proxies, warnings, perr := resolveTrustedProxies(c.TrustProxy, env("TRUSTED_PROXIES", ""))
 	c.ApprovalConfig = loadApprovalConfig()
 	c.QuotaConfig = loadQuotaConfig()
+	c.SignInConfig = loadSignInConfig()
 	c.ExportConfig = loadExportConfig()
 	c.DeletionConfig = loadDeletionConfig()
 	c.WorkerConfig = loadWorkerConfig()
@@ -241,6 +243,7 @@ func (c *Config) validate(extra ...error) error {
 	}
 	problems = append(problems, c.validateApprovals()...)
 	problems = append(problems, c.validateQuota()...)
+	problems = append(problems, c.validateSignIn()...)
 	problems = append(problems, c.validateWorker()...)
 	problems = append(problems, c.validateExport()...)
 	problems = append(problems, c.validateDeletion()...)
