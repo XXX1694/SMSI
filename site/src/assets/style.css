@@ -1,4 +1,4 @@
-/* Steerpost site. Same visual language as the app: Inter, neutral palette, one indigo accent. */
+/* Steerpost site. Same visual language as the app: Inter, neutral palette, one teal accent. */
 @font-face {
   font-family: 'Inter Variable';
   src: url('fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
@@ -11,7 +11,7 @@
    Code highlighting below is landing-page only. */
 :root {
   color-scheme: light;
-  --hl-keyword: hsl(233 62% 48%);
+  --hl-keyword: hsl(191 85% 26%);
   --hl-string: hsl(152 55% 27%);
   --hl-number: hsl(32 85% 33%);
   --hl-comment: hsl(220 9% 48%);
@@ -21,7 +21,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --hl-keyword: hsl(233 90% 76%);
+    --hl-keyword: hsl(187 72% 66%);
     --hl-string: hsl(152 50% 62%);
     --hl-number: hsl(38 85% 66%);
     --hl-comment: hsl(220 9% 58%);
@@ -55,7 +55,7 @@ code, pre, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, mon
 .site-header { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, hsl(var(--background)) 92%, transparent); backdrop-filter: saturate(1.4) blur(8px); border-bottom: 1px solid hsl(var(--border)); }
 .bar { display: flex; align-items: center; justify-content: space-between; height: 3.5rem; gap: 1rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.6rem; color: hsl(var(--foreground)); font-weight: 600; text-decoration: none; letter-spacing: -0.01em; }
-.brand .mark { width: 1.5rem; height: 1.5rem; color: hsl(var(--foreground)); }
+.brand .mark { width: 1.625rem; height: 1.625rem; color: hsl(var(--accent)); }
 .nav { display: flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; }
 .nav a:not(.btn) { color: hsl(var(--muted-foreground)); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; }
 .nav a:not(.btn):hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
