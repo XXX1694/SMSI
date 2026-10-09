@@ -123,6 +123,22 @@ describe('ApprovalsView', () => {
     expect(within(screen.getByRole('group', { name: 'Show approvals' })).getByRole('button', { name: 'History' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('shows two per-account texts of the same network as two distinct rows', async () => {
+    const same: Approval = {
+      ...publish,
+      summary: {
+        title: 'Two accounts', content: 'base', accounts: ['linkedin · @alex', 'linkedin · @team'],
+        targets: [{ platform: 'linkedin', account: 'linkedin · @alex', content: 'for alex' }, { platform: 'linkedin', account: 'linkedin · @team', content: 'for team' }],
+      },
+    };
+    apiMock.approvals.list.mockResolvedValue(page([same]));
+    render(<ApprovalsView />);
+    expect(await screen.findByText('Text on linkedin · @alex')).toBeInTheDocument();
+    expect(screen.getByText('Text on linkedin · @team')).toBeInTheDocument();
+    expect(screen.getByText('for alex')).toBeInTheDocument();
+    expect(screen.getByText('for team')).toBeInTheDocument();
+  });
+
   it('clamps long text and lets the owner read all of it, including per-network text and media', async () => {
     const long = 'A long post. '.repeat(40);
     const wide: Approval = {

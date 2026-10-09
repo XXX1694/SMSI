@@ -59,8 +59,8 @@ function Summary({ approval }: { approval: Approval }) {
   if (lines.length === 0) return null;
   return (
     <dl className="mt-3 space-y-2 text-sm">
-      {lines.map((l) => (
-        <SummaryRow key={l.label} line={l} />
+      {lines.map((l, i) => (
+        <SummaryRow key={`${i}-${l.label}`} line={l} />
       ))}
     </dl>
   );

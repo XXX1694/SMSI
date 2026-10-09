@@ -63,4 +63,19 @@ describe('approvals helpers', () => {
     expect(summaryLines({ ...base, summary: { content: 'a\nb\nc\nd\ne' } }, 'UTC')[0]!.long).toBe(true);
     expect(summaryLines({ ...base, summary: { media: { count: 0, images: 0, videos: 0 } } }, 'UTC')).toEqual([]);
   });
+
+  it('tells two accounts on the same network apart and lists accounts instead of bare networks', () => {
+    const lines = summaryLines(
+      {
+        ...base,
+        summary: {
+          platforms: ['linkedin', 'linkedin'], accounts: ['linkedin · @alex', 'linkedin · @team'], content: 'base',
+          targets: [{ platform: 'linkedin', account: 'linkedin · @alex', content: 'one' }, { platform: 'linkedin', account: 'linkedin · @team', content: 'two' }],
+        },
+      },
+      'UTC',
+    );
+    expect(lines.map((l) => l.label)).toEqual(['Text', 'Text on linkedin · @alex', 'Text on linkedin · @team', 'Accounts']);
+    expect(lines.at(-1)!.value).toBe('linkedin · @alex, linkedin · @team');
+  });
 });

@@ -94,8 +94,9 @@ export function summaryLines(a: Approval, timezone: string): SummaryLine[] {
   };
   for (const [key, label] of KNOWN) {
     const raw = a.summary[key];
+    if (key === 'platforms' && Array.isArray(a.summary.accounts)) continue; // the accounts line says it with names
     if (key === 'targets' && Array.isArray(raw)) {
-      for (const t of raw) if (isRec(t)) add(`Text on ${asText(t.platform)}`, asText(t.content));
+      for (const t of raw) if (isRec(t)) add(`Text on ${asText(t.account) || asText(t.platform)}`, asText(t.content));
     } else if (key === 'media' && isRec(raw)) add(label, mediaText(raw));
     else if (key === 'scheduled_at' && typeof raw === 'string') add(label, formatDateTime(raw, timezone));
     else add(label, asText(raw));
