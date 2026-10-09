@@ -7,7 +7,8 @@
     "src/lib/demo/approvals.ts": "Demo approval summaries are seed content, like the rest of the demo data (D-021).",
     "src/components/legal/legal-page.tsx": "Terms and Privacy are binding text and stay English; the page chrome belongs to the document (plan 2, Message layout).",
     "src/components/legal/terms-content.tsx": "Terms of Service: binding text, English only (plan 2, Message layout).",
-    "src/components/legal/privacy-content.tsx": "Privacy Policy: binding text, English only (plan 2, Message layout)."
+    "src/components/legal/privacy-content.tsx": "Privacy Policy: binding text, English only (plan 2, Message layout).",
+    "src/lib/demo/quota.ts": "Demo quota refusals simulate the API's English error messages, which stay English (D-021)."
   },
   "texts": {
     "src/components/brand/logo.tsx": {
@@ -23,6 +24,14 @@
       "Request failed (": "Fallback ApiError.message when the server sends no body; API messages stay English and the UI never shows it (isTechnicalMessage)."
     },
     "src/lib/normalize.ts": {
+      "Telegram": "Network brand name (proper noun), same in every language.",
+      "Instagram": "Network brand name (proper noun), same in every language.",
+      "Facebook": "Network brand name (proper noun), same in every language.",
+      "Threads": "Network brand name (proper noun), same in every language.",
+      "Pinterest": "Network brand name (proper noun), same in every language.",
+      "Discord": "Network brand name (proper noun), same in every language.",
+      "Mastodon": "Network brand name (proper noun), same in every language.",
+      "Bluesky": "Network brand name (proper noun), same in every language.",
       "Test network": "Provider display names come from the API; this is the fallback for the built-in test network.",
       "Bearer": "HTTP auth scheme, not UI text."
     }

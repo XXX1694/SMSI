@@ -66,7 +66,7 @@ function Attempts({ attempts, post }: { attempts: PublicationAttempt[]; post: Po
   const t = useTranslations();
   const tp = useTranslations('posts');
   const fmt = useFormat();
-  const platformOf = (id: string) => providerLabel(post.targets.find((x) => x.id === id)?.platform ?? '');
+  const platformOf = (id: string) => providerLabel(post.targets.find((x) => x.id === id)?.platform ?? '') || t('common.unknown');
   if (attempts.length === 0) return <p className="text-sm text-muted-foreground">{tp('noAttempts')}</p>;
   return (
     <Table label={tp('attemptsTable')}>

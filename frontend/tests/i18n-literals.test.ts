@@ -43,6 +43,42 @@ describe('hard-coded user-visible English', () => {
     );
   });
 
+  it('finds copy in any non-technical prop, including objects and arrays', () => {
+    const hits = scanSource(
+      `export const A = () => (<div><Empty empty="Nothing scheduled." /><List items={['Draft', 'Done']} /><Card copy={{ title: 'Heading', n: 3 }} /><Btn variant="primary" className="Flex" data-x="Hello there" aria-controls="Menu" onClick={() => go('Draft')} /></div>);`,
+      'p.tsx',
+    ) as Hit[];
+    const kinds = hits.map((h) => `${h.kind}:${h.text}`);
+    expect(kinds).toEqual(expect.arrayContaining(['attr:empty:Nothing scheduled.', 'attr:items:Draft', 'attr:items:Done', 'attr:copy:Heading']));
+    expect(kinds.filter((k) => /variant|className|data-x|aria-controls/.test(k))).toEqual([]);
+  });
+
+  it('finds capitalised single-word labels in records, arrays, returns and variables', () => {
+    const hits = scanSource(
+      `const LABELS = { draft: 'Draft', ok: 'fine' };
+       const ALL = ['Scheduled', 'x'];
+       function f(s: string) { if (s === 'Draft') return 'Published'; return cond ? 'Failed' : 'failed'; }
+       const one = 'Canceled';
+       const list: string[] = []; list.push('Queued'); const m = new Map(); m.set('k', 'Sent');
+       const x = a === 'Skipped' ? 1 : 2;`,
+      'c.ts',
+    ) as Hit[];
+    expect(hits.map((h) => h.text).sort()).toEqual(['Canceled', 'Draft', 'Failed', 'Published', 'Queued', 'Scheduled', 'Sent'].sort());
+  });
+
+  it('checks the middle and end of template strings, not only the start', () => {
+    const hits = scanSource(
+      'const a = `${n} posts scheduled`; const b = `${n} of ${m}`; const c = `${base}/api/posts/${id}`; const d = `px-2 ${x} text-sm`; const e = `Hello ${name}`;',
+      't.ts',
+    ) as Hit[];
+    expect(hits.map((h) => h.text)).toEqual(['posts scheduled', 'Hello']);
+  });
+
+  it('flags sentences passed to calls that used to be skipped (replace, set, push)', () => {
+    const hits = scanSource(`s.replace('x', 'Could not load it.'); m.set('k', 'Could not save it.'); l.push('Nothing here.'); router.replace('/login');`, 'r.ts') as Hit[];
+    expect(hits.map((h) => h.text)).toEqual(['Could not load it.', 'Could not save it.', 'Nothing here.']);
+  });
+
   it('ignores identifiers, class names, punctuation and catalog calls', () => {
     const hits = scanSource(
       `import x from 'react';
