@@ -19,7 +19,7 @@ type ServerConfig struct {
 	Concurrency int
 	// DelayedCheck is how often scheduled tasks are promoted (default 1s, so a post goes out within ~1s of its time).
 	DelayedCheck time.Duration
-	// ShutdownTimeout is how long Shutdown waits for in-flight tasks before aborting them (default 40s).
+	// ShutdownTimeout is how long Shutdown waits for in-flight tasks before aborting them (default 30s).
 	ShutdownTimeout time.Duration
 	// RetryDelay overrides the retry backoff (default scheduler.RetryDelay: 30s·2^n ±20%). Tests only.
 	RetryDelay func(n int, err error) time.Duration
@@ -50,7 +50,7 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 		cfg.DelayedCheck = time.Second
 	}
 	if cfg.ShutdownTimeout <= 0 {
-		cfg.ShutdownTimeout = 40 * time.Second
+		cfg.ShutdownTimeout = 30 * time.Second
 	}
 	retryDelay := cfg.RetryDelay
 	if retryDelay == nil {

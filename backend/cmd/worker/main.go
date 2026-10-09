@@ -26,6 +26,9 @@ func main() {
 	}
 }
 
+// backgroundMargin is the extra time background jobs get to stop on top of WORKER_SHUTDOWN_TIMEOUT.
+const backgroundMargin = 5 * time.Second
+
 func run() error {
 	cfg, err := config.Load()
 	if err != nil {
@@ -59,8 +62,11 @@ func run() error {
 	// Shutdown then stops taking tasks and lets in-flight publishes finish (up to WORKER_SHUTDOWN_TIMEOUT) before the
 	// database and Redis are closed by the deferred a.Close().
 	log.Info("shutting down worker", slog.Duration("timeout", cfg.WorkerShutdownTimeout))
+	// One deadline for the whole stop: in-flight publishes get WORKER_SHUTDOWN_TIMEOUT, background jobs only what is
+	// left of it plus a fixed margin. Together they stay under the compose stop_grace_period (45s).
+	deadline := time.Now().Add(cfg.WorkerShutdownTimeout + backgroundMargin)
 	srv.Shutdown()
-	bg.Wait(10 * time.Second)
+	bg.Wait(max(time.Until(deadline), time.Second))
 	log.Info("worker stopped")
 	return nil
 }
@@ -111,13 +117,15 @@ func serveHealth(ctx context.Context, a *app.App, addr string, log *slog.Logger)
 	})
 	mux.Handle("/metrics", promhttp.HandlerFor(a.Metrics.Registry, promhttp.HandlerOpts{}))
 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
-	go func() {
-		<-ctx.Done()
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- srv.ListenAndServe() }()
+	select {
+	case err := <-serveErr:
+		log.Warn("worker health server stopped", slog.Any("error", err))
+	case <-ctx.Done():
 		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(sctx)
-	}()
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Warn("worker health server stopped", slog.Any("error", err))
+		<-serveErr // the listener goroutine ends before this job reports done
 	}
 }

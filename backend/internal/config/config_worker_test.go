@@ -12,15 +12,15 @@ func TestWorkerSettingsDefaultAndAreValidated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.WorkerShutdownTimeout != 40*time.Second || c.WorkerHTTPAddr != ":8081" {
+	if c.WorkerShutdownTimeout != 30*time.Second || c.WorkerHTTPAddr != ":8081" {
 		t.Fatalf("defaults: %v %q", c.WorkerShutdownTimeout, c.WorkerHTTPAddr)
 	}
-	t.Setenv("WORKER_SHUTDOWN_TIMEOUT", "90s")
+	t.Setenv("WORKER_SHUTDOWN_TIMEOUT", "35s")
 	t.Setenv("WORKER_HTTP_ADDR", "127.0.0.1:9091")
-	if c, err = Load(); err != nil || c.WorkerShutdownTimeout != 90*time.Second || c.WorkerHTTPAddr != "127.0.0.1:9091" {
+	if c, err = Load(); err != nil || c.WorkerShutdownTimeout != 35*time.Second || c.WorkerHTTPAddr != "127.0.0.1:9091" {
 		t.Fatalf("overrides: %+v %v", c, err)
 	}
-	for _, val := range []string{"1s", "11m", "-5s"} {
+	for _, val := range []string{"1s", "36s", "-5s"} {
 		t.Run(val, func(t *testing.T) {
 			t.Setenv("WORKER_SHUTDOWN_TIMEOUT", val)
 			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "WORKER_SHUTDOWN_TIMEOUT") {
