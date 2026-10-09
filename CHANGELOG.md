@@ -6,6 +6,10 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Changed
+
+- CI is one workflow: `security.yml` is merged into `ci.yml`. A pull request that touches everything runs 10 jobs instead of 19; the scanners (govulncheck, `npm audit`, gitleaks, Trivy, CodeQL) keep their checks and SARIF categories. The new aggregator job **CI ok** is the single check a branch ruleset needs to require; jobs skipped because their paths did not change count as passed. The weekly scan now runs from `ci.yml`.
+
 ## [0.4.0] - 2026-10-09
 
 ### Added
