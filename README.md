@@ -13,7 +13,6 @@
 
 <p align="center">
   <a href="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/XXX1694/steerpost/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/XXX1694/steerpost/actions/workflows/security.yml"><img alt="Security" src="https://github.com/XXX1694/steerpost/actions/workflows/security.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/XXX1694/steerpost/releases"><img alt="Release" src="https://img.shields.io/github/v/release/XXX1694/steerpost?sort=semver"></a>
   <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
 </p>

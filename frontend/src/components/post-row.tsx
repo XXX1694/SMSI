@@ -28,19 +28,19 @@ export function PostRow({ post, onRetry }: RowProps) {
         <div className="min-w-32 flex-1">
           <p className="truncate text-sm font-medium">{title}</p>
           <p className="text-xs text-muted-foreground">
-            {postPlatforms(post, t)} · {fmt.dateTime(postTime(post))}
+            {postPlatforms(post, t)} · <span className="whitespace-nowrap">{fmt.dateTime(postTime(post))}</span>
           </p>
         </div>
         <PostStatusBadge status={post.status} />
       </Link>
       {postActions(post.status).edit ? (
-        <Button asChild size="sm" variant="ghost" className="min-w-12 shrink-0 px-2">
+        <Button asChild size="sm" variant="ghost" className="ml-auto min-w-12 shrink-0 px-2">
           <Link href={editHref(post.id)} aria-label={t('posts.editLabel', { title })}>
             {t('common.edit')}
           </Link>
         </Button>
       ) : onRetry && postActions(post.status).retry ? (
-        <Button size="sm" variant="secondary" className="shrink-0" onClick={() => onRetry(post)} aria-label={t('posts.retryLabel', { title })}>
+        <Button size="sm" variant="secondary" className="ml-auto shrink-0" onClick={() => onRetry(post)} aria-label={t('posts.retryLabel', { title })}>
           {t('common.retry')}
         </Button>
       ) : (

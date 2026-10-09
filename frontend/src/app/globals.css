@@ -39,6 +39,10 @@
   html:lang(ja) { --font-script: 'Noto Sans JP Variable'; }
   html:lang(zh-CN) { --font-script: 'Noto Sans SC Variable'; }
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+  /* CJK has no spaces: strict line breaking keeps 、。 and small kana off the start of a line; `overflow-wrap: anywhere` lets a long
+     run shrink flex and grid items instead of overflowing. Dates that must stay whole carry `whitespace-nowrap` where they render. */
+  :lang(ja), :lang(zh) { line-break: strict; overflow-wrap: anywhere; }
+  :lang(ja) { word-break: auto-phrase; }
 }
 
 /* viewport-fit=cover (root layout) lets the page draw under notches and the home bar; keep content inside the safe area. */

@@ -17,13 +17,12 @@ func scalar[T any](t *testing.T, db *postgres.DB, sql string) T {
 	return v
 }
 
-// rollBack undoes the newest n migrations.
-func rollBack(t *testing.T, url string, n int) {
+// downTo rolls the schema back until version is the newest applied one. Tests name the version they examine instead
+// of counting "down" steps, which move whenever another migration lands.
+func downTo(t *testing.T, url string, version int64) {
 	t.Helper()
-	for i := 0; i < n; i++ {
-		if err := postgres.Migrate(context.Background(), url, "down", testutil.Logger()); err != nil {
-			t.Fatalf("rollback %d of %d: %v", i+1, n, err)
-		}
+	if err := postgres.MigrateDownTo(context.Background(), url, version, testutil.Logger()); err != nil {
+		t.Fatalf("down to %05d: %v", version, err)
 	}
 }
 
@@ -71,8 +70,8 @@ func TestMigration00003UpAndDown(t *testing.T) {
 		t.Fatalf("plan default %q", got)
 	}
 
-	// 00007, 00006, 00005 and 00004 sit on top of 00003; roll them back first so the "down" below undoes 00003 (they have their own tests).
-	rollBack(t, url, 4)
+	// Everything above 00003 has its own test; roll it back so "down" below undoes exactly 00003.
+	downTo(t, url, 3)
 	// A deleted user must not block the rollback.
 	if _, err := db.Pool.Exec(ctx, `INSERT INTO users (email, password_hash, status) VALUES ('gone@example.com','x','deleted')`); err != nil {
 		t.Fatal(err)

@@ -197,7 +197,7 @@
       "invalidBody": "It may have expired or already been used. Links work once and last 48 hours.",
       "signInToRequest": "Sign in to request a new link"
     },
-    "deletedNotice": "Deletion of your account is scheduled. Your sessions and API keys were signed out. Sign in before the grace period ends to see the date and cancel it."
+    "deletedNotice": "Deletion of your account is scheduled. All sessions were signed out and API keys revoked. Sign in before the grace period ends to see the date and cancel it."
   },
   "posts": {
     "editBlockedPublishing": "This post is being published right now, so it cannot be changed.",

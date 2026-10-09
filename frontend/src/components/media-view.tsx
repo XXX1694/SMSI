@@ -86,7 +86,7 @@ export function MediaView() {
               <div className="space-y-1 p-3">
                 <p className="truncate text-sm font-medium" title={m.original_name}>{m.original_name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatBytes(m.size_bytes, t)} · {fmt.dateTime(m.created_at)}
+                  {formatBytes(m.size_bytes, t)} · <span className="whitespace-nowrap">{fmt.dateTime(m.created_at)}</span>
                 </p>
                 <Button variant="ghost" size="sm" className="-ml-3" onClick={() => setTarget(m)} aria-label={t('media.deleteLabel', { name: m.original_name })}>
                   {t('common.delete')}

@@ -122,7 +122,7 @@ func TestDeleteAllSessionsKeepsOnlyTheExcepted(t *testing.T) {
 	sess, ctx := postgres.NewSessions(db), context.Background()
 	a, b := newUser(t, db, "a@example.com"), newUser(t, db, "b@example.com")
 	mk := func(u *user.User, hash string) *auth.Session {
-		s := &auth.Session{UserID: u.ID, TokenHash: hash, CSRFToken: "c", ExpiresAt: base.Add(time.Hour)}
+		s := &auth.Session{CreatedAt: base, UserID: u.ID, TokenHash: hash, CSRFToken: "c", ExpiresAt: base.Add(time.Hour)}
 		if err := sess.Create(ctx, s); err != nil {
 			t.Fatal(err)
 		}

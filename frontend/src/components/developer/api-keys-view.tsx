@@ -145,8 +145,8 @@ function KeyRow({ k, onRevoke }: { k: ApiKey; onRevoke: (k: ApiKey) => void }) {
           ))}
         </div>
       </Td>
-      <Td label={t('developer.apiKeys.expiresLabel')} className="whitespace-nowrap py-3 text-muted-foreground">{k.expires_at ? fmt.dateTime(k.expires_at) : t('developer.apiKeys.expiryNever')}</Td>
-      <Td label={t('developer.apiKeys.colLastUsed')} className="whitespace-nowrap py-3 text-muted-foreground">{formatRelative(k.last_used_at, t)}</Td>
+      <Td label={t('developer.apiKeys.expiresLabel')} className="py-3 text-muted-foreground md:whitespace-nowrap">{k.expires_at ? <span className="whitespace-nowrap">{fmt.dateTime(k.expires_at)}</span> : t('developer.apiKeys.expiryNever')}</Td>
+      <Td label={t('developer.apiKeys.colLastUsed')} className="py-3 text-muted-foreground md:whitespace-nowrap">{formatRelative(k.last_used_at, t)}</Td>
       <Td align="right" className="py-3">
         {k.revoked_at ? <Badge>{t('common.status.account.revoked')}</Badge> : expired ? <Badge tone="warning">{t('developer.apiKeys.expired')}</Badge> : (
           <Button variant="ghost" size="sm" onClick={() => onRevoke(k)} aria-label={t('developer.apiKeys.revokeLabel', { name: k.name })}>{t('developer.apiKeys.revoke')}</Button>
