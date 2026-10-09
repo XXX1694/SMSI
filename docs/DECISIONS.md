@@ -427,6 +427,8 @@ The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*
 
 ## D-021: The UI is localized with next-intl on the client; locales ship when complete, beta until a native review (2026-10-09)
 
+*Amended by D-024: the "CJK and Arabic use system fonts" rule no longer holds, in the app or on the landing.*
+
 **Decision.** The dashboard and the demo use a client-side provider (`frontend/src/i18n/`) with ICU catalogs in
 `frontend/messages/{locale}.json` (typed from `en.json`) and a `useTranslations(ns)` hook with the same shape as next-intl's.
 The runtime is a small in-house ICU subset (`src/i18n/icu.ts`: arguments, number/date/time, plural, selectordinal, select,
@@ -439,7 +441,9 @@ There are no `/[locale]/` routes in the app; the landing page gets `/{locale}/` 
 then `ru`; `es`, `pt-BR`, `de`, `fr`, `id`; `ja`, `zh-CN`; `kk` (hidden until a native review); `ar` last, after logical CSS.
 This supersedes the wave table in docs/copy/languages.md: `uk` waits, `zh-CN` is in. `uk` and `zh-Hant` fall back to `en`.
 Dates and numbers come from `lib/time`/`lib/calendar` with an explicit locale and the user's timezone. CJK and Arabic use
-system fonts. API error codes, API messages, emails, MCP text and docs stay English; the UI maps error codes to text.
+system fonts (superseded by D-024: both the app and the landing now load self-hosted Noto faces for `ar`, `ja` and
+`zh-CN`, only on those locales). API error codes, API messages, emails, MCP text and docs stay English; the UI maps error
+codes to text.
 Translations are machine-drafted with the glossary, back-translated on a sample and labelled "Beta translation" until a
 native speaker signs `docs/copy/review/{locale}.md`. CI blocks missing keys in every enabled locale.
 
@@ -457,7 +461,8 @@ round trip. Static routes avoid both. Runtime formatting supports named number/d
 **Alternatives.** `[locale]` prefix routes with `generateStaticParams`: the app renders in the browser behind login, so no
 SEO gain, 11× the exported pages and every link rewritten. Server negotiation by cookie: impossible in the static export
 and makes every prod route dynamic. next-intl and react-intl: the same FormatJS engine, about 14 kB gzipped on every route. i18next, Lingui, Paraglide: a second
-message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for glyphs every OS ships.
+message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for glyphs every OS ships (revisited in
+D-024, which loads only the slices a page uses).
 
 **Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
 hint outside `en` until field codes exist. A release is blocked by missing keys or failed checks, not by draft status.
@@ -498,15 +503,17 @@ and a preview) was approved.
   are added. The app spends colour 70 / 20 / 10 by area (a dense dashboard needs neutrals to dominate); the landing uses the
   classic 60 / 30 / 10.
 - **Glass.** Real backdrop blur only on chrome (sidebar, header, landing nav) and floating layers (popovers, menus,
-  toasts); cards are translucent without blur over one fixed mesh layer; tables, inputs, the composer and long text stay
+  toasts); cards are translucent without blur over one fixed mesh layer; dialogs are a near-solid panel over a plain dim scrim; tables, inputs, the composer and long text stay
   solid. At most two blurred layers on screen. Fallbacks for missing `backdrop-filter`, `prefers-reduced-transparency`
   and `forced-colors`. Text contrast is checked against the glass composited over the mesh's strongest point.
 - **Status tags.** Square-ish 5 px tags with a hairline border, the label in the text colour and a status glyph that alone
   carries the colour (each status a different shape), replacing the rounded pastel pills.
 - **Type.** Onest Variable for Latin and Cyrillic; Noto Sans Arabic, Noto Sans JP and Noto Sans SC (variable) only for their
-  own locale, scoped with `html:lang()`. Everything is self-hosted from `@fontsource-variable` packages. This supersedes the
-  "system fonts for CJK and Arabic" part of D-021's landing work: the system faces differed by platform and Windows' Arabic
-  and Chinese fallbacks did not match the product.
+  own locale, scoped with `html:lang()`, in the app (a lazy CSS chunk on locale switch) and on the landing (a stylesheet linked
+  only from that locale's page). Everything is self-hosted from `@fontsource-variable` packages, with their OFL licences
+  shipped next to the files. This supersedes D-021's "CJK and Arabic use system fonts" for both the app and the landing:
+  the system faces differed by platform and Windows' Arabic and Chinese fallbacks did not match the product. The script
+  faces use `font-display: optional`, so a late font never shifts the layout; the system face stays in that case.
 - **Motion.** Frequent navigation becomes instant or a 150 ms fade; lists stop staggering except the dashboard's first load;
   the app gets the Pause motion setting the landing has. Three rare moments get a hero transition of at most 520 ms through
   the View Transitions API (accent circle fill on sign-in and onboarding complete, accent wipe on publish now, a

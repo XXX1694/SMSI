@@ -174,6 +174,7 @@ layers**, not for reading.
 | Sidebar, app header, landing nav | `--glass-chrome` | `hsl(188 43% 93% / 0.70)` | `hsl(201 36% 9% / 0.66)` | 20 px, saturate 160 % |
 | Cards, stat tiles, panels | `--glass-card` | `hsl(0 0% 100% / 0.78)` | `hsl(204 29% 10% / 0.74)` | none |
 | Popovers, menus, toasts | `--glass-strong` | `hsl(0 0% 100% / 0.90)` | `hsl(204 29% 10% / 0.90)` | 24 px, saturate 160 % |
+| Dialogs | `--glass-strong` | as above | as above | none (over the `--scrim`) |
 | Landing hero frame | `--glass-card` | as card | as card | 16 px |
 
 - Edge: a 1 px `--glass-border` (`hsl(205 32% 11% / 0.08)` / `hsl(0 0% 100% / 0.08)`) plus a 1 px inner top highlight
@@ -184,8 +185,8 @@ layers**, not for reading.
 - **Never glass**: tables, inputs, the editor and composer, long text (Terms, Privacy, docs), dense lists. These are solid
   `background`. Text never sits on glass with less than 0.66 alpha.
 - **Budget**: at most two blurred layers on screen (chrome plus one popover or dialog). No blur on anything that scrolls.
-  Dialogs are a near-solid panel over an overlay; the overlay alone carries a light blur.
-- **Fallbacks**: without `backdrop-filter` the chrome is `secondary` mixed into `background` and floating layers are solid;
+  Dialogs are a near-solid panel over a plain dim scrim (`--scrim`), no blur.
+- **Fallbacks**: without `backdrop-filter` the chrome and floating layers are the solid `surface`;
   `prefers-reduced-transparency` makes every glass layer solid and the mesh flat; `forced-colors` drops fills, shadows and
   the mesh and draws `CanvasText` borders.
 
@@ -199,8 +200,9 @@ layers**, not for reading.
 - **Screens, not stock**: product shots are real captures of the demo (`site/scripts/screenshots.mjs`, `record-hero.mjs`).
   No stock photos, no people, no 3D renders. The only decorative gradients are the mesh behind the glass (section 4) and the
   soft accent glow in the hero.
-- **Status tags** are tags, not candy pills: 22 px tall, 5 px radius, a 1 px `border` hairline, no pastel fill, the label in
-  the text colour at 12 px / 520 with tabular figures. Only a 12 px **glyph** carries the status colour, and each status has
+- **Status tags** are tags, not candy pills: 22 px tall, 5 px radius, a 1 px `border` hairline, no pastel fill, the label at
+  12 px / 500 with tabular figures, in the text colour (`muted-foreground` for the quiet statuses: draft, pending,
+  cancelled, revoked, expired). Only a 12 px **glyph** carries the status colour, and each status has
   its own glyph shape, so colour is never the only cue: draft = dashed ring, awaiting approval = half-filled ring,
   scheduled = clock, publishing = open arc, published = filled check, failed = triangle with a bang (and a tinted border),
   cancelled or expired = slashed ring. Capability and metadata tags are the same shape without a glyph; an unsupported one
@@ -224,7 +226,8 @@ the product a voice of its own without a display face. Its Latin subset is 32 KB
 
 - All fonts are **self-hosted**: `@fontsource-variable/*` packages bundled by the app, copied by `site/build.mjs` for the
   landing. No request ever goes to a font CDN. Onest comes first in every stack, so Latin words inside Arabic, Japanese or
-  Chinese text stay in the brand face. The language switcher's endonyms on other pages use system fonts, so listing
+  Chinese text stay in the brand face. Script faces load with `font-display: optional` (no layout shift if they arrive
+  late); Onest swaps. The OFL licences ship next to the font files. The language switcher's endonyms on other pages use system fonts, so listing
   `日本語` never downloads a Japanese font.
 - Wordmark: unchanged for now, Inter at weight 620 converted to outlines (a drawn logo, not live text). Redrawing it in
   Onest is a separate change. UI copy uses live text at 600 for the name.
