@@ -686,6 +686,7 @@
     "draftSaved": "Entwurf gespeichert",
     "postScheduled": "Beitrag geplant",
     "publishStarted": "Veröffentlichung gestartet",
+    "publishFailedAfterSave": "Als Entwurf gespeichert, aber die Veröffentlichung ist fehlgeschlagen: {reason}",
     "conflictTitle": "Dieser Beitrag wurde geändert, seit du ihn geöffnet hast.",
     "conflictEditable": "Eine neuere Version wurde in einem anderen Tab oder von einem Agenten gespeichert. Speichern überschreibt sie jetzt.",
     "conflictLocked": "{status, select, publishing {Er wird gerade veröffentlicht und kann nicht bearbeitet werden.} published {Er ist jetzt veröffentlicht und kann nicht bearbeitet werden.} partially_published {Er ist jetzt teilweise veröffentlicht und kann nicht bearbeitet werden.} failed {Er ist jetzt fehlgeschlagen und kann nicht bearbeitet werden.} cancelled {Er wurde jetzt abgebrochen und kann nicht bearbeitet werden.} other {Er hat jetzt einen Status, der keine Bearbeitung erlaubt.}}",

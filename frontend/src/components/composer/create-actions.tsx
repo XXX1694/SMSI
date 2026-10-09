@@ -55,17 +55,29 @@ export function CreateActions({ state, title, accounts, providers, selected, onL
   async function run(action: Action) {
     setBusy(true);
     setApiError(null);
+    let post: { id: string };
     try {
-      const post = await api.posts.create(buildInput(state, title, action));
-      if (action === 'publish') await Promise.all([api.posts.publish(post.id), heroWipe()]);
-      toast.success(tc(DONE[action]));
-      onLeave();
-      router.push(postHref(post.id));
+      post = await api.posts.create(buildInput(state, title, action));
     } catch (e) {
       setApiError(errorText(e));
       setBusy(false);
       throw e;
     }
+    if (action === 'publish') {
+      try {
+        await Promise.all([api.posts.publish(post.id), heroWipe()]);
+      } catch (e) {
+        // The post exists now. Staying here would let "Publish now" create it a second time (#127), so go to the
+        // saved draft, where it can be published again once the cause is fixed.
+        toast.error(tc('publishFailedAfterSave', { reason: errorText(e) }));
+        onLeave();
+        router.push(postHref(post.id));
+        return;
+      }
+    }
+    toast.success(tc(DONE[action]));
+    onLeave();
+    router.push(postHref(post.id));
   }
 
   async function submit(action: Action) {

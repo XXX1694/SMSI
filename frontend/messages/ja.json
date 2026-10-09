@@ -686,6 +686,7 @@
     "draftSaved": "下書きを保存しました",
     "postScheduled": "投稿を予約しました",
     "publishStarted": "投稿を開始しました",
+    "publishFailedAfterSave": "下書きとして保存しましたが、公開に失敗しました: {reason}",
     "conflictTitle": "この投稿は、開いた後に変更されました。",
     "conflictEditable": "別のタブまたはエージェントによって、新しいバージョンが保存されています。今すぐ保存すると上書きされます。",
     "conflictLocked": "{status, select, publishing {現在投稿中のため、編集できません。} published {投稿済みになったため、編集できません。} partially_published {一部投稿済みになったため、編集できません。} failed {失敗したため、編集できません。} cancelled {キャンセルされたため、編集できません。} other {編集できない状態になりました。}}",
