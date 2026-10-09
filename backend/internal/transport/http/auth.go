@@ -16,6 +16,7 @@ type credentialsReq struct {
 	Email       string `json:"email"`
 	Password    string `json:"password"`
 	DisplayName string `json:"display_name"`
+	AcceptTerms bool   `json:"accept_terms"`
 }
 
 func (a *API) setSessionCookies(w http.ResponseWriter, s auth.IssuedSession) {
@@ -50,6 +51,7 @@ type meResp struct {
 	ID          string `json:"id"`
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name"`
+	AcceptTerms bool   `json:"accept_terms"`
 }
 
 type keyBrief struct {
@@ -77,7 +79,7 @@ func (a *API) register(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	u, sess, err := a.svc.Auth.Register(r.Context(), auth.RegisterInput{Email: req.Email, Password: req.Password, DisplayName: req.DisplayName},
+	u, sess, err := a.svc.Auth.Register(r.Context(), auth.RegisterInput{Email: req.Email, Password: req.Password, DisplayName: req.DisplayName, AcceptTerms: req.AcceptTerms},
 		middleware.ClientInfoFrom(r, a.trusted))
 	if err != nil {
 		httpx.Error(w, r, err)

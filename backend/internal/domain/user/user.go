@@ -36,6 +36,10 @@ type User struct {
 	EmailVerifiedAt *time.Time
 	Plan            string
 	DeletedAt       *time.Time
+	// TermsAcceptedAt and TermsVersion record which legal texts the owner accepted at registration.
+	// Accounts created before the Terms existed have a nil time and an empty version.
+	TermsAcceptedAt *time.Time
+	TermsVersion    string
 }
 
 // EmailVerified reports whether the address was verified.

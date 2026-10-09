@@ -40,7 +40,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ next · ⛔ blocked (the reason is g
 - 🔄 Email verification, password reset and change (#29, security fixes in progress). Delivery in production waits for a real domain (Resend needs a verified sender).
 - ⏳ Account deletion and data export.
 - ⏳ Per-user quotas.
-- ⏳ Terms and Privacy pages.
+- ✅ Terms and Privacy pages; registration needs `accept_terms` (D-016).
 - ⏳ Onboarding.
 
 ## 5. MCP as the headline feature

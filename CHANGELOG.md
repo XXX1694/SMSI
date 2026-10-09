@@ -12,6 +12,8 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Added
 
+- Public pages `/privacy` and `/terms` (no sign-in, linked from the sign-in and register forms and from the app sidebar and Settings), written for a self-hosted, single-operator instance and usable as the LinkedIn app's Privacy Policy URL. They are a template, not legal advice. The operator's name and contact come from the frontend container's `OPERATOR_NAME` and `OPERATOR_CONTACT`; without them the pages say so.
+- Breaking: `POST /auth/register` requires `accept_terms: true` (otherwise `400 VALIDATION_ERROR` with `fields.accept_terms`). The register form has the matching checkbox. The accepted version and time are stored. Existing accounts are not blocked (D-016).
 - Email verification, password reset and password change. Mailed links carry a single-use token in the URL fragment (48 h to verify, 30 min to reset). A reset signs out every session; a change keeps the current one. API keys and MCP connections are revoked only if you tick "Also revoke all API keys and MCP connections".
 - When `MAIL_PROVIDER=smtp`, unverified accounts get `403 EMAIL_NOT_VERIFIED` on connecting networks, scheduling, publishing, editing scheduled posts and creating API keys. With the log provider nothing is restricted and the dashboard says mail is off. Existing accounts start unverified.
 - New pages `/verify-email`, `/forgot-password` and `/reset-password`, an email banner, and a Password section in Settings.

@@ -259,3 +259,25 @@ publishing needs a `trusted` key (opt-in, shown as such) or a scheduled post at 
 spent before the live check of a token connect, so a rejected credential needs a new approval. Whoever holds the owner's
 browser session can approve. `trusted` is visible: the key list shows it as a badge, and choosing it at creation needs a separate explicit
 confirmation under the "Dangerous" heading. Changing the policy of an existing key and an OAuth-grant policy come later.
+
+## D-016: Registration requires accepting the current Terms; existing users are not blocked (2026-10-09)
+
+**Context.** SocialOS can be run by anyone, so each operator needs Terms and a Privacy Policy that users see and accept, and
+a LinkedIn app needs a public Privacy Policy URL. Migration 00003 already has `users.terms_accepted_at` and `terms_version`.
+
+**Decision.** `POST /auth/register` takes `accept_terms: true`; anything else is `400 VALIDATION_ERROR` with
+`fields.accept_terms`. The server stores its own `terms.CurrentVersion` and the clock time, not a version sent by the
+client, so a client cannot claim to have accepted a text that does not exist. The texts are TSX in the frontend
+(`/terms`, `/privacy`, static, no auth, no new dependency) with the version in `frontend/src/lib/legal.ts`; a Go test fails
+when the two versions differ. The operator's name and contact are read from `OPERATOR_NAME` and `OPERATOR_CONTACT` of the
+frontend container per request, because the published image is shared by all operators and `NEXT_PUBLIC_*` values are baked
+in at build time. Unset values render a placeholder that says the operator must set them.
+
+**Alternatives.** Block existing users until they accept a new version (a gate after login, a 403 on every route): the safer
+legal posture, but it locks out accounts and API keys that run unattended, and needs UI and API states that do not exist
+yet. Markdown files plus the `marked` dependency, shared with the static site: one source, but a new dependency and a build
+step for two short pages. Operator values in the backend config: an extra API call on a page that should be static.
+
+**Consequences.** Breaking for API clients that register users (the MCP server never does). Existing accounts have an empty
+`terms_version` and carry on; when the texts change in meaning, bumping the version only affects new accounts. Re-acceptance
+for existing users is a later decision. The texts are a template: the operator must review them.
