@@ -32,7 +32,7 @@ export function onboardingSteps(f: OnboardingFacts, now: Date = new Date()): Onb
     {
       id: 'network',
       title: 'Connect a network',
-      hint: 'SocialOS publishes to the accounts you connect. Pick LinkedIn, Telegram or another network.',
+      hint: 'Steerpost publishes to the accounts you connect. Pick LinkedIn, Telegram or another network.',
       href: '/accounts',
       action: 'Connect account',
       done: f.connectedAccounts > 0,

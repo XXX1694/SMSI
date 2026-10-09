@@ -17,7 +17,7 @@ export function seedApprovals(nowMs: number): Approval[] {
       id: seedId('ab000000', 1), action: 'post.publish', resource_type: 'post', resource_id: seedPostId(0),
       actor_label: 'MCP: Claude Desktop', status: 'pending', created_at: at(2), expires_at: in10(2), decided_at: null,
       summary: {
-        title: 'Launch day', content: 'We are live. SocialOS now lets your agent draft while you stay in control. '.repeat(8).trim(),
+        title: 'Launch day', content: 'We are live. Steerpost now lets your agent draft while you stay in control. '.repeat(8).trim(),
         platforms: ['linkedin', 'telegram'], accounts: ['linkedin · @demo', 'telegram · @demo_channel'], targets: [{ platform: 'telegram', account: 'telegram · @demo_channel', content: 'We are live. Your agent drafts, you decide.' }],
         media: { count: 2, images: 2, videos: 0 }, status: 'draft',
       },

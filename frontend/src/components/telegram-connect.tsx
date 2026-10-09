@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * Connects a Telegram channel or group. There is no field for a channel name: the
- * user adds the SocialOS bot as admin and posts a one-time code in the chat, which
+ * user adds the Steerpost bot as admin and posts a one-time code in the chat, which
  * proves they control it. The screen then polls until the bot has seen the code.
  */
 export function TelegramConnect({ onConnected }: { onConnected: () => void }) {
@@ -130,7 +130,7 @@ function LinkSteps({ link, busy, error, onConnected, onCancel, onNewCode }: Link
   const [fatal, setFatal] = useState<string | null>(null);
   const remaining = secondsLeft(link.expires_at, nowMs);
   const phase = linkPhase(server, remaining);
-  const bot = link.bot_username ? `@${link.bot_username}` : 'the SocialOS bot';
+  const bot = link.bot_username ? `@${link.bot_username}` : 'the Steerpost bot';
 
   // Countdown: re-render once a second while waiting.
   useEffect(() => {

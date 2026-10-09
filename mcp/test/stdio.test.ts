@@ -17,6 +17,8 @@ it("stdio mode uses SOCIALOS_API_KEY and lists scoped tools", async () => {
   });
   const client = new Client({ name: "t", version: "0" });
   await client.connect(transport);
+  expect(client.getServerVersion()?.name).toBe("steerpost");
+  expect(client.getInstructions()).toContain("Steerpost");
   expect((await client.listTools()).tools.map((t) => t.name).sort()).toEqual(["get_post", "get_post_status", "list_posts"]);
   await client.callTool({ name: "get_post", arguments: { post_id: "p9" } });
   expect(api.calls.at(-1)?.path).toBe("/posts/p9");

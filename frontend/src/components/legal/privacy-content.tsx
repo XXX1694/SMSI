@@ -6,17 +6,17 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
     <LegalPage title="Privacy Policy" other="terms" operator={operator}>
       <LegalSection title="Who this is about">
         <p>
-          SocialOS is software that schedules and publishes social posts. Anyone can run their own copy. This policy describes what that
+          Steerpost is software that schedules and publishes social posts. Anyone can run their own copy. This policy describes what that
           software does with your data. The person or organisation that runs this copy is its operator (named under Contact below).
         </p>
-        <p>The operator decides what happens to your data and answers for it. SocialOS does not run a central service that collects your data.</p>
+        <p>The operator decides what happens to your data and answers for it. Steerpost does not run a central service that collects your data.</p>
       </LegalSection>
 
       <LegalSection title="What is stored">
         <ul>
           <li>Account: your email address, your display name and a salted hash of your password (Argon2id). The password itself is never stored.</li>
           <li>Terms: the version of these texts you accepted and when.</li>
-          <li>Connected networks: the access tokens or credentials that LinkedIn, Telegram, Discord, Mastodon and Bluesky give SocialOS. They are encrypted at rest and never shown in the interface, logs or audit log.</li>
+          <li>Connected networks: the access tokens or credentials that LinkedIn, Telegram, Discord, Mastodon and Bluesky give Steerpost. They are encrypted at rest and never shown in the interface, logs or audit log.</li>
           <li>Content: your posts, their schedule and status, and the media you upload.</li>
           <li>Audit log: what was done, by you or by an AI agent using one of your API keys, and when. It holds no post text and no secrets.</li>
           <li>Approval requests: when an AI agent asks to publish, retry, delete or schedule soon, a copy of the post title and text it wants to act on is kept so you can review it. Decided and expired requests are deleted after a retention period (30 days by default).</li>
@@ -34,7 +34,7 @@ export function PrivacyContent({ operator }: { operator: Operator }) {
 
       <LegalSection title="What leaves the server">
         <p>
-          SocialOS calls the APIs of the networks you connect, only on your behalf: LinkedIn, Telegram, Discord, Mastodon and Bluesky. It sends
+          Steerpost calls the APIs of the networks you connect, only on your behalf: LinkedIn, Telegram, Discord, Mastodon and Bluesky. It sends
           the post text and media you chose to publish and reads back the status and ids it needs. Those networks have their own privacy
           policies, which apply to what they receive.
         </p>

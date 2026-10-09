@@ -1,19 +1,19 @@
-Subject: Verify your email for SocialOS
+Subject: Verify your email for Steerpost
 
 --- text ---
-Confirm your email address for SocialOS by opening this link:
+Confirm your email address for Steerpost by opening this link:
 
 https://app.example.com/verify-email#token=abc123
 
 The link works once and expires in 48 hours. If you did not create an account, ignore this message.
 
-SocialOS
+Steerpost
 
 --- html ---
 <!doctype html>
 <html><body style="font-family:sans-serif;line-height:1.5;color:#111">
-<p>Confirm your email address for SocialOS:</p>
+<p>Confirm your email address for Steerpost:</p>
 <p><a href="https://app.example.com/verify-email#token=abc123">Verify email</a></p>
 <p>The link works once and expires in 48 hours. If you did not create an account, ignore this message.</p>
-<p style="color:#666;font-size:13px">SocialOS</p>
+<p style="color:#666;font-size:13px">Steerpost</p>
 </body></html>

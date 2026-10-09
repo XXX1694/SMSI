@@ -51,7 +51,7 @@ describe('MCP client config safety (issue #90)', () => {
   it('generates a Claude Desktop config with a pinned package and the key only in env', () => {
     const { http, stdio } = buildMcpConfig('sk_live_abc', 'https://mcp.example.com/mcp');
     for (const cfg of [http, stdio]) expect(cfg).not.toContain('socialos-mcp');
-    const srv = JSON.parse(stdio).mcpServers.socialos as { command: string; args: string[]; env: Record<string, string> };
+    const srv = JSON.parse(stdio).mcpServers.steerpost as { command: string; args: string[]; env: Record<string, string> };
     expect(srv.command).toBe('npx');
     expect(srv.args[0]).toBe('-y');
     expect(srv.args[1]).toMatch(EXACT);

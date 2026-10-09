@@ -1,4 +1,4 @@
-// End-to-end acceptance check of the SocialOS MVP flow across API, worker and MCP.
+// End-to-end acceptance check of the Steerpost MVP flow across API, worker and MCP.
 // Requires a running API (SOCIALOS_API_URL, default http://127.0.0.1:8080) with
 // SOCIAL_MOCK_PROVIDERS=true, a running worker and a running MCP server (MCP_URL).
 //

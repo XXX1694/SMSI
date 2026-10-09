@@ -24,7 +24,7 @@ export function DemoBanner() {
         </button>
       </p>
       <a href={SITE_HREF} className="hidden shrink-0 hover:text-foreground sm:inline">
-        About SocialOS
+        About Steerpost
       </a>
     </div>
   );

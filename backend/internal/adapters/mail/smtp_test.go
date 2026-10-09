@@ -71,7 +71,7 @@ func (f *fakeSMTP) port() int { return f.ln.Addr().(*net.TCPAddr).Port }
 
 func (f *fakeSMTP) cfg(mode string) SMTPConfig {
 	return SMTPConfig{Host: "127.0.0.1", Port: f.port(), TLS: mode, Username: "resend", Password: "key-123",
-		From: "SocialOS <no-reply@example.com>", Timeout: 5 * time.Second, tlsConfig: &tls.Config{RootCAs: f.pool, MinVersion: tls.VersionTLS12}}
+		From: "Steerpost <no-reply@example.com>", Timeout: 5 * time.Second, tlsConfig: &tls.Config{RootCAs: f.pool, MinVersion: tls.VersionTLS12}}
 }
 
 func (f *fakeSMTP) serve() {
@@ -170,7 +170,7 @@ func (f *fakeSMTP) sawCommand(name string) bool {
 }
 
 func testMessage() port.Message {
-	return port.Message{To: "Alice <alice@example.org>", Subject: "Verify your email — SocialOS", Template: VerifyEmail,
+	return port.Message{To: "Alice <alice@example.org>", Subject: "Verify your email — Steerpost", Template: VerifyEmail,
 		Text: "Open https://app.example.com/verify-email#token=abc\n\n.dot line\n", HTML: "<p>Open <a href=\"https://app.example.com/x\">link</a></p>"}
 }
 
@@ -198,7 +198,7 @@ func TestSMTPStartTLSDeliversMultipart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dec, _ := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject")); dec != "Verify your email — SocialOS" {
+	if dec, _ := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject")); dec != "Verify your email — Steerpost" {
 		t.Fatalf("subject: %q", dec)
 	}
 	if !strings.Contains(msg.Header.Get("From"), "no-reply@example.com") || !strings.Contains(msg.Header.Get("To"), "alice@example.org") ||

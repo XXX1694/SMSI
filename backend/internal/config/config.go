@@ -81,7 +81,7 @@ type Config struct {
 	SMTPTLS      string // starttls (default, port 587) | implicit (TLS from the first byte, port 465)
 	SMTPUsername string
 	SMTPPassword string
-	MailFrom     string // RFC 5322 address, e.g. "SocialOS <no-reply@example.com>"
+	MailFrom     string // RFC 5322 address, e.g. "Steerpost <no-reply@example.com>"
 
 	ApprovalConfig // approvals and the agent schedule lead (config_approvals.go)
 	QuotaConfig    // plan limits (config_quota.go)

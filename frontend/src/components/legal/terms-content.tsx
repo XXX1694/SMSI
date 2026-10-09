@@ -6,14 +6,14 @@ export function TermsContent({ operator }: { operator: Operator }) {
     <LegalPage title="Terms of Service" other="privacy" operator={operator}>
       <LegalSection title="Who you are dealing with">
         <p>
-          SocialOS is open-source software. These terms are between you and the operator of this copy (named under Contact below). The SocialOS
+          Steerpost is open-source software. These terms are between you and the operator of this copy (named under Contact below). The Steerpost
           maintainers do not run this instance and are not a party to these terms.
         </p>
       </LegalSection>
 
       <LegalSection title="What the service does">
         <p>
-          SocialOS lets you write posts, schedule them and publish them to the networks you connect. You and the AI agents you give an API key can
+          Steerpost lets you write posts, schedule them and publish them to the networks you connect. You and the AI agents you give an API key can
           use it. Which networks work, and what each can do, is shown in the app. Some are not available yet and the app says so.
         </p>
       </LegalSection>
@@ -29,7 +29,7 @@ export function TermsContent({ operator }: { operator: Operator }) {
         <p>
           You own your content. You allow the operator&apos;s instance to store it and to send it to the networks you choose, when you or your
           agents ask. You must have the right to post it and you must follow the rules of each network. A network can reject a post, limit your
-          account or disconnect it, and SocialOS cannot prevent that.
+          account or disconnect it, and Steerpost cannot prevent that.
         </p>
       </LegalSection>
 

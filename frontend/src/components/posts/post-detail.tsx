@@ -226,7 +226,7 @@ export function PostDetail({ id }: { id: string }) {
         open={dlg === 'delete'}
         onOpenChange={(o) => !o && setDlg(null)}
         title="Delete this post?"
-        description="It is removed from SocialOS. Content already published on a platform stays there."
+        description="It is removed from Steerpost. Content already published on a platform stays there."
         confirmLabel="Delete"
         destructive
         onConfirm={async () => {

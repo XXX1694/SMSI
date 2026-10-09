@@ -24,7 +24,7 @@
           <div class="frame">
             <picture class="poster">
               <source media="(prefers-color-scheme: dark)" srcset="{{base}}assets/video/hero-dark.jpg">
-              <img src="{{base}}assets/video/hero-light.jpg" width="1280" height="800" alt="The SocialOS composer with a post about Release 2.5 written for LinkedIn and Telegram." fetchpriority="high" decoding="async">
+              <img src="{{base}}assets/video/hero-light.jpg" width="1280" height="800" alt="The Steerpost composer with a post about Release 2.5 written for LinkedIn and Telegram." fetchpriority="high" decoding="async">
             </picture>
             <video muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" width="1280" height="800" data-video="{{base}}assets/video/hero-"></video>
           </div>
@@ -68,7 +68,7 @@
 
     <section class="lp-section story" id="how" aria-labelledby="how-title" data-story>
       <div class="lp-wrap">
-        <h2 id="how-title" class="lp-h2 reveal">Your agent drafts. You decide. SocialOS posts once.</h2>
+        <h2 id="how-title" class="lp-h2 reveal">Your agent drafts. You decide. Steerpost posts once.</h2>
         <div class="story-grid">
         <div class="story-steps">
           <ol class="steps-list">
@@ -83,7 +83,7 @@
               <figure class="step-shot">{{shot:approvals:The Approvals page listing a request from an MCP agent to publish a post now, with Deny and Approve buttons.}}</figure>
             </li>
             <li class="step" data-step="2">
-              <h3>SocialOS posts it once</h3>
+              <h3>Steerpost posts it once</h3>
               <p>A worker publishes at the scheduled time and retries failures that are safe to retry. If it cannot tell whether a post went out, it stops and asks you.</p>
               <figure class="step-shot">{{shot:calendar:The calendar in month view with draft, scheduled, published and failed posts.}}</figure>
             </li>
@@ -109,7 +109,7 @@
         <p class="lp-sub reveal">Screenshots of the demo build. Everything on screen is clickable in the live demo.</p>
         <div class="look-grid">
           <figure class="look-shot ls-a"><div class="px" style="--from:70px;--to:-40px"><div class="frame">{{shot:compose:The composer with account chips, per-platform text and live previews.}}</div></div><figcaption><strong>Compose.</strong> One draft, per-platform text and previews with each network's limits.</figcaption></figure>
-          <figure class="look-shot ls-b"><div class="px" style="--from:120px;--to:-70px"><div class="frame">{{shot:dashboard:The SocialOS dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures.}}</div></div><figcaption><strong>Dashboard.</strong> What is going out, and what needs attention.</figcaption></figure>
+          <figure class="look-shot ls-b"><div class="px" style="--from:120px;--to:-70px"><div class="frame">{{shot:dashboard:The Steerpost dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent publications and failures.}}</div></div><figcaption><strong>Dashboard.</strong> What is going out, and what needs attention.</figcaption></figure>
           <figure class="look-shot ls-c"><div class="px" style="--from:40px;--to:-60px"><div class="frame">{{shot:accounts:The accounts page with connected networks and the others marked as not available.}}</div></div><figcaption><strong>Accounts.</strong> Capabilities are reported honestly, including what is not available yet.</figcaption></figure>
         </div>
       </div>
@@ -135,7 +135,7 @@
             <h3>Permission model</h3>
             <ul class="facts">
               <li><strong>Scoped keys.</strong> Tools a key has no scope for are not even listed, and the REST API checks the scope again on every call.</li>
-              <li><strong>Dangerous actions are opt-in.</strong> <code>publish_post</code>, <code>delete_post</code> and <code>disconnect_account</code> are off by default, and every call needs your approval in SocialOS before it runs.</li>
+              <li><strong>Dangerous actions are opt-in.</strong> <code>publish_post</code>, <code>delete_post</code> and <code>disconnect_account</code> are off by default, and every call needs your approval in Steerpost before it runs.</li>
               <li><strong>Revocable and expiring.</strong> Keys are stored as SHA-256 hashes and shown once. Revoking a connection invalidates its key immediately.</li>
               <li><strong>Audited.</strong> Every agent action lands in the audit log as <code>api_key:&lt;name&gt;</code>. Keys can never create keys or change account security.</li>
             </ul>
@@ -145,7 +145,7 @@
             <p class="note" style="margin-top:0">Create a connection under Developer, then paste the generated config. For example, for an HTTP client:</p>
 <pre><code class="hljs language-json">{
   "mcpServers": {
-    "socialos": {
+    "steerpost": {
       "type": "http",
       "url": "http://localhost:3333/mcp",
       "headers": { "Authorization": "Bearer sk_live_..." }
@@ -224,7 +224,7 @@
       <div class="lp-wrap run-grid">
         <div>
           <h2 id="run-title" class="lp-h2 reveal">Run it yourself</h2>
-          <p class="lp-sub reveal">SocialOS is self-hosted. One command starts Postgres, Redis, MinIO, the API, the worker, the MCP server and the web app. With the mock network enabled you can try the whole flow without any credentials.</p>
+          <p class="lp-sub reveal">Steerpost is self-hosted. One command starts Postgres, Redis, MinIO, the API, the worker, the MCP server and the web app. With the mock network enabled you can try the whole flow without any credentials.</p>
           <p class="note reveal">Local setup, environment variables, OAuth setup and the full API are in the <a href="{{base}}docs/getting-started/">documentation</a>.</p>
         </div>
         <div class="copyable reveal">

@@ -1,4 +1,4 @@
-// Command api serves the SocialOS REST API.
+// Command api serves the Steerpost REST API.
 package main
 
 import (

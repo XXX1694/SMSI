@@ -234,22 +234,22 @@ func TestMCPConfigIsReadyToPaste(t *testing.T) {
 		t.Fatalf("dedicated key: %+v", keys.keys[0])
 	}
 	raw := got.RawKey
-	httpSrv := got.Config["http"].(map[string]any)["mcpServers"].(map[string]any)["socialos"].(map[string]any)
+	httpSrv := got.Config["http"].(map[string]any)["mcpServers"].(map[string]any)["steerpost"].(map[string]any)
 	if httpSrv["type"] != "http" || httpSrv["url"] != "https://mcp.example.com/mcp" || httpSrv["headers"].(map[string]string)["Authorization"] != "Bearer "+raw {
 		t.Fatalf("http: %v", httpSrv)
 	}
-	stdio := got.Config["stdio"].(map[string]any)["mcpServers"].(map[string]any)["socialos"].(map[string]any)
+	stdio := got.Config["stdio"].(map[string]any)["mcpServers"].(map[string]any)["steerpost"].(map[string]any)
 	env := stdio["env"].(map[string]string)
 	args := stdio["args"].([]string)
 	if stdio["command"] != "npx" || env["SOCIALOS_AUTH_HEADER"] != "Bearer "+raw || args[1] != MCPRemotePackage || args[2] != "https://mcp.example.com/mcp" {
 		t.Fatalf("stdio: %v", stdio)
 	}
 	assertNoUnpinnedNpx(t, got.Config)
-	if _, ok := got.Config["mcpServers"].(map[string]any)["socialos"]; !ok {
+	if _, ok := got.Config["mcpServers"].(map[string]any)["steerpost"]; !ok {
 		t.Fatal("top-level mcpServers must be pasteable as-is")
 	}
 	cmd := got.Config["claude_code"].(string)
-	if !strings.HasPrefix(cmd, "claude mcp add --transport http socialos https://mcp.example.com/mcp") || !strings.Contains(cmd, `"Authorization: Bearer `+raw+`"`) {
+	if !strings.HasPrefix(cmd, "claude mcp add --transport http steerpost https://mcp.example.com/mcp") || !strings.Contains(cmd, `"Authorization: Bearer `+raw+`"`) {
 		t.Fatalf("claude_code: %s", cmd)
 	}
 	if _, err := s.CreateMCPConnection(context.Background(), session(), CreateMCPInput{Name: "x", ClientName: strings.Repeat("c", 101)}); !errs.Is(err, errs.Validation) {

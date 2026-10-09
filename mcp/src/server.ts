@@ -5,11 +5,11 @@ import { errorResult, toToolError } from "./errors.js";
 import { ALL_TOOLS } from "./tools/index.js";
 import { jsonResult } from "./tools/types.js";
 
-export const SERVER_INFO = { name: "socialos", version: "0.1.0" } as const;
+export const SERVER_INFO = { name: "steerpost", version: "0.1.0" } as const;
 
 const INSTRUCTIONS =
-  "SocialOS lets you draft, schedule and publish social media posts. Prefer create_draft, then schedule_post. " +
-  "publish_post, delete_post, disconnect_account and scheduling or editing a post closer than the server's minimum lead (default 5 minutes) need the owner's approval in SocialOS: " +
+  "Steerpost lets you draft, schedule and publish social media posts. Prefer create_draft, then schedule_post. " +
+  "publish_post, delete_post, disconnect_account and scheduling or editing a post closer than the server's minimum lead (default 5 minutes) need the owner's approval in Steerpost: " +
   "the first call answers APPROVAL_REQUIRED and does nothing. Tell the owner to approve it at the approve_url, wait until they confirm, " +
   "then repeat the identical call with the approval_id. An approval works once and only for that exact call. " +
   "The plan has limits (connected accounts, posts per month, media storage, requests per minute): get_usage shows them if your key has the analytics:read scope, and an action over a limit fails with QUOTA_EXCEEDED and is not performed.";

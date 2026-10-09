@@ -353,7 +353,7 @@ describe('connecting accounts in the demo', () => {
     const link = r.call('POST', '/social/telegram/connect');
     expect(link.status).toBe(201);
     expect(link.body.code).toMatch(/^SOS-[A-HJKMNP-Z2-9]{8}$/);
-    expect(link.body.bot_username).toBe('socialos_bot');
+    expect(link.body.bot_username).toBe('steerpost_bot');
     const id = link.body.id as string;
     expect(r.call('GET', `/social/telegram/connect/${id}`).body.status).toBe('pending');
     r.tick(4100);
@@ -570,7 +570,7 @@ describe('API client in demo mode', () => {
 
     const mcp = await api.developer.createMcpConnection({ name: 'Test agent', scopes: ['posts:read'] });
     expect(mcp.rawKey).toMatch(/^sk_live_/);
-    expect(JSON.parse(mcp.config.http).mcpServers.socialos.headers.Authorization).toBe(`Bearer ${mcp.rawKey}`);
+    expect(JSON.parse(mcp.config.http).mcpServers.steerpost.headers.Authorization).toBe(`Bearer ${mcp.rawKey}`);
 
     const summary = await api.dashboard.summary();
     expect(summary.connected_accounts).toBe(3);

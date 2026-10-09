@@ -120,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen md:flex">
       <header className="flex h-12 items-center justify-between border-b px-4 md:hidden">
-        <span className="text-sm font-semibold">SocialOS</span>
+        <span className="text-sm font-semibold">Steerpost</span>
         {pending ? (
           <TransitionLink href="/approvals" className="ml-auto mr-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
             {pending} waiting for approval
@@ -137,7 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           open ? 'flex' : 'hidden',
         )}
       >
-        <div className="mb-4 hidden px-2.5 pt-1 text-sm font-semibold md:block">SocialOS</div>
+        <div className="mb-4 hidden px-2.5 pt-1 text-sm font-semibold md:block">Steerpost</div>
         <nav ref={nav} aria-label="Main" data-indicator={box ? 'on' : 'off'} className="group/nav relative flex flex-1 flex-col gap-0.5">
           <span
             aria-hidden

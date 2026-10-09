@@ -50,7 +50,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-xl font-semibold tracking-tight">{isLogin ? 'Sign in to SocialOS' : 'Create your account'}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{isLogin ? 'Sign in to Steerpost' : 'Create your account'}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {isLogin ? 'Welcome back.' : 'Start composing and scheduling in a minute.'}
         </p>

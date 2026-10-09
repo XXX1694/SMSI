@@ -8,7 +8,7 @@ import { DEMO } from '@/lib/demo/config';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'SocialOS', template: '%s · SocialOS' },
+  title: { default: 'Steerpost', template: '%s · Steerpost' },
   description: 'Compose, schedule and publish to your social accounts.',
 };
 
