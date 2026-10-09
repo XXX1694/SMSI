@@ -9,7 +9,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ next · ⛔ blocked (the reason is g
 
 - ✅ MVP: Go backend (hexagonal, Postgres, Redis/Asynq, S3), MCP server with 13 scoped tools, Next.js dashboard.
 - ✅ Real LinkedIn and Telegram adapters (tested against fakes). Telegram channel ownership is proven by a one-time code.
-- ✅ CI, image release to GHCR (amd64 + arm64), SSH deploy workflow, Pages workflow, Dependabot.
+- ✅ CI, image release to GHCR (amd64 + arm64), SSH deploy workflow, GitHub Pages deployed from CI, Dependabot.
 
 ## 1. Stabilization ✅
 
