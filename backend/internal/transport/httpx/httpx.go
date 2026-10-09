@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"math"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/socialos/backend/internal/domain/errs"
@@ -83,6 +85,9 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 	if e.Code == errs.Internal {
 		slog.ErrorContext(r.Context(), "internal error", slog.String("path", r.URL.Path), slog.Any("error", err))
 		body.Message = "internal server error"
+	}
+	if e.RetryAfter > 0 && w.Header().Get("Retry-After") == "" {
+		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(e.RetryAfter.Seconds()))))
 	}
 	if e.Code == errs.RateLimited && w.Header().Get("Retry-After") == "" {
 		w.Header().Set("Retry-After", RetryAfterSeconds)

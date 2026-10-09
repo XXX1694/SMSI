@@ -4,6 +4,7 @@ import { useTranslations } from '@/i18n/use-translations';
 import { useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
+import { DataExportCard } from '@/components/data-export';
 import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
 import { UsageCard } from '@/components/usage-card';
@@ -75,6 +76,9 @@ export function SettingsView() {
       </Section>
       <Section title={t('password')}>
         <PasswordForm />
+      </Section>
+      <Section title={t('yourData')}>
+        <DataExportCard />
       </Section>
       <Section title={t('legal')}>
         <p className="text-sm text-muted-foreground">

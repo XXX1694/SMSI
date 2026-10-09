@@ -674,5 +674,16 @@
   "approvals.action.post_delete": { "type": "label", "description": "Name of a dangerous action an agent or API key asks to take. Shown as a badge in an approval card and inside sentences as a name." },
   "approvals.action.post_schedule_soon": { "type": "label", "description": "Name of a dangerous action an agent or API key asks to take. Shown as a badge in an approval card and inside sentences as a name." },
   "approvals.action.social_account_disconnect": { "type": "label", "description": "Name of a dangerous action an agent or API key asks to take. Shown as a badge in an approval card and inside sentences as a name." },
-  "approvals.action.social_account_connect_token": { "type": "label", "description": "Name of a dangerous action an agent or API key asks to take. Shown as a badge in an approval card and inside sentences as a name." }
+  "approvals.action.social_account_connect_token": { "type": "label", "description": "Name of a dangerous action an agent or API key asks to take. Shown as a badge in an approval card and inside sentences as a name." },
+  "settings.yourData": { "type": "title", "description": "Section heading in Settings above the data export card" },
+  "settings.export.loadFailed": { "type": "error", "description": "Title of the error box when the list of data exports cannot be loaded" },
+  "settings.export.intro": { "type": "body", "description": "Explains what the data export ZIP contains" },
+  "settings.export.preparing": { "type": "status", "description": "Shown, read by screen readers, while the export is being built" },
+  "settings.export.ready": { "type": "body", "description": "{size } is the file size with its unit, {date } is the date and time the file is deleted. 5 minutes is how long the download link works." },
+  "settings.export.failed": { "type": "error", "description": "Shown when the last data export failed" },
+  "settings.export.expired": { "type": "body", "description": "Shown when the last data export is past its retention and was deleted" },
+  "settings.export.download": { "type": "button", "description": "Button that downloads the finished data export as a ZIP file" },
+  "settings.export.requestNew": { "type": "button", "description": "Button that starts another data export when one is already ready" },
+  "settings.export.request": { "type": "button", "description": "Button that starts a data export" },
+  "settings.export.cooldown": { "type": "hint", "description": "Rate limit note under a ready data export" }
 }

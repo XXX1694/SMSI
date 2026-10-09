@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 
 	"github.com/socialos/backend/internal/application/port"
@@ -19,14 +21,24 @@ type ServerConfig struct {
 	Concurrency int
 	// DelayedCheck is how often scheduled tasks are promoted (default 1s, so a post goes out within ~1s of its time).
 	DelayedCheck time.Duration
-	// ShutdownTimeout is how long Shutdown waits for in-flight tasks before aborting them (default 30s).
+	// ShutdownTimeout is how long Shutdown waits for in-flight publish tasks before aborting them (default 30s).
 	ShutdownTimeout time.Duration
+	// ExportShutdownTimeout is the same for the export server (default 5s). A build cut short is recorded as
+	// interrupted and the user asks again, so it is not worth a long wait inside the stop_grace_period.
+	ExportShutdownTimeout time.Duration
 	// RetryDelay overrides the retry backoff (default scheduler.RetryDelay: 30s·2^n ±20%). Tests only.
 	RetryDelay func(n int, err error) time.Duration
 	// Mailer, when set, makes this worker deliver mail:send tasks.
 	Mailer port.Mailer
 	// Auth, when set, makes this worker run the password-reset lookup and retire the links of undelivered mail.
 	Auth AuthTasks
+	// Exports, when set, makes this worker build data exports.
+	Exports ExportTasks
+}
+
+// ExportTasks is what the worker needs from the export service.
+type ExportTasks interface {
+	Build(ctx context.Context, exportID uuid.UUID) error
 }
 
 // AuthTasks is what the worker needs from the auth service.
@@ -39,6 +51,9 @@ type AuthTasks interface {
 type Server struct {
 	srv *asynq.Server
 	mux *asynq.ServeMux
+	// exports runs data exports on their own queue with one worker (nil without ServerConfig.Exports).
+	exports *asynq.Server
+	exMux   *asynq.ServeMux
 }
 
 // NewServer wires the publisher into an Asynq server.
@@ -51,6 +66,9 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	}
 	if cfg.ShutdownTimeout <= 0 {
 		cfg.ShutdownTimeout = 30 * time.Second
+	}
+	if cfg.ExportShutdownTimeout <= 0 {
+		cfg.ExportShutdownTimeout = 5 * time.Second
 	}
 	retryDelay := cfg.RetryDelay
 	if retryDelay == nil {
@@ -80,7 +98,19 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 	if cfg.Auth != nil {
 		mux.HandleFunc(TypeAuthForgot, ForgotHandler(cfg.Auth.ProcessForgot))
 	}
-	return &Server{srv: srv, mux: mux}
+	s := &Server{srv: srv, mux: mux}
+	if cfg.Exports != nil {
+		s.exports = asynq.NewServer(redis, asynq.Config{
+			Concurrency: 1, Queues: map[string]int{ExportQueueName(cfg.Queue): 1}, ShutdownTimeout: cfg.ExportShutdownTimeout,
+			Logger: asynqLogger{log: log},
+			ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, t *asynq.Task, err error) {
+				log.WarnContext(ctx, "export task returned error", slog.String("type", t.Type()), slog.Any("error", err))
+			}),
+		})
+		s.exMux = asynq.NewServeMux()
+		s.exMux.HandleFunc(TypeAccountExport, ExportHandler(cfg.Exports.Build))
+	}
+	return s
 }
 
 // Handler adapts the publisher to an Asynq handler.
@@ -100,11 +130,35 @@ func Handler(pub *scheduler.Publisher) func(context.Context, *asynq.Task) error 
 }
 
 // Start begins processing in the background.
-func (s *Server) Start() error { return s.srv.Start(s.mux) }
+func (s *Server) Start() error {
+	if err := s.srv.Start(s.mux); err != nil {
+		return err
+	}
+	if s.exports != nil {
+		return s.exports.Start(s.exMux)
+	}
+	return nil
+}
 
-// Shutdown stops taking new tasks and waits for in-flight ones, up to ShutdownTimeout; after that the unfinished
-// tasks are aborted and returned to the queue.
-func (s *Server) Shutdown() { s.srv.Shutdown() }
+// Shutdown stops both servers from taking new tasks at once, then waits for in-flight ones concurrently: the publish
+// server up to ShutdownTimeout, the export server up to ExportShutdownTimeout. The total is the larger of the two, not
+// their sum, so it fits the stop_grace_period. Unfinished tasks are aborted and returned to the queue.
+func (s *Server) Shutdown() {
+	s.srv.Stop()
+	if s.exports != nil {
+		s.exports.Stop()
+	}
+	var wg sync.WaitGroup
+	if s.exports != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.exports.Shutdown()
+		}()
+	}
+	s.srv.Shutdown()
+	wg.Wait()
+}
 
 type asynqLogger struct{ log *slog.Logger }
 
