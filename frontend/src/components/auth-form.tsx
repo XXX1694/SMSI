@@ -5,6 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { InlineError } from '@/components/states';
 import { DEMO, DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/demo/config';
 import { errorMessage } from '@/hooks';
 
@@ -78,9 +79,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             </p>
           ) : null}
           {error ? (
-            <p role="alert" className="text-sm text-danger">
-              {error}
-            </p>
+            <InlineError>{error}</InlineError>
           ) : null}
           <Button type="submit" className="w-full" disabled={busy || !email || !password}>
             {busy ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}

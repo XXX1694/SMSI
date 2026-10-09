@@ -2,12 +2,11 @@ package posts
 
 import (
 	"context"
-
-	"github.com/socialos/backend/internal/application/port"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/domain/post"
 )
 

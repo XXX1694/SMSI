@@ -74,7 +74,7 @@ describe('request layer', () => {
     const c = await api.developer.createMcpConnection({ name: 'Claude', scopes: ['posts:read'] });
     expect(c.rawKey).toBe('sk_live_abc');
     expect(JSON.parse(c.config.http).mcpServers.socialos.headers.Authorization).toBe('Bearer sk_live_abc');
-    expect(JSON.parse(c.config.stdio).mcpServers.socialos.env.SOCIALOS_API_KEY).toBe('sk_live_abc');
+    expect(JSON.parse(c.config.stdio).mcpServers.socialos.env.SOCIALOS_AUTH_HEADER).toBe("Bearer sk_live_abc");
   });
 });
 

@@ -169,6 +169,18 @@ func TestUserPasswordAndVerification(t *testing.T) {
 	if got, _ = r.GetByID(ctx, u.ID); got.PasswordHash != "newhash" {
 		t.Fatal("password not set")
 	}
+	if err := r.RehashPassword(ctx, u.ID, "stale", "upgraded"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ = r.GetByID(ctx, u.ID); got.PasswordHash != "newhash" {
+		t.Fatalf("rehash against a stale hash must be a no-op, got %q", got.PasswordHash)
+	}
+	if err := r.RehashPassword(ctx, u.ID, "newhash", "upgraded"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ = r.GetByID(ctx, u.ID); got.PasswordHash != "upgraded" {
+		t.Fatalf("rehash against the current hash must apply, got %q", got.PasswordHash)
+	}
 	if err := r.SetPassword(ctx, uuid.New(), "x"); !errs.Is(err, errs.NotFound) {
 		t.Fatalf("unknown user: %v", err)
 	}

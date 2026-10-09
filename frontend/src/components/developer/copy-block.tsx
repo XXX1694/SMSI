@@ -5,20 +5,31 @@ import { Button } from '@/components/ui/button';
 
 export function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
   const [done, setDone] = useState(false);
+  const [failed, setFailed] = useState(false);
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
+      setFailed(false);
       setDone(true);
       window.setTimeout(() => setDone(false), 2000);
     } catch {
       setDone(false);
+      setFailed(true);
+      window.setTimeout(() => setFailed(false), 6000);
     }
   }
   return (
-    <Button variant="secondary" size="sm" onClick={() => void copy()}>
-      {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
-      {done ? 'Copied' : label}
-    </Button>
+    <span className="inline-flex flex-wrap items-center justify-end gap-2">
+      <Button variant="secondary" size="sm" onClick={() => void copy()}>
+        {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+        {done ? 'Copied' : label}
+      </Button>
+      {failed ? (
+        <span role="alert" className="text-xs text-danger">
+          Could not copy. Select the text and copy it by hand.
+        </span>
+      ) : null}
+    </span>
   );
 }
 

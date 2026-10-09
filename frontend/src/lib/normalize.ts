@@ -127,7 +127,14 @@ export function normalizeCreatedApiKey(raw: unknown): CreatedApiKey {
   return { key: meta as unknown as ApiKey, rawKey: findRawKey(r) };
 }
 
-export function buildMcpConfig(rawKey: string, mcpUrl: string, apiUrl: string): McpConfigSnippets {
+/** The only npm package a generated config may run. Pinned exactly: never `npx -y <name>` without a version. */
+export const MCP_REMOTE_PACKAGE = 'mcp-remote@0.14.3';
+
+/**
+ * `stdio` is the Claude Desktop bridge: Desktop spawns `mcp-remote`, which talks HTTP to our server.
+ * There is no SocialOS npm package (do not invent one: whoever registered the name would receive the keys).
+ */
+export function buildMcpConfig(rawKey: string, mcpUrl: string): McpConfigSnippets {
   const http = {
     mcpServers: {
       socialos: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${rawKey}` } },
@@ -137,22 +144,22 @@ export function buildMcpConfig(rawKey: string, mcpUrl: string, apiUrl: string): 
     mcpServers: {
       socialos: {
         command: 'npx',
-        args: ['-y', 'socialos-mcp', '--stdio'],
-        env: { SOCIALOS_API_KEY: rawKey, SOCIALOS_API_URL: apiUrl },
+        args: ['-y', MCP_REMOTE_PACKAGE, mcpUrl, '--header', 'Authorization:${SOCIALOS_AUTH_HEADER}'],
+        env: { SOCIALOS_AUTH_HEADER: `Bearer ${rawKey}` },
       },
     },
   };
   return { http: JSON.stringify(http, null, 2), stdio: JSON.stringify(stdio, null, 2) };
 }
 
-export function normalizeCreatedMcp(raw: unknown, mcpUrl: string, apiUrl: string): CreatedMcpConnection {
+export function normalizeCreatedMcp(raw: unknown, mcpUrl: string): CreatedMcpConnection {
   const r = isRec(raw) ? raw : {};
   const meta = ['connection', 'mcp_connection', 'item'].map((k) => r[k]).find(isRec) ?? r;
   const rawKey = findRawKey(r);
   const cfg = isRec(r.config) ? r.config : null;
   const fromServer = (v: unknown): string | null =>
     typeof v === 'string' ? v : isRec(v) ? JSON.stringify(v, null, 2) : null;
-  const built = buildMcpConfig(rawKey, mcpUrl, apiUrl);
+  const built = buildMcpConfig(rawKey, mcpUrl);
   return {
     connection: meta as unknown as McpConnection,
     rawKey,

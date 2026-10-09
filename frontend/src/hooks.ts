@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { DEMO, DEMO_CHANGE_EVENT } from '@/lib/demo/config';
+import { friendlyMessage } from '@/lib/errors';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -50,7 +51,10 @@ export function useAsync<T>(fn: () => Promise<T>): AsyncState<T> {
   return { data, error, loading, reload };
 }
 
-export function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) return e.requestId ? `${e.message} (ref ${e.requestId})` : e.message;
-  return e instanceof Error ? e.message : 'Something went wrong.';
+export function errorMessage(e: unknown, withRef = true): string {
+  if (e instanceof ApiError) {
+    const text = friendlyMessage(e.code, e.message);
+    return withRef && e.requestId ? `${text} (ref ${e.requestId})` : text;
+  }
+  return friendlyMessage(null, e instanceof Error ? e.message : null);
 }

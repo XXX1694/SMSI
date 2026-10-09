@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ScopePicker } from '@/components/developer/scope-picker';
 import { CapabilityBadges } from '@/components/capability-badges';
 import { PostStatusBadge } from '@/components/status-badge';
+import { ErrorState, InlineError } from '@/components/states';
 import { defaultScopes } from '@/lib/scopes';
 import { normalizeCapabilities } from '@/lib/normalize';
 
@@ -82,5 +83,19 @@ describe('ComposerView', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/over the Mock limit/));
     expect(apiMock.posts.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('InlineError and ErrorState title', () => {
+  it('renders an alert with a retry button', async () => {
+    const onRetry = vi.fn();
+    render(<InlineError onRetry={onRetry}>Could not save.</InlineError>);
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save.');
+    screen.getByRole('button', { name: 'Try again' }).click();
+    expect(onRetry).toHaveBeenCalled();
+  });
+  it('uses a custom ErrorState title', () => {
+    render(<ErrorState title="Could not load posts" error={new Error('Offline.')} />);
+    expect(screen.getByText('Could not load posts')).toBeInTheDocument();
   });
 });

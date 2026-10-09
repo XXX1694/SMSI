@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/socialos/backend/internal/adapters/bluesky"
 	"github.com/socialos/backend/internal/adapters/discord"
 	"github.com/socialos/backend/internal/adapters/linkedin"
 	"github.com/socialos/backend/internal/adapters/mail"
@@ -138,6 +139,7 @@ func buildRegistry(cfg *config.Config, extra []provider.Provider) *provider.Regi
 	reg.Register(telegram.New(telegram.Config{BotToken: cfg.TelegramToken}))
 	reg.Register(discord.New(discord.Config{}))
 	reg.Register(mastodon.New(mastodon.Config{}))
+	reg.Register(bluesky.New(bluesky.Config{}))
 	if cfg.MockProviders {
 		reg.Register(mock.New())
 		reg.Register(mocktoken.New())
@@ -159,7 +161,7 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	}
 	hasher := ov.Hasher
 	if hasher == nil {
-		hasher = crypto.NewPasswordHasher(crypto.DefaultArgon2)
+		hasher = crypto.NewPasswordHasher(crypto.DefaultArgon2, cfg.PasswordHashConcurrency, int64(cfg.PasswordHashMemoryMiB)*1024)
 	}
 	db := a.DB
 	auditRepo := postgres.NewAudit(db)

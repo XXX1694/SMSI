@@ -18,8 +18,8 @@ func TestAcceptanceFlow(t *testing.T) {
 		t.Fatalf("unexpected /me: %v", me)
 	}
 	providers := c.must("GET", "/api/v1/social/providers", nil, 200)["items"].([]any)
-	if len(providers) != 16 {
-		t.Fatalf("expected 16 providers (linkedin, telegram, discord, mastodon, mock, mocktoken + 10 stubs), got %d", len(providers))
+	if len(providers) != 17 {
+		t.Fatalf("expected 17 providers (linkedin, telegram, discord, mastodon, bluesky, mock, mocktoken + 10 stubs), got %d", len(providers))
 	}
 
 	accountID := c.connectMock()

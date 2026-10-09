@@ -26,10 +26,13 @@ func (inlineTx) InTx(ctx context.Context, fn func(context.Context) error) error 
 
 type plainHasher struct{}
 
-func (plainHasher) Hash(p string) (string, error) { return "h:" + p, nil }
-func (plainHasher) Verify(p, enc string) (bool, error) {
-	return enc == "h:"+p, nil
+func (plainHasher) Hash(_ context.Context, p string) (string, error) { return "h:" + p, nil }
+func (plainHasher) Verify(_ context.Context, p, enc string) (bool, error) {
+	return enc == "h:"+p || enc == "old:"+p, nil
 }
+
+// NeedsRehash treats the "old:" prefix as outdated parameters.
+func (plainHasher) NeedsRehash(enc string) bool { return strings.HasPrefix(enc, "old:") }
 
 type auditEntry struct {
 	action string
@@ -66,6 +69,12 @@ func (f *usersFake) GetByID(_ context.Context, id uuid.UUID) (*user.User, error)
 }
 func (f *usersFake) SetPassword(_ context.Context, id uuid.UUID, h string) error {
 	f.byID[id].PasswordHash = h
+	return nil
+}
+func (f *usersFake) RehashPassword(_ context.Context, id uuid.UUID, old, h string) error {
+	if u := f.byID[id]; u.PasswordHash == old {
+		u.PasswordHash = h
+	}
 	return nil
 }
 func (f *usersFake) MarkEmailVerified(_ context.Context, id uuid.UUID, at time.Time) error {
