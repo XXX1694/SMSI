@@ -21,6 +21,7 @@ import { decide, findApproval, visibleApprovals } from './approvals';
 import { svgThumb } from './art';
 import type { DemoLink, DemoPost, DemoRequest, DemoResponse, DemoState, WireProvider } from './model';
 import { PROVIDERS } from './providers';
+import { demoQuotaError, demoUsage } from './quota';
 
 const MIN = 60_000;
 const DAY = 86_400_000;
@@ -352,6 +353,7 @@ export class DemoEngine {
     }
 
     // ---- dashboard, analytics, audit
+    if (path === '/account/usage' && m === 'GET') return ok(200, demoUsage(s, this.now()));
     if (path === '/dashboard/summary' && m === 'GET') return ok(200, this.summary());
     if (path === '/analytics' && m === 'GET') return ok(200, { items: this.analytics(query) });
     if (path === '/audit-logs' && m === 'GET') return ok(200, paginate(query?.action ? s.audit.filter((a) => a.action === query.action) : s.audit, query));
@@ -435,6 +437,8 @@ export class DemoEngine {
     const p = this.provider(providerId);
     if (!p || p.status === 'unsupported' || !p.configured) return fail(501, 'PROVIDER_NOT_AVAILABLE', 'Provider not available');
     if (providerId === 'telegram') return fail(400, 'VALIDATION_ERROR', 'Telegram is connected with a one-time code');
+    const full = demoQuotaError(this.state, 'connected_accounts', 1, this.now());
+    if (full) return fail(403, 'QUOTA_EXCEEDED', full);
     const n = this.state.accounts.filter((a) => a.provider === providerId).length + 1;
     const people = ['Riley Chen', 'Sam Okafor', 'Taylor Brooks', 'Morgan Ito'];
     const display = providerId === 'linkedin' ? (people[(n - 1) % people.length] ?? 'Demo Profile') : `Mock Network ${n}`;
@@ -477,6 +481,8 @@ export class DemoEngine {
     let acc = this.state.accounts.find((a) => a.provider === p.provider && a.username === username);
     if (acc) acc.status = 'active';
     else {
+      const full = demoQuotaError(this.state, 'connected_accounts', 1, this.now());
+      if (full) return fail(403, 'QUOTA_EXCEEDED', full);
       acc = { id: newUuid(), provider: p.provider, username, display_name: `${this.providerName(p)} ${username}`, avatar_url: null, status: 'active', scopes: [], connected_at: this.iso() };
       this.state.accounts.push(acc);
     }
@@ -619,6 +625,8 @@ export class DemoEngine {
     if (wantSchedule && !(Date.parse(scheduleAt) > this.now())) {
       return fail(400, 'VALIDATION_ERROR', 'scheduled_at must be in the future');
     }
+    const full = wantSchedule ? demoQuotaError(this.state, 'scheduled_posts_month', 1, this.now()) : null;
+    if (full) return fail(403, 'QUOTA_EXCEEDED', full);
     const at = this.iso();
     const post: DemoPost = {
       id: newUuid(),
@@ -634,6 +642,7 @@ export class DemoEngine {
       attempts: [],
       media_ids: mediaIds,
       settle_at: null,
+      quota_counted: wantSchedule,
     };
     s.posts.push(post);
     this.audit(this.user, 'post.created', 'post', post.id);
@@ -677,6 +686,13 @@ export class DemoEngine {
       return fail(409, 'INVALID_STATE_TRANSITION', `Cannot go from ${post.status} to ${to}`);
     }
     const now = this.now();
+    // Seeded posts carry no flag: pin it from the status before anything changes it, so a later unschedule keeps the slot.
+    post.quota_counted ??= post.status !== 'draft' && post.status !== 'cancelled';
+    if (!post.quota_counted && (act === 'schedule' || act === 'publish' || act === 'retry')) {
+      const full = demoQuotaError(this.state, 'scheduled_posts_month', 1, now);
+      if (full) return fail(403, 'QUOTA_EXCEEDED', full);
+      post.quota_counted = true;
+    }
     if (act === 'schedule') {
       const at = str(body.scheduled_at);
       if (!at || !(Date.parse(at) > now)) return fail(400, 'VALIDATION_ERROR', 'scheduled_at must be in the future');
@@ -705,6 +721,8 @@ export class DemoEngine {
     }
     const kind: Media['kind'] = upload.mime.startsWith('image') ? 'image' : 'video';
     if (upload.size > (kind === 'image' ? 10 : 100) * 1024 * 1024) return fail(400, 'VALIDATION_ERROR', 'File is too large');
+    const full = demoQuotaError(this.state, 'media_bytes', upload.size, this.now());
+    if (full) return fail(403, 'QUOTA_EXCEEDED', full);
     const med: Media = {
       id: newUuid(),
       kind,

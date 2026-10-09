@@ -4,6 +4,7 @@ const TEXT: Record<string, string> = {
   UNAUTHENTICATED: 'You are not signed in, or your session has ended. Please sign in again.',
   FORBIDDEN: 'You do not have permission to do that.',
   INSUFFICIENT_SCOPE: 'This API key does not have the permission for that action.',
+  QUOTA_EXCEEDED: 'You have reached a limit of your plan. See Settings for what you have used.',
   EMAIL_NOT_VERIFIED: 'Verify your email address first, then try again.',
   NOT_FOUND: 'We could not find that. It may have been deleted.',
   INVALID_STATE_TRANSITION: 'That is not possible for a post in its current status.',

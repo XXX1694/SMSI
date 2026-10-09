@@ -5,6 +5,7 @@ import { useAuth } from '@/components/auth-provider';
 import { usePrefs, type Theme } from '@/components/prefs-provider';
 import { PasswordForm } from '@/components/password-form';
 import { Section } from '@/components/ui/card';
+import { UsageCard } from '@/components/usage-card';
 import { Field, Input, Select } from '@/components/ui/input';
 import { browserTimezone, formatDateTime, isValidTimezone } from '@/lib/time';
 
@@ -38,6 +39,9 @@ export function SettingsView() {
             ) : null}
           </dd>
         </dl>
+      </Section>
+      <Section title="Plan & usage">
+        <UsageCard />
       </Section>
       <Section title="Preferences">
         <div className="space-y-4">

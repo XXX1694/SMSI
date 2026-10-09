@@ -23,6 +23,8 @@ export interface DemoPost extends Post {
   media_ids: string[];
   /** While `publishing`: when the simulated provider call finishes. */
   settle_at: string | null;
+  /** Set once the post was scheduled or published: it then counts against the monthly limit, like `quota_counted_at` in the API. */
+  quota_counted?: boolean;
 }
 
 /** A pending/connected Telegram "post this code in your chat" request. */

@@ -180,6 +180,24 @@ export interface CreatePostInput {
   schedule?: boolean;
 }
 
+/** One line of `GET /account/usage`. `used` is absent for limits that are not counted (the agent request rate). `limit` -1 = unlimited. */
+export interface QuotaLine {
+  used?: number;
+  limit: number;
+}
+
+export interface UsageReport {
+  plan: string;
+  period_start: string;
+  period_end: string;
+  quotas: {
+    connected_accounts: QuotaLine;
+    scheduled_posts_month: QuotaLine;
+    media_bytes: QuotaLine;
+    agent_requests_per_minute: QuotaLine;
+  };
+}
+
 export interface DashboardSummary {
   connected_accounts: number;
   scheduled_posts: number;
