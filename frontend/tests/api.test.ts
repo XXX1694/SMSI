@@ -158,6 +158,32 @@ describe('auth recovery endpoints', () => {
   });
 });
 
+describe('approvals endpoints', () => {
+  it('lists pending ones by default, asks for history with status=all, and decides with POST + CSRF', async () => {
+    setCsrfToken('tok123');
+    const fn = mockFetch(200, { items: [{ id: 'a1' }], next_cursor: 'c2' });
+    const page = await api.approvals.list();
+    expect(page.items).toHaveLength(1);
+    expect(page.next_cursor).toBe('c2');
+    await api.approvals.list('all', 10, 'c2');
+    await api.approvals.approve('a/1');
+    await api.approvals.deny('a2');
+    const calls = fn.mock.calls as unknown as [string, RequestInit][];
+    expect(calls.map((c) => `${c[1].method} ${c[0]}`)).toEqual([
+      'GET /api/v1/approvals?status=pending&limit=25',
+      'GET /api/v1/approvals?status=all&limit=10&cursor=c2',
+      'POST /api/v1/approvals/a%2F1/approve',
+      'POST /api/v1/approvals/a2/deny',
+    ]);
+    expect((calls[2]![1].headers as Record<string, string>)['X-CSRF-Token']).toBe('tok123');
+  });
+
+  it('a request that is no longer pending is a 409 ApiError', async () => {
+    mockFetch(409, { error: { code: 'CONFLICT', message: 'this approval is no longer pending', request_id: 'r' } });
+    await expect(api.approvals.approve('a1')).rejects.toMatchObject({ code: 'CONFLICT', status: 409 });
+  });
+});
+
 describe('parseErrorBody fields', () => {
   it('keeps per-field messages and ignores non-string values', () => {
     const e = parseErrorBody(400, { error: { code: 'VALIDATION_ERROR', message: 'm', fields: { a: 'required', b: 3 } } });

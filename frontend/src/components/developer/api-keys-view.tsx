@@ -17,6 +17,7 @@ import type { ApiKey, CreatedApiKey } from '@/lib/types';
 import { errorMessage, useAsync } from '@/hooks';
 import { CopyButton } from './copy-block';
 import { ScopePicker } from './scope-picker';
+import { TrustedPolicyField } from './trusted-policy';
 
 function RawKeyDialog({ created, onClose }: { created: CreatedApiKey | null; onClose: () => void }) {
   return (
@@ -48,23 +49,29 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
   const [scopes, setScopes] = useState<string[]>(defaultScopes());
   const [expiry, setExpiry] = useState('90');
   const [ack, setAck] = useState(false);
+  const [trusted, setTrusted] = useState(false);
+  const [trustAck, setTrustAck] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const dangerous = hasDangerous(scopes);
+  const isTrusted = dangerous && trusted; // the choice only exists while a dangerous scope is selected
 
   async function submit() {
     if (!name.trim()) return setError('Give the key a name.');
     if (scopes.length === 0) return setError('Select at least one scope.');
     if (dangerous && !ack) return setError('Confirm that you understand the risk of dangerous scopes.');
+    if (isTrusted && !trustAck) return setError('Confirm that this key may act without your approval, or turn the trusted option off.');
     setBusy(true);
     setError(null);
     try {
       const days = expiry ? Number(expiry) : null;
       const expires_at = days ? new Date(Date.now() + days * 86_400_000).toISOString() : undefined;
-      const created = await api.developer.createApiKey({ name: name.trim(), scopes, expires_at });
+      const created = await api.developer.createApiKey({ name: name.trim(), scopes, expires_at, dangerous_policy: isTrusted ? 'trusted' : 'approve' });
       setName('');
       setScopes(defaultScopes());
       setAck(false);
+      setTrusted(false);
+      setTrustAck(false);
       onOpenChange(false);
       onCreated(created);
     } catch (e) {
@@ -95,6 +102,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
               <label htmlFor="key-ack" className="text-sm">I understand this key can publish, delete or disconnect on my behalf.</label>
             </div>
           ) : null}
+          {dangerous ? <TrustedPolicyField trusted={trusted} confirmed={trustAck} onTrusted={(v) => { setTrusted(v); if (!v) setTrustAck(false); }} onConfirmed={setTrustAck} /> : null}
           {error ? <InlineError>{error}</InlineError> : null}
         </div>
         <DialogFooter>
@@ -115,6 +123,11 @@ function KeyRow({ k, onRevoke }: { k: ApiKey; onRevoke: (k: ApiKey) => void }) {
         <div>
           <p className="font-medium">{k.name}</p>
           <code className="text-xs text-muted-foreground">{k.prefix}…</code>
+          {k.revoked_at ? null : k.dangerous_policy === 'trusted' ? (
+            <Badge tone="warning" className="mt-1.5 flex w-fit">Trusted: acts without asking</Badge>
+          ) : (
+            <Badge tone="neutral" className="mt-1.5 flex w-fit">Asks before dangerous actions</Badge>
+          )}
         </div>
       </Td>
       <Td label="Scopes" className="py-3">

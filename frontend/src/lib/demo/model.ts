@@ -1,6 +1,7 @@
 import type {
   AnalyticsPoint,
   ApiKey,
+  Approval,
   AuditLog,
   McpConnection,
   Media,
@@ -45,6 +46,7 @@ export interface DemoState {
   api_keys: ApiKey[];
   mcp_connections: McpConnection[];
   audit: AuditLog[];
+  approvals: Approval[];
   links: DemoLink[];
   /** Request counts per key / connection id, shown on the usage panel. */
   usage: Record<string, number>;

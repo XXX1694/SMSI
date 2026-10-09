@@ -11,12 +11,14 @@ import {
   Menu,
   PenSquare,
   Settings,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ComponentType, type ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
+import { usePendingApprovals } from '@/components/approvals/use-pending-approvals';
 import { EmailBanner } from '@/components/email-banner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -35,13 +37,14 @@ const NAV: NavItem[] = [
   { href: '/media', label: 'Media', icon: ImageIcon },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/accounts', label: 'Accounts', icon: Link2 },
+  { href: '/approvals', label: 'Approvals', icon: ShieldCheck },
 ];
 const NAV_BOTTOM: NavItem[] = [
   { href: '/developer', label: 'Developer', icon: Code2 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-function NavLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
+function NavLink({ item, onNavigate, badge }: { item: NavItem; onNavigate: () => void; badge?: number | null }) {
   const pathname = usePathname();
   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
@@ -57,6 +60,12 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void }
     >
       <Icon className="h-4 w-4" aria-hidden />
       {item.label}
+      {badge ? (
+        <span className="ml-auto rounded-full bg-warning-soft px-1.5 text-xs font-medium text-warning">
+          {badge > 99 ? '99+' : badge}
+          <span className="sr-only"> waiting</span>
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -66,6 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const close = () => setOpen(false);
+  const pending = usePendingApprovals();
 
   async function signOut() {
     await logout();
@@ -76,6 +86,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen md:flex">
       <header className="flex h-12 items-center justify-between border-b px-4 md:hidden">
         <span className="text-sm font-semibold">SocialOS</span>
+        {pending ? (
+          <Link href="/approvals" className="ml-auto mr-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+            {pending} waiting for approval
+          </Link>
+        ) : null}
         <Button variant="ghost" size="icon" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="sidebar">
           {open ? <X className="h-4 w-4" aria-hidden /> : <Menu className="h-4 w-4" aria-hidden />}
         </Button>
@@ -90,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mb-4 hidden px-2.5 pt-1 text-sm font-semibold md:block">SocialOS</div>
         <nav aria-label="Main" className="flex flex-1 flex-col gap-0.5">
           {NAV.map((i) => (
-            <NavLink key={i.href} item={i} onNavigate={close} />
+            <NavLink key={i.href} item={i} onNavigate={close} badge={i.href === '/approvals' ? pending : null} />
           ))}
           <div className="mt-auto flex flex-col gap-0.5 pt-4">
             {NAV_BOTTOM.map((i) => (
