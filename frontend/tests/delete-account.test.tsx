@@ -19,8 +19,6 @@ vi.mock('@/lib/api', () => ({
     }
   },
 }));
-const nav = vi.hoisted(() => ({ replace: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => nav }));
 const auth = vi.hoisted(() => ({ user: null as unknown, endSession: vi.fn(), refresh: vi.fn() }));
 vi.mock('@/components/auth-provider', () => ({ useAuth: () => auth }));
 vi.mock('@/components/prefs-provider', () => ({ usePrefs: () => ({ timezone: 'UTC' }) }));
@@ -39,7 +37,6 @@ beforeEach(() => {
   apiMock.account.cancelDeletion.mockReset();
   auth.endSession.mockReset();
   auth.refresh.mockReset();
-  nav.replace.mockReset();
   auth.user = me();
 });
 
@@ -67,15 +64,14 @@ describe('DeleteAccount', () => {
     expect(submit).toBeEnabled();
   });
 
-  it('sends the request, forgets the session and goes to the login page', async () => {
+  it('sends the request and ends the session with the reason, so the login page can explain', async () => {
     apiMock.account.requestDeletion.mockResolvedValue({ scheduled_for: '2026-10-16T12:00:00Z' });
     await openDialog();
     await userEvent.type(screen.getByLabelText('Your password'), 'secret-pw');
     await userEvent.type(screen.getByLabelText(/Type owner@example.com to confirm/), 'Owner@Example.com');
     await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
-    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/login?deleted=1'));
+    await waitFor(() => expect(auth.endSession).toHaveBeenCalledWith('deleted'));
     expect(apiMock.account.requestDeletion).toHaveBeenCalledWith('secret-pw', 'Owner@Example.com');
-    expect(auth.endSession).toHaveBeenCalled();
   });
 
   it('shows a wrong password next to the field and stays signed in', async () => {
@@ -86,7 +82,6 @@ describe('DeleteAccount', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
     expect(await screen.findByText('That is not your current password.')).toBeInTheDocument();
     expect(auth.endSession).not.toHaveBeenCalled();
-    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   it('shows any other failure and lets the user retry', async () => {

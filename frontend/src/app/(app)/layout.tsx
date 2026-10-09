@@ -6,13 +6,14 @@ import { AppShell } from '@/components/app-shell';
 import { ErrorState } from '@/components/states';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { user, loading, error, retry } = useAuth();
+  const { user, loading, error, retry, endedBy } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user && !error) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [loading, user, error, router, pathname]);
+    // After account deletion the login page explains what happened instead of remembering where the user was.
+    if (!loading && !user && !error) router.replace(endedBy === 'deleted' ? '/login?deleted=1' : `/login?next=${encodeURIComponent(pathname)}`);
+  }, [loading, user, error, router, pathname, endedBy]);
 
   if (error && !user) {
     return (

@@ -16,7 +16,9 @@ interface AuthState {
   /** Re-reads /me, e.g. after the email was verified. A failure keeps the current user. */
   refresh: () => Promise<void>;
   /** Forgets the user without calling the server, after it ended the session itself (account deletion). */
-  endSession: () => void;
+  endSession: (reason?: 'deleted') => void;
+  /** Why the session ended without the user signing out, so the login page can say so. */
+  endedBy: 'deleted' | null;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -26,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [attempt, setAttempt] = useState(0);
+  const [endedBy, setEndedBy] = useState<'deleted' | null>(null);
 
   const adopt = useCallback((me: Me | null) => {
     setCsrfToken(me?.csrf_token ?? null);
@@ -86,11 +89,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [adopt]);
 
-  const endSession = useCallback(() => adopt(null), [adopt]);
+  const endSession = useCallback(
+    (reason?: 'deleted') => {
+      setEndedBy(reason ?? null);
+      adopt(null);
+    },
+    [adopt],
+  );
 
   const value = useMemo(
-    () => ({ user, loading, error, retry, login, register, logout, refresh, endSession }),
-    [user, loading, error, retry, login, register, logout, refresh, endSession],
+    () => ({ user, loading, error, retry, login, register, logout, refresh, endSession, endedBy }),
+    [user, loading, error, retry, login, register, logout, refresh, endSession, endedBy],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

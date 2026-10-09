@@ -1,5 +1,4 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { InlineError } from '@/components/states';
@@ -22,7 +21,6 @@ function refusal(e: unknown): { password?: string; confirm?: string; general?: s
 export function DeleteAccount() {
   const { user, endSession } = useAuth();
   const graceDays = user?.deletion_grace_days ?? 7;
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -43,8 +41,8 @@ export function DeleteAccount() {
     setProblem({});
     try {
       await api.account.requestDeletion(password, confirm.trim());
-      endSession();
-      router.replace('/login?deleted=1');
+      // The (app) layout sees the missing user and sends the owner to the login page with the notice.
+      endSession('deleted');
     } catch (err) {
       setProblem(refusal(err));
       setBusy(false);
