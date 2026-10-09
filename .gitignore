@@ -7,3 +7,6 @@ dump.rdb
 *.log
 # deploy.sh state (current/previous tag, history) when it is run from a checkout
 .deploy/
+
+# Local screenshots and scratch output
+.artifacts/

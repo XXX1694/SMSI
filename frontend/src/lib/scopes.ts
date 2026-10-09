@@ -1,34 +1,35 @@
+import type { AppT } from '@/i18n/translate';
 import type { Scope } from './types';
 
 export type ScopeRisk = 'safe' | 'medium' | 'dangerous';
 
+/** Names and descriptions live in the catalog: `scopes.<scope with ":" as "_">.label` (see `scopeLabel`). */
 export interface ScopeInfo {
   scope: Scope;
-  label: string;
-  description: string;
   risk: ScopeRisk;
 }
 
 export const SCOPES: readonly ScopeInfo[] = [
-  { scope: 'social:read', label: 'Read accounts', description: 'List connected accounts and networks.', risk: 'safe' },
-  { scope: 'posts:read', label: 'Read posts', description: 'List posts, statuses and attempts.', risk: 'safe' },
-  { scope: 'analytics:read', label: 'Read analytics', description: 'Read analytics data.', risk: 'safe' },
-  { scope: 'posts:write', label: 'Create and edit drafts', description: 'Create drafts, edit and cancel posts.', risk: 'safe' },
-  { scope: 'media:write', label: 'Upload media', description: 'Upload files to the media library.', risk: 'safe' },
-  { scope: 'posts:schedule', label: 'Schedule posts', description: 'Schedule posts to publish later.', risk: 'medium' },
-  { scope: 'posts:publish', label: 'Publish immediately', description: 'Publish to live social accounts right now.', risk: 'dangerous' },
-  { scope: 'posts:delete', label: 'Delete posts', description: 'Delete posts from Steerpost. Published copies stay on the networks.', risk: 'dangerous' },
-  { scope: 'social:disconnect', label: 'Disconnect accounts', description: 'Remove connected social accounts.', risk: 'dangerous' },
-  { scope: 'social:connect', label: 'Connect accounts', description: 'Hand a network credential (token, app password, webhook URL) to Steerpost. Anyone holding this key can attach accounts.', risk: 'dangerous' },
+  { scope: 'social:read', risk: 'safe' },
+  { scope: 'posts:read', risk: 'safe' },
+  { scope: 'analytics:read', risk: 'safe' },
+  { scope: 'posts:write', risk: 'safe' },
+  { scope: 'media:write', risk: 'safe' },
+  { scope: 'posts:schedule', risk: 'medium' },
+  { scope: 'posts:publish', risk: 'dangerous' },
+  { scope: 'posts:delete', risk: 'dangerous' },
+  { scope: 'social:disconnect', risk: 'dangerous' },
+  { scope: 'social:connect', risk: 'dangerous' },
 ];
 
 export const RISK_ORDER: readonly ScopeRisk[] = ['safe', 'medium', 'dangerous'];
 
-export const RISK_LABEL: Record<ScopeRisk, string> = {
-  safe: 'Safe',
-  medium: 'Medium',
-  dangerous: 'Dangerous',
-};
+export const riskLabel = (risk: ScopeRisk, t: AppT): string => t(`developer.scopes.risk.${risk}`);
+
+type ScopeKey = 'social_read' | 'posts_read' | 'analytics_read' | 'posts_write' | 'media_write' | 'posts_schedule' | 'posts_publish' | 'posts_delete' | 'social_disconnect' | 'social_connect';
+const scopeKey = (scope: Scope): ScopeKey => scope.replace(':', '_') as ScopeKey;
+export const scopeLabel = (scope: Scope, t: AppT): string => t(`developer.scopes.${scopeKey(scope)}.label`);
+export const scopeDescription = (scope: Scope, t: AppT): string => t(`developer.scopes.${scopeKey(scope)}.description`);
 
 export function groupScopes(): Record<ScopeRisk, ScopeInfo[]> {
   const out: Record<ScopeRisk, ScopeInfo[]> = { safe: [], medium: [], dangerous: [] };
@@ -50,22 +51,23 @@ export function hasDangerous(scopes: readonly string[]): boolean {
 }
 
 export interface McpPermission {
-  id: string;
-  label: string;
-  description: string;
+  id: 'read' | 'draft' | 'schedule' | 'publish' | 'delete' | 'disconnect';
   scopes: Scope[];
   risk: ScopeRisk;
   defaultOn: boolean;
 }
 
 export const MCP_PERMISSIONS: readonly McpPermission[] = [
-  { id: 'read', label: 'Read posts', description: 'Agents can list accounts, posts, statuses and analytics.', scopes: ['social:read', 'posts:read', 'analytics:read'], risk: 'safe', defaultOn: true },
-  { id: 'draft', label: 'Create drafts', description: 'Agents can create and edit drafts with media you uploaded.', scopes: ['posts:write', 'media:write'], risk: 'safe', defaultOn: true },
-  { id: 'schedule', label: 'Schedule', description: 'Agents can schedule posts to publish later.', scopes: ['posts:schedule'], risk: 'medium', defaultOn: false },
-  { id: 'publish', label: 'Publish', description: 'Agents can publish to live accounts immediately.', scopes: ['posts:publish'], risk: 'dangerous', defaultOn: false },
-  { id: 'delete', label: 'Delete', description: 'Agents can delete posts.', scopes: ['posts:delete'], risk: 'dangerous', defaultOn: false },
-  { id: 'disconnect', label: 'Disconnect', description: 'Agents can disconnect social accounts.', scopes: ['social:disconnect'], risk: 'dangerous', defaultOn: false },
+  { id: 'read', scopes: ['social:read', 'posts:read', 'analytics:read'], risk: 'safe', defaultOn: true },
+  { id: 'draft', scopes: ['posts:write', 'media:write'], risk: 'safe', defaultOn: true },
+  { id: 'schedule', scopes: ['posts:schedule'], risk: 'medium', defaultOn: false },
+  { id: 'publish', scopes: ['posts:publish'], risk: 'dangerous', defaultOn: false },
+  { id: 'delete', scopes: ['posts:delete'], risk: 'dangerous', defaultOn: false },
+  { id: 'disconnect', scopes: ['social:disconnect'], risk: 'dangerous', defaultOn: false },
 ];
+
+export const permissionLabel = (id: McpPermission['id'], t: AppT): string => t(`developer.mcp.perms.${id}.label`);
+export const permissionDescription = (id: McpPermission['id'], t: AppT): string => t(`developer.mcp.perms.${id}.description`);
 
 export function mcpDefaultSelection(): string[] {
   return MCP_PERMISSIONS.filter((p) => p.defaultOn).map((p) => p.id);

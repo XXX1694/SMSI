@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { usePrefs } from '@/components/prefs-provider';
 import { EmptyState, ErrorState, InlineError, LoadingRows } from '@/components/states';
 import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
@@ -13,40 +12,45 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field, Input, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { defaultScopes, hasDangerous, scopeRisk } from '@/lib/scopes';
-import { formatDateTime, formatRelative } from '@/lib/time';
+import { formatRelative } from '@/lib/time';
 import type { ApiKey, CreatedApiKey } from '@/lib/types';
-import { errorMessage, useAsync } from '@/hooks';
+import { useAsync, useErrorText } from '@/hooks';
+import { nodes } from '@/i18n/rich';
 import { CopyButton } from './copy-block';
 import { ScopePicker } from './scope-picker';
 import { TrustedPolicyField } from './trusted-policy';
+import { useTranslations } from '@/i18n/use-translations';
+import { useFormat } from '@/i18n/use-format';
 
 function RawKeyDialog({ created, onClose }: { created: CreatedApiKey | null; onClose: () => void }) {
+  const t = useTranslations();
   return (
     <Dialog open={created !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Copy your API key" description="This is the only time the full key is shown. Store it somewhere safe.">
+      <DialogContent title={t('developer.apiKeys.rawTitle')} description={t('developer.apiKeys.rawBody')}>
         <div className="space-y-3">
           <code data-testid="raw-key" className="block break-all rounded-md border bg-muted p-3 font-mono text-xs">
             {created?.rawKey}
           </code>
-          <CopyButton text={created?.rawKey ?? ''} label="Copy key" />
+          <CopyButton text={created?.rawKey ?? ''} label={t('developer.apiKeys.copyKey')} />
         </div>
         <DialogFooter>
-          <Button onClick={onClose}>I have saved it</Button>
+          <Button onClick={onClose}>{t('common.haveSaved')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-const EXPIRY: { label: string; days: number | null }[] = [
-  // Translator note: "Never" is the option "Expires: Never" for an API key.
-  { label: 'Never', days: null },
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
-  { label: '1 year', days: 365 },
-];
+const EXPIRY = [
+  { id: 'never', days: null },
+  { id: '30', days: 30 },
+  { id: '90', days: 90 },
+  { id: 'year', days: 365 },
+] as const;
 
 function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; onCreated: (c: CreatedApiKey) => void }) {
+  const t = useTranslations();
+  const errorText = useErrorText();
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<string[]>(defaultScopes());
   const [expiry, setExpiry] = useState('90');
@@ -59,10 +63,10 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
   const isTrusted = dangerous && trusted; // the choice only exists while a dangerous scope is selected
 
   async function submit() {
-    if (!name.trim()) return setError('Give the key a name.');
-    if (scopes.length === 0) return setError('Select at least one scope.');
-    if (dangerous && !ack) return setError('Confirm that you understand the risk of dangerous scopes.');
-    if (isTrusted && !trustAck) return setError('Confirm that this key may act without your approval, or turn the trusted option off.');
+    if (!name.trim()) return setError(t('developer.apiKeys.nameRequired'));
+    if (scopes.length === 0) return setError(t('developer.apiKeys.scopesRequired'));
+    if (dangerous && !ack) return setError(t('developer.apiKeys.ackRequired'));
+    if (isTrusted && !trustAck) return setError(t('developer.apiKeys.trustAckRequired'));
     setBusy(true);
     setError(null);
     try {
@@ -77,7 +81,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
       onOpenChange(false);
       onCreated(created);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -85,28 +89,30 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Create API key" description="Keys act as you. Grant only what the integration needs.">
+      <DialogContent title={t('developer.apiKeys.createTitle')} description={t('developer.apiKeys.createBody')}>
         <div className="space-y-5">
-          <Field label="Name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="CI publisher" />
+          <Field label={t('developer.apiKeys.nameLabel')}>
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder={t('developer.apiKeys.namePlaceholder')} />
           </Field>
-          <Field label="Expires">
+          <Field label={t('developer.apiKeys.expiresLabel')}>
             <Select value={expiry} onChange={(e) => setExpiry(e.target.value)}>
               {EXPIRY.map((o) => (
-                <option key={o.label} value={o.days ?? ''}>{o.label}</option>
+                <option key={o.id} value={o.days ?? ''}>
+                  {o.id === 'never' ? t('developer.apiKeys.expiryNever') : o.id === 'year' ? t('developer.apiKeys.expiryYear') : t('developer.apiKeys.expiryDays', { days: o.days })}
+                </option>
               ))}
             </Select>
           </Field>
           <ScopePicker value={scopes} onChange={setScopes} />
           {dangerous ? (
-            <CheckboxField checked={ack} onCheckedChange={(c) => setAck(c === true)} label="I understand this key can ask to publish, delete or disconnect. Each request waits for my approval." />
+            <CheckboxField checked={ack} onCheckedChange={(c) => setAck(c === true)} label={t('developer.apiKeys.ackDangerous')} />
           ) : null}
           {dangerous ? <TrustedPolicyField trusted={trusted} confirmed={trustAck} onTrusted={(v) => { setTrusted(v); if (!v) setTrustAck(false); }} onConfirmed={setTrustAck} /> : null}
           {error ? <InlineError>{error}</InlineError> : null}
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => void submit()} disabled={busy}>{busy ? 'Creating…' : 'Create key'}</Button>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
+          <Button onClick={() => void submit()} disabled={busy}>{busy ? t('common.creating') : t('developer.apiKeys.createKey')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -114,22 +120,23 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
 }
 
 function KeyRow({ k, onRevoke }: { k: ApiKey; onRevoke: (k: ApiKey) => void }) {
-  const { timezone } = usePrefs();
+  const t = useTranslations();
+  const fmt = useFormat();
   const expired = k.expires_at !== null && new Date(k.expires_at).getTime() < Date.now();
   return (
     <Tr className="align-top">
-      <Td label="Name" className="py-3">
+      <Td label={t('developer.apiKeys.colName')} className="py-3">
         <div>
           <p className="font-medium">{k.name}</p>
           <code className="text-xs text-muted-foreground">{k.prefix}…</code>
           {k.revoked_at ? null : k.dangerous_policy === 'trusted' ? (
-            <Badge tone="warning" className="mt-1.5 flex w-fit">Trusted: acts without asking</Badge>
+            <Badge tone="warning" className="mt-1.5 flex w-fit">{t('developer.apiKeys.badgeTrusted')}</Badge>
           ) : (
-            <Badge tone="neutral" className="mt-1.5 flex w-fit">Asks before dangerous actions</Badge>
+            <Badge tone="neutral" className="mt-1.5 flex w-fit">{t('developer.apiKeys.badgeAsks')}</Badge>
           )}
         </div>
       </Td>
-      <Td label="Scopes" className="py-3">
+      <Td label={t('developer.apiKeys.colScopes')} className="py-3">
         <div className="flex max-w-xs flex-wrap gap-1">
           {k.scopes.map((s) => (
             <Badge key={s} tone={scopeRisk(s) === 'dangerous' ? 'danger' : scopeRisk(s) === 'medium' ? 'warning' : 'neutral'}>
@@ -138,11 +145,11 @@ function KeyRow({ k, onRevoke }: { k: ApiKey; onRevoke: (k: ApiKey) => void }) {
           ))}
         </div>
       </Td>
-      <Td label="Expires" className="whitespace-nowrap py-3 text-muted-foreground">{k.expires_at ? formatDateTime(k.expires_at, timezone) : 'Never'}</Td>
-      <Td label="Last used" className="whitespace-nowrap py-3 text-muted-foreground">{formatRelative(k.last_used_at)}</Td>
+      <Td label={t('developer.apiKeys.expiresLabel')} className="whitespace-nowrap py-3 text-muted-foreground">{k.expires_at ? fmt.dateTime(k.expires_at) : t('developer.apiKeys.expiryNever')}</Td>
+      <Td label={t('developer.apiKeys.colLastUsed')} className="whitespace-nowrap py-3 text-muted-foreground">{formatRelative(k.last_used_at, t)}</Td>
       <Td align="right" className="py-3">
-        {k.revoked_at ? <Badge>Revoked</Badge> : expired ? <Badge tone="warning">Expired</Badge> : (
-          <Button variant="ghost" size="sm" onClick={() => onRevoke(k)} aria-label={`Revoke ${k.name}`}>Revoke</Button>
+        {k.revoked_at ? <Badge>{t('common.status.account.revoked')}</Badge> : expired ? <Badge tone="warning">{t('developer.apiKeys.expired')}</Badge> : (
+          <Button variant="ghost" size="sm" onClick={() => onRevoke(k)} aria-label={t('developer.apiKeys.revokeLabel', { name: k.name })}>{t('developer.apiKeys.revoke')}</Button>
         )}
       </Td>
     </Tr>
@@ -150,6 +157,7 @@ function KeyRow({ k, onRevoke }: { k: ApiKey; onRevoke: (k: ApiKey) => void }) {
 }
 
 export function ApiKeysView() {
+  const t = useTranslations();
   const load = useCallback(() => api.developer.apiKeys(), []);
   const { data, error, loading, reload } = useAsync(load);
   const toast = useToast();
@@ -160,24 +168,36 @@ export function ApiKeysView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Use API keys for scripts and integrations. Send as <code className="text-xs">Authorization: Bearer sk_live_…</code></p>
-        <Button onClick={() => setCreateOpen(true)}>Create key</Button>
+        <p className="text-sm text-muted-foreground">
+          {nodes(t.rich('developer.apiKeys.intro', { header: 'Authorization: Bearer sk_live_…', code: (c) => <code className="text-xs">{c}</code> }))}
+        </p>
+        <Button onClick={() => setCreateOpen(true)}>{t('developer.apiKeys.createKey')}</Button>
       </div>
       {loading && !data ? (
         <LoadingRows rows={2} />
       ) : error || !data ? (
         <ErrorState error={error} onRetry={reload} />
       ) : data.length === 0 ? (
-        <EmptyState title="No API keys">Create a key to call the REST API from your own tools. To connect an AI agent, <Link href="/developer/mcp" className="underline underline-offset-4">use an MCP connection</Link>.</EmptyState>
+        <EmptyState title={t('developer.apiKeys.emptyTitle')}>
+          {nodes(
+            t.rich('developer.apiKeys.emptyBody', {
+              link: (c) => (
+                <Link href="/developer/mcp" className="underline underline-offset-4">
+                  {c}
+                </Link>
+              ),
+            }),
+          )}
+        </EmptyState>
       ) : (
-        <Table label="API keys">
+        <Table label={t('developer.apiKeys.tableLabel')}>
           <Thead>
             <Tr>
-              <Th>Name</Th>
-              <Th>Scopes</Th>
-              <Th>Expires</Th>
-              <Th>Last used</Th>
-              <Th><span className="sr-only">Actions</span></Th>
+              <Th>{t('developer.apiKeys.colName')}</Th>
+              <Th>{t('developer.apiKeys.colScopes')}</Th>
+              <Th>{t('developer.apiKeys.expiresLabel')}</Th>
+              <Th>{t('developer.apiKeys.colLastUsed')}</Th>
+              <Th><span className="sr-only">{t('developer.apiKeys.colActions')}</span></Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -192,14 +212,14 @@ export function ApiKeysView() {
       <ConfirmDialog
         open={revoking !== null}
         onOpenChange={(o) => !o && setRevoking(null)}
-        title="Revoke API key?"
-        description={`Anything using “${revoking?.name ?? 'this key'}” stops working immediately. This cannot be undone.`}
-        confirmLabel="Revoke"
+        title={t('developer.apiKeys.revokeTitle')}
+        description={revoking ? t('developer.apiKeys.revokeBody', { name: revoking.name }) : ''}
+        confirmLabel={t('developer.apiKeys.revoke')}
         destructive
         onConfirm={async () => {
           if (!revoking) return;
           await api.developer.revokeApiKey(revoking.id);
-          toast.success('Key revoked');
+          toast.success(t('developer.apiKeys.revoked'));
           reload();
         }}
       />

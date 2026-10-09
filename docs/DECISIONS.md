@@ -462,6 +462,7 @@ message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for
 **Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
 hint outside `en` until field codes exist. A release is blocked by missing keys or failed checks, not by draft status.
 Localized emails need a later decision built on `users.locale`.
+The English catalog (about 10.5 kB gzipped) is statically imported, so it adds 13 to 16 kB to first-load JS on every app and auth route (for example `/login` 131 to 147 kB); loading a catalog per namespace so auth pages fetch only nav/common/errors/auth/legal is a planned follow-up.
 
 ## D-022: Steerpost is licensed under the AGPL-3.0 (2026-10-09)
 

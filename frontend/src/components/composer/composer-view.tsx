@@ -10,9 +10,11 @@ import { formFromPost } from '@/lib/post-edit';
 import { editBlockedReason } from '@/lib/status';
 import { useAsync } from '@/hooks';
 import { ComposerForm } from './composer-form';
+import { useTranslations } from '@/i18n/use-translations';
 
 /** Compose a new post, or (with `postId`) edit a draft or scheduled one. */
 export function ComposerView({ postId }: { postId?: string }) {
+  const t = useTranslations();
   const { timezone } = usePrefs();
   const load = useCallback(async () => {
     const [providers, accounts, post] = await Promise.all([
@@ -25,18 +27,18 @@ export function ComposerView({ postId }: { postId?: string }) {
   const { data, error, loading, reload } = useAsync(load);
 
   if (loading && !data) return <LoadingRows rows={4} />;
-  if (error || !data) return <ErrorState title={postId ? 'Could not load this post' : undefined} showRef={!postId} error={error} onRetry={reload} />;
+  if (error || !data) return <ErrorState title={postId ? t('composer.loadFailed') : undefined} showRef={!postId} error={error} onRetry={reload} />;
   const { providers, accounts, post } = data;
 
   if (post) {
-    const reason = editBlockedReason(post.status);
+    const reason = editBlockedReason(post.status, t);
     if (reason) {
       return (
         <EmptyState
-          title="This post cannot be edited"
+          title={t('composer.cannotEditTitle')}
           action={
             <Button asChild variant="secondary">
-              <Link href={postHref(post.id)}>Back to the post</Link>
+              <Link href={postHref(post.id)}>{t('composer.backToPost')}</Link>
             </Button>
           }
         >
@@ -49,14 +51,14 @@ export function ComposerView({ postId }: { postId?: string }) {
   if (accounts.length === 0) {
     return (
       <EmptyState
-        title="No accounts yet"
+        title={t('composer.noAccountsTitle')}
         action={
           <Button asChild>
-            <Link href="/accounts">Connect account</Link>
+            <Link href="/accounts">{t('common.connectAccount')}</Link>
           </Button>
         }
       >
-        Connect an account to write your first post.
+        {t('composer.noAccountsBody')}
       </EmptyState>
     );
   }

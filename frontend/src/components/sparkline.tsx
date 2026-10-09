@@ -1,5 +1,7 @@
+import { useTranslations } from '@/i18n/use-translations';
 export function Sparkline({ values, label }: { values: number[]; label: string }) {
-  if (values.length < 2) return <span className="text-xs text-muted-foreground">Not enough data</span>;
+  const t = useTranslations('analytics');
+  if (values.length < 2) return <span className="text-xs text-muted-foreground">{t('notEnough')}</span>;
   const w = 120;
   const h = 32;
   const min = Math.min(...values);

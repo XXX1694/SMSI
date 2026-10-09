@@ -16,7 +16,7 @@ describe('Calendar month view', () => {
   it('makes "+N more" a button that opens the day view', async () => {
     apiMock.posts.list.mockResolvedValue({ items: [1, 2, 3, 4, 5].map(post), next_cursor: null });
     render(<CalendarViewPage />);
-    await userEvent.click(await screen.findByRole('button', { name: /\+2 more/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /2 more posts on .*, open the day/ }));
     expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getAllByRole('link', { name: /Post \d/ })).toHaveLength(5);
   });

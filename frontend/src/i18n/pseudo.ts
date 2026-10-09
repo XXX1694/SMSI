@@ -52,6 +52,8 @@ function walk(els: MessageFormatElement[]): MessageFormatElement[] {
 
 /** One ICU message → its pseudo version, in brackets. A message that does not parse is returned wrapped, unchanged. */
 export function pseudoMessage(message: string): string {
+  // A separator such as ", " has nothing to accent; brackets around it would show up inside lists.
+  if (!/[A-Za-z{<]/.test(message)) return message;
   try {
     return `[${printAST(walk(parse(message)))}]`;
   } catch {

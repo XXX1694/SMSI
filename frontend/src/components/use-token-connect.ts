@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { describeConnectFailure, fieldPayload, isSecretField, requiredErrors } from '@/lib/token-connect';
 import type { Provider, SocialAccount } from '@/lib/types';
+import { useTranslations } from '@/i18n/use-translations';
 
 /**
  * State of a "Connect with a token" form. Values live here only while the form is mounted (the dialog
  * unmounts it on close), and secret values are dropped as soon as they have been sent.
  */
 export function useTokenConnect(provider: Provider, onConnected: (account: SocialAccount) => void, idPrefix: string) {
+  const t = useTranslations();
   const fields = provider.capabilities.connectFields;
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -26,7 +28,7 @@ export function useTokenConnect(provider: Provider, onConnected: (account: Socia
 
   async function submit() {
     setFormError(null);
-    const missing = requiredErrors(fields, values);
+    const missing = requiredErrors(fields, values, t);
     setErrors(missing);
     const first = fields.find((f) => missing[f.name]);
     if (first) {
@@ -39,7 +41,7 @@ export function useTokenConnect(provider: Provider, onConnected: (account: Socia
       setValues({});
       onConnected(account);
     } catch (e) {
-      const failure = describeConnectFailure(e, fields, provider.name);
+      const failure = describeConnectFailure(e, fields, provider.name, t);
       dropSecrets();
       setErrors(failure.fields);
       setFormError(failure.message);

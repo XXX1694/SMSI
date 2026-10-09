@@ -39,9 +39,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME + localeScript(availableLocales()) }} />
       </head>
       <body>
-        {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
         <PrefsProvider>
           <LocaleProvider>
+            {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
             <ToastProvider>
               <AuthProvider>{children}</AuthProvider>
             </ToastProvider>

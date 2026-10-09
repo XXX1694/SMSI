@@ -41,10 +41,14 @@ root.classList.toggle('motion-off', motion.off);
 guard('split headlines', () => {
   if (reduced.matches) return;
   for (const el of document.querySelectorAll('.split')) {
+    // Words are separated by spaces; ja and zh have none, so their catalogs put a zero-width space between phrases.
     const text = el.textContent.trim().replace(/\s+/g, ' ');
-    el.setAttribute('aria-label', text);
+    const label = text.replace(/\u200b/g, '');
+    el.setAttribute('aria-label', label);
+    const parts = text.match(/[^ \u200b]+(?: |\u200b|$)/g) ?? [text];
     el.replaceChildren(
-      ...text.split(' ').flatMap((word, i) => {
+      ...parts.flatMap((part, i) => {
+        const word = part.replace(/[ \u200b]$/, '');
         const outer = document.createElement('span');
         outer.className = 'sw';
         outer.setAttribute('aria-hidden', 'true');
@@ -53,7 +57,8 @@ guard('split headlines', () => {
         inner.style.setProperty('--i', String(i));
         inner.textContent = word;
         outer.append(inner);
-        return i ? [' ', outer] : [outer];
+        const spaced = part.endsWith(' ');
+        return spaced ? [outer, ' '] : [outer];
       }),
     );
     el.classList.add('is-split');

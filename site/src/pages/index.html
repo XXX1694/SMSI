@@ -6,14 +6,14 @@
       <div class="lp-wrap hero-grid" data-hero>
         <div class="hero-copy">
           <h1 id="hero-title" class="hero-title">
-            <span class="ln"><span class="wm"><span class="w" style="--i:0">AI</span></span> <span class="wm"><span class="w" style="--i:1">agents</span></span> <span class="wm"><span class="w" style="--i:2">draft</span></span> <span class="wm"><span class="w" style="--i:3">posts.</span></span></span>
-            <span class="ln soft"><span class="wm"><span class="w" style="--i:4">You</span></span> <span class="wm"><span class="w" style="--i:5">stay</span></span> <span class="wm"><span class="w" style="--i:6">in</span></span> <span class="wm"><span class="w" style="--i:7">control.</span></span></span>
+            <span class="ln">{{words:hero.l1:0}}</span>
+            <span class="ln soft">{{words:hero.l2:hero.l1}}</span>
           </h1>
           <div class="hero-side">
-            <p class="lead">Self-hosted publishing to {{liveCount}} networks. Agents draft through MCP; publishing, deleting and disconnecting wait for your approval.</p>
+            <p class="lead">{{t:hero.lead}}</p>
             <div class="cta">
-              <a class="btn-pill btn-pill-primary" href="{{base}}demo/" data-magnetic><span>Try the demo</span><i class="btn-ico" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></i></a>
-              <a class="btn-pill btn-pill-ghost" href="{{base}}docs/" data-magnetic>Read the docs</a>
+              <a class="btn-pill btn-pill-primary" href="{{base}}demo/" data-magnetic><span>{{t:cta.demo}}</span><i class="btn-ico" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></i></a>
+              <a class="btn-pill btn-pill-ghost" href="{{base}}docs/" data-magnetic hreflang="en">{{t:cta.docs}}</a>
             </div>
           </div>
         </div>
@@ -22,13 +22,13 @@
           <div class="frame" data-tilt>
             <picture class="poster">
               <source media="(prefers-color-scheme: dark)" srcset="{{base}}assets/video/hero-dark.jpg">
-              <img src="{{base}}assets/video/hero-light.jpg" width="1280" height="800" alt="The Steerpost composer with a post written for LinkedIn and Telegram." fetchpriority="high" decoding="async">
+              <img src="{{base}}assets/video/hero-light.jpg" width="1280" height="800" alt="{{t:hero.alt}}" fetchpriority="high" decoding="async">
             </picture>
             <video muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" width="1280" height="800" data-video="{{base}}assets/video/hero-"></video>
           </div>
           <div class="stage-cap">
-            <span>Recorded in the live demo.</span>
-            <button type="button" class="pause" data-motion aria-pressed="false"><svg class="ic-pause" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><rect x="3.5" y="3" width="3" height="10" rx="1"/><rect x="9.5" y="3" width="3" height="10" rx="1"/></svg><svg class="ic-play" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4.5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.4 2.7a.6.6 0 0 0-.9.5Z"/></svg><span>Pause motion</span></button>
+            <span>{{t:hero.caption}}</span>
+            <button type="button" class="pause" data-motion aria-pressed="false"><svg class="ic-pause" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><rect x="3.5" y="3" width="3" height="10" rx="1"/><rect x="9.5" y="3" width="3" height="10" rx="1"/></svg><svg class="ic-play" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4.5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.4 2.7a.6.6 0 0 0-.9.5Z"/></svg><span>{{t:hero.pause}}</span></button>
           </div>
         </div>
       </div>
@@ -36,8 +36,8 @@
 
     <section class="strip" aria-labelledby="strip-title">
       <div class="lp-wrap strip-head">
-        <h2 id="strip-title">Publishes today to</h2>
-        <a href="#networks">What each network supports</a>
+        <h2 id="strip-title">{{t:strip.title}}</h2>
+        <a href="#networks">{{t:strip.link}}</a>
       </div>
       <div class="marquee">
         <ul class="marquee-track" role="list">
@@ -67,24 +67,24 @@
 
     <section class="lp-section story" id="how" aria-labelledby="how-title" data-story>
       <div class="lp-wrap">
-        <h2 id="how-title" class="lp-h2 split">Draft, approve, publish</h2>
+        <h2 id="how-title" class="lp-h2 split">{{t:how.title}}</h2>
         <div class="story-grid">
         <div class="story-steps">
           <ol class="steps-list">
             <li class="step is-active" data-step="0">
-              <h3>Your agent drafts</h3>
-              <p>Create an MCP connection and paste its config into your agent. By default, it can only read and draft.</p>
-              <figure class="step-shot">{{shot:mcp:The MCP connections page with a permission picker and a ready-to-paste client config.}}</figure>
+              <h3>{{t:how.1.title}}</h3>
+              <p>{{t:how.1.text}}</p>
+              <figure class="step-shot">{{shot:mcp:{{t:how.1.alt}}}}</figure>
             </li>
             <li class="step" data-step="1">
-              <h3>You approve the risky part</h3>
-              <p>Publishing now, deleting and disconnecting wait in Approvals until you say yes. Each approval works once.</p>
-              <figure class="step-shot">{{shot:approvals:The Approvals page listing a request from an MCP agent to publish a post now, with Deny and Approve buttons.}}</figure>
+              <h3>{{t:how.2.title}}</h3>
+              <p>{{t:how.2.text}}</p>
+              <figure class="step-shot">{{shot:approvals:{{t:how.2.alt}}}}</figure>
             </li>
             <li class="step" data-step="2">
-              <h3>Steerpost posts it once</h3>
-              <p>Posts go out on time. If Steerpost cannot tell whether one went out, it marks it for you to check.</p>
-              <figure class="step-shot">{{shot:calendar:The calendar in month view with draft, scheduled, published and failed posts.}}</figure>
+              <h3>{{t:how.3.title}}</h3>
+              <p>{{t:how.3.text}}</p>
+              <figure class="step-shot">{{shot:calendar:{{t:how.3.alt}}}}</figure>
             </li>
           </ol>
         </div>
@@ -100,8 +100,8 @@
               </g>
               <rect class="pk pk0" x="-6" y="-4" width="12" height="8" rx="2.5"/><rect class="pk pk1" x="-6" y="-4" width="12" height="8" rx="2.5"/><rect class="pk pk2" x="-6" y="-4" width="12" height="8" rx="2.5"/><rect class="pk pk3" x="-6" y="-4" width="12" height="8" rx="2.5"/><rect class="pk pk4" x="-6" y="-4" width="12" height="8" rx="2.5"/><rect class="pk pk5" x="-6" y="-4" width="12" height="8" rx="2.5"/>
             </svg>
-            <span class="rn rn-agent">Agent</span>
-            <span class="rn rn-gate">You approve</span>
+            <span class="rn rn-agent">{{t:route.agent}}</span>
+            <span class="rn rn-gate">{{t:route.gate}}</span>
             <span class="nd nd0" style="--n:0;left:92.8%;top:9.1%">{{brand:linkedin}}</span><span class="nd nd1" style="--n:1;left:92.8%;top:29.5%">{{brand:telegram}}</span><span class="nd nd2" style="--n:2;left:92.8%;top:50.0%">{{brand:discord}}</span><span class="nd nd3" style="--n:3;left:92.8%;top:70.5%">{{brand:mastodon}}</span><span class="nd nd4" style="--n:4;left:92.8%;top:90.9%">{{brand:bluesky}}</span>
           </div>
           <div class="story-frame">
@@ -116,40 +116,40 @@
 
     <section class="lp-section look" aria-labelledby="look-title">
       <div class="lp-wrap">
-        <h2 id="look-title" class="lp-h2 split">Or do it yourself</h2>
+        <h2 id="look-title" class="lp-h2 split">{{t:look.title}}</h2>
         <div class="look-grid">
-          <figure class="look-shot ls-a"><div class="px" style="--from:70px;--to:-40px"><div class="frame clip" data-tilt>{{shot:compose:The composer with account chips, custom text per account and live previews.}}</div></div><figcaption><strong>Compose.</strong> One post, custom text per network, live previews.</figcaption></figure>
-          <figure class="look-shot ls-b"><div class="px" style="--from:120px;--to:-70px"><div class="frame clip" data-tilt>{{shot:dashboard:The Steerpost dashboard: connected accounts, scheduled and published counts, upcoming posts, drafts, recent posts and failures.}}</div></div><figcaption><strong>Dashboard.</strong> What goes out next, and what failed.</figcaption></figure>
-          <figure class="look-shot ls-c"><div class="px" style="--from:40px;--to:-60px"><div class="frame clip" data-tilt>{{shot:accounts:The accounts page with connected networks and the others marked as not available.}}</div></div><figcaption><strong>Accounts.</strong> What each network supports, and what it does not.</figcaption></figure>
+          <figure class="look-shot ls-a"><div class="px" style="--from:70px;--to:-40px"><div class="frame clip" data-tilt>{{shot:compose:{{t:look.a.alt}}}}</div></div><figcaption>{{t:look.a.cap}}</figcaption></figure>
+          <figure class="look-shot ls-b"><div class="px" style="--from:120px;--to:-70px"><div class="frame clip" data-tilt>{{shot:dashboard:{{t:look.b.alt}}}}</div></div><figcaption>{{t:look.b.cap}}</figcaption></figure>
+          <figure class="look-shot ls-c"><div class="px" style="--from:40px;--to:-60px"><div class="frame clip" data-tilt>{{shot:accounts:{{t:look.c.alt}}}}</div></div><figcaption>{{t:look.c.cap}}</figcaption></figure>
         </div>
       </div>
     </section>
 
-    <section class="lp-section facts-band" aria-label="Facts">
+    <section class="lp-section facts-band" aria-label="{{t:facts.aria}}">
       <div class="lp-wrap">
         <dl class="facts-row">
-          <div class="reveal"><dt>MCP tools</dt><dd><span class="num" data-count="{{toolCount}}">{{toolCount}}</span></dd></div>
-          <div class="reveal"><dt>Live networks</dt><dd><span class="num" data-count="{{liveCount}}">{{liveCount}}</span></dd></div>
-          <div class="reveal"><dt>Retries, then a clear error</dt><dd><span class="num" data-count="{{retryCount}}">{{retryCount}}</span></dd></div>
-          <div class="reveal"><dt>Trackers</dt><dd><span class="num">0</span></dd></div>
+          <div class="reveal"><dt>{{t:facts.tools}}</dt><dd><span class="num" data-count="{{toolCount}}">{{toolCount}}</span></dd></div>
+          <div class="reveal"><dt>{{t:facts.networks}}</dt><dd><span class="num" data-count="{{liveCount}}">{{liveCount}}</span></dd></div>
+          <div class="reveal"><dt>{{t:facts.retries}}</dt><dd><span class="num" data-count="{{retryCount}}">{{retryCount}}</span></dd></div>
+          <div class="reveal"><dt>{{t:facts.trackers}}</dt><dd><span class="num">0</span></dd></div>
         </dl>
       </div>
     </section>
 
     <section class="lp-section" id="mcp" aria-labelledby="mcp-title">
       <div class="lp-wrap">
-        <h2 id="mcp-title" class="lp-h2 split">Agents work within limits you set</h2>
+        <h2 id="mcp-title" class="lp-h2 split">{{t:mcp.title}}</h2>
         <div class="two reveal">
           <div>
             <ul class="facts">
-              <li><strong>Scoped keys.</strong> An agent sees only the tools its key allows.</li>
-              <li><strong>Approvals.</strong> Publish now, delete and disconnect wait for your yes, unless you mark the key as trusted.</li>
-              <li><strong>Revocable.</strong> Revoke a connection, and its key stops working at once.</li>
-              <li><strong>Audited.</strong> Every agent action is in the audit log.</li>
+              <li>{{t:mcp.f1}}</li>
+              <li>{{t:mcp.f2}}</li>
+              <li>{{t:mcp.f3}}</li>
+              <li>{{t:mcp.f4}}</li>
             </ul>
           </div>
           <div class="copyable">
-            <p class="note" style="margin-top:0">Create a connection under Developer, then paste its config:</p>
+            <p class="note" style="margin-top:0">{{t:mcp.paste}}</p>
 <pre><code class="hljs language-json">{
   "mcpServers": {
     "steerpost": {
@@ -159,40 +159,40 @@
     }
   }
 }</code></pre>
-            <p class="note">Then ask: <em>“Draft a post about our new release for LinkedIn and Telegram.”</em></p>
+            <p class="note">{{t:mcp.ask}}</p>
           </div>
         </div>
         <details class="tools reveal">
-          <summary>All {{toolCount}} tools, each tied to one scope</summary>
+          <summary>{{t:mcp.tools}}</summary>
           <div class="table-wrap">
             {{mcpTools}}
           </div>
         </details>
-        <p class="note">Setup for Claude Desktop, Claude Code and Cursor: <a href="{{base}}docs/mcp/">MCP docs</a>.</p>
+        <p class="note">{{t:mcp.setup}}</p>
       </div>
     </section>
 
     <section class="lp-section reliability" id="reliability" aria-labelledby="rel-title">
       <div class="lp-wrap rel-grid">
         <div class="rel-head">
-          <h2 id="rel-title" class="lp-h2 split">Built so a post goes out once</h2>
+          <h2 id="rel-title" class="lp-h2 split">{{t:rel.title}}</h2>
         </div>
         <div class="rel-list">
           <article class="reveal">
-            <h3>No double posts</h3>
-            <p>If a crash hides the result, the post is marked unconfirmed instead of sent again.</p>
+            <h3>{{t:rel.1.title}}</h3>
+            <p>{{t:rel.1.text}}</p>
           </article>
           <article class="reveal">
-            <h3>Safe retries only</h3>
-            <p>Network errors and rate limits retry up to {{retryCount}} times. Other errors fail with the reason.</p>
+            <h3>{{t:rel.2.title}}</h3>
+            <p>{{t:rel.2.text}}</p>
           </article>
           <article class="reveal">
-            <h3>Secrets stay secret</h3>
-            <p>Network tokens are encrypted with AES-256-GCM and never logged.</p>
+            <h3>{{t:rel.3.title}}</h3>
+            <p>{{t:rel.3.text}}</p>
           </article>
           <article class="reveal">
-            <h3>No lost schedules</h3>
-            <p>The database is the source of truth, so a Redis restart loses no scheduled post.</p>
+            <h3>{{t:rel.4.title}}</h3>
+            <p>{{t:rel.4.text}}</p>
           </article>
         </div>
       </div>
@@ -200,26 +200,26 @@
 
     <section class="lp-section" id="networks" aria-labelledby="networks-title">
       <div class="lp-wrap">
-        <h2 id="networks-title" class="lp-h2 split">Where it publishes, and where it does not</h2>
+        <h2 id="networks-title" class="lp-h2 split">{{t:net.title}}</h2>
         <div class="net-grid">
           <div class="net-live reveal">
-            <h3><span class="badge badge-live">Live</span></h3>
+            <h3><span class="badge badge-live">{{t:net.live}}</span></h3>
             <ul class="net-rows">
-              <li>{{brand:linkedin}}<div><strong>LinkedIn</strong><span>Personal profile. Text, up to 20 images, delete. No video yet.</span></div></li>
-              <li>{{brand:telegram}}<div><strong>Telegram</strong><span>Channels and groups. Text, images, video, delete.</span></div></li>
-              <li>{{brand:discord}}<div><strong>Discord</strong><span>A channel webhook. Text, up to 10 images, delete.</span></div></li>
-              <li>{{brand:mastodon}}<div><strong>Mastodon</strong><span>Any compatible server. Text, images, delete.</span></div></li>
-              <li>{{brand:bluesky}}<div><strong>Bluesky</strong><span>App password. Text, up to 4 images, delete.</span></div></li>
+              <li>{{brand:linkedin}}<div><strong>LinkedIn</strong><span>{{t:net.linkedin}}</span></div></li>
+              <li>{{brand:telegram}}<div><strong>Telegram</strong><span>{{t:net.telegram}}</span></div></li>
+              <li>{{brand:discord}}<div><strong>Discord</strong><span>{{t:net.discord}}</span></div></li>
+              <li>{{brand:mastodon}}<div><strong>Mastodon</strong><span>{{t:net.mastodon}}</span></div></li>
+              <li>{{brand:bluesky}}<div><strong>Bluesky</strong><span>{{t:net.bluesky}}</span></div></li>
             </ul>
           </div>
           <div class="net-off reveal">
-            <h3><span class="badge badge-off">Not available yet</span></h3>
+            <h3><span class="badge badge-off">{{t:net.off}}</span></h3>
             <dl>
-              <div><dt>Planned</dt><dd>Slack, Misskey, Dev.to, WordPress, Ghost, VK, Tumblr, Threads, Instagram, Facebook Pages, Nostr.</dd></div>
-              <div><dt>Need app review or a paid API</dt><dd>X, LinkedIn company pages, YouTube, TikTok, Reddit, Pinterest, Hashnode, Max.</dd></div>
-              <div><dt>No official API</dt><dd>Medium, WhatsApp Channels.</dd></div>
+              <div><dt>{{t:net.planned}}</dt><dd>Slack, Misskey, Dev.to, WordPress, Ghost, VK, Tumblr, Threads, Instagram, Facebook Pages, Nostr.</dd></div>
+              <div><dt>{{t:net.review}}</dt><dd>{{t:net.reviewList}}</dd></div>
+              <div><dt>{{t:net.noapi}}</dt><dd>Medium, WhatsApp Channels.</dd></div>
             </dl>
-            <p class="note"><a href="{{base}}docs/providers/">Setup and reasons per network</a></p>
+            <p class="note"><a href="{{base}}docs/providers/" hreflang="en">{{t:net.link}}</a></p>
           </div>
         </div>
       </div>
@@ -228,9 +228,9 @@
     <section class="lp-section run" id="run" aria-labelledby="run-title">
       <div class="lp-wrap run-grid">
         <div>
-          <h2 id="run-title" class="lp-h2 split">Run it yourself</h2>
-          <p class="lp-sub reveal">One command starts the whole stack. Turn on the test network to try it without credentials.</p>
-          <p class="note reveal"><a href="{{base}}docs/getting-started/">Setup guide</a></p>
+          <h2 id="run-title" class="lp-h2 split">{{t:run.title}}</h2>
+          <p class="lp-sub reveal">{{t:run.text}}</p>
+          <p class="note reveal"><a href="{{base}}docs/getting-started/" hreflang="en">{{t:run.link}}</a></p>
         </div>
         <div class="copyable reveal">
 <pre><code class="hljs language-bash">make up        # generates .env, then docker compose up
@@ -242,11 +242,11 @@ open http://localhost:3000</code></pre>
     <section class="lp-section final" aria-labelledby="final-title">
       <div class="lp-wrap final-card reveal">
         <div class="final-bg" aria-hidden="true"><i class="blob blob-a"></i><i class="blob blob-b"></i></div>
-        <h2 id="final-title" class="split">See it work first</h2>
-        <p>The demo runs in your browser, with sample posts, accounts and agents.</p>
+        <h2 id="final-title" class="split">{{t:final.title}}</h2>
+        <p>{{t:final.text}}</p>
         <div class="cta">
-          <a class="btn-pill btn-pill-primary" href="{{base}}demo/" data-magnetic><span>Try the demo</span><i class="btn-ico" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></i></a>
-          <a class="btn-pill btn-pill-ghost" href="{{base}}docs/" data-magnetic>Read the docs</a>
+          <a class="btn-pill btn-pill-primary" href="{{base}}demo/" data-magnetic><span>{{t:cta.demo}}</span><i class="btn-ico" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></i></a>
+          <a class="btn-pill btn-pill-ghost" href="{{base}}docs/" data-magnetic hreflang="en">{{t:cta.docs}}</a>
         </div>
       </div>
     </section>

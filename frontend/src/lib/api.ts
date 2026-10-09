@@ -1,4 +1,5 @@
 import { ApiError, parseErrorBody } from './api-error';
+import { enT } from '@/i18n/en';
 import { describeErrorCode } from './errors';
 import {
   buildMcpConfig,
@@ -112,7 +113,7 @@ async function request(path: string, opts: RequestOptions = {}): Promise<unknown
       credentials: opts.direct && base !== API_BASE ? 'include' : 'same-origin',
     });
   } catch {
-    throw new ApiError(0, 'NETWORK', describeErrorCode('NETWORK'));
+    throw new ApiError(0, 'NETWORK', describeErrorCode('NETWORK', enT));
   }
   const text = await res.text();
   let json: unknown = null;

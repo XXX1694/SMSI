@@ -1,4 +1,6 @@
 /** Timezone helpers built on Intl only (no date library). */
+import { formatRelativeTime } from '@/i18n/format';
+import type { AppT } from '@/i18n/translate';
 import { addDays } from '@/lib/calendar';
 
 export function browserTimezone(): string {
@@ -98,33 +100,10 @@ export function utcToZonedInputs(iso: string, tz: string): { date: string; time:
   return { date: `${p.year}-${pad(p.month)}-${pad(p.day)}`, time: `${pad(p.hour)}:${pad(p.minute)}` };
 }
 
-export function formatDateTime(iso: string | null | undefined, tz: string): string {
-  if (!iso) return '—';
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: tz,
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date(iso));
-}
-
-export function formatRelative(iso: string | null | undefined, now: Date = new Date()): string {
-  if (!iso) return 'Never';
-  const diff = new Date(iso).getTime() - now.getTime();
-  const abs = Math.abs(diff);
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-  const units: [Intl.RelativeTimeFormatUnit, number][] = [
-    ['day', 86_400_000],
-    ['hour', 3_600_000],
-    ['minute', 60_000],
-  ];
-  for (const [unit, ms] of units) {
-    if (abs >= ms) return rtf.format(Math.round(diff / ms), unit);
-  }
-  return 'just now';
+/** "2 hours ago", "yesterday"; `Never` and `just now` come from the catalog. */
+export function formatRelative(iso: string | null | undefined, t: AppT, now: Date = new Date()): string {
+  if (!iso) return t('common.never');
+  return formatRelativeTime(iso, t.locale, now, t('common.justNow'));
 }
 
 /** "YYYY-MM-DD" key of an instant in a timezone — used by the calendar. */
