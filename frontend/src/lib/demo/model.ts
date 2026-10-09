@@ -17,6 +17,8 @@ export interface DemoUser {
   email: string;
   password: string;
   display_name: string;
+  /** Set after "Delete account"; signing in shows it and the owner can cancel. */
+  deletion_scheduled_at?: string | null;
 }
 
 /** A post as stored: the public `Post` plus fields the server keeps but never returns. */

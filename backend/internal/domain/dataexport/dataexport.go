@@ -60,7 +60,10 @@ func (e *Export) EffectiveStatus(now time.Time) Status {
 	return e.Status
 }
 
+// UserPrefix is the storage prefix that holds everything of one user (media and exports); the purge deletes it whole.
+func UserPrefix(userID uuid.UUID) string { return "users/" + userID.String() + "/" }
+
 // ObjectKey is where the ZIP of an export lives; it sits under the owner's prefix like the user's media.
 func ObjectKey(userID, exportID uuid.UUID) string {
-	return "users/" + userID.String() + "/exports/" + exportID.String() + ".zip"
+	return UserPrefix(userID) + "exports/" + exportID.String() + ".zip"
 }
