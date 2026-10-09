@@ -15,13 +15,14 @@
   <meta property="og:url" content="{{canonical}}">
   <meta property="og:image" content="{{siteUrl}}{{base}}assets/screens/dashboard-light.png">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="{{base}}assets/video/hero-light.jpg" as="image" media="(prefers-color-scheme: light)" fetchpriority="high">
+  <link rel="preload" href="{{base}}assets/video/hero-dark.jpg" as="image" media="(prefers-color-scheme: dark)" fetchpriority="high">
   <link rel="preload" href="{{base}}assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{base}}assets/tokens.css">
   <link rel="stylesheet" href="{{base}}assets/style.css">
   <link rel="stylesheet" href="{{base}}assets/landing.css">
   <link rel="stylesheet" href="{{base}}assets/hero.css">
   <link rel="stylesheet" href="{{base}}assets/scroll.css">
-  <script>document.documentElement.classList.add('js')</script>
 </head>
 <body class="landing">
   <a class="skip" href="#main">Skip to content</a>
@@ -45,7 +46,7 @@
   </main>
   <footer class="lp-footer">
     <div class="lp-wrap">
-      <p class="lp-footer-word" aria-hidden="true">SocialOS</p>
+      <p class="lp-footer-word" aria-hidden="true"></p>
       <div class="lp-footer-row">
         <p>Self-hosted social publishing for people and their AI agents. The demo runs entirely in your browser; nothing is sent anywhere, and this site has no trackers.</p>
         <nav aria-label="Footer">

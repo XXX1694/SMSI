@@ -276,6 +276,13 @@ function brands(html) {
   });
 }
 
+/** The publisher's retry limit, read from the code that enforces it, so the page cannot drift from it. */
+function retryLimit() {
+  const m = read(join(repoRoot, 'backend/internal/application/scheduler/backoff.go')).match(/\bMaxRetry\s*=\s*(\d+)/);
+  if (!m) fail('backend/internal/application/scheduler/backoff.go no longer defines MaxRetry (the landing page counter reads it)');
+  return Number(m[1]);
+}
+
 /** How many networks the README marks as live, so the page never claims a number the docs do not. */
 function liveNetworkCount() {
   const table = take(readme, 'Supported networks')[0].tokens.find((t) => t.type === 'table');
@@ -318,6 +325,9 @@ function mcpToolsTable() {
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 cpSync(join(src, 'assets'), join(dist, 'assets'), { recursive: true });
+// The docs render diagrams in the browser; ship the renderer ourselves instead of loading it from a CDN.
+mkdirSync(join(dist, 'assets/vendor'), { recursive: true });
+cpSync(join(here, 'node_modules/mermaid/dist/mermaid.min.js'), join(dist, 'assets/vendor/mermaid.min.js'));
 
 // Design tokens: the app's file is the single source. The app switches theme with a `.dark` class, the site follows the
 // OS, so the `.dark` block becomes a prefers-color-scheme rule on :root.
@@ -335,6 +345,7 @@ cpSync(join(src, 'assets'), join(dist, 'assets'), { recursive: true });
     .replace('{{mcpTools}}', () => tools.html)
     .replaceAll('{{toolCount}}', String(tools.count))
     .replaceAll('{{liveCount}}', String(liveNetworkCount()))
+    .replaceAll('{{retryCount}}', String(retryLimit()))
     .replaceAll('{{base}}', BASE);
   write(
     'index.html',

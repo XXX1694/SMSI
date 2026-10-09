@@ -39,7 +39,8 @@
 .stage.is-playing video { opacity: 1; }
 .stage .frame { position: relative; }
 .stage-cap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin: 1rem 0 0; font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
-.pause { padding: 0.25rem 0.75rem; border: 1px solid hsl(var(--input)); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.hero-side .pause { margin-top: 1.25rem; }
+.pause { padding: 0.3rem 0.85rem; border: 1px solid hsl(var(--input)); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .pause:hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
 
 @media (min-width: 62rem) {
@@ -55,7 +56,9 @@
   .stage { margin-top: 1.5rem; }
   /* phones get the poster and the animated flow, not a 400 KB video */
   .stage video { display: none; }
-  .pause { display: none; }
+  /* a feathered scrim keeps the moving background from running under the text */
+  .hero-title, .hero-side { position: relative; box-shadow: 0 0 1.25rem 1.1rem hsl(var(--background) / 0.78); background: hsl(var(--background) / 0.78); }
+  .hero-flow { opacity: 0.55; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -67,6 +70,9 @@
 @media (prefers-reduced-motion: reduce) {
   .blob { animation: none; }
 }
+/* The motion switch (landing.js): every looping animation stops, nothing disappears. */
+html.motion-off .blob, html.motion-off .marquee-track, html.motion-off .story-flow i::after { animation-play-state: paused; }
 @keyframes word-up { from { transform: translateY(105%); } }
 @keyframes fade-up { from { opacity: 0; transform: translateY(22px); } }
-@keyframes stage-in { from { opacity: 0; transform: translateY(70px) scale(0.96); } }
+/* No opacity here: the poster is the largest element above the fold and should be painted at once (LCP). */
+@keyframes stage-in { from { transform: translateY(70px) scale(0.96); } }

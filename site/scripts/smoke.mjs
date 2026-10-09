@@ -111,6 +111,41 @@ await step('landing scroll motion and story', async () => {
   expect(revealed === 0, `${revealed} reveal element(s) in view are still hidden`);
 });
 
+await step('motion switch stops every loop and is remembered', async () => {
+  await page.goto(`${SITE}/`);
+  await page.waitForSelector('.stage.is-playing', { timeout: 10_000 });
+  const btn = page.getByRole('button', { name: 'Pause motion' });
+  await btn.focus();
+  await page.keyboard.press('Enter');
+  await visible(page.getByRole('button', { name: 'Play motion' }));
+  const s = await page.evaluate(() => ({
+    off: document.documentElement.classList.contains('motion-off'),
+    video: document.querySelector('.stage video').paused,
+    loops: ['.blob', '.marquee-track'].map((q) => getComputedStyle(document.querySelector(q)).animationPlayState),
+    saved: localStorage.getItem('socialos_landing_motion'),
+  }));
+  expect(s.off && s.video && s.loops.every((x) => x === 'paused') && s.saved === 'off', `motion switch left something running: ${JSON.stringify(s)}`);
+  await page.reload();
+  await visible(page.getByRole('button', { name: 'Play motion' }));
+  expect(await page.evaluate(() => document.querySelector('.stage video').paused), 'the choice should survive a reload');
+  await page.getByRole('button', { name: 'Play motion' }).click();
+  await page.waitForSelector('.stage.is-playing', { timeout: 10_000 });
+});
+
+await step('a failing enhancement never hides the page', async () => {
+  const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const p = await ctx2.newPage();
+  await p.route((u) => u.hostname !== '127.0.0.1' || u.pathname.endsWith('hero-flow.js'), (route) => route.abort());
+  await p.addInitScript(() => { delete CanvasRenderingContext2D.prototype.roundRect; });
+  await p.goto(`${SITE}/`);
+  await p.waitForTimeout(800);
+  await p.locator('.look').scrollIntoViewIfNeeded();
+  await p.waitForTimeout(1200);
+  const hidden = await p.evaluate(() => [...document.querySelectorAll('.reveal')].filter((e) => getComputedStyle(e).opacity === '0' && e.getBoundingClientRect().top > 0 && e.getBoundingClientRect().top < innerHeight * 0.5).length);
+  expect(hidden === 0, `${hidden} section(s) stayed hidden after a script failure`);
+  await ctx2.close();
+});
+
 await step('landing respects reduced motion and phones', async () => {
   const calm = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   const p = await calm.newPage();
@@ -119,6 +154,7 @@ await step('landing respects reduced motion and phones', async () => {
   await p.waitForTimeout(1200);
   const state = await p.evaluate(() => ({ src: document.querySelector('.stage video').getAttribute('src'), playing: !!document.querySelector('.stage.is-playing'), hidden: [...document.querySelectorAll('.reveal')].filter((e) => getComputedStyle(e).opacity === '0').length }));
   expect(!state.src && !state.playing, 'reduced motion must not load or play the video (the poster stays)');
+  expect(await p.locator('[data-motion]').isHidden(), 'nothing moves under reduced motion, so no switch is offered');
   expect(state.hidden === 0, 'reduced motion must show every section without a reveal');
   await calm.close();
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -143,8 +179,8 @@ await step('docs pages render', async () => {
     await page.goto(`${SITE}/${path}`);
     await visible(page.getByRole('heading', { level: 1, name: heading }));
   }
-  // Without the CDN the diagram stays readable as source.
-  expect((await page.locator('pre.mermaid').count()) >= 1, 'the architecture page should contain a diagram block');
+  // The renderer is served from this site, so the diagram is drawn even with every other host blocked.
+  await page.locator('pre.mermaid svg').first().waitFor({ state: 'attached', timeout: 20_000 });
   await shot('02-docs-architecture');
 });
 

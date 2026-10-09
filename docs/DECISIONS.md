@@ -276,3 +276,10 @@ for decoration.
 
 **Consequences.** Safari and Firefox without scroll-driven animations show the parallax and hero exit still, which is fine.
 The hero video must be re-recorded (`npm run record`) when the compose or approvals screens change.
+
+Addendum (review): a visible "Pause motion" switch (remembered in `localStorage`) stops the video, canvas, glow blobs, marquee
+and story sweep (WCAG 2.2.2); it is not offered under reduced motion, where nothing moves. Each script block is guarded and the
+`js` class that hides unrevealed sections is set only after the reveal setup works. The retry counter is read from
+`MaxRetry` in `backend/internal/application/scheduler/backoff.go` at build time. The docs' Mermaid renderer is now vendored
+from the `mermaid` npm package (MIT, 3.5 MB, loaded only on pages with diagrams) instead of jsDelivr, so the site makes no
+third-party request.

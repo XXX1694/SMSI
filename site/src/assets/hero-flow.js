@@ -4,16 +4,22 @@
 const LANES = 6;
 const GATE_T = 0.46;
 
+// CanvasRenderingContext2D.roundRect is missing in older Safari; a plain rectangle is fine at this size.
+const pill = (ctx, x, y, w, h, r) => (ctx.roundRect ? (ctx.beginPath(), ctx.roundRect(x, y, w, h, r)) : (ctx.beginPath(), ctx.rect(x, y, w, h)));
+
 export function startFlow(canvas, { reduced }) {
   const ctx = canvas.getContext('2d');
-  if (!ctx) return () => {};
+  if (!ctx) return { setPaused() {}, stop() {} };
   const root = getComputedStyle(document.documentElement);
   let w = 0, h = 0, dpr = 1, colors, lanes = [], packets = [], rings = [];
-  let raf = 0, last = 0, visible = true;
+  let raf = 0, last = 0, visible = true, paused = reduced;
+  let accentChannel = '';
 
+  // Theme colours are read once per theme change, never inside the frame loop.
   const channel = (name) => root.getPropertyValue(name).trim();
   const hsl = (name, a) => `hsl(${channel(name)} / ${a})`;
   const readColors = () => {
+    accentChannel = channel('--accent');
     colors = { line: hsl('--foreground', 0.08), gate: hsl('--foreground', 0.18), accent: hsl('--accent', 0.9), accentSoft: hsl('--accent', 0.3), idle: hsl('--foreground', 0.22), dot: hsl('--foreground', 0.14), bg: hsl('--background', 1) };
   };
 
@@ -23,7 +29,7 @@ export function startFlow(canvas, { reduced }) {
     w = r.width; h = r.height;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const n = w < 700 ? 4 : LANES;
+    const n = w < 700 ? 3 : LANES;
     lanes = Array.from({ length: n }, (_, i) => {
       const k = i / (n - 1);
       const y0 = h * (0.2 + k * 0.62), y1 = h * (0.12 + ((i * 0.37) % 1) * 0.74);
@@ -63,39 +69,46 @@ export function startFlow(canvas, { reduced }) {
       if (p.t < 0) continue;
       const [x, y] = at(lanes[p.lane], p.t);
       ctx.fillStyle = p.crossed ? colors.accent : colors.idle;
-      ctx.beginPath(); ctx.roundRect(x - 7, y - 4.5, 14, 9, 2.5); ctx.fill();
-      if (p.crossed) { ctx.fillStyle = colors.accentSoft; ctx.beginPath(); ctx.roundRect(x - 20, y - 1.5, 12, 3, 1.5); ctx.fill(); }
+      pill(ctx, x - 7, y - 4.5, 14, 9, 2.5); ctx.fill();
+      if (p.crossed) { ctx.fillStyle = colors.accentSoft; pill(ctx, x - 20, y - 1.5, 12, 3, 1.5); ctx.fill(); }
     }
     rings = rings.filter((r) => (r.age += dt) < 0.9);
     for (const r of rings) {
-      ctx.strokeStyle = hsl('--accent', 0.6 * (1 - r.age / 0.9));
+      ctx.strokeStyle = `hsl(${accentChannel} / ${0.6 * (1 - r.age / 0.9)})`;
       ctx.beginPath(); ctx.arc(r.x, r.y, 6 + r.age * 26, 0, 6.2832); ctx.stroke();
     }
   };
 
   const tick = (now) => {
     raf = 0;
-    if (!visible || document.hidden) return;
+    if (!visible || document.hidden || paused) return;
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
     frame(dt);
     raf = requestAnimationFrame(tick);
   };
-  const run = () => { if (!raf && !reduced) { last = performance.now(); raf = requestAnimationFrame(tick); } };
+  const run = () => { if (!raf && !paused) { last = performance.now(); raf = requestAnimationFrame(tick); } };
 
   readColors(); resize();
-  if (reduced) {
+  const still = () => {
     packets.forEach((p, i) => { p.t = 0.1 + (i / packets.length) * 0.8; p.crossed = p.t > GATE_T; });
     frame(0);
-  } else run();
+  };
+  if (paused) still(); else run();
 
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) run(); });
   io.observe(canvas);
-  const ro = new ResizeObserver(() => { resize(); if (reduced) frame(0); });
+  const ro = new ResizeObserver(() => { resize(); if (paused) still(); });
   ro.observe(canvas);
   const scheme = matchMedia('(prefers-color-scheme: dark)');
-  const onScheme = () => { readColors(); if (reduced) frame(0); };
+  const onScheme = () => { readColors(); if (paused) still(); };
   scheme.addEventListener('change', onScheme);
   document.addEventListener('visibilitychange', run);
-  return () => { cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); scheme.removeEventListener('change', onScheme); document.removeEventListener('visibilitychange', run); };
+  // Pause stops the loop and leaves one still frame, so the picture does not vanish.
+  const setPaused = (value) => {
+    paused = value;
+    if (paused) { cancelAnimationFrame(raf); raf = 0; still(); } else run();
+  };
+  const stop = () => { cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); scheme.removeEventListener('change', onScheme); document.removeEventListener('visibilitychange', run); };
+  return { setPaused, stop };
 }

@@ -57,8 +57,10 @@
 .steps-list { position: relative; margin: 0; padding: 0 0 0 2rem; list-style: none; }
 .steps-list::before { content: ''; position: absolute; left: 0; top: 0.4rem; bottom: 0.4rem; width: 2px; background: hsl(var(--border)); border-radius: 2px; }
 .steps-list::after { content: ''; position: absolute; left: 0; top: 0.4rem; bottom: 0.4rem; width: 2px; background: hsl(var(--accent)); border-radius: 2px; transform-origin: top; transform: scaleY(var(--p, 0.33)); transition: transform 0.7s var(--lp-ease); }
-.step { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 52vh; padding-block: 1.5rem; opacity: 0.38; transition: opacity 0.6s var(--lp-ease); }
-.step.is-active { opacity: 1; }
+.step { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 52vh; padding-block: 1.5rem; }
+/* Inactive steps are dimmed by colour, not opacity, so their text keeps AA contrast. */
+.step h3 { color: hsl(var(--muted-foreground)); transition: color 0.6s var(--lp-ease); }
+.step.is-active h3 { color: hsl(var(--foreground)); }
 .step h3 { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); line-height: 1.15; font-weight: 620; letter-spacing: -0.03em; }
 .step p { margin: 0.8rem 0 0; max-width: 30rem; font-size: 1.0625rem; color: hsl(var(--muted-foreground)); }
 .step-shot { display: none; margin: 1.5rem 0 0; }
@@ -136,7 +138,9 @@
 /* footer */
 .lp-footer { margin-top: var(--lp-pad); padding-block: 0 2.5rem; overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.875rem; }
 .lp-wrap.lp-footer-inner { padding-top: 0; }
-.lp-footer-word { margin: 0 0 1rem; font-size: clamp(4.5rem, 19vw, 17rem); line-height: 0.82; font-weight: 700; letter-spacing: -0.07em; color: hsl(var(--foreground) / 0.06); user-select: none; white-space: nowrap; }
+.lp-footer-word { margin: 0 0 1rem; font-size: clamp(4.5rem, 19vw, 17rem); line-height: 0.82; font-weight: 700; letter-spacing: -0.07em; user-select: none; white-space: nowrap; }
+/* Drawn as pseudo-element content: it is decoration, so it is not text and carries no contrast requirement. */
+.lp-footer-word::before { content: 'SocialOS'; color: hsl(var(--foreground) / 0.06); }
 .lp-footer-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 3rem; padding-top: 1.5rem; border-top: 1px solid hsl(var(--border)); }
 .lp-footer-row p { margin: 0; max-width: 34rem; }
 .lp-footer nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
@@ -147,7 +151,8 @@
 @media (max-width: 56rem) {
   .story-grid, .rel-grid, .net-grid, .run-grid { grid-template-columns: minmax(0, 1fr); }
   .story-stage { display: none; }
-  .step { min-height: 0; opacity: 1; padding-block: 1.25rem 2rem; }
+  .step { min-height: 0; padding-block: 1.25rem 2rem; }
+  .step h3 { color: hsl(var(--foreground)); }
   .step-shot { display: block; }
   .step-shot picture { border: 1px solid hsl(var(--border)); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-pop); }
   .steps-list::after { display: none; }
@@ -166,4 +171,6 @@
   .marquee-track { animation: none; flex-wrap: wrap; width: auto; }
   .marquee li[aria-hidden='true'] { display: none; }
   .story-flow i::after { animation: none; }
+  .story-shot, .step h3, .story-flow span { transition: none; }
+  .story-shot { transform: none; }
 }

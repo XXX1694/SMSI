@@ -17,6 +17,7 @@
             <a class="btn-pill btn-pill-primary" href="{{base}}demo/"><span>Try the demo</span><i class="btn-ico" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M8.5 4l4 4-4 4"/></svg></i></a>
             <a class="btn-pill btn-pill-ghost" href="{{base}}docs/">Read the docs</a>
           </div>
+          <button type="button" class="pause" data-motion>Pause motion</button>
           </div>
         </div>
         <div class="stage" data-hero-video>
@@ -29,7 +30,6 @@
           </div>
           <p class="stage-cap">
             <span>Real footage of the demo: write, schedule, approve. Nothing here is staged.</span>
-            <button type="button" class="pause" data-pause hidden aria-pressed="false">Pause video</button>
           </p>
         </div>
       </div>
@@ -120,7 +120,7 @@
         <dl class="facts-row">
           <div class="reveal"><dt>MCP tools, each tied to one scope</dt><dd><span class="num" data-count="{{toolCount}}">{{toolCount}}</span></dd></div>
           <div class="reveal"><dt>Networks that publish today</dt><dd><span class="num" data-count="{{liveCount}}">{{liveCount}}</span></dd></div>
-          <div class="reveal"><dt>Attempts at most, then the failure is shown with its reason</dt><dd><span class="num" data-count="5">5</span></dd></div>
+          <div class="reveal"><dt>Retries at most, then the failure is shown with its reason</dt><dd><span class="num" data-count="{{retryCount}}">{{retryCount}}</span></dd></div>
           <div class="reveal"><dt>Third-party trackers in the app or on this site</dt><dd><span class="num">0</span></dd></div>
         </dl>
       </div>
@@ -178,7 +178,7 @@
           </article>
           <article class="reveal">
             <h3>Retries only where they are safe</h3>
-            <p>Network errors, 5xx responses and rate limits back off exponentially, up to five attempts. Permanent and authorization errors fail visibly, with the reason attached to the attempt.</p>
+            <p>Network errors, 5xx responses and rate limits back off exponentially, up to {{retryCount}} retries. Permanent and authorization errors fail visibly, with the reason attached to the attempt.</p>
           </article>
           <article class="reveal">
             <h3>Secrets stay secret</h3>

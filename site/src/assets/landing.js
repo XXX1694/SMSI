@@ -1,16 +1,43 @@
 // Landing page behaviour. Progressive enhancement: without this file the page is complete, just still.
-import { startFlow } from './hero-flow.js';
-
+// Every block is guarded on its own, and the `js` class (which hides .reveal elements until they scroll in) is only set
+// once the reveal setup has worked, so one failing feature can never leave the page blank.
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const dark = matchMedia('(prefers-color-scheme: dark)');
+const root = document.documentElement;
+const guard = (name, fn) => {
+  try {
+    return fn();
+  } catch (err) {
+    console.warn(`landing: ${name} is off`, err);
+    return undefined;
+  }
+};
 
-// 1. Hero background.
-const canvas = document.querySelector('[data-flow]');
-if (canvas) startFlow(canvas, { reduced: reduced.matches });
+// 0. Motion switch (WCAG 2.2.2). One toggle stops every looping animation: the video, the flow canvas, the glow blobs,
+//    the marquee and the story sweep. It is remembered per visitor. With reduced motion the page starts paused and the
+//    switch is not offered, because nothing moves.
+const KEY = 'socialos_landing_motion';
+const readPref = () => guard('motion preference', () => localStorage.getItem(KEY)) ?? null;
+const motion = { off: reduced.matches || readPref() === 'off', listeners: [] };
+const toggle = document.querySelector('[data-motion]');
+const applyMotion = () => {
+  root.classList.toggle('motion-off', motion.off);
+  if (toggle) toggle.textContent = motion.off ? 'Play motion' : 'Pause motion';
+  motion.listeners.forEach((fn) => guard('motion listener', () => fn(motion.off)));
+};
+if (toggle) {
+  if (reduced.matches) toggle.hidden = true;
+  toggle.addEventListener('click', () => {
+    motion.off = !motion.off;
+    guard('save motion preference', () => localStorage.setItem(KEY, motion.off ? 'off' : 'on'));
+    applyMotion();
+  });
+}
+root.classList.toggle('motion-off', motion.off);
 
-// 2. Scroll reveals: a class flips once, CSS does the motion (scroll.css). Items that arrive together are staggered.
-const reveals = [...document.querySelectorAll('.reveal')];
-if (reveals.length) {
+// 1. Scroll reveals: a class flips once, CSS does the motion (scroll.css). Items that arrive together are staggered.
+guard('reveals', () => {
+  const reveals = [...document.querySelectorAll('.reveal')];
   const io = new IntersectionObserver(
     (entries) => {
       entries.filter((e) => e.isIntersecting).forEach((e, i) => {
@@ -21,12 +48,28 @@ if (reveals.length) {
     },
     { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
   );
-  reveals.forEach((el) => io.observe(el));
+  for (const el of reveals) {
+    // Anything already on screen is shown before the hiding class exists, so nothing flashes.
+    if (el.getBoundingClientRect().top < innerHeight) el.classList.add('in');
+    else io.observe(el);
+  }
+  root.classList.add('js');
+});
+
+// 2. Hero background (its own module, so a failure to load or run it cannot touch anything else).
+const canvas = document.querySelector('[data-flow]');
+if (canvas) {
+  import('./hero-flow.js')
+    .then(({ startFlow }) => {
+      const flow = startFlow(canvas, { reduced: motion.off });
+      motion.listeners.push((off) => flow.setPaused(off));
+    })
+    .catch((err) => console.warn('landing: flow background is off', err));
 }
 
 // 3. Counters: facts only (the numbers come from the build). Start at zero when scrolled into view, end on the true value.
-if (!reduced.matches) {
-  const nums = [...document.querySelectorAll('.num[data-count]')];
+guard('counters', () => {
+  if (reduced.matches) return;
   const io = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -45,12 +88,13 @@ if (!reduced.matches) {
     },
     { threshold: 0.6 },
   );
-  nums.forEach((n) => io.observe(n));
-}
+  document.querySelectorAll('.num[data-count]').forEach((n) => io.observe(n));
+});
 
 // 4. "How it works": the step nearest the middle of the screen drives the sticky picture.
-const story = document.querySelector('[data-story]');
-if (story) {
+guard('story', () => {
+  const story = document.querySelector('[data-story]');
+  if (!story) return;
   const stage = story.querySelector('.story-stage');
   const rail = story.querySelector('.steps-list');
   const steps = [...story.querySelectorAll('.step')];
@@ -67,21 +111,21 @@ if (story) {
     { rootMargin: '-45% 0px -45% 0px' },
   );
   steps.forEach((s) => io.observe(s));
-}
+});
 
-// 5. Hero video: real footage of the demo. Not on phones, not with reduced motion, not with data saver, and only while
-//    it is on screen. The poster stays underneath, so nothing jumps when the video starts or stops.
-const stage = document.querySelector('[data-hero-video]');
-const video = stage?.querySelector('video');
-const pause = stage?.querySelector('[data-pause]');
-if (stage && video) {
+// 5. Hero video: real footage of the demo. Not on phones, not with reduced motion, not with data saver, not while motion
+//    is paused, and only while it is on screen. The poster stays underneath, so nothing jumps when it starts or stops.
+guard('hero video', () => {
+  const stage = document.querySelector('[data-hero-video]');
+  const video = stage?.querySelector('video');
+  if (!stage || !video) return;
   const wide = matchMedia('(min-width: 62rem)');
   const saver = navigator.connection?.saveData === true;
   const webm = video.canPlayType('video/webm; codecs="vp9"') !== '';
-  let userPaused = false;
   let loadedFor = '';
+  let onScreen = false;
 
-  const wanted = () => wide.matches && !reduced.matches && !saver;
+  const wanted = () => wide.matches && !reduced.matches && !saver && !motion.off;
   const load = () => {
     const scheme = dark.matches ? 'dark' : 'light';
     if (loadedFor === scheme) return;
@@ -90,27 +134,19 @@ if (stage && video) {
     video.src = `${video.dataset.video}${scheme}.${webm ? 'webm' : 'mp4'}`;
     video.load();
   };
-  const play = () => {
-    if (!wanted() || userPaused) return;
-    load();
-    video.play().catch(() => {});
+  const sync = () => {
+    if (wanted() && onScreen) {
+      load();
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
   };
-  video.addEventListener('playing', () => { stage.classList.add('is-playing'); if (pause) pause.hidden = false; });
-  const io = new IntersectionObserver(([e]) => (e.isIntersecting ? play() : video.pause()), { threshold: 0.25 });
-  io.observe(stage);
-  dark.addEventListener('change', () => { if (wanted()) play(); });
-  const retarget = () => {
-    if (wanted()) return;
-    video.pause();
-    stage.classList.remove('is-playing');
-    if (pause) pause.hidden = true;
-  };
-  reduced.addEventListener('change', retarget);
-  wide.addEventListener('change', () => (wanted() ? play() : retarget()));
-  pause?.addEventListener('click', () => {
-    userPaused = !userPaused;
-    pause.setAttribute('aria-pressed', String(userPaused));
-    pause.textContent = userPaused ? 'Play video' : 'Pause video';
-    userPaused ? video.pause() : play();
-  });
-}
+  video.addEventListener('playing', () => stage.classList.add('is-playing'));
+  new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; sync(); }, { threshold: 0.25 }).observe(stage);
+  dark.addEventListener('change', sync);
+  wide.addEventListener('change', sync);
+  motion.listeners.push(sync);
+});
+
+applyMotion();
