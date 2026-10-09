@@ -1,18 +1,21 @@
 name: CI
 
-# Lean on purpose (GitHub Free = 2000 private Actions minutes/month):
-#   * pull requests only run the jobs whose paths changed; pushes to main run everything;
-#   * a newer push cancels the run it supersedes;
-#   * Go modules, npm, Next.js and Docker layers are cached.
+# One workflow, one required check ("CI ok"):
+#   * pull requests run only the jobs whose paths changed; pushes to main, the weekly schedule and manual runs run all;
+#   * a newer push cancels the pull-request run it supersedes;
+#   * the repository is public, so scanners (govulncheck, npm audit, gitleaks, Trivy, CodeQL) live in the jobs below.
 on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # Mondays 03:00 UTC: new advisories appear without any code change.
+    - cron: "0 3 * * 1"
   workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -21,13 +24,16 @@ env:
   # Go toolchain for CI and for the backend image (ARG GO_VERSION in backend/Dockerfile): keep both on the same minor
   # version. go.mod states the minimum (1.26.0); CI and the image use the latest patch of the 1.26 line.
   GO_VERSION: "1.26"
-  # Pinned so that a new linter release cannot turn CI red by itself; bump it deliberately.
+  # Pinned so that a new tool release cannot turn CI red by itself; bump deliberately (Dependabot does not track these).
   GOLANGCI_LINT_VERSION: v2.14.0
+  GOVULNCHECK_VERSION: v1.8.0
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
   NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Which parts of the repo changed? (always "everything" outside pull requests)
+  # Which parts of the repo changed? Only used on pull requests; every other event runs every job.
   # ---------------------------------------------------------------------------
   changes:
     name: Detect changes
@@ -37,81 +43,64 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      backend: ${{ steps.decide.outputs.backend }}
-      mcp: ${{ steps.decide.outputs.mcp }}
-      frontend: ${{ steps.decide.outputs.frontend }}
-      e2e: ${{ steps.decide.outputs.e2e }}
-      lint: ${{ steps.decide.outputs.lint }}
-      images: ${{ steps.decide.outputs.images }}
+      backend: ${{ steps.filter.outputs.backend }}
+      mcp: ${{ steps.filter.outputs.mcp }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      site: ${{ steps.filter.outputs.site }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+      codeql_go: ${{ steps.filter.outputs.codeql_go }}
+      codeql_js: ${{ steps.filter.outputs.codeql_js }}
     steps:
-      - name: Filter changed paths (pull requests)
-        id: filter
+      - id: filter
         if: github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
+          # `ci` is this workflow itself: changing it re-runs every job once. Other files under .github/ (release,
+          # uptime, scripts, Dependabot) are covered by repo-lint, which always runs.
           filters: |
+            ci: &ci
+              - '.github/workflows/ci.yml'
             backend:
+              - *ci
               - 'backend/**'
             mcp:
+              - *ci
               - 'mcp/**'
             frontend:
+              - *ci
               - 'frontend/**'
-            stack:
+            site:
+              - *ci
+              - 'site/**'
+              - 'frontend/**'
+              - 'docs/**'
+              - 'README.md'
+              - 'mcp/README.md'
+            e2e:
+              - *ci
+              - '.github/ci/**'
+              - 'backend/**'
+              - 'mcp/**'
+              - 'frontend/**'
               - 'docker-compose.yml'
               - 'Makefile'
               - '.env.example'
-              - '.github/workflows/ci.yml'
-              - '.github/ci/**'
-            lint:
-              - '.github/**'
-              - 'deploy/**'
-              - 'CHANGELOG.md'
-
-      - name: Decide what to run
-        id: decide
-        env:
-          EVENT: ${{ github.event_name }}
-          F_BACKEND: ${{ steps.filter.outputs.backend }}
-          F_MCP: ${{ steps.filter.outputs.mcp }}
-          F_FRONTEND: ${{ steps.filter.outputs.frontend }}
-          F_STACK: ${{ steps.filter.outputs.stack }}
-          F_LINT: ${{ steps.filter.outputs.lint }}
-        run: |
-          pick() { if [ "$EVENT" != pull_request ] || [ "$1" = true ]; then echo true; else echo false; fi; }
-          backend=$(pick "$F_BACKEND")
-          mcp=$(pick "$F_MCP")
-          frontend=$(pick "$F_FRONTEND")
-          stack=$(pick "$F_STACK")
-          lint=$(pick "$F_LINT")
-
-          # A shared change (compose file, Makefile, this workflow) rebuilds every image.
-          build() { if [ "$1" = true ] || [ "$stack" = true ]; then echo true; else echo false; fi; }
-          images=$(jq -nc \
-            --arg b "$(build "$backend")" --arg m "$(build "$mcp")" --arg f "$(build "$frontend")" \
-            '[ (if $b == "true" then {image: "backend",  context: "backend"}  else empty end),
-               (if $m == "true" then {image: "mcp",      context: "mcp"}      else empty end),
-               (if $f == "true" then {image: "frontend", context: "frontend"} else empty end) ]')
-
-          e2e=false
-          if [ "$backend" = true ] || [ "$mcp" = true ] || [ "$frontend" = true ] || [ "$stack" = true ]; then e2e=true; fi
-
-          {
-            echo "backend=$backend"
-            echo "mcp=$mcp"
-            echo "frontend=$frontend"
-            echo "e2e=$e2e"
-            echo "lint=$lint"
-            echo "images=$images"
-          } >> "$GITHUB_OUTPUT"
-          echo "backend=$backend mcp=$mcp frontend=$frontend e2e=$e2e lint=$lint images=$images"
+            codeql_go:
+              - *ci
+              - 'backend/**'
+            codeql_js:
+              - *ci
+              - 'mcp/**'
+              - 'frontend/**'
+              - 'site/**'
 
   # ---------------------------------------------------------------------------
-  # Backend: format, vet, lint, unit tests, then integration + e2e on real Postgres/Redis.
+  # Backend: lint (gofmt, vet and more), vulnerabilities, unit tests, then integration + e2e on real Postgres/Redis.
   # ---------------------------------------------------------------------------
   backend:
     name: Backend (Go)
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -151,25 +140,15 @@ jobs:
           check-latest: true
           cache-dependency-path: backend/go.sum
 
-      - name: gofmt
-        run: |
-          out="$(gofmt -l .)"
-          if [ -n "$out" ]; then
-            echo "::error title=gofmt::these files need gofmt -w:"
-            echo "$out"
-            exit 1
-          fi
-
-      - name: go vet
-        run: go vet ./...
-
-      # Runs only when a golangci-lint config exists (backend/.golangci.yml is part of the repo).
-      - name: golangci-lint
-        if: ${{ hashFiles('backend/.golangci.yml', 'backend/.golangci.yaml', 'backend/.golangci.toml', 'backend/.golangci.json') != '' }}
-        uses: golangci/golangci-lint-action@v9
+      # golangci-lint v2 runs gofmt (formatters in backend/.golangci.yml) and go vet (govet is a standard linter).
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: backend
+
+      # Fails only for vulnerabilities whose vulnerable symbol is reachable from our code.
+      - name: govulncheck
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
 
       - name: Unit tests
         run: make test
@@ -186,7 +165,7 @@ jobs:
   mcp:
     name: MCP server (Node 22)
     needs: changes
-    if: needs.changes.outputs.mcp == 'true'
+    if: github.event_name != 'pull_request' || needs.changes.outputs.mcp == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -210,6 +189,9 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      # Reads package-lock.json; devDependencies are out of scope on purpose.
+      - name: npm audit (production dependencies, high and above)
+        run: npm audit --omit=dev --audit-level=high
 
   # ---------------------------------------------------------------------------
   # Frontend
@@ -217,7 +199,7 @@ jobs:
   frontend:
     name: Frontend (Next.js)
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -249,46 +231,24 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-
       - name: Build
         run: npm run build
+      # Reads package-lock.json; devDependencies are out of scope on purpose.
+      - name: npm audit (production dependencies, high and above)
+        run: npm audit --omit=dev --audit-level=high
 
   # ---------------------------------------------------------------------------
-  # Docker: every image must build from its Dockerfile (no push). Layers go to the GitHub Actions cache,
-  # which the e2e job below and the release workflow reuse.
+  # End to end: build the three images once (layers go to the Actions cache that release.yml reuses), run the real
+  # compose stack with the MVP acceptance flow (register -> connect -> MCP agent drafts and schedules -> worker
+  # publishes) and a smoke test of the frontend, then scan the same images with Trivy.
   # ---------------------------------------------------------------------------
-  docker:
-    name: Docker build (${{ matrix.image }})
-    needs: changes
-    if: needs.changes.outputs.images != '[]'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.changes.outputs.images) }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: docker/setup-buildx-action@v4
-      - name: Build ${{ matrix.image }}
-        uses: docker/build-push-action@v7
-        with:
-          context: ${{ matrix.context }}
-          push: false
-          tags: socialos-${{ matrix.image }}:ci
-          provenance: false
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
-
-  # ---------------------------------------------------------------------------
-  # End to end: the real compose stack + the MVP acceptance flow (register -> connect -> MCP agent
-  # drafts and schedules -> worker publishes) and a smoke test of the frontend.
-  # ---------------------------------------------------------------------------
-  e2e-compose:
+  e2e:
     name: E2E (docker compose)
-    needs: [changes, docker]
-    if: ${{ !cancelled() && needs.changes.outputs.e2e == 'true' && needs.docker.result == 'success' }}
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # Trivy results -> code scanning
     env:
       # .github/ci/compose.ci.yml points the services at the images built below instead of building again.
       COMPOSE_FILE: docker-compose.yml:.github/ci/compose.ci.yml
@@ -296,33 +256,35 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Same context, Dockerfile and build args as the docker job, so these are cache hits.
       - name: Build backend image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: backend
           load: true
           tags: socialos-backend:ci
           provenance: false
           cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
       - name: Build mcp image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: mcp
           load: true
           tags: socialos-mcp:ci
           provenance: false
           cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp
       - name: Build frontend image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: frontend
           load: true
           tags: socialos-frontend:ci
           provenance: false
           cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
       - name: Create .env (fresh ENCRYPTION_KEY)
         run: make env
@@ -377,31 +339,117 @@ jobs:
         if: always()
         run: docker compose down -v --remove-orphans || true
 
+      - name: Trivy scan (backend)
+        if: ${{ !cancelled() }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: socialos-backend:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+          format: sarif
+          output: trivy-backend.sarif
+          exit-code: "1"
+      # Pull requests from forks get a read-only token and cannot upload.
+      - name: Upload Trivy results (backend)
+        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-backend.sarif
+          category: trivy-backend
+
+      - name: Trivy scan (mcp)
+        if: ${{ !cancelled() }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: socialos-mcp:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+          format: sarif
+          output: trivy-mcp.sarif
+          exit-code: "1"
+      # Pull requests from forks get a read-only token and cannot upload.
+      - name: Upload Trivy results (mcp)
+        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-mcp.sarif
+          category: trivy-mcp
+
+      - name: Trivy scan (frontend)
+        if: ${{ !cancelled() }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: socialos-frontend:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+          format: sarif
+          output: trivy-frontend.sarif
+          exit-code: "1"
+      # Pull requests from forks get a read-only token and cannot upload.
+      - name: Upload Trivy results (frontend)
+        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-frontend
+
   # ---------------------------------------------------------------------------
-  # Workflow files, deploy scripts, production compose file and Caddyfile.
+  # Always runs (about 45 s): workflow files, deploy scripts, production compose file, Caddyfile, secrets in history.
   # ---------------------------------------------------------------------------
   repo-lint:
     name: Lint workflows & deploy files
     needs: changes
-    if: needs.changes.outputs.lint == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-depth: 0 # gitleaks scans the history
           persist-credentials: false
 
       - name: actionlint
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
 
       - name: shellcheck
-        run: |
-          shopt -s nullglob
-          scripts=(deploy/*.sh deploy/host-proxy/*.sh deploy/tests/*.sh .github/scripts/*.sh)
-          if [ "${#scripts[@]}" -gt 0 ]; then shellcheck "${scripts[@]}"; fi
+        run: shellcheck deploy/*.sh deploy/host-proxy/*.sh deploy/tests/*.sh .github/scripts/*.sh
 
-      - name: shellcheck (.github scripts)
-        run: shellcheck .github/scripts/*.sh
+      # The binary is used directly: it needs no licence key, unlike gitleaks-action for organisations.
+      # The download is checked against a pinned hash.
+      - name: Install gitleaks
+        run: |
+          set -eu
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$file" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$file"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$file" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$file" -C "$RUNNER_TEMP" gitleaks
+      - name: gitleaks
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          if [ "$EVENT" = pull_request ]; then
+            range="${BASE_SHA}..${HEAD_SHA}"   # only the commits this pull request adds
+          else
+            range="--all"                      # whole history (push to main, weekly schedule)
+          fi
+          "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --log-opts="$range" .
+
+      # Reads package-lock.json, so no install is needed.
+      - name: npm audit (site, production dependencies, high and above)
+        if: github.event_name != 'pull_request' || needs.changes.outputs.site == 'true'
+        working-directory: site
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Uptime script tests (stubbed gh, local HTTP server)
         run: bash .github/scripts/uptime.test.sh
@@ -410,78 +458,78 @@ jobs:
         run: bash deploy/tests/run.sh
 
       - name: Production compose files resolve with the example environment (standalone and host-proxy)
-        run: |
-          set -euo pipefail
-          standalone=(--env-file deploy/.env.prod.example -f deploy/docker-compose.prod.yml)
-          host_proxy=("${standalone[@]}" -f deploy/docker-compose.host-proxy.yml)
-          # check MODE JQ_FILTER MESSAGE: the resolved configuration of MODE must satisfy the jq filter.
-          check() {
-            local -n compose_args=$1
-            docker compose "${compose_args[@]}" config --format json | jq -e "$2" >/dev/null ||
-              { echo "::error title=compose config ($1)::$3"; exit 1; }
-          }
-          docker compose "${standalone[@]}" config -q
-          docker compose "${host_proxy[@]}" config -q
+        run: .github/scripts/repo-lint.sh compose
 
-          check standalone '[.services[] | select(.mem_limit == null)] | length == 0' 'a service has no mem_limit'
-          check host_proxy '[.services[] | select(.mem_limit == null)] | length == 0' 'a service has no mem_limit'
-          # Standalone is unchanged: caddy owns 80/443 and nothing else publishes a port.
-          check standalone '[.services | to_entries[] | select(.value.ports != null) | .key] == ["caddy"]' 'only caddy may publish ports'
-          # Host-proxy: no bundled caddy, and everything that is published is bound to 127.0.0.1.
-          check host_proxy '.services | has("caddy") | not' 'the bundled caddy is still part of the stack'
-          check host_proxy '[.services[].ports[]?.host_ip] | (length > 0) and all(. == "127.0.0.1")' 'a published port is not bound to 127.0.0.1'
-          # Host-proxy: under host-wide memory pressure the kernel must pick Steerpost before the host's Caddy or other service,
-          # and postgres gets a small /dev/shm (64 MiB, not smaller than its shared_buffers default of 64MB).
-          check host_proxy '[.services[] | select(.oom_score_adj != 500)] | length == 0' 'a service lacks oom_score_adj 500'
-          check host_proxy '.services.postgres.shm_size | tonumber == 67108864' 'postgres shm_size is not 64mb'
-          # Host-proxy: the whole stack runs in socialos.slice (one kernel-enforced budget), no container may swap, and each
-          # has a process cap. Standalone needs no slice on the host.
-          check host_proxy '[.services[] | select(.cgroup_parent != "socialos.slice")] | length == 0' 'a service is not in socialos.slice'
-          check host_proxy '[.services[] | select(.memswap_limit != .mem_limit or .pids_limit == null)] | length == 0' 'a service may swap or has no pids_limit'
-          check standalone '[.services[] | select(.cgroup_parent != null)] | length == 0' 'the standalone stack must not depend on socialos.slice'
-          # ACME_EMAIL is only for the bundled Caddy: host-proxy mode must resolve with it empty (init-env.sh --host-proxy writes
-          # it empty). Standalone resolves too, and deploy.sh refuses an empty value there.
-          sed 's|^ACME_EMAIL=.*|ACME_EMAIL=|' deploy/.env.prod.example >"$RUNNER_TEMP/env-no-acme"
-          docker compose --env-file "$RUNNER_TEMP/env-no-acme" -f deploy/docker-compose.prod.yml -f deploy/docker-compose.host-proxy.yml config -q
 
       - name: Caddyfile is valid
-        run: |
-          docker run --rm \
-            -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            -e DOMAIN=example.com -e ACME_EMAIL=ops@example.com -e S3_SITE=s3.example.com \
-            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+        run: .github/scripts/repo-lint.sh caddy
+
 
       # The rendered host snippet is imported by a host Caddyfile that has its own global options, its own snippet called
       # "common" and its own site: none of that may collide. Its routes must also equal those of the standalone Caddyfile
       # (same headers, /metrics block, flush_interval, encode), apart from the upstream addresses.
       - name: Host-proxy Caddy snippet renders, validates and matches the standalone Caddyfile
-        run: |
-          set -euo pipefail
-          work="$RUNNER_TEMP/host-proxy"
-          mkdir -p "$work/caddy"
-          sed 's|^DOMAIN=.*|DOMAIN=example.com|' deploy/.env.prod.example >"$work/env"
-          deploy/host-proxy/render-caddy.sh --env "$work/env" --out "$work/caddy/socialos.caddy"
-          cat >"$work/Caddyfile" <<'EOF'
-          {
-          	email ops@example.com
-          }
-          (common) {
-          	header X-Host "1"
-          }
-          other.example.org {
-          	import common
-          	respond "ok"
-          }
-          import /opt/socialos/caddy/*.caddy
-          EOF
-          host_caddy=(docker run --rm -v "$work/Caddyfile:/etc/caddy/Caddyfile:ro" -v "$work/caddy:/opt/socialos/caddy:ro" caddy:2-alpine caddy)
-          "${host_caddy[@]}" validate --config /etc/caddy/Caddyfile --adapter caddyfile
+        run: .github/scripts/repo-lint.sh host-proxy
 
-          # Routes without the upstream addresses (the host's own site is left out on the host side).
-          "${host_caddy[@]}" adapt --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null |
-            jq -S '[.apps.http.servers[].routes[] | select(.match[0].host[0] | startswith("other.") | not)] | map(del(.. | .upstreams?))' >"$work/host.json"
-          docker run --rm -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            -e DOMAIN=example.com -e ACME_EMAIL=ops@example.com -e S3_SITE=s3.example.com \
-            caddy:2-alpine caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null |
-            jq -S '[.apps.http.servers[].routes[]] | map(del(.. | .upstreams?))' >"$work/standalone.json"
-          diff -u "$work/standalone.json" "$work/host.json"
+
+  # ---------------------------------------------------------------------------
+  # CodeQL. The categories match the old security.yml so the Security tab keeps one configuration per language.
+  # A language whose paths did not change on a pull request skips its steps (a matrix cannot be gated per entry).
+  # ---------------------------------------------------------------------------
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    needs: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: autobuild
+            run: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.codeql_go == 'true') && 'yes' || 'no' }}
+          - language: javascript-typescript
+            build-mode: none
+            run: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.codeql_js == 'true') && 'yes' || 'no' }}
+    steps:
+      - uses: actions/checkout@v7
+        if: matrix.run == 'yes'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        if: matrix.run == 'yes' && matrix.language == 'go'
+        with:
+          go-version-file: backend/go.mod
+          check-latest: true
+          cache-dependency-path: backend/go.sum
+      - uses: github/codeql-action/init@v4
+        if: matrix.run == 'yes'
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - uses: github/codeql-action/analyze@v4
+        if: matrix.run == 'yes'
+        with:
+          category: /language:${{ matrix.language }}
+
+  # ---------------------------------------------------------------------------
+  # The one required check. Skipped jobs (nothing changed there) count as ok; failed or cancelled ones do not.
+  # `changes` is listed so that a broken filter cannot turn every skipped job into a green run.
+  # ---------------------------------------------------------------------------
+  ci-ok:
+    name: CI ok
+    if: always()
+    needs: [changes, backend, mcp, frontend, e2e, repo-lint, codeql]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error title=CI::a required job failed or was cancelled"
+          exit 1
+      - run: echo "All jobs passed or were skipped because nothing relevant changed."
