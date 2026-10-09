@@ -15,6 +15,7 @@ import (
 type fakeUsage struct {
 	accounts, posts, bytes   int64
 	locks                    int
+	hasProvider              bool
 	since                    time.Time
 	exceptProvider, exceptID string
 }
@@ -23,6 +24,9 @@ func (f *fakeUsage) LockUser(context.Context, uuid.UUID) error { f.locks++; retu
 func (f *fakeUsage) CountAccounts(_ context.Context, _ uuid.UUID, p, id string) (int64, error) {
 	f.exceptProvider, f.exceptID = p, id
 	return f.accounts, nil
+}
+func (f *fakeUsage) HasProvider(context.Context, uuid.UUID, string) (bool, error) {
+	return f.hasProvider, nil
 }
 func (f *fakeUsage) CountPostsSince(_ context.Context, _ uuid.UUID, t time.Time) (int64, error) {
 	f.since = t
@@ -90,5 +94,22 @@ func TestReportNeedsAnalyticsScope(t *testing.T) {
 	}
 	if !rep.PeriodEnd.Equal(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)) || *rep.Items[domain.ScheduledPostsMonth].Used != 3 {
 		t.Fatalf("%+v", rep)
+	}
+}
+
+func TestPrecheckAccountOnlyRefusesWhatCannotBeAReconnect(t *testing.T) {
+	u := &fakeUsage{accounts: 5}
+	s := NewService(u, domain.Limits{Accounts: 5}, clk{oct})
+	ctx := context.Background()
+	if err := s.PrecheckAccount(ctx, uuid.New(), "mock"); !errs.Is(err, errs.QuotaExceeded) {
+		t.Fatalf("at the limit with no account on the provider: %v", err)
+	}
+	u.hasProvider = true // may be a reconnect: the authoritative check in the transaction decides
+	if err := s.PrecheckAccount(ctx, uuid.New(), "mock"); err != nil {
+		t.Fatalf("provider already connected: %v", err)
+	}
+	u.hasProvider, u.accounts = false, 4
+	if err := s.PrecheckAccount(ctx, uuid.New(), "mock"); err != nil || u.locks != 0 {
+		t.Fatalf("below the limit: %v (locks=%d)", err, u.locks)
 	}
 }

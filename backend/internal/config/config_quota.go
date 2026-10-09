@@ -4,8 +4,8 @@ import (
 	"github.com/socialos/backend/internal/domain/quota"
 )
 
-// QuotaConfig holds the limits of the single "free" plan (D-014). -1 switches a limit off; self-hosters who do not want
-// limits set all four to -1.
+// QuotaConfig holds the limits of the single "free" plan (D-014). They are opt-in: the default -1 switches a limit off,
+// so an existing install is never capped by an update. A public instance sets positive numbers in its .env.
 type QuotaConfig struct {
 	QuotaAccounts      int
 	QuotaPostsPerMonth int
@@ -14,9 +14,9 @@ type QuotaConfig struct {
 
 func loadQuotaConfig() QuotaConfig {
 	return QuotaConfig{
-		QuotaAccounts:      envInt("QUOTA_ACCOUNTS", 5),
-		QuotaPostsPerMonth: envInt("QUOTA_POSTS_PER_MONTH", 60),
-		QuotaMediaMB:       envInt("QUOTA_MEDIA_MB", 500),
+		QuotaAccounts:      envInt("QUOTA_ACCOUNTS", quota.Unlimited),
+		QuotaPostsPerMonth: envInt("QUOTA_POSTS_PER_MONTH", quota.Unlimited),
+		QuotaMediaMB:       envInt("QUOTA_MEDIA_MB", quota.Unlimited),
 	}
 }
 

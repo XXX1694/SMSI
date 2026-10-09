@@ -195,3 +195,63 @@ func TestQuotaUnlimitedAndUsageReport(t *testing.T) {
 	}
 	e.apiKeyClient(c.createKey("reader", "analytics:read")).must("GET", "/api/v1/account/usage", nil, 200)
 }
+
+type steppingClock struct{ t atomic.Int64 }
+
+func (c *steppingClock) Now() time.Time  { return time.Unix(0, c.t.Load()).UTC() }
+func (c *steppingClock) set(t time.Time) { c.t.Store(t.UnixNano()) }
+
+// A post counts in the month it is scheduled or published in: scheduling at the end of one month must not bank an
+// allowance for the next, while unscheduling and scheduling again within a month stays free.
+func TestQuotaMonthRollover(t *testing.T) {
+	clk := &steppingClock{}
+	clk.set(time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC))
+	e := newEnv(t, envOpts{clock: clk, mutate: func(c *config.Config) {
+		c.QuotaConfig = quotaOf(unlimited, func(q *config.QuotaConfig) { q.QuotaPostsPerMonth = 1 })
+		c.SessionTTL = 90 * 24 * time.Hour
+	}})
+	c := e.browser()
+	c.register("rollover@example.com")
+	acc := c.connectMock()
+	at := func(d time.Duration) string { return fmtTime(clk.Now().Add(d)) }
+	draft := func(n string) string {
+		return c.must("POST", "/api/v1/posts", map[string]any{"content": n, "social_account_ids": []string{acc}}, 201)["id"].(string)
+	}
+	p1, p2 := draft("one"), draft("two")
+	c.must("POST", "/api/v1/posts/"+p1+"/schedule", map[string]any{"scheduled_at": at(72 * time.Hour)}, 200) // counted in October
+	c.must("POST", "/api/v1/posts/"+p1+"/unschedule", nil, 200)
+	c.must("POST", "/api/v1/posts/"+p1+"/schedule", map[string]any{"scheduled_at": at(72 * time.Hour)}, 200) // same month: free
+	c.must("POST", "/api/v1/posts/"+p1+"/unschedule", nil, 200)
+	requireQuotaExceeded(t, c.do("POST", "/api/v1/posts/"+p2+"/schedule", map[string]any{"scheduled_at": at(72 * time.Hour)}), "scheduled_posts_month")
+
+	clk.set(time.Date(2026, 11, 2, 9, 0, 0, 0, time.UTC))
+	c.must("POST", "/api/v1/posts/"+p2+"/schedule", map[string]any{"scheduled_at": at(72 * time.Hour)}, 200) // November's one slot
+	// p1 was counted in October; scheduling it now uses a November slot, which is taken.
+	requireQuotaExceeded(t, c.do("POST", "/api/v1/posts/"+p1+"/schedule", map[string]any{"scheduled_at": at(72 * time.Hour)}), "scheduled_posts_month")
+	if used, _ := usageOf(t, c, "scheduled_posts_month"); used != 1 {
+		t.Fatalf("November usage %v, want 1", used)
+	}
+}
+
+// The owner is not asked to approve what the plan would refuse anyway.
+func TestQuotaIsCheckedBeforeApproval(t *testing.T) {
+	e := newEnv(t, withQuota(quotaOf(unlimited, func(q *config.QuotaConfig) { q.QuotaPostsPerMonth = 1 })))
+	c := e.browser()
+	c.register("approval-order@example.com")
+	acc := c.connectMock()
+	at := fmtTime(time.Now().Add(48 * time.Hour))
+	c.must("POST", "/api/v1/posts", map[string]any{"content": "full", "social_account_ids": []string{acc}, "schedule": true, "scheduled_at": at}, 201)
+	p2 := c.must("POST", "/api/v1/posts", map[string]any{"content": "next", "social_account_ids": []string{acc}}, 201)["id"].(string)
+	k := e.apiKeyClient(c.createKey("agent", "posts:read", "posts:write", "posts:schedule", "posts:publish"))
+	requireQuotaExceeded(t, k.do("POST", "/api/v1/posts/"+p2+"/publish", nil), "scheduled_posts_month")
+	requireQuotaExceeded(t, k.do("POST", "/api/v1/posts/"+p2+"/schedule", map[string]any{"scheduled_at": fmtTime(time.Now().Add(time.Minute))}), "scheduled_posts_month")
+}
+
+// At the limit, starting to connect a network you do not have yet is refused up front, not after the consent screen.
+func TestQuotaRefusesAnOAuthStartAtTheLimit(t *testing.T) {
+	e := newEnv(t, withQuota(quotaOf(unlimited, func(q *config.QuotaConfig) { q.QuotaAccounts = 1 })))
+	c := e.browser()
+	c.register("oauth-quota@example.com")
+	c.connectToken(tokenKey(1))
+	requireQuotaExceeded(t, c.do("GET", "/api/v1/social/mock/connect?redirect=/accounts", nil), "connected_accounts")
+}

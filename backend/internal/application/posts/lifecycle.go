@@ -11,6 +11,7 @@ import (
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/domain/media"
 	"github.com/socialos/backend/internal/domain/post"
+	"github.com/socialos/backend/internal/domain/quota"
 )
 
 // revalidate checks every pending target is still publishable (accounts active, content valid).
@@ -63,11 +64,25 @@ func (s *Service) scheduleLocked(ctx context.Context, a actor.Actor, p *post.Pos
 		map[string]any{"scheduled_at": at.UTC().Format(time.RFC3339)})
 }
 
-// countQuota counts the post against the monthly quota the first time it is scheduled or published; unscheduling and
-// scheduling again, or retrying, never counts it twice. The caller's transaction holds the user lock, so the count and
+// needsQuota: a post is counted in the month it is first scheduled or published, and again when it is scheduled or
+// published in a later month, so a post cannot bank an allowance by being scheduled at the end of one month.
+func (s *Service) needsQuota(p *post.Post) bool {
+	return p.QuotaCountedAt == nil || p.QuotaCountedAt.Before(quota.MonthStart(s.clock.Now()))
+}
+
+// requireQuota refuses early, before the owner is asked to approve something that would fail anyway.
+func (s *Service) requireQuota(ctx context.Context, p *post.Post) error {
+	if !s.needsQuota(p) {
+		return nil
+	}
+	return s.quota.EnforcePost(ctx, p.UserID)
+}
+
+// countQuota counts the post against the monthly quota; unscheduling and scheduling again within the month, or
+// retrying, never counts it twice. The caller's transaction holds the user lock, so the count and
 // the update that records it cannot interleave with another request of the same user.
 func (s *Service) countQuota(ctx context.Context, p *post.Post) error {
-	if p.QuotaCountedAt != nil {
+	if !s.needsQuota(p) {
 		return nil
 	}
 	if err := s.quota.EnforcePost(ctx, p.UserID); err != nil {
@@ -92,6 +107,9 @@ func (s *Service) Schedule(ctx context.Context, a actor.Actor, id uuid.UUID, at 
 	err := s.inTx(ctx, func(ctx context.Context) ([]post.Job, error) {
 		p, err := s.repo.GetForUpdate(ctx, a.UserID, id)
 		if err != nil {
+			return nil, err
+		}
+		if err := s.requireQuota(ctx, p); err != nil {
 			return nil, err
 		}
 		if err := s.requireSoon(ctx, a, p, at); err != nil {

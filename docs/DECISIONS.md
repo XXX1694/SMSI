@@ -266,13 +266,16 @@ confirmation under the "Dangerous" heading. Changing the policy of an existing k
 exhaust the shared host (D-012), and self-hosters need to switch them off. Migration `00003` already carries
 `users.plan` and `posts.quota_counted_at`.
 
-**Decision.** One plan, `free`, whose limits come from env (`QUOTA_*`, `-1` = unlimited). Count limits are checked in
+**Decision.** One plan, `free`, whose limits come from env (`QUOTA_*`). They are opt-in: the default is `-1` (unlimited), so an automatic update never caps an existing single-owner install; a public instance sets positive numbers in its `.env`. Count limits are checked in
 the application services (`accounts.connectAccount`, `posts.scheduleLocked` and `startPublishing`, `media.Upload`) by
 `quota.Service`, which first takes `SELECT 1 FROM users WHERE id=$1 FOR NO KEY UPDATE` in the transaction of the change,
 then counts, then lets the caller write. `FOR NO KEY UPDATE` conflicts only with itself, so inserts of child rows (which
 take key-share locks on the user) are not held up, while two requests of one user queue and cannot both pass the check. A
-post counts once, when it is first scheduled or published (`quota_counted_at`, set-once), so unschedule/schedule and
-retries are free and deleting does not refund. Posts are counted per UTC month. A refusal is the typed error
+post counts when it is scheduled or published (`quota_counted_at`), and again when that happens in a later UTC month (a
+post cannot bank an allowance by being scheduled at month end); within a month unschedule/schedule and retries are free
+and deleting does not refund. Quota is checked before the owner's approval is asked for or spent, and a cheap
+no-lock pre-check runs before an OAuth start and before a token connect's approval and live check. A chat link that hits
+the limit is dropped (logged, the code stays unused) rather than retried, because the Telegram poller is shared. Posts are counted per UTC month. A refusal is the typed error
 `QUOTA_EXCEEDED` (403), mapped once in `httpx`. Usage is shown by `GET /account/usage`. The per-user cap on agent requests follows
 in the next PR.
 

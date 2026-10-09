@@ -3,6 +3,7 @@ package quota
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/socialos/backend/internal/domain/errs"
 )
@@ -37,6 +38,12 @@ func (l Limits) For(m Metric) int64 {
 		return l.MediaBytes
 	}
 	return Unlimited
+}
+
+// MonthStart is the first instant of t's UTC month: the period the monthly post limit counts in.
+func MonthStart(t time.Time) time.Time {
+	t = t.UTC()
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
 
 // Check returns QUOTA_EXCEEDED when used+delta would pass limit. A negative limit never fails.

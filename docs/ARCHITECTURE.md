@@ -211,13 +211,13 @@ Security properties: user B cannot connect user A's channel without posting a co
 `GET /audit-logs?limit=&cursor=&action=` (session only; `action` keeps one action, e.g. `mcp.tool_call` for agent actions)
 
 ### Plan limits (D-014)
-One `free` plan; the limits come from env and `-1` switches one off. The application layer counts under a per-user lock (`SELECT … FOR NO KEY UPDATE` on the user row, taken in the same transaction as the change), so parallel requests cannot pass the check together. A refusal is `403 QUOTA_EXCEEDED` with `fields.quota` naming the metric and a message that says what to do; nothing is changed.
+One `free` plan; the limits come from env and are **off by default** (`-1` = unlimited, so an update never caps an existing install); a public instance sets positive numbers. The application layer counts under a per-user lock (`SELECT … FOR NO KEY UPDATE` on the user row, taken in the same transaction as the change), so parallel requests cannot pass the check together. A refusal is `403 QUOTA_EXCEEDED` with `fields.quota` naming the metric and a message that says what to do; nothing is changed.
 
 | Metric (`fields.quota`) | Env, default | Counted | Checked in |
 |---|---|---|---|
-| `connected_accounts` | `QUOTA_ACCOUNTS=5` | non-revoked social accounts; reconnecting one you have is free | `accounts.connectAccount` (OAuth, token and chat connects) |
-| `scheduled_posts_month` | `QUOTA_POSTS_PER_MONTH=60` | posts whose `quota_counted_at` is in the current UTC month; set once, when a post is first scheduled or published. Drafts are free, unschedule then schedule does not count twice, deleting does not give it back | `posts.scheduleLocked`, `posts.startPublishing` |
-| `media_bytes` | `QUOTA_MEDIA_MB=500` | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (early refusal before the object is stored, authoritative check with the insert) |
+| `connected_accounts` | `QUOTA_ACCOUNTS` (e.g. 5) | non-revoked social accounts; reconnecting one you have is free | `accounts.connectAccount` (OAuth, token and chat connects); an early `PrecheckAccount` (no lock) runs before an OAuth start and before a token connect spends its approval; a chat link refused at the limit is dropped, not retried |
+| `scheduled_posts_month` | `QUOTA_POSTS_PER_MONTH` (e.g. 60) | posts whose `quota_counted_at` is in the current UTC month; set when a post is scheduled or published, and set again (counted anew) when it is scheduled or published in a later month. Drafts are free, unschedule then schedule within the month does not count twice, deleting does not give it back | `posts.scheduleLocked`, `posts.startPublishing`; checked before the approval, so the owner is not asked about an action the plan refuses |
+| `media_bytes` | `QUOTA_MEDIA_MB` (e.g. 500) | sum of `media.size_bytes`; deleting media frees it | `media.Upload` (early refusal before the object is stored, authoritative check with the insert) |
 
 `GET /account/usage` (scope `analytics:read`) → `{plan, period_start, period_end, quotas:{connected_accounts:{used,limit}, scheduled_posts_month:{used,limit}, media_bytes:{used,limit}}}`; `limit` -1 = unlimited.
 
