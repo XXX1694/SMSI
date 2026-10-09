@@ -6,6 +6,18 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- Internationalization infrastructure (D-021; no translated copy yet). A client-side locale provider that works the same in the server build and the static demo (no middleware, no locale routes): the locale is resolved as user setting (later `users.locale`) → `localStorage` (`socialos_locale`) → `navigator.languages` → English, `<html lang>` and `dir` follow it (right-to-left only for `ar`), and `uk`, `zh-TW`, `zh-HK` and `zh-Hant` browsers get English. Message catalogs live in `frontend/messages/<locale>.json` with `en` as the source and empty files for the target locales; a missing key falls back to English. ICU MessageFormat comes from a small in-house runtime (`src/i18n/icu.ts`, plural, select, ordinal, rich tags) with typed keys; it is checked against FormatJS in tests. next-intl 4.14 supports Next 15 but added about 14 kB gzipped to every route (measured: first-load JS of `/` 114.8 kB → 128.7 kB), so it was not used; the runtime adds about 2 kB (114.8 kB → 116.9 kB, the Next build table stays at 103 kB shared).
+- Language switcher in Settings → Preferences and a compact one in the sidebar. It lists only enabled locales by their own name and marks machine-drafted ones "Beta translation". Only English is enabled so far; the pseudo-locale `en-XA` (accented, about 35 % longer) is listed in dev builds and the demo, to find hard-coded strings and overflow.
+- `Intl` formatting helpers for numbers, dates, times and relative times that honour the locale and the Settings timezone (`src/i18n/format.ts`, `useFormat()`). Arabic keeps Latin digits and the Gregorian calendar.
+- `npm run i18n:check` (part of `npm run lint`): every catalog key must exist in English, every message must be valid ICU with the same placeholders and tags, enabled locales must be complete with all plural categories, code may only use keys English defines; unused keys and missing `meta.json` descriptions are warnings.
+- The sidebar navigation labels are the first strings read from the catalog.
+
+### Changed
+
+- Docs: D-021 (locale set and rollout order, `uk` waits, `zh-CN` joins), `docs/copy/languages.md` and `translation-process.md` updated, a release is no longer blocked by a locale's review status (machine-drafted locales ship as "Beta translation"), and the copy glossary has `zh-CN`, `ar`, `fr` and `id` columns.
+
 ## [0.3.0] - 2026-10-09
 
 ### Added

@@ -81,9 +81,14 @@ Also:
   and mixed languages. Arabic, when added, is captured in both directions.
 - **Live check.** Before a release, someone fluent in the locale runs the acceptance scenario once in that language.
 
-## 5. Library: next-intl
+## 5. Runtime: a client-side provider with an ICU subset (D-021)
 
-**Use `next-intl`** for the dashboard.
+> **Update (D-021).** next-intl was evaluated and supports Next 15, but its FormatJS formatter adds about 14 kB gzipped to every
+> route, which would break the 110 kB shared-JS budget. The dashboard uses `frontend/src/i18n/` instead: the same ICU syntax,
+> the same `useTranslations('ns')` call shape, about 2 kB. The notes below describe the original next-intl evaluation and still
+> hold for the provider layout, the no-routing mode and the typed keys.
+
+**Original choice: `next-intl`** for the dashboard.
 
 - It is built for the App Router and works in the client components this codebase uses everywhere (`'use client'` views).
   It also works in server code (`getTranslations` for `metadata` titles).

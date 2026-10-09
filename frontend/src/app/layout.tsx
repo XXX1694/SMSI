@@ -5,7 +5,9 @@ import { DemoBanner } from '@/components/demo-banner';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { ToastProvider } from '@/components/toast';
 import { BRAND_HEX } from '@/lib/brand';
+import { LocaleProvider } from '@/i18n/locale-provider';
 import { DEMO } from '@/lib/demo/config';
+import en from '../../messages/en.json';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,7 +24,7 @@ export const viewport: Viewport = {
   ],
 };
 
-const themeScript = `try{var t=localStorage.getItem('socialos_theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}`;
+const themeScript = `try{var t=localStorage.getItem('socialos_theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}try{var l=localStorage.getItem('socialos_locale');if(l&&/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$/.test(l)){var h=document.documentElement;h.lang=l;h.dir=/^ar(-|$)/.test(l)?'rtl':'ltr'}}catch(e){}`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -33,9 +35,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
         <PrefsProvider>
-          <ToastProvider>
-            <AuthProvider>{children}</AuthProvider>
-          </ToastProvider>
+          <LocaleProvider enMessages={en}>
+            <ToastProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </ToastProvider>
+          </LocaleProvider>
         </PrefsProvider>
       </body>
     </html>

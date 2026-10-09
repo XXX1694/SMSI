@@ -425,8 +425,13 @@ The Bluesky salt and the Mastodon prefix are never changed. The new `steerpost-*
 
 ## D-021: The UI is localized with next-intl on the client; locales ship when complete, beta until a native review (2026-10-09)
 
-**Decision.** The dashboard and the demo use next-intl's `NextIntlClientProvider` with ICU catalogs in
-`frontend/messages/{locale}.json` (typed from `en.json`). The locale is resolved in the browser, the same way in the
+**Decision.** The dashboard and the demo use a client-side provider (`frontend/src/i18n/`) with ICU catalogs in
+`frontend/messages/{locale}.json` (typed from `en.json`) and a `useTranslations(ns)` hook with the same shape as next-intl's.
+The runtime is a small in-house ICU subset (`src/i18n/icu.ts`: arguments, number/date/time, plural, selectordinal, select,
+`#`, rich tags), not next-intl itself: next-intl 4.14 supports Next 15 but measured +14 kB gzipped on every route (see the
+CHANGELOG), this is about 2 kB. A test asserts that it prints the same text as FormatJS `intl-messageformat`, and
+`npm run i18n:check` validates every catalog with the official FormatJS parser. Switching to next-intl later means changing
+the import of `useTranslations`. The locale is resolved in the browser, the same way in the
 standalone and the static-export build: `users.locale` → `localStorage socialos_locale` → `navigator.languages` → `en`.
 There are no `/[locale]/` routes in the app; the landing page gets `/{locale}/` pages with hreflang. Locales: `en` (source),
 then `ru`; `es`, `pt-BR`, `de`, `fr`, `id`; `ja`, `zh-CN`; `kk` (hidden until a native review); `ar` last, after logical CSS.
@@ -438,7 +443,7 @@ native speaker signs `docs/copy/review/{locale}.md`. CI blocks missing keys in e
 
 **Alternatives.** `[locale]` prefix routes with `generateStaticParams`: the app renders in the browser behind login, so no
 SEO gain, 11× the exported pages and every link rewritten. Server negotiation by cookie: impossible in the static export
-and makes every prod route dynamic. react-intl: same engine, no App Router helpers. i18next, Lingui, Paraglide: a second
+and makes every prod route dynamic. next-intl and react-intl: the same FormatJS engine, about 14 kB gzipped on every route. i18next, Lingui, Paraglide: a second
 message syntax or a brittle SWC plugin. Vendored CJK/Arabic fonts: megabytes for glyphs every OS ships.
 
 **Consequences.** Server metadata titles stay English. Server field-level messages are replaced by a generic localized
