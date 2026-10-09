@@ -138,7 +138,7 @@ Codes: `VALIDATION_ERROR 400`, `UNAUTHENTICATED 401`, `FORBIDDEN 403` (also miss
 Pagination: `?limit=&cursor=` → `{"items":[…],"next_cursor":null|"…"}`. Times are RFC 3339 UTC.
 
 ### Auth
-`POST /auth/register {email,password,display_name}` · `POST /auth/login` · `POST /auth/logout` · `GET /me`
+`POST /auth/register {email,password,display_name,accept_terms}` (`accept_terms` must be `true`, else `400 VALIDATION_ERROR` with `fields.accept_terms`; the current terms version and the time are stored in `users.terms_version` / `terms_accepted_at`, D-016) · `POST /auth/login` · `POST /auth/logout` · `GET /me`
 
 Email verification and password recovery (mail goes through the queued mail port, D-006; links carry the token in the URL fragment, `{WEB_BASE_URL}/verify-email#token=…` and `/reset-password#token=…`):
 

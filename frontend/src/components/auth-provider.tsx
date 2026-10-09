@@ -11,7 +11,7 @@ interface AuthState {
   /** Re-runs the /me check after such a failure. */
   retry: () => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string, acceptTerms: boolean) => Promise<void>;
   logout: () => Promise<void>;
   /** Re-reads /me, e.g. after the email was verified. A failure keeps the current user. */
   refresh: () => Promise<void>;
@@ -63,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adopt],
   );
   const register = useCallback(
-    async (email: string, password: string, displayName: string) => {
-      adopt(await api.auth.register({ email, password, display_name: displayName }));
+    async (email: string, password: string, displayName: string, acceptTerms: boolean) => {
+      adopt(await api.auth.register({ email, password, display_name: displayName, accept_terms: acceptTerms }));
     },
     [adopt],
   );

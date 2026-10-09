@@ -21,6 +21,7 @@ import { usePendingApprovals } from '@/components/approvals/use-pending-approval
 import { EmailBanner } from '@/components/email-banner';
 import { PageTransition } from '@/components/page-transition';
 import { TransitionLink } from '@/components/transition-link';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -157,6 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </div>
         </nav>
+        <LegalLinks className="mt-3 px-2.5" />
         <div className="mt-3 flex items-center justify-between gap-2 border-t px-2.5 pt-3">
           <span className="truncate text-xs text-muted-foreground" title={user?.email}>
             {user?.display_name || user?.email}

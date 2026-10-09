@@ -124,9 +124,10 @@ describe('auth (single built-in user)', () => {
 
   it('validates registration and renames the single user', () => {
     const r = rig();
-    expect(r.call('POST', '/auth/register', { email: 'a@b.co', password: 'short' }).status).toBe(400);
-    expect(r.call('POST', '/auth/register', { email: DEMO_USER_EMAIL, password: 'longenough1' }).status).toBe(409);
-    const ok = r.call('POST', '/auth/register', { email: 'sam@example.com', password: 'longenough1', display_name: 'Sam' });
+    expect(r.call('POST', '/auth/register', { email: 'a@b.co', password: 'short', accept_terms: true }).status).toBe(400);
+    expect(r.call('POST', '/auth/register', { email: 'sam@example.com', password: 'longenough1' }).status).toBe(400);
+    expect(r.call('POST', '/auth/register', { email: DEMO_USER_EMAIL, password: 'longenough1', accept_terms: true }).status).toBe(409);
+    const ok = r.call('POST', '/auth/register', { email: 'sam@example.com', password: 'longenough1', display_name: 'Sam', accept_terms: true });
     expect(ok.status).toBe(201);
     expect(r.call('GET', '/me').body).toMatchObject({ email: 'sam@example.com', display_name: 'Sam' });
     // The seeded data is still there: there are no tenants in the demo.
