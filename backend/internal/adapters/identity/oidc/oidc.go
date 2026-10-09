@@ -1,5 +1,7 @@
-// Package oidc is the sign-in adapter for OpenID Connect providers (Google today; Keycloak or Authentik through
-// configuration later). It runs Authorization Code + PKCE and verifies the ID token with coreos/go-oidc.
+// Package oidc is the sign-in adapter for OpenID Connect providers. Google is the only one today; any other issuer
+// (Keycloak, Authentik) must get its own identity.Provider id and is never authoritative for an email (D-023).
+//
+// The adapter runs Authorization Code + PKCE and verifies the ID token with coreos/go-oidc.
 //
 // go-oidc checks the signature against the provider's keys (fetched and cached, refetched on an unknown key id),
 // the algorithm against an allow-list, issuer, audience and expiry. It does not check the nonce; this package does.
@@ -47,7 +49,7 @@ type ProviderConfig struct {
 // rules (identity.Claims.AuthoritativeEmail).
 func Google(clientID, clientSecret string) ProviderConfig {
 	return ProviderConfig{
-		ID: identity.Google, Issuer: "https://accounts.google.com",
+		ID: identity.Google, Issuer: identity.GoogleIssuer,
 		AuthURL:  "https://accounts.google.com/o/oauth2/v2/auth",
 		TokenURL: "https://oauth2.googleapis.com/token",
 		JWKSURL:  "https://www.googleapis.com/oauth2/v3/certs",

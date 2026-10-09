@@ -177,3 +177,9 @@ func TestNewValidatesConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestGooglePresetUsesTheIssuerTheDomainTrusts(t *testing.T) {
+	if oidc.Google("id", "s").Issuer != identity.GoogleIssuer {
+		t.Fatal("the Google preset must use identity.GoogleIssuer, the only issuer with gmail/hd rules")
+	}
+}
