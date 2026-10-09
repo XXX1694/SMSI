@@ -25,3 +25,17 @@ it("stdio mode uses SOCIALOS_API_KEY and lists scoped tools", async () => {
   expect(api.calls.at(-1)?.headers.authorization).toBe(`Bearer ${VALID_KEY}`);
   await client.close();
 });
+
+it("stdio mode accepts the STEERPOST_* names", async () => {
+  api.keys.set(VALID_KEY, ["posts:read"]);
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: ["--import", "tsx", "src/index.ts", "--stdio"],
+    env: { PATH: process.env.PATH ?? "", STEERPOST_API_URL: api.url, STEERPOST_API_KEY: VALID_KEY },
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "t", version: "0" });
+  await client.connect(transport);
+  expect((await client.listTools()).tools.length).toBeGreaterThan(0);
+  await client.close();
+});
