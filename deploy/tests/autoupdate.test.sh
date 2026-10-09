@@ -24,9 +24,10 @@ STUB
 # the ghcr.io manifest HEAD (manifest.<image>.code). Unset files mean "fine": a token and 200.
 out=""
 url=""
+follow=0
 echo "$*" >>"$STUB_DIR/curl.argv"
 while [ $# -gt 0 ]; do
-  case "$1" in -o) out=$2; shift ;; http*) url=$1 ;; esac
+  case "$1" in -o) out=$2; shift ;; http*) url=$1 ;; -L | --location | -[a-zA-Z]*L*) follow=1 ;; esac
   shift
 done
 echo "$url" >>"$STUB_DIR/curl.calls"
@@ -35,6 +36,8 @@ case "$url" in
   *api.github.com*)
     body=$(cat "$STUB_DIR/api.json")
     code=$(cat "$STUB_DIR/api.code")
+    # api.redirect: the repository was renamed, so the API answers 301 unless the client follows redirects (-L).
+    if [ -e "$STUB_DIR/api.redirect" ] && [ "$follow" = 0 ]; then code=301; body=""; fi
     ;;
   *ghcr.io/token*)
     name=${url##*socialos-}
@@ -165,6 +168,29 @@ for code in 404 403 500 000; do
   assert_eq "HTTP $code: exit" 0 "$rc"
   assert_eq "HTTP $code: no deploy" "" "$(calls)"
 done
+
+# 8b. after a repository rename the API answers 301: the redirect is followed (curl -L, https only, bounded)
+setup
+touch "$SB/api.redirect"
+run
+assert_eq "301 then 200: exit" 0 "$rc"
+assert_eq "301 then 200: deployed" "1.2.3" "$(calls)"
+assert_has "301 then 200: curl follows redirects" "$(grep api.github.com "$SB/curl.argv")" "-L --proto-redir =https --max-redirs 3"
+
+# 8c. a final non-200 (404 after the redirects) is logged as a warning, not swallowed; the run still ends cleanly
+for code in 404 301 500; do
+  setup
+  echo "$code" >"$SB/api.code"
+  out=$(cd "$SB/app" && STUB_DIR="$SB" PATH="$SB/bin:$PATH" bash ./autoupdate.sh 2>&1 >/dev/null) && rc=0 || rc=$?
+  assert_eq "HTTP $code: warning exit" 0 "$rc"
+  assert_has "HTTP $code: warning on stderr" "$out" "autoupdate: "
+  assert_has "HTTP $code: names the repo" "$out" "XXX1694/SMSI"
+done
+
+# 8d. GITHUB_REPO from the process environment wins over the default
+setup
+(cd "$SB/app" && GITHUB_REPO=acme/renamed STUB_DIR="$SB" PATH="$SB/bin:$PATH" bash ./autoupdate.sh >/dev/null 2>&1) || true
+assert_has "GITHUB_REPO env is used" "$(cat "$SB/curl.calls")" "/repos/acme/renamed/releases/latest"
 
 # 9. overlapping runs: the second one backs off
 setup
