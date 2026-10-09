@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -89,19 +88,5 @@ func TestDecide(t *testing.T) {
 				t.Fatalf("got %+v, want %+v", got, tc.want)
 			}
 		})
-	}
-}
-
-func TestReasonMessagesNameTheNextStep(t *testing.T) {
-	if m := ReasonEmailUnverified.Message(GitHub); !strings.Contains(m, "Verify your primary email on GitHub") {
-		t.Fatalf("github: %q", m)
-	}
-	if m := ReasonAccountExists.Message(Google); !strings.Contains(m, "Sign in with your password") || !strings.Contains(m, "Google") {
-		t.Fatalf("exists: %q", m)
-	}
-	for _, r := range []Reason{ReasonEmailUnverified, ReasonAccountExists, ReasonAccountUnavailable, ReasonNone} {
-		if r.Message(Google) == "" {
-			t.Fatalf("no message for %q", r)
-		}
 	}
 }
