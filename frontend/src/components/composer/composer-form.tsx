@@ -24,7 +24,7 @@ export function ComposerForm({ accounts, providers, edit }: Props) {
   const [baseline, setBaseline] = useState<Baseline | null>(edit ?? null);
   const fields = useComposerFields(edit?.values ?? EMPTY_FORM);
   const { form, patch, state, timezone } = fields;
-  const guard = useUnsavedGuard(baseline !== null && isDirty(form, baseline.values));
+  const guard = useUnsavedGuard(isDirty(form, baseline?.values ?? EMPTY_FORM));
   const selected = accounts.filter((a) => form.accountIds.includes(a.id));
   const toggle = (id: string) =>
     patch({ accountIds: form.accountIds.includes(id) ? form.accountIds.filter((x) => x !== id) : [...form.accountIds, id] });
@@ -60,7 +60,7 @@ export function ComposerForm({ accounts, providers, edit }: Props) {
         {baseline ? (
           <EditActions fields={fields} baseline={baseline} onBaseline={setBaseline} onLeave={guard.allowLeave} accounts={accounts} providers={providers} />
         ) : (
-          <CreateActions state={state} title={form.title} accounts={accounts} providers={providers} selected={selected} />
+          <CreateActions onLeave={guard.allowLeave} state={state} title={form.title} accounts={accounts} providers={providers} selected={selected} />
         )}
       </div>
       <PreviewsPanel selected={selected} content={form.content} overrides={form.overrides} media={form.media} />

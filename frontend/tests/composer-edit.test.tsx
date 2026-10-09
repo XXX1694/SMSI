@@ -218,3 +218,47 @@ describe('ComposerView unsaved changes guard', () => {
     expect(ev.defaultPrevented).toBe(false);
   });
 });
+
+describe('ComposerView review fixes', () => {
+  it('Discard hands the router a path without the deploy base path', async () => {
+    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/SMSI/demo');
+    try {
+      await open();
+      type('Half written');
+      const a = document.createElement('a');
+      a.href = '/SMSI/demo/posts/view?id=p1';
+      a.textContent = 'Back to post';
+      document.body.appendChild(a);
+      await userEvent.click(a);
+      await userEvent.click(await screen.findByRole('button', { name: 'Discard changes' }));
+      expect(nav.push).toHaveBeenCalledWith('/posts/view?id=p1');
+      a.remove();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('says the draft was saved but not scheduled when /schedule fails, and leaves the form clean', async () => {
+    apiMock.posts.get.mockResolvedValue(scheduled({ status: 'draft', scheduled_at: null }));
+    const { ApiError } = await import('@/lib/api');
+    apiMock.posts.schedule.mockRejectedValue(new ApiError(403, 'QUOTA_EXCEEDED', 'Monthly limit reached.'));
+    await open();
+    type('Edited draft');
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-12-05' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
+    expect(await screen.findByText('Changes saved; the post is still a draft and was not scheduled: Monthly limit reached.')).toBeInTheDocument();
+    expect(nav.push).not.toHaveBeenCalled();
+    const ev = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
+  it('guards unsaved text on a new post too', async () => {
+    render(<ComposerView />);
+    await screen.findByLabelText('Post content');
+    type('Draft idea');
+    const ev = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+});

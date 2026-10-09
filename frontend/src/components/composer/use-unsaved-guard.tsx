@@ -10,7 +10,10 @@ function internalTarget(e: MouseEvent): string | null {
   const url = new URL(a.href, window.location.href);
   if (url.origin !== window.location.origin) return null;
   if (url.pathname + url.search === window.location.pathname + window.location.search) return null;
-  return url.pathname + url.search + url.hash;
+  // `a.href` carries the deploy base path (the Pages demo); router.push adds it again, so hand it a path without it.
+  const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '');
+  const path = base && (url.pathname === base || url.pathname.startsWith(`${base}/`)) ? url.pathname.slice(base.length) || '/' : url.pathname;
+  return path + url.search + url.hash;
 }
 
 /**

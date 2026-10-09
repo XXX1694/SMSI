@@ -28,6 +28,7 @@ function buildInput(state: ComposerState, title: string, action: Action): Create
 }
 
 interface Props {
+  onLeave: () => void;
   state: ComposerState;
   title: string;
   accounts: SocialAccount[];
@@ -37,7 +38,7 @@ interface Props {
 
 const DONE: Record<Action, string> = { draft: 'Draft saved', schedule: 'Post scheduled', publish: 'Publishing started' };
 
-export function CreateActions({ state, title, accounts, providers, selected }: Props) {
+export function CreateActions({ state, title, accounts, providers, selected, onLeave }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
@@ -52,6 +53,7 @@ export function CreateActions({ state, title, accounts, providers, selected }: P
       const post = await api.posts.create(buildInput(state, title, action));
       if (action === 'publish') await api.posts.publish(post.id);
       toast.success(DONE[action]);
+      onLeave();
       router.push(postHref(post.id));
     } catch (e) {
       setApiError(errorMessage(e));

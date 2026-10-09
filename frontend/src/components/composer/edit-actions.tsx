@@ -84,7 +84,7 @@ export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, p
       setConflict(null);
       const saved = await api.posts.update(post.id, buildUpdate(state, form, baseline.values, post.status));
       onBaseline({ post: { ...post, ...saved }, values: form });
-      if (kind === 'schedule' && state.scheduledAtUtc) await api.posts.schedule(post.id, state.scheduledAtUtc);
+      if (kind === 'schedule' && state.scheduledAtUtc && !(await schedule(state.scheduledAtUtc))) return;
       toast.success(kind === 'schedule' ? 'Changes saved and post scheduled' : 'Changes saved');
       onLeave();
       router.push(postHref(post.id));
@@ -92,6 +92,17 @@ export function EditActions({ fields, baseline, onBaseline, onLeave, accounts, p
       setApiError(errorMessage(e));
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** The edit is already saved here. A failure must say so, because the post stays a draft. */
+  async function schedule(at: string): Promise<boolean> {
+    try {
+      await api.posts.schedule(post.id, at);
+      return true;
+    } catch (e) {
+      setApiError(`Changes saved; the post is still a draft and was not scheduled: ${errorMessage(e, false)}`);
+      return false;
     }
   }
 
