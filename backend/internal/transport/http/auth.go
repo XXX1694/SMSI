@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -60,8 +61,12 @@ type keyBrief struct {
 	Name string `json:"name"`
 }
 
-func (a *API) meFor(u *user.User, act actor.Actor, csrf string) meResp {
-	resp := meResp{User: toUser(u), AuthType: "session", Scopes: apikey.Strings(act.EffectiveScopes()),
+func (a *API) meFor(ctx context.Context, u *user.User, act actor.Actor, csrf string) (meResp, error) {
+	methods, err := a.svc.Auth.LoginMethods(ctx, u)
+	if err != nil {
+		return meResp{}, err
+	}
+	resp := meResp{User: toUser(u, methods), AuthType: "session", Scopes: apikey.Strings(act.EffectiveScopes()),
 		ID: u.ID.String(), Email: u.Email, DisplayName: u.DisplayName,
 		VerificationEnforced: a.opt.RequireVerification, MailDelivery: a.opt.MailDelivery, DeletionGraceDays: a.opt.DeletionGraceDays}
 	if csrf != "" && act.Type != actor.TypeAPIKey {
@@ -71,7 +76,17 @@ func (a *API) meFor(u *user.User, act actor.Actor, csrf string) meResp {
 		resp.AuthType = "api_key"
 		resp.APIKey = &keyBrief{ID: act.APIKeyID.String(), Name: act.Label}
 	}
-	return resp
+	return resp, nil
+}
+
+// writeMe answers with the meResp of u, or the error that stopped it being built.
+func (a *API) writeMe(w http.ResponseWriter, r *http.Request, status int, u *user.User, act actor.Actor, csrf string) {
+	resp, err := a.meFor(r.Context(), u, act, csrf)
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	httpx.JSON(w, status, resp)
 }
 
 func (a *API) register(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +102,7 @@ func (a *API) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setSessionCookies(w, sess)
-	httpx.JSON(w, http.StatusCreated, a.meFor(u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken))
+	a.writeMe(w, r, http.StatusCreated, u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken)
 }
 
 func (a *API) login(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +117,7 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setSessionCookies(w, sess)
-	httpx.JSON(w, http.StatusOK, a.meFor(u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken))
+	a.writeMe(w, r, http.StatusOK, u, actor.Actor{Type: actor.TypeUser}, sess.CSRFToken)
 }
 
 func (a *API) logout(w http.ResponseWriter, r *http.Request) {
@@ -121,5 +136,5 @@ func (a *API) me(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, a.meFor(u, act, middleware.CSRFToken(r.Context())))
+	a.writeMe(w, r, http.StatusOK, u, act, middleware.CSRFToken(r.Context()))
 }

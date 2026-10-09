@@ -45,11 +45,16 @@ type userDTO struct {
 	Plan          string `json:"plan"`
 	// DeletionScheduledAt is when the account will be deleted (null unless the owner asked and has not cancelled).
 	DeletionScheduledAt *time.Time `json:"deletion_scheduled_at"`
+	// HasPassword is false for accounts created by a social sign-in until the owner sets one.
+	HasPassword bool `json:"has_password"`
+	// LoginMethods lists the ways to sign in: "password" and/or the linked providers ("google", "github").
+	LoginMethods []string `json:"login_methods"`
 }
 
-func toUser(u *user.User) userDTO {
+func toUser(u *user.User, methods []string) userDTO {
 	return userDTO{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, CreatedAt: utc(u.CreatedAt),
-		EmailVerified: u.EmailVerified(), Plan: u.Plan, DeletionScheduledAt: utcp(u.DeletionScheduledAt)}
+		EmailVerified: u.EmailVerified(), Plan: u.Plan, DeletionScheduledAt: utcp(u.DeletionScheduledAt),
+		HasPassword: u.HasPassword(), LoginMethods: methods}
 }
 
 type accountDTO struct {

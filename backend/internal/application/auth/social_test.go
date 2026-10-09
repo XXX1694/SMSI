@@ -66,6 +66,7 @@ func (identitiesFake) GetBySubject(context.Context, identity.Provider, string) (
 func (identitiesFake) ListByUser(context.Context, uuid.UUID) ([]identity.Identity, error) {
 	return nil, nil
 }
+func (identitiesFake) LockUser(context.Context, uuid.UUID) error                  { return nil }
 func (identitiesFake) Delete(context.Context, uuid.UUID, identity.Provider) error { return nil }
 func (identitiesFake) TouchLogin(context.Context, uuid.UUID, identity.Provider, string, bool, time.Time) error {
 	return nil

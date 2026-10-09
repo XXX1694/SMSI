@@ -68,7 +68,19 @@ func (r *socialRig) start(t *testing.T, c *client, provider, next string) flow {
 	if res.status != http.StatusFound {
 		t.Fatalf("start %s: %d %s", provider, res.status, res.body)
 	}
-	loc, err := url.Parse(res.header.Get("Location"))
+	f := parseAuthorize(t, provider, res.header.Get("Location"))
+	for _, ck := range (&http.Response{Header: res.header}).Cookies() {
+		if ck.Name == stateCookie {
+			f.setCookie = ck
+		}
+	}
+	return f
+}
+
+// parseAuthorize reads what a provider's consent URL carries.
+func parseAuthorize(t *testing.T, provider, rawURL string) flow {
+	t.Helper()
+	loc, err := url.Parse(rawURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,11 +88,6 @@ func (r *socialRig) start(t *testing.T, c *client, provider, next string) flow {
 	f := flow{provider: provider, state: q.Get("state"), nonce: q.Get("nonce"), challenge: q.Get("code_challenge"), redirectURI: q.Get("redirect_uri")}
 	if f.state == "" || f.challenge == "" || q.Get("code_challenge_method") != "S256" {
 		t.Fatalf("authorize URL lacks state or S256 PKCE: %s", loc)
-	}
-	for _, ck := range (&http.Response{Header: res.header}).Cookies() {
-		if ck.Name == stateCookie {
-			f.setCookie = ck
-		}
 	}
 	return f
 }

@@ -21,7 +21,7 @@ func (r *delRig) socialSession(age time.Duration) actor.Actor {
 
 func TestPasswordlessOwnerCanDeleteWithAFreshSession(t *testing.T) {
 	r := newDelRig(t)
-	for _, age := range []time.Duration{0, 9*time.Minute + 59*time.Second, FreshSessionWindow} {
+	for _, age := range []time.Duration{0, 9*time.Minute + 59*time.Second, actor.FreshSessionWindow} {
 		r2 := newDelRig(t)
 		if _, err := r2.svc.Request(context.Background(), r2.socialSession(age), "", r2.u.Email); err != nil {
 			t.Fatalf("session %s old: %v", age, err)
@@ -38,7 +38,7 @@ func TestPasswordlessOwnerCanDeleteWithAFreshSession(t *testing.T) {
 }
 
 func TestPasswordlessOwnerWithAStaleSessionMustSignInAgain(t *testing.T) {
-	for name, age := range map[string]time.Duration{"just over the window": FreshSessionWindow + time.Second, "days": 72 * time.Hour} {
+	for name, age := range map[string]time.Duration{"just over the window": actor.FreshSessionWindow + time.Second, "days": 72 * time.Hour} {
 		t.Run(name, func(t *testing.T) {
 			r := newDelRig(t)
 			_, err := r.svc.Request(context.Background(), r.socialSession(age), "", r.u.Email)

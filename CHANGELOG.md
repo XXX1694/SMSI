@@ -6,10 +6,15 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ## [Unreleased]
 
+### Added
+
+- Manage sign-in methods, API side (D-023; the Settings screen comes next). `GET /auth/identities`, `POST /auth/identities/{provider}/link` (returns `authorize_url`; the provider calls the ordinary sign-in callback, which finishes the link and returns to `/settings`), `DELETE /auth/identities/{provider}` (refused with `409` when it is the last way to sign in) and `POST /auth/password/set` for accounts without a password (session younger than 10 minutes, else `403 REAUTH_REQUIRED`). `/me` gains `user.has_password` and `user.login_methods`. Linking and unlinking are audited and mailed to the owner.
+
 ### Changed
 
 - CI is one workflow: `security.yml` is merged into `ci.yml`. A pull request that touches everything runs 9 jobs instead of 19; the scanners (govulncheck, `npm audit`, gitleaks, Trivy, CodeQL) keep their checks and SARIF categories. The new aggregator job **CI ok** is the single check a branch ruleset needs to require; jobs skipped because their paths did not change count as passed. The weekly scan now runs from `ci.yml`.
 - GitHub Pages moved into `ci.yml`: a `site` job builds the demo and the site, checks links and runs the browser smoke test on every pull request that touches `frontend/`, `site/`, `docs/` or the READMEs, so breakage no longer reaches `main`; a `pages` job deploys only after a push to `main`. `pages.yml` and its "is Pages enabled?" gate are gone.
+- The "provider connected" notice mail now says where to undo it (Settings, Sign-in methods) and no longer assumes an automatic link.
 
 ## [0.4.0] - 2026-10-09
 
