@@ -115,7 +115,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 	t.Cleanup(e.srv.Close)
 	if o.startWorker {
 		w := queue.NewServer(a.Redis.Asynq, queue.ServerConfig{Queue: cfg.QueueName, Concurrency: 4, DelayedCheck: 200 * time.Millisecond,
-			RetryDelay: o.retryDelay, Mailer: a.Mailer, Auth: a.Services.Auth, Exports: exportTasksOf(o, a)}, a.Publisher, testutil.Logger())
+			RetryDelay: o.retryDelay, Mailer: a.Mailer, Auth: a.Services.Auth, Exports: exportTasksOf(o, a), Purge: a.Services.Deletion}, a.Publisher, testutil.Logger())
 		if err := w.Start(); err != nil {
 			t.Fatalf("start worker: %v", err)
 		}

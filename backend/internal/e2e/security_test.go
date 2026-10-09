@@ -616,3 +616,46 @@ func TestExportIsTenantScoped(t *testing.T) {
 		}
 	}
 }
+
+// User B can only ever delete B: the request has no user id, the password and typed email must be B's own, and a
+// purge of B leaves A's data alone.
+func TestAccountDeletionIsTenantScoped(t *testing.T) {
+	e, clk := deletionEnv(t, &captureMailer{})
+	alice, bob := e.browser(), e.browser()
+	alice.register("alice@del-scope.test")
+	bobMe := bob.register("bob@del-scope.test")
+	bobID := bobMe["user"].(map[string]any)["id"].(string)
+	alice.connectMock()
+	bob.connectMock()
+
+	// Bob cannot name Alice: her email as confirmation is refused, and nothing is scheduled for either of them.
+	if r := bob.deleteAccount("correct horse battery", "alice@del-scope.test"); r.status != 400 {
+		t.Fatalf("bob confirmed with alice's email: %d %s", r.status, r.body)
+	}
+	if n := e.count(`SELECT count(*) FROM users WHERE deletion_scheduled_at IS NOT NULL`); n != 0 {
+		t.Fatalf("%d accounts scheduled after refused requests", n)
+	}
+	// Bob cannot cancel Alice's deletion: cancel acts on the session user only.
+	if r := alice.deleteAccount("correct horse battery", "alice@del-scope.test"); r.status != 202 {
+		t.Fatalf("alice's request: %d %s", r.status, r.body)
+	}
+	if r := bob.do("POST", "/api/v1/account/delete/cancel", nil); r.status != http.StatusConflict {
+		t.Fatalf("bob cancelling: %d %s", r.status, r.body)
+	}
+	if n := e.count(`SELECT count(*) FROM users WHERE deletion_scheduled_at IS NOT NULL`); n != 1 {
+		t.Fatalf("bob's cancel changed the schedule: %d scheduled", n)
+	}
+	// Purging Alice leaves Bob's account, sessions and data.
+	clk.set(clk.Now().Add(8 * 24 * time.Hour))
+	if n, _ := e.app.Services.Deletion.Sweep(context.Background()); n != 1 {
+		t.Fatalf("sweep queued %d", n)
+	}
+	deadline := time.Now().Add(20 * time.Second)
+	for e.count(`SELECT count(*) FROM users`) != 1 && time.Now().Before(deadline) {
+		time.Sleep(100 * time.Millisecond)
+	}
+	bob.must("GET", "/api/v1/me", nil, 200)
+	if n := e.count(`SELECT count(*) FROM social_accounts WHERE user_id = $1`, bobID); n != 1 {
+		t.Fatalf("bob has %d accounts", n)
+	}
+}

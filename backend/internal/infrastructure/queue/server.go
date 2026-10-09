@@ -34,6 +34,13 @@ type ServerConfig struct {
 	Auth AuthTasks
 	// Exports, when set, makes this worker build data exports.
 	Exports ExportTasks
+	// Purge, when set, makes this worker delete accounts whose grace period is over.
+	Purge PurgeTasks
+}
+
+// PurgeTasks is what the worker needs from the account deletion service.
+type PurgeTasks interface {
+	Purge(ctx context.Context, userID uuid.UUID) error
 }
 
 // ExportTasks is what the worker needs from the export service.
@@ -99,7 +106,7 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 		mux.HandleFunc(TypeAuthForgot, ForgotHandler(cfg.Auth.ProcessForgot))
 	}
 	s := &Server{srv: srv, mux: mux}
-	if cfg.Exports != nil {
+	if cfg.Exports != nil || cfg.Purge != nil {
 		s.exports = asynq.NewServer(redis, asynq.Config{
 			Concurrency: 1, Queues: map[string]int{ExportQueueName(cfg.Queue): 1}, ShutdownTimeout: cfg.ExportShutdownTimeout,
 			Logger: asynqLogger{log: log},
@@ -108,7 +115,13 @@ func NewServer(redis asynq.RedisConnOpt, cfg ServerConfig, pub *scheduler.Publis
 			}),
 		})
 		s.exMux = asynq.NewServeMux()
-		s.exMux.HandleFunc(TypeAccountExport, ExportHandler(cfg.Exports.Build))
+		if cfg.Exports != nil {
+			s.exMux.HandleFunc(TypeAccountExport, ExportHandler(cfg.Exports.Build))
+		}
+		// Purges run on the same maintenance queue, so a long purge never occupies a publishing slot either.
+		if cfg.Purge != nil {
+			s.exMux.HandleFunc(TypeAccountPurge, PurgeHandler(cfg.Purge.Purge))
+		}
 	}
 	return s
 }

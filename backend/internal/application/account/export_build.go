@@ -125,7 +125,7 @@ func writeArchive(ctx context.Context, w io.Writer, d Deps, e *dataexport.Export
 }
 
 func readme(now time.Time) string {
-	return "SocialOS data export, created " + now.UTC().Format(time.RFC3339) + `
+	return "Steerpost data export, created " + now.UTC().Format(time.RFC3339) + `
 
 profile.json          your account (no password hash)
 social_accounts.json  connected networks (no tokens or other credentials)

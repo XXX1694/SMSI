@@ -36,7 +36,7 @@ func (s *Service) AuthenticateSession(ctx context.Context, rawToken string, ci C
 	}
 	a := actor.Actor{
 		UserID: u.ID, Type: actor.TypeUser, ID: u.ID.String(), Label: u.Email,
-		SessionID: sess.ID, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u),
+		SessionID: sess.ID, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u), DeletionScheduled: u.DeletionScheduledAt != nil,
 	}
 	return a, sess.CSRFToken, nil
 }
@@ -67,7 +67,7 @@ func (s *Service) AuthenticateAPIKey(ctx context.Context, raw string, ci ClientI
 	return actor.Actor{
 		UserID: k.UserID, Type: actor.TypeAPIKey, ID: k.ID.String(), Label: k.Name,
 		Scopes: k.Scopes, APIKeyID: k.ID, RequestID: ci.RequestID, IP: ci.IP, EmailVerified: s.verified(u),
-		DangerousPolicy: k.DangerousPolicy,
+		DangerousPolicy: k.DangerousPolicy, DeletionScheduled: u.DeletionScheduledAt != nil,
 	}, nil
 }
 
