@@ -5,7 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('next/navigation', () => ({ usePathname: () => '/dashboard', useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 vi.mock('@/components/auth-provider', () => ({ useAuth: () => ({ user: { email: 'a@b.c', display_name: 'A', email_verified: true }, logout: vi.fn() }) }));
 vi.mock('@/components/approvals/use-pending-approvals', () => ({ usePendingApprovals: () => 3 }));
-vi.mock('@/i18n/locale-provider', async () => ({ ...(await vi.importActual<typeof import('@/i18n/locale-provider')>('@/i18n/locale-provider')), useLocaleSettings: () => ({ available: ['en'] }) }));
+vi.mock('@/i18n/locale-provider', async () => {
+  const { FALLBACK } = await vi.importActual<typeof import('@/i18n/locale-context')>('@/i18n/locale-context');
+  return { ...(await vi.importActual<typeof import('@/i18n/locale-provider')>('@/i18n/locale-provider')), useLocaleSettings: () => ({ ...FALLBACK, available: ['en'] }) };
+});
 vi.mock('@/components/email-banner', () => ({ EmailBanner: () => null }));
 vi.mock('@/components/deletion-banner', () => ({ DeletionBanner: () => null }));
 

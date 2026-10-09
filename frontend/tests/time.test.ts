@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dayKey, formatRelative, isValidTimezone, utcToZonedInputs, zonedDayRangeIso, zonedToUtcIso } from '@/lib/time';
-import { enT } from '@/i18n/en';
+import { enT } from './helpers/en-t';
 
 describe('timezone conversion', () => {
   it('converts Almaty wall time (UTC+5) to UTC', () => {

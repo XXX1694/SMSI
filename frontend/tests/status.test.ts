@@ -11,7 +11,7 @@ import {
   postStatusView,
   targetStatusView,
 } from '@/lib/status';
-import { enT } from '@/i18n/en';
+import { enT } from './helpers/en-t';
 
 describe('state to badge mapping', () => {
   it('maps post statuses', () => {

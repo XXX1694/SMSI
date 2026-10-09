@@ -1,36 +1,17 @@
 'use client';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePrefs } from '@/components/prefs-provider';
+import { FALLBACK_BUNDLES } from '@/i18n/fallback-bundles';
+import { LocaleContext, useLocaleSettings, type LocaleSettings, type ScopeRegistration } from '@/i18n/locale-context';
 import { availableLocales, dirOf, ENABLED_LOCALES, type AppLocale, type Locale } from '@/i18n/locales';
-import { loadMessages } from '@/i18n/messages';
+import { loadBundles } from '@/i18n/messages';
 import type { Catalog } from '@/i18n/pseudo';
 import { LOCALE_STORAGE_KEY, resolveLocale } from '@/i18n/resolve';
 import { loadScriptFont } from '@/i18n/script-fonts';
+import { MessagesScope } from '@/i18n/scope';
 import { readStorage, writeStorage } from '@/lib/storage';
-import en from '@/i18n/en-all';
 
-interface LocaleSettings {
-  locale: AppLocale;
-  setLocale: (l: AppLocale) => void;
-  /** What the language switcher lists. */
-  available: AppLocale[];
-  /** English merged under the active locale, so a missing key falls back to English. */
-  messages: Catalog;
-  timeZone: string;
-}
-
-/**
- * Without a provider (a component rendered on its own in a test, an error boundary above the provider) the UI is English:
- * the same text the app had before it was localized.
- */
-const FALLBACK: LocaleSettings = { locale: 'en', setLocale: () => {}, available: ['en'], messages: en, timeZone: 'UTC' };
-
-const LocaleContext = createContext<LocaleSettings>(FALLBACK);
-
-interface LocaleState {
-  locale: AppLocale;
-  messages: Catalog;
-}
+export { useLocaleSettings };
 
 function applyDocument(locale: string): void {
   document.documentElement.lang = locale;
@@ -39,11 +20,56 @@ function applyDocument(locale: string): void {
 }
 
 /**
+ * The active locale and how to change it: `activate` preloads every registered scope, then sets the locale in a
+ * transition; lang, dir and the end of the head script's hiding are applied in the commit that shows the new text.
+ */
+function useActiveLocale() {
+  const [locale, setActive] = useState<AppLocale>('en');
+  const current = useRef<AppLocale>('en');
+  const seq = useRef(0);
+  const scopes = useRef(new Set<ScopeRegistration>());
+  /** The locale whose document attributes are applied once it has committed. */
+  const applyOnCommit = useRef<AppLocale | null>(null);
+
+  const register = useCallback((scope: ScopeRegistration) => {
+    scopes.current.add(scope);
+    return () => void scopes.current.delete(scope);
+  }, []);
+
+  const activate = useCallback(async (next: AppLocale) => {
+    const mine = ++seq.current;
+    try {
+      // Bundles of every mounted scope and the script face (ar, ja, zh-CN) load before the first frame in that locale.
+      const loads = [...scopes.current].map((s) => loadBundles(next, s.ids, s.english, { retry: true }));
+      const [results] = await Promise.all([Promise.all(loads), loadScriptFont(next)]);
+      if (results.includes(null)) next = 'en'; // a chunk failed (offline, already logged): stay readable
+    } catch {
+      next = 'en';
+    }
+    if (mine !== seq.current) return; // a newer choice won
+    if (next === current.current) return applyDocument(next);
+    current.current = next;
+    applyOnCommit.current = next;
+    startTransition(() => setActive(next));
+  }, []);
+
+  // After the commit: lang, dir and the end of the head script's hiding happen together with the new text.
+  useLayoutEffect(() => {
+    if (applyOnCommit.current !== locale) return;
+    applyOnCommit.current = null;
+    applyDocument(locale);
+  }, [locale]);
+  return { locale, activate, register, current };
+}
+
+/**
  * Client-side locale state, no middleware and no locale routes (D-021), so it behaves the same in the server build and
- * the static demo. English is a static import (a cached JS chunk, not part of every document); other catalogs are lazy
- * chunks merged over it. Routes stay static in both builds: the first render is English and the stored or detected locale
- * swaps in after mount; a head script hides the shell meanwhile (`data-i18n-pending`, at most 1.5 s) only when that locale
- * is not English, so English users see no change and others see no flash of English.
+ * the static demo. The provider holds the locale only; the messages come from `MessagesScope`s below it (English is
+ * imported statically by each scope, other locales are lazy chunks). Routes stay static in both builds: the first render
+ * is English and the stored or detected locale swaps in after mount; a head script hides the shell meanwhile
+ * (`data-i18n-pending`, at most 1.5 s) only when that locale is not English, so English users see no change and others
+ * see no flash of English. A switch preloads every registered scope first, changes the locale in a transition, and shows
+ * the shell again only after that commit.
  */
 export function LocaleProvider({
   children,
@@ -60,31 +86,14 @@ export function LocaleProvider({
   const enabledKey = enabled.join(',');
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content, so an inline array does not re-run the effect
   const stableEnabled = useMemo(() => enabled, [enabledKey]);
-  const [state, setState] = useState<LocaleState>({ locale: 'en', messages: en });
-  const current = useRef(state.locale);
-  const seq = useRef(0);
-
-  const activate = useCallback(async (next: AppLocale) => {
-    const mine = ++seq.current;
-    let messages: Catalog = en;
-    try {
-      // The script face (ar, ja, zh-CN) loads alongside the catalog, so the first frame in that locale has its font rules.
-      [messages] = await Promise.all([loadMessages(next, en), loadScriptFont(next)]);
-    } catch {
-      next = 'en'; // chunk failed to load (offline): stay readable
-    }
-    if (mine !== seq.current) return; // a newer choice won
-    applyDocument(next);
-    current.current = next;
-    setState({ locale: next, messages });
-  }, []);
+  const { locale, activate, register, current } = useActiveLocale();
 
   useEffect(() => {
     const stored = readStorage(LOCALE_STORAGE_KEY);
     const next = resolveLocale({ user: userLocale, stored, languages: navigator.languages }, { enabled: stableEnabled });
     if (next !== current.current) void activate(next);
     else applyDocument(next);
-  }, [activate, userLocale, stableEnabled]);
+  }, [activate, current, userLocale, stableEnabled]);
 
   const setLocale = useCallback(
     (l: AppLocale) => {
@@ -96,13 +105,21 @@ export function LocaleProvider({
     [activate],
   );
 
-  const settings = useMemo(
-    () => ({ locale: state.locale, setLocale, available: availableLocales({ enabled: stableEnabled }), messages: state.messages, timeZone: timezone }),
-    [state, setLocale, timezone, stableEnabled],
+  const settings = useMemo<LocaleSettings>(
+    () => ({
+      locale,
+      setLocale,
+      available: availableLocales({ enabled: stableEnabled }),
+      messages: FALLBACK_BUNDLES as Catalog,
+      english: FALLBACK_BUNDLES as Catalog,
+      timeZone: timezone,
+      register,
+    }),
+    [locale, setLocale, timezone, stableEnabled, register],
   );
-  return <LocaleContext.Provider value={settings}>{children}</LocaleContext.Provider>;
-}
-
-export function useLocaleSettings(): LocaleSettings {
-  return useContext(LocaleContext);
+  return (
+    <LocaleContext.Provider value={settings}>
+      <MessagesScope bundles={FALLBACK_BUNDLES}>{children}</MessagesScope>
+    </LocaleContext.Provider>
+  );
 }

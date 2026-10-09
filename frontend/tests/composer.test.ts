@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { charCount, counterTone, effectiveContent, validateComposer, type ComposerState } from '@/lib/composer';
 import { normalizeProvider } from '@/lib/normalize';
 import type { Media, SocialAccount } from '@/lib/types';
-import { enT } from '@/i18n/en';
+import { enT } from './helpers/en-t';
 
 const providers = [
   normalizeProvider({ provider: 'mock', configured: true, capabilities: { can_publish_text: true, can_publish_image: true, max_text_length: 10, max_media_count: 1 } }),

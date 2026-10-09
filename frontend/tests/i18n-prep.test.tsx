@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { enT } from '@/i18n/en';
+import { enT } from './helpers/en-t';
 import { postPlatforms, providerName } from '@/lib/format';
 import { summaryLines } from '@/lib/approvals';
 import type { Approval, Post } from '@/lib/types';
@@ -9,7 +9,10 @@ const pending = vi.hoisted(() => ({ n: 150 }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/dashboard', useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 vi.mock('@/components/auth-provider', () => ({ useAuth: () => ({ user: { email: 'a@b.c', display_name: 'A', email_verified: true }, logout: vi.fn() }) }));
 vi.mock('@/components/approvals/use-pending-approvals', () => ({ usePendingApprovals: () => pending.n }));
-vi.mock('@/i18n/locale-provider', async () => ({ ...(await vi.importActual<typeof import('@/i18n/locale-provider')>('@/i18n/locale-provider')), useLocaleSettings: () => ({ available: ['en'] }) }));
+vi.mock('@/i18n/locale-provider', async () => {
+  const { FALLBACK } = await vi.importActual<typeof import('@/i18n/locale-context')>('@/i18n/locale-context');
+  return { ...(await vi.importActual<typeof import('@/i18n/locale-provider')>('@/i18n/locale-provider')), useLocaleSettings: () => ({ ...FALLBACK, available: ['en'] }) };
+});
 vi.mock('@/components/email-banner', () => ({ EmailBanner: () => null }));
 
 import { AppShell } from '@/components/app-shell';

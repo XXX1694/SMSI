@@ -6,6 +6,7 @@ import { FocusOnNavigate } from '@/components/focus-on-navigate';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { ToastProvider } from '@/components/toast';
 import { BRAND_HEX } from '@/lib/brand';
+import { LegacyMessagesScope } from '@/i18n/legacy-scope';
 import { LocaleProvider } from '@/i18n/locale-provider';
 import { availableLocales } from '@/i18n/locales';
 import { localeScript } from '@/i18n/head-script';
@@ -42,11 +43,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <PrefsProvider>
           <LocaleProvider>
-            {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
-            <ToastProvider>
-              <AuthProvider>{children}</AuthProvider>
-              <FocusOnNavigate />
-            </ToastProvider>
+            <LegacyMessagesScope>
+              {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
+              <ToastProvider>
+                <AuthProvider>{children}</AuthProvider>
+                <FocusOnNavigate />
+              </ToastProvider>
+            </LegacyMessagesScope>
           </LocaleProvider>
         </PrefsProvider>
       </body>

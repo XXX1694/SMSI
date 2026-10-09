@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { DEMO, DEMO_CHANGE_EVENT } from '@/lib/demo/config';
-import { enT } from '@/i18n/en';
+import { enErrorsT } from '@/i18n/en';
 import { useTranslations } from '@/i18n/use-translations';
 import { describeErrorCode, friendlyMessage } from '@/lib/errors';
 import type { AppT } from '@/i18n/translate';
@@ -33,7 +33,7 @@ export function useAsync<T>(fn: () => Promise<T>): AsyncState<T> {
       },
       (e: unknown) => {
         if (cancelled) return;
-        setError(e instanceof ApiError ? e : new ApiError(0, 'UNKNOWN', describeErrorCode('UNKNOWN', enT)));
+        setError(e instanceof ApiError ? e : new ApiError(0, 'UNKNOWN', describeErrorCode('UNKNOWN', enErrorsT)));
         setLoading(false);
       },
     );
