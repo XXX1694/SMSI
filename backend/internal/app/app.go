@@ -27,6 +27,7 @@ import (
 	"github.com/socialos/backend/internal/application/media"
 	"github.com/socialos/backend/internal/application/port"
 	"github.com/socialos/backend/internal/application/posts"
+	"github.com/socialos/backend/internal/application/quota"
 	"github.com/socialos/backend/internal/application/scheduler"
 	"github.com/socialos/backend/internal/config"
 	"github.com/socialos/backend/internal/infrastructure/clock"
@@ -182,18 +183,19 @@ func (a *App) wire(cfg *config.Config, log *slog.Logger, ov Overrides) error {
 	if err != nil {
 		return fmt.Errorf("approval fingerprint key: %w", err)
 	}
+	quotaSvc := quota.NewService(postgres.NewQuota(db), cfg.QuotaLimits(), clk)
 	accountSvc := accounts.NewService(accounts.Deps{Repo: accountRepo, States: postgres.NewOAuthStates(db), Links: postgres.NewLinkCodes(db),
 		Log: log, Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Enc: enc, RedirectBaseURL: cfg.APIPublicURL,
 		Gate: verifiedOwners{users: postgres.NewUsers(db), enforce: requireVerification(cfg)}, Approvals: approvalSvc,
-		FingerprintKey: fingerprintKey})
+		FingerprintKey: fingerprintKey, Quota: quotaSvc})
 	analyticsSvc := analytics.NewService(analyticsRepo, clk)
 	a.Services = transport.Services{
-		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc, Approvals: approvalSvc,
+		Auth: authSvc, Accounts: accountSvc, Audit: auditSvc, Analytics: analyticsSvc, Approvals: approvalSvc, Quota: quotaSvc,
 		Posts: posts.NewService(posts.Deps{Repo: postRepo, Jobs: jobRepo, Queue: a.Queue, Accounts: accountRepo, Media: mediaRepo,
-			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc,
+			Registry: a.Registry, Tx: db, Audit: auditSvc, Clock: clk, Log: log, Gate: approvalSvc, Quota: quotaSvc,
 			MinAgentLead: cfg.AgentMinScheduleLead, NoAgentLead: cfg.AgentMinScheduleLead == 0}),
 		Media: media.NewService(mediaRepo, a.Storage, auditSvc, clk,
-			media.WithUploadLimit(cfg.MediaUploadConcurrency, media.DefaultUploadWait)),
+			media.WithUploadLimit(cfg.MediaUploadConcurrency, media.DefaultUploadWait)).WithQuota(quotaSvc, db),
 		Developer: developer.NewService(developer.Deps{Keys: keyRepo, Connections: postgres.NewMCPConnections(db), Usage: auditRepo,
 			Tx: db, Audit: auditSvc, Clock: clk, MCPPublicURL: cfg.MCPPublicURL, APIPublicURL: cfg.APIPublicURL}),
 	}

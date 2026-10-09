@@ -29,6 +29,7 @@ type Service struct {
 	redirectBaseURL string
 	gate            OwnerGate
 	approvals       port.ApprovalGate
+	quota           port.QuotaGate
 	fingerprintKey  []byte
 }
 
@@ -49,6 +50,8 @@ type Deps struct {
 	Gate OwnerGate
 	// Approvals asks the owner to approve dangerous actions of API keys; nil refuses them (fail closed).
 	Approvals port.ApprovalGate
+	// Quota limits connected accounts; nil enforces nothing.
+	Quota port.QuotaGate
 	// FingerprintKey keys the fingerprint of a token-connect approval (an HKDF subkey of ENCRYPTION_KEY), so the stored
 	// value cannot be used to test guesses of the credential. Empty: a random per-process key (approvals then do not
 	// survive a restart).
@@ -64,12 +67,15 @@ func NewService(d Deps) *Service {
 	if d.Approvals == nil {
 		d.Approvals = port.FailClosedGate{}
 	}
+	if d.Quota == nil {
+		d.Quota = port.NoQuota{}
+	}
 	if len(d.FingerprintKey) == 0 {
 		d.FingerprintKey = make([]byte, 32)
 		_, _ = rand.Read(d.FingerprintKey) // crypto/rand.Read never fails on supported platforms
 	}
 	return &Service{repo: d.Repo, states: d.States, links: d.Links, log: log, vault: NewVault(d.Repo, d.Enc), registry: d.Registry,
-		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL, gate: d.Gate, approvals: d.Approvals, fingerprintKey: d.FingerprintKey}
+		tx: d.Tx, audit: d.Audit, clock: d.Clock, enc: d.Enc, redirectBaseURL: d.RedirectBaseURL, gate: d.Gate, approvals: d.Approvals, quota: d.Quota, fingerprintKey: d.FingerprintKey}
 }
 
 // Vault exposes credential storage to other use cases (scheduler).
@@ -156,6 +162,10 @@ func (s *Service) connectAccount(ctx context.Context, a actor.Actor, acc *social
 		}
 	}
 	return s.tx.InTx(ctx, func(ctx context.Context) error {
+		// Under the user's quota lock, so two connections racing for the last slot cannot both pass.
+		if err := s.quota.EnforceAccount(ctx, acc.UserID, acc.Provider, acc.ProviderAccountID); err != nil {
+			return err
+		}
 		if err := s.repo.Upsert(ctx, acc); err != nil {
 			return err
 		}

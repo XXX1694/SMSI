@@ -71,6 +71,7 @@ func newHarness(t *testing.T, o opts) *harness {
 		APIPublicURL:  "http://" + h.srv.Listener.Addr().String(), WebBaseURL: "http://web.test", MCPPublicURL: "http://mcp.test/mcp",
 		CORSOrigins: []string{"http://web.test"}, SessionTTL: time.Hour, MockProviders: true, StorageDriver: "memory",
 		RateLimitRPS: 1000, RateLimitBurst: 1000, AuthRateRPS: 1000, AuthRateBurst: 1000, LinkedInVersion: "202606",
+		QuotaConfig: config.QuotaConfig{QuotaAccounts: -1, QuotaPostsPerMonth: -1, QuotaMediaMB: -1},
 	}
 	if o.tune != nil {
 		o.tune(cfg)

@@ -58,6 +58,8 @@ type envOpts struct {
 	mailer port.Mailer
 	// logger replaces the discarding test logger (e.g. to assert nothing sensitive is logged).
 	logger *slog.Logger
+	// clock replaces the system clock (tests that cross a month boundary).
+	clock port.Clock
 	// realMailLimit keeps the production mail-endpoint limiter; by default tests get a permissive one.
 	realMailLimit bool
 }
@@ -81,6 +83,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 		CORSOrigins: []string{"http://web.test"}, SessionTTL: time.Hour, MockProviders: true,
 		RateLimitRPS: 1000, RateLimitBurst: 1000, AuthRateRPS: 1000, AuthRateBurst: 1000, StorageDriver: "memory",
 		ApprovalConfig: config.ApprovalConfig{AgentMinScheduleLead: 5 * time.Minute, ApprovalTTL: 10 * time.Minute, ApprovalMaxPending: 10},
+		QuotaConfig:    config.QuotaConfig{QuotaAccounts: -1, QuotaPostsPerMonth: -1, QuotaMediaMB: -1}, // tests opt in to limits
 		TelegramToken:  "", LinkedInVersion: "202606", MetricsToken: o.metricsToken,
 	}
 	if o.rateBurst > 0 {
@@ -94,7 +97,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 		log = o.logger
 	}
 	a, err := app.Build(context.Background(), cfg, log, app.Overrides{
-		Storage: store, Providers: o.providers, Mailer: o.mailer,
+		Storage: store, Providers: o.providers, Mailer: o.mailer, Clock: o.clock,
 		Hasher: crypto.NewPasswordHasher(crypto.Argon2Params{Memory: 1024, Time: 1, Threads: 1, KeyLen: 32, SaltLen: 16}, 2, 0),
 	})
 	if err != nil {

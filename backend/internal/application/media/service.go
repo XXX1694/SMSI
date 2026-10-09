@@ -50,6 +50,8 @@ type Service struct {
 	storage Storage
 	audit   port.AuditRecorder
 	clock   port.Clock
+	quota   port.QuotaGate
+	tx      port.TxRunner
 	slots   chan struct{} // bounds concurrent uploads (D-015)
 	mu      sync.Mutex
 	active  map[uuid.UUID]struct{} // users with an upload in flight: one each, so one user cannot hold every slot
@@ -65,6 +67,26 @@ func NewService(repo Repo, storage Storage, audit port.AuditRecorder, clock port
 		o(s)
 	}
 	return s
+}
+
+// WithQuota makes uploads count against the storage limit. tx must be the runner that backs the quota gate.
+func (s *Service) WithQuota(q port.QuotaGate, tx port.TxRunner) *Service {
+	s.quota, s.tx = q, tx
+	return s
+}
+
+// createCounted inserts the row. With a quota gate, the check (with the streamed byte count) and the insert run in one
+// transaction under the user's lock, so concurrent uploads cannot overshoot the limit together.
+func (s *Service) createCounted(ctx context.Context, m *domain.Media) error {
+	if s.quota == nil || s.tx == nil {
+		return s.repo.Create(ctx, m)
+	}
+	return s.tx.InTx(ctx, func(ctx context.Context) error {
+		if err := s.quota.EnforceMedia(ctx, m.UserID, m.SizeBytes); err != nil {
+			return err
+		}
+		return s.repo.Create(ctx, m)
+	})
 }
 
 // Storage returns the storage port (used by the publisher to stream bytes).

@@ -25,6 +25,7 @@ type Service struct {
 	audit    port.AuditRecorder
 	clock    port.Clock
 	gate     port.ApprovalGate
+	quota    port.QuotaGate
 	log      *slog.Logger
 	// minAgentLead is how far ahead an API key may schedule without approval.
 	minAgentLead time.Duration
@@ -43,6 +44,8 @@ type Deps struct {
 	Clock    port.Clock
 	// Gate asks the owner to approve dangerous actions of API keys; nil refuses them (fail closed).
 	Gate port.ApprovalGate
+	// Quota counts posts against the monthly limit; nil enforces nothing.
+	Quota port.QuotaGate
 	// MinAgentLead is how far ahead a key may schedule without approval (DefaultMinAgentLead when 0).
 	MinAgentLead time.Duration
 	// NoAgentLead switches the lead rule off (AGENT_MIN_SCHEDULE_LEAD=0).
@@ -58,6 +61,9 @@ func NewService(d Deps) *Service {
 	if d.Gate == nil {
 		d.Gate = port.FailClosedGate{}
 	}
+	if d.Quota == nil {
+		d.Quota = port.NoQuota{}
+	}
 	lead := d.MinAgentLead
 	if lead <= 0 {
 		lead = DefaultMinAgentLead
@@ -66,7 +72,7 @@ func NewService(d Deps) *Service {
 		lead = 0
 	}
 	return &Service{repo: d.Repo, jobs: d.Jobs, queue: d.Queue, accounts: d.Accounts, media: d.Media,
-		registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, gate: d.Gate, minAgentLead: lead, log: d.Log}
+		registry: d.Registry, tx: d.Tx, audit: d.Audit, clock: d.Clock, gate: d.Gate, quota: d.Quota, minAgentLead: lead, log: d.Log}
 }
 
 // Detail is a post with its publication attempts.

@@ -103,7 +103,7 @@ func (s *Service) Upload(ctx context.Context, a actor.Actor, in UploadInput) (*W
 		return nil, errs.Wrap(errs.Internal, "storage upload failed", err)
 	}
 	m.SizeBytes, m.SHA256 = g.n, hex.EncodeToString(g.sum.Sum(nil))
-	if err := s.repo.Create(ctx, m); err != nil {
+	if err := s.createCounted(ctx, m); err != nil {
 		_ = s.storage.Delete(context.WithoutCancel(ctx), m.StorageKey)
 		return nil, err
 	}
