@@ -38,7 +38,7 @@ most half of the machine. Updates can be pushed from GitHub (section 8) or pulle
 | `backup.sh`, `restore-test.sh` | `pg_dump` (+ media archive, optional encrypted off-site copy) with retention, and the restore drill; `systemd/socialos-backup.*` schedule them (section 9) |
 
 Images are built by `.github/workflows/release.yml` and published as `ghcr.io/<owner>/socialos-{backend,mcp,frontend}`.
-Tags: `sha-<7 hex>` (every merge to `main`, immutable, what you deploy), `main` (moves), `X.Y.Z` / `X.Y` / `X` for `vX.Y.Z` git tags.
+Tags: `sha-<7 hex>` (every merge to `main`, immutable, what you deploy), `main` (moves), `X.Y.Z` / `X.Y` / `X` for `vX.Y.Z` git tags (a tag build pushes no `sha-` tag, so a `sha-` tag never changes its digest).
 
 ## 1. DNS records
 

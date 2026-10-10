@@ -107,8 +107,12 @@ for url in $urls; do
 done
 
 # Which build answered, for the run log only: a backend without /version (0.4.0 and older) must not fail the probe.
+# Only the three parsed fields are printed, never the raw body, and each is cut to version-like characters (no newline
+# can start a line): whatever answers that URL could otherwise inject workflow commands (::stop-commands::) into the log.
 if [ -n "${API_PUBLIC_URL:-}" ]; then
-  version="$(curl -fsS -m "$timeout_s" "${API_PUBLIC_URL%/}/version" 2>/dev/null || true)"
+  version="$(curl -fsS -m "$timeout_s" --max-filesize 2048 "${API_PUBLIC_URL%/}/version" 2>/dev/null |
+    jq -r '[.version, .commit, .built_at] | map(tostring | gsub("[^0-9A-Za-z._:+-]"; "")) | join(" ")' 2>/dev/null ||
+    true)"
   echo "Version: ${version:-unknown}"
 fi
 exit "$failed"

@@ -5,7 +5,7 @@ name: Release
 # and, from the same build and with the same tags and digest, steerpost-backend | steerpost-mcp | steerpost-frontend (D-020).
 #
 #   * every commit on main whose CI run succeeded  ->  sha-<7 hex> and main
-#   * a tag vX.Y.Z (or vX.Y.Z-rc.1)                ->  sha-<7 hex>, X.Y.Z, X.Y (and X from 1.0 on)
+#   * a tag vX.Y.Z (or vX.Y.Z-rc.1)                ->  X.Y.Z, X.Y (and X from 1.0 on); no sha tag, so it stays immutable
 #   * manual run (Run workflow)                    ->  rebuild a ref, e.g. after changing the frontend URL variables
 #
 # After a successful main release the Deploy workflow is started (skipped unless the DEPLOY_* secrets exist).
@@ -96,7 +96,10 @@ jobs:
           short="${sha:0:7}"
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           repo="ghcr.io/${owner}/socialos-${IMAGE}"
-          tags=("${repo}:sha-${short}")
+          # sha-<7 hex> is immutable (what deploys pin), so only the main/manual build of a commit pushes it. A tag build is a
+          # second build of that commit with another digest (other VERSION and BUILT_AT), so it pushes only version tags.
+          tags=()
+          if [ "$REF_TYPE" != tag ]; then tags+=("${repo}:sha-${short}"); fi
           version=""
 
           # "main" must follow the tip of main. A slower CI run for an older commit must not move it backwards.
@@ -124,7 +127,8 @@ jobs:
                 if [ "$major" != 0 ]; then tags+=("${repo}:${major}"); fi
               fi
             else
-              echo "::warning title=Not a semver tag::${REF_NAME} does not look like vMAJOR.MINOR.PATCH; only the sha tag is pushed."
+              echo "::error title=Not a semver tag::${REF_NAME} does not look like vMAJOR.MINOR.PATCH[-pre]; nothing is pushed."
+              exit 1
             fi
           fi
 
