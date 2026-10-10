@@ -84,15 +84,21 @@ describe('every route loads the namespaces its components use', () => {
   it('loads the namespaces of the demo banner inside DemoScope, the only place it renders', () => {
     const banner = [...usedNamespaces(DEMO_BANNER).keys()].filter((ns) => !['common', 'errors'].includes(ns));
     expect(namespacesOfScope(DEMO_SCOPE)).toEqual(expect.arrayContaining(banner));
+    const scoped = fs.readFileSync(path.resolve(__dirname, '../src/components/demo-banner-scoped.tsx'), 'utf8');
+    expect(scoped).toMatch(/<DemoScope>\s*<DemoBanner \/>\s*<\/DemoScope>/);
+    // The slot imports it only when the build-time demo flag is on, so the normal build ships neither banner nor `shell`.
+    const slot = fs.readFileSync(path.resolve(__dirname, '../src/components/demo-banner-slot.tsx'), 'utf8');
+    expect(slot).toMatch(/process\.env\.NEXT_PUBLIC_DEMO === 'true' \? dynamic\(\(\) => import\('@\/components\/demo-banner-scoped'\)\)/);
     const layout = fs.readFileSync(path.resolve(__dirname, '../src/app/layout.tsx'), 'utf8');
-    expect(layout).toMatch(/<DemoScope>\s*<DemoBanner \/>\s*<\/DemoScope>/);
+    expect(layout).toMatch(/<DemoBannerSlot \/>/);
   });
 
   it('keeps the root to the namespaces every route needs', () => {
     expect(namespacesOfScope('i18n/scopes/core.tsx')).toEqual(['common', 'errors']);
     expect(scopesImportedBy('i18n/i18n-root.tsx')).toEqual(['i18n/scopes/core.tsx']);
     // The demo banner is the one root-level component with its own namespace, rendered in the demo build only.
-    expect(scopesImportedBy('app/layout.tsx')).toEqual(['i18n/scopes/demo.tsx']);
+    expect(scopesImportedBy('app/layout.tsx')).toEqual([]);
+    expect(scopesImportedBy('components/demo-banner-scoped.tsx')).toEqual(['i18n/scopes/demo.tsx']);
   });
 });
 
