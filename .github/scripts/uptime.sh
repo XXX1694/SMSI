@@ -105,4 +105,10 @@ for url in $urls; do
     fi
   fi
 done
+
+# Which build answered, for the run log only: a backend without /version (0.4.0 and older) must not fail the probe.
+if [ -n "${API_PUBLIC_URL:-}" ]; then
+  version="$(curl -fsS -m "$timeout_s" "${API_PUBLIC_URL%/}/version" 2>/dev/null || true)"
+  echo "Version: ${version:-unknown}"
+fi
 exit "$failed"

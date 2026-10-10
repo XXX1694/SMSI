@@ -137,6 +137,7 @@ jobs:
             echo "sha=${sha}"
             echo "short=${short}"
             echo "version=${version:-sha-${short}}"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "tags<<EOF"
             printf '%s\n' "${tags[@]}"
             echo "EOF"
@@ -168,7 +169,12 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          build-args: ${{ matrix.build_args }}
+          # VERSION, COMMIT and BUILT_AT become GET /version of the backend (internal/buildinfo); the other images ignore them.
+          build-args: |
+            ${{ matrix.build_args }}
+            VERSION=${{ steps.meta.outputs.version }}
+            COMMIT=${{ steps.meta.outputs.short }}
+            BUILT_AT=${{ steps.meta.outputs.built_at }}
           labels: |
             org.opencontainers.image.title=socialos-${{ matrix.image }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}

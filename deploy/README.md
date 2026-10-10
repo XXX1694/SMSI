@@ -360,6 +360,8 @@ certificate expires in under 14 days.
   `/login`) and `${MCP_PUBLIC_URL%/mcp}/health`, all from repository variables (section 3). To watch other URLs set the
   repository variable `UPTIME_URLS` to a space-separated list; it replaces the defaults. With neither variable set the run
   is skipped with a notice.
+- **Version**: with `API_PUBLIC_URL` set, each run also prints the deployed backend version (`/version`) to its log; a
+  failure to read it never fails the run.
 - **Delays**: GitHub may delay or drop scheduled runs under load, so 15 minutes is a target, not a guarantee. On
   2026-10-09 the cron stopped running after 02:30 UTC, so an outage that night would have gone unnoticed. Scheduled
   workflows are best-effort; treat this one as a convenience and add an **external monitor** that does not depend on GitHub.
@@ -636,6 +638,10 @@ A release is a git tag `vX.Y.Z` on `main`. Everything after the tag is automatic
 5. **Servers with pull-based updates (section 14) deploy it** within about 5 minutes: `releases/latest` now names the tag, the images
    exist, the version is newer than the deployed one. Servers without the timer deploy it by hand (`./deploy.sh X.Y.Z`) or through
    `deploy.yml` (section 8).
+6. **Check what runs**, without SSH: `curl https://api.<domain>/api/v1/version` answers
+   `{"version":"X.Y.Z","commit":"<7 hex>","built_at":"<RFC3339>"}`. A build of `main` reports `sha-<7 hex>` as its version. The
+   values are linked into the backend binary from the `VERSION`, `COMMIT` and `BUILT_AT` build arguments that `release.yml`
+   passes; an image built without them (for example `docker compose build` locally) reports `dev` and `unknown`.
 
 If the Release workflow fails on the CHANGELOG check, fix the changelog on `main`, then move the tag to the fixed commit
 (`git tag -f vX.Y.Z <sha> && git push -f origin vX.Y.Z`; an administrator can do that despite the protection) or delete the tag and

@@ -299,7 +299,7 @@ An API-key request that carries `X-MCP-Tool: <tool_name>` (must match `^[a-z_]{1
 Env: `MCP_GATEWAY_SECRET` (backend and mcp share it; min 32 chars, empty = disabled; `deploy/init-env.sh` generates it). The usage counters (`GET /developer/usage`) count both `api_key.request` and `mcp.tool_call`.
 
 ### Ops
-`GET /health` (liveness) · `GET /ready` (Postgres + Redis + S3) · `GET /metrics` (Prometheus text, basic counters, optionally token-protected)
+`GET /health` (liveness) · `GET /ready` (Postgres + Redis + S3) · `GET /metrics` (Prometheus text, basic counters, optionally token-protected) · `GET /version` (unauthenticated, `Cache-Control: public, max-age=60`: `{"version","commit","built_at"}`; release images get the tag version, or `sha-<7 hex>` for a main build, the short commit and the build time at link time from `release.yml`; a local build falls back to the Go VCS stamp, then `dev` / `unknown`. Nothing host- or toolchain-specific is exposed)
 
 ### Scopes
 `social:read` (accounts, providers) · `posts:read` · `posts:write` (create/update drafts, cancel) · `posts:schedule` · `posts:publish` (**sensitive**) · `posts:delete` (**sensitive**) · `social:disconnect` (**critical**) · `social:connect` (**critical**, hands a network credential to Steerpost) · `media:write` · `analytics:read`.

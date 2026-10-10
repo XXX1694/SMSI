@@ -121,6 +121,9 @@ func TestEndpointContract(t *testing.T) {
 				t.Errorf("%s: %d %s", p, r.status, r.body)
 			}
 		}
+		if r := c.do("GET", "/api/v1/version", nil); r.status != 200 || r.json(t)["version"] == nil || r.json(t)["commit"] == nil {
+			t.Errorf("/api/v1/version: %d %s", r.status, r.body)
+		}
 		r := c.do("GET", "/metrics", nil)
 		if r.status != 200 || !strings.Contains(string(r.body), "socialos_http_requests_total") || !strings.Contains(string(r.body), `status="200"`) {
 			t.Errorf("metrics: %d %.200s", r.status, r.body)

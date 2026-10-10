@@ -30,11 +30,19 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 COPY . .
 ENV CGO_ENABLED=0
+# Build identity for GET /version (internal/buildinfo). release.yml passes the tag version (or sha-<7 hex> for main), the
+# short commit and the build time; empty values fall back to "dev"/"unknown". Declared after the dependency layers, so a
+# new commit only re-runs the compile step.
+ARG VERSION=""
+ARG COMMIT=""
+ARG BUILT_AT=""
 RUN --mount=type=cache,target=/root/.cache/go-build \
     set -eu; \
     export GOOS="${TARGETOS}" GOARCH="${TARGETARCH:-$(go env GOARCH)}"; \
+    pkg=github.com/socialos/backend/internal/buildinfo; \
+    ldflags="-s -w -X ${pkg}.version=${VERSION} -X ${pkg}.commit=${COMMIT} -X ${pkg}.builtAt=${BUILT_AT}"; \
     for cmd in api worker migrate telegram; do \
-      go build -trimpath -ldflags="-s -w" -o "/out/${cmd}" "./cmd/${cmd}"; \
+      go build -trimpath -ldflags="${ldflags}" -o "/out/${cmd}" "./cmd/${cmd}"; \
     done
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS runtime

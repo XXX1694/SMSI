@@ -12,6 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/socialos/backend/internal/buildinfo"
 	"github.com/socialos/backend/internal/domain/errs"
 	"github.com/socialos/backend/internal/infrastructure/crypto"
 	"github.com/socialos/backend/internal/transport/httpx"
@@ -25,6 +26,13 @@ type ReadyCheck struct {
 
 func (a *API) health(w http.ResponseWriter, _ *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// version reports the running build (tag version, short commit, build time). It is public and constant for the life of
+// the process, so it may be cached briefly; the short max-age keeps a fresh deploy visible within a minute.
+func (a *API) version(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=60")
+	httpx.JSON(w, http.StatusOK, buildinfo.Get())
 }
 
 // ready probes every dependency. Per-check status is "ok" or "unavailable";
