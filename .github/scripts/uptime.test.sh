@@ -12,7 +12,13 @@ cat >"$work/bin/gh" <<'STUB'
 #!/usr/bin/env bash
 echo "gh $*" >>"$STUB_DIR/calls.log"
 case "$1 $2" in
-  "issue list") [ -s "$STUB_DIR/issue" ] && { IFS='|' read -r n t c <"$STUB_DIR/issue"; echo "$n $c"; } || true ;;
+  "issue list")
+    if [ -s "$STUB_DIR/issue" ]; then
+      IFS='|' read -r n t c <"$STUB_DIR/issue"
+      jq -n --argjson n "$n" --arg t "$t" --arg c "$c" '[{number: $n, title: $t, createdAt: $c}]'
+    else
+      echo '[]'
+    fi ;;
   "issue create") echo "42|$(printf '%s\n' "$@" | sed -n '/^--title$/{n;p;}')|2020-01-01T00:00:00Z" >"$STUB_DIR/issue" ;;
   "issue close") : >"$STUB_DIR/issue" ;;
 esac
@@ -62,6 +68,15 @@ expect "recovery: commented" "$(count 'issue comment')" 1
 grep -q 'recovered after' "$work/calls.log" && r=yes || r=no
 expect "recovery: says recovered after" "$r" yes
 expect "recovery: closed" "$(count 'issue close')" 1
+
+# A URL with a quote, a backslash and glob characters: one target, and the second failure finds the open issue.
+odd="http://127.0.0.1:$port/miss\"ing\\?a=*"
+: >"$work/issue"
+: >"$work/calls.log"
+run "$odd" >/dev/null
+run "$odd" >/dev/null
+expect "odd url: still one issue" "$(count 'issue create')" 1
+expect "odd url: second failure commented" "$(count 'issue comment')" 1
 
 # Inside Actions: the run is linked and the job summary gets a table.
 : >"$work/issue"

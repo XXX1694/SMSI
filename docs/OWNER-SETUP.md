@@ -372,7 +372,9 @@ nothing here adds it. The same applies to the GitHub workflow (`UPTIME_URLS`, se
 1. Open the URL from the alert; `curl -s https://api.194-238-43-194.sslip.io/api/v1/ready` shows which dependency failed.
 2. Run the GitHub probe right away for an issue with the HTTP codes: **Actions > Uptime > Run workflow** (or
    `gh workflow run uptime.yml`, or `gh api repos/XXX1694/steerpost/dispatches -f event_type=uptime-check`). It opens or
-   comments on an `incident` + `uptime` issue and closes it with "recovered after ..." once the URL is back.
+   comments on an `incident` + `uptime` issue and closes it with "recovered after ..." once the URL is back. Run these
+   from your own machine only: they need a token with push access, which must never be given to UptimeRobot or any other
+   third-party monitor.
 3. On the server: [deploy/README.md](../deploy/README.md), section 12 (troubleshooting).
 
 ## Sources (read 2026-10-09)

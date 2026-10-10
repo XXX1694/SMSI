@@ -11,8 +11,10 @@ on:
         description: "Space-separated URLs to probe instead of the defaults (empty: UPTIME_URLS or the derived targets)"
         required: false
         default: ""
-  # Lets an external monitor or a script trigger an immediate probe:
+  # Immediate probe for repository writers and their local scripts only:
   # gh api repos/{owner}/{repo}/dispatches -f event_type=uptime-check
+  # The call needs a token with Contents: write (push access). Never give such a token to UptimeRobot or any other
+  # third-party monitor.
   repository_dispatch:
     types: [uptime-check]
 

@@ -72,9 +72,10 @@ human() { # seconds -> "1h 5m"
 }
 
 open_issue() { # title -> "number createdAt" or empty
-  gh issue list --state open --label incident --search "in:title \"$1\"" \
-    --json number,title,createdAt \
-    --jq "[.[] | select(.title == \"$1\")] | .[0] | select(. != null) | \"\(.number) \(.createdAt)\""
+  # The title goes to jq as data (--arg), never into the filter or a search query: a URL with " or \ must still match
+  # its open issue, otherwise every run would open a duplicate.
+  gh issue list --state open --label incident --limit 100 --json number,title,createdAt |
+    jq -r --arg t "$1" 'map(select(.title == $t)) | .[0] | select(. != null) | "\(.number) \(.createdAt)"'
 }
 
 run_link() {
@@ -97,7 +98,9 @@ fi
 failed=0
 summary "| Target | Result | HTTP |"
 summary "|---|---|---|"
-for url in $urls; do
+# read -ra splits on whitespace without glob expansion, so a URL with ? or * stays one literal target.
+read -ra targets <<<"$urls"
+for url in "${targets[@]}"; do
   title="Uptime: $url is down"
   existing="$(open_issue "$title")"
   if probe "$url"; then

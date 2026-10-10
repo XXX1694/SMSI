@@ -371,7 +371,8 @@ lists every target with its HTTP code.
   keywords, is [OWNER-SETUP](../docs/OWNER-SETUP.md), section 6.
 - **On demand**: run the workflow from the Actions tab (`workflow_dispatch`, optionally with its own `urls`), with
   `gh workflow run uptime.yml`, or with a `repository_dispatch` of type `uptime-check`
-  (`gh api repos/<owner>/<repo>/dispatches -f event_type=uptime-check`).
+  (`gh api repos/<owner>/<repo>/dispatches -f event_type=uptime-check`). Dispatch is for repository writers and their
+  local scripts: it needs a token with push access, so never hand one to a third-party monitor.
 
 ## 12. Troubleshooting
 
