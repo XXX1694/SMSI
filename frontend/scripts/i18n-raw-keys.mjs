@@ -20,8 +20,6 @@ const KEYS = NAMESPACES.flatMap((ns) => flatten(JSON.parse(readFileSync(new URL(
 /** Signed-in routes (the post detail is reached from the list, so the id comes from the data). */
 export const APP_ROUTES = ['/dashboard', '/compose', '/posts', '/calendar', '/media', '/analytics', '/accounts', '/approvals', '/developer', '/developer/mcp', '/settings'];
 export const AUTH_ROUTES = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/signup/complete'];
-/** An unknown URL renders app/not-found.tsx (root scope only). */
-export const NOT_FOUND_ROUTES = ['/this-page-does-not-exist'];
 export const LOCALES = ['en', 'ru'];
 
 /** Tokens of the page's visible text and text attributes that are catalog keys, or look like `namespace.camelCase.path`. */
