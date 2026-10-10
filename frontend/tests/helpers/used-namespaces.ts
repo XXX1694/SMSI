@@ -133,7 +133,7 @@ function add(used: Used, namespaces: Set<string>, file: string) {
 /**
  * The namespaces needed by `entry` (a path under src/) and everything it imports, each with the files that ask for it.
  */
-export function usedNamespaces(entry: string): Used {
+export function usedNamespaces(entry: string, exclude: string[] = []): Used {
   const used: Used = new Map();
   const done = new Set<string>();
   const queue: [string, string[]][] = [[path.join(SRC, entry), [ALL]]];
@@ -144,6 +144,7 @@ export function usedNamespaces(entry: string): Used {
     done.add(key);
     // The demo backend is English seed data and audit event names (allow-listed for i18n:literals), not UI text.
     if (path.relative(SRC, file).startsWith(`lib${path.sep}demo${path.sep}`)) continue;
+    if (exclude.includes(path.relative(SRC, file).split(path.sep).join('/'))) continue;
     const text = stripComments(fs.readFileSync(file, 'utf8'));
     const imports = parseImports(file, text);
     if (!isDeclarationModule(file) || names.includes(ALL)) {

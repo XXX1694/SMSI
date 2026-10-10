@@ -37,15 +37,19 @@ const PAGES = filesNamed(APP_DIR, 'page.tsx')
   .map(rel)
   .filter((p) => p !== 'app/page.tsx'); // the redirect to /dashboard renders nothing
 
+const DEMO_SCOPE = 'i18n/scopes/demo.tsx';
+const DEMO_BANNER = 'components/demo-banner.tsx';
+
+/** The demo scope exists in the demo build only, so it never counts as loaded for a route. */
 function loadedNamespaces(chain: string[]): Set<string> {
-  const scopes = ['i18n/i18n-root.tsx', ...chain].flatMap(scopesImportedBy);
+  const scopes = ['i18n/i18n-root.tsx', ...chain].flatMap(scopesImportedBy).filter((s) => s !== DEMO_SCOPE);
   return new Set(scopes.flatMap(namespacesOfScope));
 }
 
 function usedAlong(chain: string[]): Map<string, Set<string>> {
   const used = new Map<string, Set<string>>();
   for (const file of chain) {
-    for (const [ns, files] of usedNamespaces(file)) used.set(ns, new Set([...(used.get(ns) ?? []), ...files]));
+    for (const [ns, files] of usedNamespaces(file, [DEMO_BANNER])) used.set(ns, new Set([...(used.get(ns) ?? []), ...files]));
   }
   return used;
 }
@@ -75,6 +79,13 @@ describe('every route loads the namespaces its components use', () => {
       own.filter((ns) => !used.has(ns)),
       `${page} loads namespaces that no component on it uses`,
     ).toEqual([]);
+  });
+
+  it('loads the namespaces of the demo banner inside DemoScope, the only place it renders', () => {
+    const banner = [...usedNamespaces(DEMO_BANNER).keys()].filter((ns) => !['common', 'errors'].includes(ns));
+    expect(namespacesOfScope(DEMO_SCOPE)).toEqual(expect.arrayContaining(banner));
+    const layout = fs.readFileSync(path.resolve(__dirname, '../src/app/layout.tsx'), 'utf8');
+    expect(layout).toMatch(/<DemoScope>\s*<DemoBanner \/>\s*<\/DemoScope>/);
   });
 
   it('keeps the root to the namespaces every route needs', () => {

@@ -65,8 +65,8 @@ function useActiveLocale() {
  * `I18nRoot`, not this alone. Each scope imports its English statically; other locales are lazy chunks. Routes stay
  * static in both builds: the first render is English and the stored or detected locale swaps in after mount; a head
  * script hides the shell meanwhile (`data-i18n-pending`, at most 1.5 s) only when that locale is not English, so English
- * users see no change and others see no flash of English. A switch preloads every registered scope first, changes the locale in a transition, and shows
- * the shell again only after that commit.
+ * users see no change and others see no flash of English. A switch preloads every registered scope first, changes the
+ * locale in a transition, and shows the shell again only after that commit.
  */
 export function LocaleProvider({
   children,

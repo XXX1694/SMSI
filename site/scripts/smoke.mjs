@@ -15,7 +15,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { LOCALES } from '../i18n/locales.mjs';
-import { APP_ROUTES, scanForRawKeys } from '../../frontend/scripts/i18n-raw-keys.mjs';
+import { APP_ROUTES, AUTH_ROUTES, scanForRawKeys } from '../../frontend/scripts/i18n-raw-keys.mjs';
 import { launch } from './lib.mjs';
 import { startServer } from './serve.mjs';
 
@@ -421,7 +421,7 @@ await step('every demo screen shows text, never a raw message key (en, ru)', asy
   await p.getByRole('link', { name: /Release 2.5 teaser/ }).first().waitFor({ state: 'visible' });
   const detail = new URL(await p.getByRole('link', { name: /Release 2.5 teaser/ }).first().getAttribute('href'), p.url()).href;
   const open = (route) => p.goto(route.startsWith('http') ? route : `${SITE}/demo${route}/`);
-  const findings = await scanForRawKeys(p, [...APP_ROUTES, detail], { open });
+  const findings = await scanForRawKeys(p, [...APP_ROUTES, ...AUTH_ROUTES, detail], { open });
   await fresh.close();
   expect(findings.length === 0, `raw message keys on screen: ${JSON.stringify(findings)}`);
   expect(errs.length === 0, `console problems: ${errs.join('; ')}`);
