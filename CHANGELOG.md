@@ -36,6 +36,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- The production build no longer ships the demo banner: it was imported statically by the root layout, which bundled it (with its Reset dialog, Radix Dialog and the `shell` messages) into every route. First-load JS (gzip, all chunks of the route): /login 159.2 → 148.3 kB, /verify-email 151.9 → 137.8 kB; app routes about the same (/dashboard +0.6 kB, the dialog now loads with the pages that use it). Part of #180.
 - Unknown URLs show a translated "Page not found" page with a button to the dashboard, instead of Next's English default (#181).
 - Publish now in the composer no longer creates the post twice when the first try fails after the post was saved (#127): you are taken to the saved post with the reason and publish it from there. The Publish now wipe plays only after a publish that went through.
 - After a navigation that removes the focused control (signing in, a dialog that leaves the page, a link in the mobile menu, moving between sign-in and sign-up) keyboard focus fell back to the top of the document; it now lands on the page's main content. Focus that is still somewhere (a sidebar link) is left alone.
