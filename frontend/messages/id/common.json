@@ -61,5 +61,10 @@
       "failed": "Gagal",
       "unknown": "Belum pasti"
     }
+  },
+  "notFound": {
+    "title": "Halaman tidak ditemukan",
+    "body": "Tautan mungkin sudah lama atau salah ketik. Periksa alamatnya, atau buka dasbor Anda.",
+    "action": "Buka dasbor"
   }
 }

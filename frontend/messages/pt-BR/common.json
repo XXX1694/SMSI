@@ -61,5 +61,10 @@
       "failed": "Com falha",
       "unknown": "Não confirmada"
     }
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "body": "O link pode estar desatualizado ou com erro de digitação. Confira o endereço ou vá para o seu painel.",
+    "action": "Ir para o painel"
   }
 }

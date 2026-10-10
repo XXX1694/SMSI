@@ -61,5 +61,10 @@
       "failed": "Échouée",
       "unknown": "Non confirmée"
     }
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "body": "Le lien est peut-être ancien ou mal saisi. Vérifiez l’adresse ou allez à votre tableau de bord.",
+    "action": "Aller au tableau de bord"
   }
 }

@@ -61,5 +61,10 @@
       "failed": "Failed",
       "unknown": "Unconfirmed"
     }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The link may be old or mistyped. Check the address, or go to your dashboard.",
+    "action": "Go to the dashboard"
   }
 }

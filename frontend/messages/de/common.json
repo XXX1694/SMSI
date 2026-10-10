@@ -61,5 +61,10 @@
       "failed": "Fehlgeschlagen",
       "unknown": "Unbestätigt"
     }
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "body": "Der Link ist vielleicht veraltet oder falsch geschrieben. Prüfe die Adresse oder geh zu deinem Dashboard.",
+    "action": "Zum Dashboard"
   }
 }

@@ -36,6 +36,7 @@ GitHub Release whose notes are the matching section of this file (see "Releasing
 
 ### Fixed
 
+- Unknown URLs show a translated "Page not found" page with a button to the dashboard, instead of Next's English default (#181).
 - Publish now in the composer no longer creates the post twice when the first try fails after the post was saved (#127): you are taken to the saved post with the reason and publish it from there. The Publish now wipe plays only after a publish that went through.
 - After a navigation that removes the focused control (signing in, a dialog that leaves the page, a link in the mobile menu, moving between sign-in and sign-up) keyboard focus fell back to the top of the document; it now lands on the page's main content. Focus that is still somewhere (a sidebar link) is left alone.
 - The data export now includes `sign_in_methods.json` (the Google or GitHub accounts you sign in with: provider, account id there, email, dates), and `profile.json` says whether a password is set. Before, the archive left them out although it promised everything.

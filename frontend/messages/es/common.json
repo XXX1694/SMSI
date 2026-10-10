@@ -61,5 +61,10 @@
       "failed": "Fallido",
       "unknown": "Sin confirmar"
     }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "body": "El enlace puede ser antiguo o tener un error. Revisa la dirección o ve a tu panel.",
+    "action": "Ir al panel"
   }
 }
