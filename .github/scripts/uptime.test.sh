@@ -45,6 +45,10 @@ expect "down: exit 1" "$(run "http://127.0.0.1:$port/missing")" 1
 expect "down: issue opened once" "$(count 'issue create')" 1
 grep -q 'issue create.*--label incident' "$work/calls.log" && r=yes || r=no
 expect "down: labelled incident" "$r" yes
+grep -q 'issue create.*--label uptime' "$work/calls.log" && r=yes || r=no
+expect "down: labelled uptime" "$r" yes
+grep -q 'issue create.*last HTTP 404' "$work/calls.log" && r=yes || r=no
+expect "down: body names the last HTTP code" "$r" yes
 
 run "http://127.0.0.1:$port/missing" >/dev/null
 expect "second failure: still one issue" "$(count 'issue create')" 1
@@ -58,6 +62,18 @@ expect "recovery: commented" "$(count 'issue comment')" 1
 grep -q 'recovered after' "$work/calls.log" && r=yes || r=no
 expect "recovery: says recovered after" "$r" yes
 expect "recovery: closed" "$(count 'issue close')" 1
+
+# Inside Actions: the run is linked and the job summary gets a table.
+: >"$work/issue"
+: >"$work/calls.log"
+GITHUB_RUN_ID=7 GITHUB_REPOSITORY=o/r GITHUB_STEP_SUMMARY="$work/summary.md" \
+  UPTIME_URLS="http://127.0.0.1:$port/missing http://127.0.0.1:$port/up" bash "$here/uptime.sh" >/dev/null 2>&1 || true
+grep -q 'issue create.*actions/runs/7' "$work/calls.log" && r=yes || r=no
+expect "actions: issue links the run" "$r" yes
+grep -qF "| http://127.0.0.1:$port/missing | **down** | 404 |" "$work/summary.md" && r=yes || r=no
+expect "actions: summary marks the down target" "$r" yes
+grep -qF "| http://127.0.0.1:$port/up | up | 200 |" "$work/summary.md" && r=yes || r=no
+expect "actions: summary marks the up target" "$r" yes
 
 # No targets: skip with a notice.
 out="$(env -u UPTIME_URLS -u API_PUBLIC_URL -u MCP_PUBLIC_URL bash "$here/uptime.sh")"

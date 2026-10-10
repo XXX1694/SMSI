@@ -2,8 +2,19 @@ name: Uptime
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    # Off-peak minutes: GitHub delays or drops scheduled runs most at :00/:15/:30/:45 when everyone's cron fires.
+    # Scheduled runs stay best-effort either way; the external monitor in docs/OWNER-SETUP.md section 6 is the real alarm.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
+    inputs:
+      urls:
+        description: "Space-separated URLs to probe instead of the defaults (empty: UPTIME_URLS or the derived targets)"
+        required: false
+        default: ""
+  # Lets an external monitor or a script trigger an immediate probe:
+  # gh api repos/{owner}/{repo}/dispatches -f event_type=uptime-check
+  repository_dispatch:
+    types: [uptime-check]
 
 permissions:
   issues: write
@@ -28,7 +39,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          UPTIME_URLS: ${{ vars.UPTIME_URLS }}
+          UPTIME_URLS: ${{ inputs.urls || vars.UPTIME_URLS }}
           API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
           MCP_PUBLIC_URL: ${{ vars.MCP_PUBLIC_URL }}
         run: bash .github/scripts/uptime.sh
