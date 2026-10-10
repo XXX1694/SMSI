@@ -6,7 +6,7 @@ import { PrefsProvider } from '@/components/prefs-provider';
 import en from '@/i18n/en-all';
 import { LanguageSelect } from '@/i18n/language-select';
 import { FALLBACK, LocaleContext } from '@/i18n/locale-context';
-import { LocaleProvider } from '@/i18n/locale-provider';
+import { I18nRoot } from '@/i18n/i18n-root';
 import { MessagesScope } from '@/i18n/scope';
 import { useTranslations } from '@/i18n/use-translations';
 import ruNav from '../messages/ru/nav.json';
@@ -103,6 +103,38 @@ describe('MessagesScope', () => {
   });
 });
 
+describe('MessagesScope registration', () => {
+  it('an inline bundles object does not re-register on every render', () => {
+    const register = vi.fn(() => () => {});
+    const ui = () => (
+      <LocaleContext.Provider value={{ ...FALLBACK, register }}>
+        <MessagesScope bundles={{ nav: en.nav }}>
+          <Probe />
+        </MessagesScope>
+      </LocaleContext.Provider>
+    );
+    const view = render(ui());
+    view.rerender(ui());
+    view.rerender(ui());
+    expect(register).toHaveBeenCalledTimes(1);
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({ ids: ['nav'] }));
+  });
+});
+
+describe('I18nRoot (what the app renders)', () => {
+  it('gives components real English text, never keys', () => {
+    // The provider alone carries no messages: without the legacy scope this would print `nav.dashboard`.
+    render(
+      <PrefsProvider>
+        <I18nRoot enabled={['en']}>
+          <Probe />
+        </I18nRoot>
+      </PrefsProvider>,
+    );
+    expect(screen.getByTestId('probe')).toHaveTextContent('Dashboard|Compose');
+  });
+});
+
 describe('switching the language', () => {
   it('never shows a key or half-translated text, and shows the shell only after the commit', async () => {
     const html = document.documentElement;
@@ -114,12 +146,12 @@ describe('switching the language', () => {
     const texts: string[] = [];
     render(
       <PrefsProvider>
-        <LocaleProvider enabled={['en', 'ru']}>
+        <I18nRoot enabled={['en', 'ru']}>
           <MessagesScope bundles={NAV}>
             <LanguageSelect />
             <Probe log={texts} events={events} />
           </MessagesScope>
-        </LocaleProvider>
+        </I18nRoot>
       </PrefsProvider>,
     );
     await act(async () => {});

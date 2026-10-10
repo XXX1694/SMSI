@@ -1,14 +1,11 @@
 'use client';
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePrefs } from '@/components/prefs-provider';
-import { FALLBACK_BUNDLES } from '@/i18n/fallback-bundles';
 import { LocaleContext, useLocaleSettings, type LocaleSettings, type ScopeRegistration } from '@/i18n/locale-context';
 import { availableLocales, dirOf, ENABLED_LOCALES, type AppLocale, type Locale } from '@/i18n/locales';
 import { loadBundles } from '@/i18n/messages';
-import type { Catalog } from '@/i18n/pseudo';
 import { LOCALE_STORAGE_KEY, resolveLocale } from '@/i18n/resolve';
 import { loadScriptFont } from '@/i18n/script-fonts';
-import { MessagesScope } from '@/i18n/scope';
 import { readStorage, writeStorage } from '@/lib/storage';
 
 export { useLocaleSettings };
@@ -64,7 +61,7 @@ function useActiveLocale() {
 
 /**
  * Client-side locale state, no middleware and no locale routes (D-021), so it behaves the same in the server build and
- * the static demo. The provider holds the locale only; the messages come from `MessagesScope`s below it (English is
+ * the static demo. The provider holds the locale only; the messages come from `MessagesScope`s below it (render `I18nRoot`, not this alone) (English is
  * imported statically by each scope, other locales are lazy chunks). Routes stay static in both builds: the first render
  * is English and the stored or detected locale swaps in after mount; a head script hides the shell meanwhile
  * (`data-i18n-pending`, at most 1.5 s) only when that locale is not English, so English users see no change and others
@@ -110,16 +107,12 @@ export function LocaleProvider({
       locale,
       setLocale,
       available: availableLocales({ enabled: stableEnabled }),
-      messages: FALLBACK_BUNDLES as Catalog,
-      english: FALLBACK_BUNDLES as Catalog,
+      messages: {},
+      english: {},
       timeZone: timezone,
       register,
     }),
     [locale, setLocale, timezone, stableEnabled, register],
   );
-  return (
-    <LocaleContext.Provider value={settings}>
-      <MessagesScope bundles={FALLBACK_BUNDLES}>{children}</MessagesScope>
-    </LocaleContext.Provider>
-  );
+  return <LocaleContext.Provider value={settings}>{children}</LocaleContext.Provider>;
 }

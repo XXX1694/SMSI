@@ -24,7 +24,7 @@ import { buildSeed } from '@/lib/demo/seed';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { ScopePicker } from '@/components/developer/scope-picker';
 import { TrustedPolicyField } from '@/components/developer/trusted-policy';
-import { LocaleProvider } from '@/i18n/locale-provider';
+import { I18nRoot } from '@/i18n/i18n-root';
 import { createTranslator } from '@/i18n/translate';
 import { enT } from './helpers/en-t';
 import { ApiError } from '@/lib/api';
@@ -185,9 +185,9 @@ function inPseudo(ui: React.ReactElement) {
   window.localStorage.setItem('steerpost_locale', 'en-XA');
   return render(
     <PrefsProvider>
-      <LocaleProvider enabled={['en']}>
+      <I18nRoot enabled={['en']}>
         <ToastProvider>{ui}</ToastProvider>
-      </LocaleProvider>
+      </I18nRoot>
     </PrefsProvider>,
   );
 }

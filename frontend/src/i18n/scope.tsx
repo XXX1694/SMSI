@@ -1,5 +1,5 @@
 'use client';
-import { use, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import { use, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { Messages } from '@/i18n/catalog';
 import { LocaleContext } from '@/i18n/locale-context';
 import { loadBundles, mergeMessages } from '@/i18n/messages';
@@ -16,10 +16,16 @@ export function MessagesScope({ bundles, children }: { bundles: Partial<Messages
   const parent = useContext(LocaleContext);
   const { locale, register } = parent;
   const english = bundles as Catalog;
-  const ids = useMemo(() => Object.keys(bundles), [bundles]);
+  // Keyed by the namespace list, not by the object: an inline `bundles` literal must not re-register on every render.
+  const idsKey = Object.keys(bundles).join(',');
+  const ids = useMemo(() => (idsKey ? idsKey.split(',') : []), [idsKey]);
+  const latest = useRef(english);
+  useEffect(() => {
+    latest.current = english;
+  });
 
   // The provider preloads every registered scope before it changes the locale, so no key or English text flashes.
-  useEffect(() => register({ ids, english }), [register, ids, english]);
+  useEffect(() => register({ ids, english: latest.current }), [register, ids]);
 
   const translated = locale === 'en' || ids.length === 0 ? null : use(loadBundles(locale, ids, english));
   const value = useMemo(
