@@ -1,4 +1,5 @@
 import { PostDetail } from '@/components/posts/post-detail';
+import { PostDetailScope } from '@/i18n/scopes/post-detail';
 import { DEMO } from '@/lib/demo/config';
 import { SEEDED_POST_IDS } from '@/lib/demo/ids';
 
@@ -11,5 +12,9 @@ export const generateStaticParams = DEMO ? () => SEEDED_POST_IDS.map((id) => ({ 
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <PostDetail id={id} />;
+  return (
+    <PostDetailScope>
+      <PostDetail id={id} />
+    </PostDetailScope>
+  );
 }

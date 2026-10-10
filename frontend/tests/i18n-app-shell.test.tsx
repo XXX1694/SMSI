@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '@/components/app-shell';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { I18nRoot } from '@/i18n/i18n-root';
+import { AppScope } from '@/i18n/scopes/app';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/posts', useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 vi.mock('@/components/auth-provider', () => ({ useAuth: () => ({ user: { email: 'a@example.com', display_name: 'Ana' }, logout: vi.fn() }) }));
@@ -16,7 +17,9 @@ function shell() {
   return render(
     <PrefsProvider>
       <I18nRoot enabled={ENABLED}>
-        <AppShell>content</AppShell>
+        <AppScope>
+          <AppShell>content</AppShell>
+        </AppScope>
       </I18nRoot>
     </PrefsProvider>,
   );

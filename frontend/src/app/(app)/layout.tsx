@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { AppShell } from '@/components/app-shell';
 import { ErrorState } from '@/components/states';
+import { AppScope } from '@/i18n/scopes/app';
 import { useTranslations } from '@/i18n/use-translations';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -33,5 +34,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AppScope>
+      <AppShell>{children}</AppShell>
+    </AppScope>
+  );
 }

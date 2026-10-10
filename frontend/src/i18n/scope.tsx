@@ -28,13 +28,15 @@ export function MessagesScope({ bundles, children }: { bundles: Partial<Messages
   useEffect(() => register({ ids, english: latest.current }), [register, ids]);
 
   const translated = locale === 'en' || ids.length === 0 ? null : use(loadBundles(locale, ids, english));
+  // Keyed by the namespace list like `ids`, so an inline `bundles` literal does not rebuild the context on every render.
   const value = useMemo(
     () => ({
       ...parent,
       messages: { ...parent.messages, ...(translated ? mergeMessages(english, translated) : english) },
       english: { ...parent.english, ...english },
     }),
-    [parent, english, translated],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `english` is identified by `idsKey`
+    [parent, idsKey, translated],
   );
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
