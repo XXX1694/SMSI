@@ -145,6 +145,7 @@ func NewRouter(svc Services, opt Options) http.Handler {
 func (a *API) mountOps(r chi.Router) {
 	r.Get("/health", a.health)
 	r.Get("/ready", a.ready)
+	r.Get("/version", a.version)
 	r.Handle("/metrics", a.metricsHandler())
 }
 

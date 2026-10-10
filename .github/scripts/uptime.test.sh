@@ -95,6 +95,20 @@ out="$(env -u UPTIME_URLS -u API_PUBLIC_URL -u MCP_PUBLIC_URL bash "$here/uptime
 case "$out" in *notice*) r=yes ;; *) r=no ;; esac
 expect "no targets: notice" "$r" yes
 
+# Version line: parsed fields only; a hostile or missing body never reaches the log raw and never fails the run.
+version_line() { UPTIME_URLS="http://127.0.0.1:$port/up" API_PUBLIC_URL="http://127.0.0.1:$port/" bash "$here/uptime.sh" 2>/dev/null | grep '^Version:' || true; }
+echo '{"version":"0.5.0","commit":"abc1234","built_at":"2026-10-10T12:00:00Z","go":"x"}' >"$work/www/version"
+expect "version: parsed fields" "$(version_line)" "Version: 0.5.0 abc1234 2026-10-10T12:00:00Z"
+printf '{"version":"1\\n::stop-commands::tok","commit":"a b","built_at":null}' >"$work/www/version"
+out="$(UPTIME_URLS="http://127.0.0.1:$port/up" API_PUBLIC_URL="http://127.0.0.1:$port" bash "$here/uptime.sh" 2>/dev/null)"
+case "$out" in *$'\n::'*) r=injected ;; *) r=clean ;; esac
+expect "version: no workflow command injected" "$r" clean
+echo '::stop-commands::tok' >"$work/www/version"
+expect "version: non-JSON body" "$(version_line)" "Version: unknown"
+rm "$work/www/version"
+expect "version: missing endpoint" "$(version_line)" "Version: unknown"
+expect "version: run still passes" "$(UPTIME_URLS="http://127.0.0.1:$port/up" API_PUBLIC_URL="http://127.0.0.1:$port" bash "$here/uptime.sh" >/dev/null 2>&1 && echo 0 || echo $?)" 0
+
 # Derived targets.
 sed -n '/^derive_urls/,/^}/p' "$here/uptime.sh" >"$work/derive.sh"
 out="$(API_PUBLIC_URL=https://api.example.com MCP_PUBLIC_URL=https://mcp.example.com/mcp \

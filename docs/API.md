@@ -22,7 +22,7 @@ All endpoints are under `/api/v1`. Errors look like this:
 | Account | `GET /account/usage` · `POST /account/delete` · `POST /account/delete/cancel` · `POST /account/exports` · `GET /account/exports` · `GET /account/exports/{id}` (export and deletion are session only; see [ARCHITECTURE](ARCHITECTURE.md#account-data-export-d-018)) |
 | Insights | `GET /dashboard/summary` · `GET /analytics` · `GET /audit-logs` |
 | Developer | `GET/POST /developer/api-keys` · `DELETE /developer/api-keys/{id}` · `GET/POST /developer/mcp-connections` · `DELETE /developer/mcp-connections/{id}` · `GET /developer/usage` |
-| Ops | `GET /health` · `GET /ready` · `GET /metrics` |
+| Ops | `GET /health` · `GET /ready` · `GET /metrics` · `GET /version` (public: `{"version":"0.4.0","commit":"abc1234","built_at":"2026-10-10T12:00:00Z"}`, cached 60 s) |
 | Webhook | `POST /webhooks/telegram` (only when `TELEGRAM_UPDATES_MODE=webhook`; authenticated by the `X-Telegram-Bot-Api-Secret-Token` header, not by session or key) |
 
 ## Post lifecycle
