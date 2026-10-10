@@ -1,6 +1,6 @@
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { compareBudgets, filesContaining, formatTable, gzipBytes, pageKeyFor, routeScripts, toKb } from '../scripts/bundle-budget-lib.mjs';
+import { compareBudgets, filesContaining, formatTable, gzipBytes, markerProblems, pageKeyFor, routeScripts, toKb } from '../scripts/bundle-budget-lib.mjs';
 
 // A trimmed copy of the shape Next 15 writes to .next/app-build-manifest.json and .next/build-manifest.json.
 const manifests = {
@@ -19,6 +19,10 @@ const manifests = {
       '/(app)/developer/layout': ['static/chunks/dev-12.js'],
       '/(app)/developer/page': ['static/chunks/app/(app)/developer/page-13.js'],
       '/page': ['static/chunks/app/page-14.js'],
+      '/not-found': ['static/chunks/webpack-1.js', 'static/chunks/app/not-found-15.js'],
+      '/(app)/error': ['static/chunks/app/(app)/error-16.js'],
+      '/(auth)/loading': ['static/chunks/app/(auth)/loading-17.js'],
+      '/(app)/template': ['static/chunks/app/(app)/template-18.js'],
     },
   },
 };
@@ -39,11 +43,13 @@ describe('pageKeyFor', () => {
 });
 
 describe('routeScripts', () => {
-  it('joins root main files, root layout, group layout and page, without css or polyfills, each once', () => {
+  it('joins root main files, root layout and not-found, group layout and loading, and the page, without css or polyfills, each once', () => {
     expect(routeScripts('/login', manifests)).toEqual([
       'static/chunks/app/(auth)/layout-6.js',
+      'static/chunks/app/(auth)/loading-17.js',
       'static/chunks/app/(auth)/login/page-7.js',
       'static/chunks/app/layout-4.js',
+      'static/chunks/app/not-found-15.js',
       'static/chunks/auth-5.js',
       'static/chunks/framework-2.js',
       'static/chunks/main-app-3.js',
@@ -57,6 +63,41 @@ describe('routeScripts', () => {
     expect(files).toContain('static/chunks/app/(app)/layout-9.js');
     expect(files).not.toContain('static/chunks/auth-5.js');
     expect(routeScripts('/posts', manifests)).not.toContain('static/chunks/dev-12.js');
+  });
+});
+
+describe('routeScripts, special files', () => {
+  it('counts the root not-found on every route', () => {
+    for (const route of ['/login', '/posts', '/']) expect(routeScripts(route, manifests)).toContain('static/chunks/app/not-found-15.js');
+  });
+
+  it('counts error and template of the segment above the page, but only for that group', () => {
+    const posts = routeScripts('/posts', manifests);
+    expect(posts).toContain('static/chunks/app/(app)/error-16.js');
+    expect(posts).toContain('static/chunks/app/(app)/template-18.js');
+    expect(posts).not.toContain('static/chunks/app/(auth)/loading-17.js');
+    const login = routeScripts('/login', manifests);
+    expect(login).not.toContain('static/chunks/app/(app)/error-16.js');
+  });
+});
+
+describe('markerProblems', () => {
+  const base = { marker: 'skipToContent', label: 'shell text', fix: 'move it.' };
+
+  it('passes when the marker is only in the (app) chunks', () => {
+    expect(markerProblems({ ...base, forbidden: { root: 'x', auth: 'y' }, expected: { app: 'a skipToContent b' } })).toEqual([]);
+  });
+
+  it('fails when the marker is injected into a forbidden chunk', () => {
+    const problems = markerProblems({ ...base, forbidden: { root: 'skipToContent', auth: 'y' }, expected: { app: 'skipToContent' } });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('root');
+  });
+
+  it('fails when the marker disappears from every (app) chunk, so a rename cannot pass silently', () => {
+    const problems = markerProblems({ ...base, forbidden: { root: 'x' }, expected: { app: 'renamedKey' } });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/no \(app\) chunk/);
   });
 });
 

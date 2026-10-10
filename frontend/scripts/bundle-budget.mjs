@@ -6,15 +6,15 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compareBudgets, filesContaining, formatTable, gzipBytes, routeScripts } from './bundle-budget-lib.mjs';
+import { compareBudgets, formatTable, gzipBytes, markerProblems, routeScripts } from './bundle-budget-lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const nextDir = join(root, '.next');
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 const read = (file) => readFileSync(join(nextDir, file));
 
-// Strings that survive minification (component display names / a shell.json key). If one stops being emitted the
-// guard would pass for the wrong reason, so the check also demands that the app layouts still carry them.
+// Strings that survive minification (a component display name, a shell.json key). markerProblems also fails when a
+// marker is gone from every (app) chunk, so renaming one cannot make its guard pass silently.
 const RADIX_DIALOG = 'DialogContentModal';
 const SHELL_KEY = 'skipToContent';
 const AUTH_ROUTES = ['/login', '/register', '/verify-email'];
@@ -47,25 +47,27 @@ function main() {
     problems.push(`${row.route} is ${row.kb.toFixed(1)} kB gzip, budget ${row.budgetKb.toFixed(1)} kB.`);
   }
 
-  const rootLayouts = manifests.appManifest.pages['/layout'].filter((f) => /\/app\/layout-[^/]*\.js$/.test(f));
-  const rootLayoutText = Object.fromEntries(rootLayouts.map((f) => [f, read(f).toString('utf8')]));
-  if (rootLayouts.length === 0) problems.push('guard: no app/layout-*.js chunk found in the root layout entry.');
-  for (const file of filesContaining(rootLayoutText, SHELL_KEY)) {
-    problems.push(`guard: "${SHELL_KEY}" (shell.json) is in the root layout chunk ${file}; shell text belongs in the (app) layout.`);
-  }
-
-  const authText = {};
-  for (const route of AUTH_ROUTES.filter((r) => r in budgets)) {
-    for (const file of scripts[route]) authText[file] ??= read(file).toString('utf8');
-  }
-  for (const file of filesContaining(authText, RADIX_DIALOG)) {
-    problems.push(`guard: Radix Dialog ("${RADIX_DIALOG}") is in ${file}, loaded by an auth route; load dialogs lazily or only in (app).`);
-  }
-  const appChunks = Object.keys(manifests.appManifest.pages).filter((k) => k.startsWith('/(app)/')).flatMap((k) => manifests.appManifest.pages[k]);
-  const appText = Object.fromEntries([...new Set(appChunks)].filter((f) => f.endsWith('.js')).map((f) => [f, read(f).toString('utf8')]));
-  if (filesContaining(appText, RADIX_DIALOG).length === 0) {
-    problems.push(`guard: "${RADIX_DIALOG}" no longer appears in any (app) chunk, so the Radix Dialog check cannot detect anything. Update RADIX_DIALOG in scripts/bundle-budget.mjs.`);
-  }
+  const readAll = (files) => Object.fromEntries([...new Set(files)].filter((f) => f.endsWith('.js')).map((f) => [f, read(f).toString('utf8')]));
+  const pages = manifests.appManifest.pages;
+  const appText = readAll(Object.keys(pages).filter((k) => k.startsWith('/(app)/')).flatMap((k) => pages[k]));
+  const rootLayoutText = readAll(pages['/layout']);
+  const authText = readAll(AUTH_ROUTES.filter((r) => r in budgets).flatMap((r) => scripts[r]));
+  problems.push(
+    ...markerProblems({
+      marker: SHELL_KEY,
+      label: 'shell.json text',
+      forbidden: { ...rootLayoutText, ...authText },
+      expected: appText,
+      fix: 'shell text belongs in the (app) layout only.',
+    }),
+    ...markerProblems({
+      marker: RADIX_DIALOG,
+      label: 'Radix Dialog',
+      forbidden: authText,
+      expected: appText,
+      fix: 'load dialogs lazily or only in (app).',
+    }),
+  );
 
   if (problems.length === 0) {
     console.log('\nbundle-budget: all routes within budget, guards clean.');

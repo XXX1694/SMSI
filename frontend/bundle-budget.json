@@ -1,9 +1,9 @@
 {
-  "/login": 154,
-  "/register": 154,
-  "/verify-email": 144,
-  "/dashboard": 172,
-  "/compose": 183,
-  "/posts": 155,
-  "/settings": 180
+  "/login": 156,
+  "/register": 156,
+  "/verify-email": 145,
+  "/dashboard": 173,
+  "/compose": 184,
+  "/posts": 157,
+  "/settings": 182
 }

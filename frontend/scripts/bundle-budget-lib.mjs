@@ -13,21 +13,25 @@ export function pageKeyFor(route, pages) {
   return matches[0];
 }
 
+/** Files Next adds per segment level beside `layout` (the root level is `/not-found`, `/error`, ...). */
+const SEGMENT_FILES = ['layout', 'template', 'error', 'loading', 'not-found'];
+
 /**
- * The scripts a first visit to `route` downloads: the root main files, the root layout, every layout above the page
- * (route group and nested) and the page entry. Polyfills are left out on purpose: `nomodule`, never loaded by the browsers
- * we target, and Next's own table omits them too. Next's printed table also omits layout chunks; this does not.
+ * The scripts a first visit to `route` downloads: the root main files and, for the root and every segment above the page
+ * (route group, nested), its layout, template, error, loading and not-found entries when present, then the page entry.
+ * The root `not-found` is a client component every page ships. Polyfills are left out on purpose: `nomodule`, never
+ * loaded by the browsers we target, and Next's own table omits them too. Next's printed table also omits layout chunks;
+ * this does not.
  */
 export function routeScripts(route, { appManifest, buildManifest }) {
   const pages = appManifest.pages;
   const pageKey = pageKeyFor(route, pages);
   const segments = pageKey.split('/').slice(1, -1);
-  const layoutKeys = ['/layout'];
-  for (let depth = 1; depth <= segments.length; depth += 1) {
-    layoutKeys.push(`/${segments.slice(0, depth).join('/')}/layout`);
-  }
+  const prefixes = [''];
+  for (let depth = 1; depth <= segments.length; depth += 1) prefixes.push(`/${segments.slice(0, depth).join('/')}`);
+  const keys = prefixes.flatMap((prefix) => SEGMENT_FILES.map((name) => `${prefix}/${name}`)).filter((key) => key in pages);
   const files = new Set(buildManifest.rootMainFiles);
-  for (const key of [...layoutKeys.filter((k) => k in pages), pageKey]) {
+  for (const key of [...keys, pageKey]) {
     for (const file of pages[key]) files.add(file);
   }
   return [...files].filter(isScript).sort();
@@ -58,3 +62,15 @@ export function formatTable(rows) {
 
 /** Files in `contents` (path -> text) that contain `needle`; used for the regression guards. */
 export const filesContaining = (contents, needle) => Object.keys(contents).filter((file) => contents[file].includes(needle));
+
+/**
+ * A marker guard. `forbidden` and `expected` map file -> text. Fails when the marker is in a forbidden file, and also
+ * when it is in no expected file: then the marker was renamed or dropped and the guard would pass without looking.
+ */
+export function markerProblems({ marker, label, forbidden, expected, fix }) {
+  const problems = filesContaining(forbidden, marker).map((file) => `guard: ${label} ("${marker}") is in ${file}; ${fix}`);
+  if (filesContaining(expected, marker).length === 0) {
+    problems.push(`guard: "${marker}" is in no (app) chunk any more, so the ${label} check cannot detect anything. Update the marker in scripts/bundle-budget.mjs.`);
+  }
+  return problems;
+}
