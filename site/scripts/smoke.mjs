@@ -15,6 +15,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { LOCALES } from '../i18n/locales.mjs';
+import { APP_ROUTES, scanForRawKeys } from '../../frontend/scripts/i18n-raw-keys.mjs';
 import { launch } from './lib.mjs';
 import { startServer } from './serve.mjs';
 
@@ -407,6 +408,23 @@ await step('state survives a reload, Reset restores the seed', async () => {
   await monthGoto();
   await page.waitForTimeout(500);
   expect((await page.getByRole('link', { name: new RegExp(TITLE) }).count()) === 0, 'the smoke post should be gone after Reset');
+});
+
+await step('every demo screen shows text, never a raw message key (en, ru)', async () => {
+  // A route whose scope lacks a namespace, or text shown before a locale's bundles arrived, prints `posts.untitled`.
+  const fresh = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'en-GB', timezoneId: 'UTC' });
+  const p = await fresh.newPage();
+  const errs = [];
+  p.on('pageerror', (e) => errs.push(e.message));
+  p.on('console', (m) => m.type() === 'error' && !external(m.location().url ?? '') && errs.push(m.text()));
+  await p.goto(`${SITE}/demo/posts/`);
+  await p.getByRole('link', { name: /Release 2.5 teaser/ }).first().waitFor({ state: 'visible' });
+  const detail = new URL(await p.getByRole('link', { name: /Release 2.5 teaser/ }).first().getAttribute('href'), p.url()).href;
+  const open = (route) => p.goto(route.startsWith('http') ? route : `${SITE}/demo${route}/`);
+  const findings = await scanForRawKeys(p, [...APP_ROUTES, detail], { open });
+  await fresh.close();
+  expect(findings.length === 0, `raw message keys on screen: ${JSON.stringify(findings)}`);
+  expect(errs.length === 0, `console problems: ${errs.join('; ')}`);
 });
 
 await step('demo works on a phone', async () => {

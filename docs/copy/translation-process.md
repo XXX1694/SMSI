@@ -82,12 +82,49 @@ Also:
   that cannot call hooks use `<T k="ns.key" />`. Functions in `src/lib` stay pure: they take the root translator as a
   parameter (`postStatusView(status, t)`, `validateComposer(state, accounts, providers, t)`) and tests pass `enT` from
   `tests/helpers/en-t.ts` (the whole English catalog). Code outside React that only needs error sentences (the API client)
-  uses `enErrorsT` from `@/i18n/en`, which reads `errors.json` alone. A subtree gets its bundles from `MessagesScope`
-  (`src/i18n/scope.tsx`: English imported statically, translations loaded per locale); the root layout wraps the app in one
-  `LegacyMessagesScope` with every bundle until routes declare their own. Errors: `useErrorText()` / `errorMessage(e, t)` map the API `code` to a catalog sentence and show the server
+  uses `enErrorsT` from `@/i18n/en`, which reads `errors.json` alone. A subtree gets its bundles from `MessagesScope` (`src/i18n/scope.tsx`: English imported statically, translations loaded per locale); which scope loads which namespace is in §3a. Errors: `useErrorText()` / `errorMessage(e, t)` map the API `code` to a catalog sentence and show the server
   message only in English.
 - **Pseudo-locales in dev.** `en-XA` (accented, 40 % longer, wrapped in [ ]) and `ar-XB` (RTL pseudo) expose hardcoded
   strings, clipping and RTL bugs before any translator starts.
+
+### 3a. Which scope loads which namespace
+
+A component can only read a namespace some `MessagesScope` above it has loaded. Scopes are the files in
+`frontend/src/i18n/scopes/*.tsx`: each statically imports the English JSON of its namespaces as a module-level constant
+(so English ships with the route's chunk, not with every route) and renders `MessagesScope`. Other locales come from one
+lazy chunk per locale; a scope takes its namespaces out of it and suspends until it has arrived, so mount a page's scope
+outside the page's own `Suspense` and the navigation (a transition) keeps the old screen meanwhile.
+
+| Where | Scope | Namespaces |
+|---|---|---|
+| Every route (`I18nRoot`, root layout) | `core` | `common`, `errors` |
+| Demo build only, banner in the root layout | `demo` | `shell` |
+| `(auth)` group layout: `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/signup/complete` | `auth` | `auth`, `legal` |
+| `(app)` group layout (sidebar, header, banners) | `app` | `nav`, `shell`, `language`, `legal` |
+| `/dashboard` | `dashboard` | `dashboard`, `posts` |
+| `/compose` | `compose` | `composer`, `posts`, `media` |
+| `/posts` | `posts` | `posts` |
+| `/posts/[id]`, `/posts/view` | `post-detail` | `posts`, `composer` |
+| `/calendar` | `calendar` | `calendar`, `posts` |
+| `/media` | `media` | `media`, `composer` |
+| `/analytics`, and the usage chart on `/developer` | `analytics` | `analytics` |
+| `/accounts` | `accounts` | `accounts` |
+| `/approvals` | `approvals` | `approvals` |
+| `/settings` | `settings` | `settings`, `auth` |
+| `/developer` layout | `developer` | `developer` |
+| `/terms`, `/privacy` | none | the legal text stays English (D-021) |
+
+`posts` appears on several pages because post titles and status words come from shared helpers (`lib/format.ts`,
+`lib/status.ts`); `composer` appears on the pages that show editor limits. Moving those keys into `common` would put them
+on every route, so the pages that need them declare them instead.
+
+**Adding a namespace to a route.** Add the id to the route's scope file (import its English JSON, add it to `BUNDLES`).
+For a route without a scope, copy a scope file, name it after the route, and wrap the page (or the group layout) in it,
+above any `Suspense`. Then run `npm test -- tests/i18n-route-scopes.test.tsx` in `frontend/`: it reads the source of every page, its
+layouts and everything they import, and fails when a page uses a namespace its scopes do not load (and when a page
+loads one nothing on it uses). Keys built at run time are invisible to that test; in development they log
+`MISSING_SCOPE: <key>` once, and `frontend/scripts/i18n-raw-keys.mjs` (run by the site smoke test on the demo, in English
+and Russian) fails on a raw key on screen.
 
 ## 4. Review
 

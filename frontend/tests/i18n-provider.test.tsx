@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { LanguageSelect } from '@/i18n/language-select';
 import { I18nRoot } from '@/i18n/i18n-root';
+import { AppScope } from '@/i18n/scopes/app';
 import { useLocaleSettings } from '@/i18n/locale-provider';
 import { useFormat } from '@/i18n/use-format';
 import { useTranslations } from '@/i18n/use-translations';
@@ -27,7 +28,7 @@ function setup(ui = <Probe />, props: { userLocale?: string | null } = {}) {
   return render(
     <PrefsProvider>
       <I18nRoot enabled={ENABLED} {...props}>
-        {ui}
+        <AppScope>{ui}</AppScope>
       </I18nRoot>
     </PrefsProvider>,
   );

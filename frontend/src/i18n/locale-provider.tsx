@@ -61,11 +61,11 @@ function useActiveLocale() {
 
 /**
  * Client-side locale state, no middleware and no locale routes (D-021), so it behaves the same in the server build and
- * the static demo. The provider holds the locale only; the messages come from `MessagesScope`s below it (render `I18nRoot`, not this alone) (English is
- * imported statically by each scope, other locales are lazy chunks). Routes stay static in both builds: the first render
- * is English and the stored or detected locale swaps in after mount; a head script hides the shell meanwhile
- * (`data-i18n-pending`, at most 1.5 s) only when that locale is not English, so English users see no change and others
- * see no flash of English. A switch preloads every registered scope first, changes the locale in a transition, and shows
+ * the static demo. The provider holds the locale only; the messages come from the `MessagesScope`s below it, so render
+ * `I18nRoot`, not this alone. Each scope imports its English statically; other locales are lazy chunks. Routes stay
+ * static in both builds: the first render is English and the stored or detected locale swaps in after mount; a head
+ * script hides the shell meanwhile (`data-i18n-pending`, at most 1.5 s) only when that locale is not English, so English
+ * users see no change and others see no flash of English. A switch preloads every registered scope first, changes the locale in a transition, and shows
  * the shell again only after that commit.
  */
 export function LocaleProvider({

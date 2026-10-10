@@ -7,6 +7,7 @@ import { PrefsProvider } from '@/components/prefs-provider';
 import { ToastProvider } from '@/components/toast';
 import { BRAND_HEX } from '@/lib/brand';
 import { I18nRoot } from '@/i18n/i18n-root';
+import { DemoScope } from '@/i18n/scopes/demo';
 import { availableLocales } from '@/i18n/locales';
 import { localeScript } from '@/i18n/head-script';
 import { DEMO } from '@/lib/demo/config';
@@ -42,7 +43,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <PrefsProvider>
           <I18nRoot>
-            {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
+            {process.env.NEXT_PUBLIC_DEMO === 'true' ? (
+              <DemoScope>
+                <DemoBanner />
+              </DemoScope>
+            ) : null}
             <ToastProvider>
               <AuthProvider>{children}</AuthProvider>
               <FocusOnNavigate />

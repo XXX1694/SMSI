@@ -122,16 +122,23 @@ describe('MessagesScope registration', () => {
 });
 
 describe('I18nRoot (what the app renders)', () => {
-  it('gives components real English text, never keys', () => {
-    // The provider alone carries no messages: without the legacy scope this would print `nav.dashboard`.
+  function CoreProbe() {
+    const t = useTranslations();
+    return <p data-testid="probe">{`${t('common.loading')}|${t('errors.FORBIDDEN')}|${t('nav.dashboard')}`}</p>;
+  }
+
+  it('carries the core bundles (common, errors) and nothing a route has to declare', () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(
       <PrefsProvider>
         <I18nRoot enabled={['en']}>
-          <Probe />
+          <CoreProbe />
         </I18nRoot>
       </PrefsProvider>,
     );
-    expect(screen.getByTestId('probe')).toHaveTextContent('Dashboard|Compose');
+    // `nav` belongs to the (app) scope: here it prints its key and the dev guard names the missing scope.
+    expect(screen.getByTestId('probe')).toHaveTextContent(`${en.common.loading}|${en.errors.FORBIDDEN}|nav.dashboard`);
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining('MISSING_SCOPE: nav.dashboard'));
   });
 });
 

@@ -26,7 +26,7 @@ export interface TranslatorConfig {
   timeZone?: string;
   /** English catalog: used when a key is missing or its message fails to format in `messages`. */
   fallback?: Catalog;
-  /** Called for a key that is in no catalog. Default: `console.error` outside production. */
+  /** Called for a key that is in no catalog. Default: `console.error` outside production, naming the missing scope when the whole namespace is absent. */
   onMissing?: (path: string) => void;
 }
 
@@ -46,12 +46,20 @@ export type AppT = Translator<KeysOf<undefined>>;
 
 export function createTranslator<N extends Namespace | undefined = undefined>(config: TranslatorConfig, ns?: N): Translator<KeysOf<N>> {
   const prefix = ns ? `${ns}.` : '';
+  // A namespace that is in neither catalog was never loaded: the route's scope (src/i18n/scopes) lacks it.
+  const describeMissing = (path: string): string => {
+    const ns = path.split('.')[0] ?? '';
+    const loaded = ns in config.messages || (config.fallback !== undefined && ns in config.fallback);
+    return loaded
+      ? `MISSING_MESSAGE: ${path} (${config.locale})`
+      : `MISSING_SCOPE: ${path} (${config.locale}): the "${ns}" messages are not loaded here; add "${ns}" to the scope of this route (src/i18n/scopes)`;
+  };
   const report =
     config.onMissing ??
     ((p: string) => {
       if (process.env.NODE_ENV !== 'production' && !logged.has(p)) {
         logged.add(p);
-        console.error(`MISSING_MESSAGE: ${p} (${config.locale})`);
+        console.error(describeMissing(p));
       }
     });
   const attempt = (catalog: Catalog, path: string, values: FormatContext<unknown>['values']): (string | unknown)[] | null => {

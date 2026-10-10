@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { PostByQuery } from '@/components/posts/post-by-query';
 import { LoadingRows } from '@/components/states';
+import { PostDetailScope } from '@/i18n/scopes/post-detail';
 import { DEMO } from '@/lib/demo/config';
 
 export const metadata = { title: 'Post' };
@@ -10,8 +11,10 @@ export const metadata = { title: 'Post' };
 export default function Page() {
   if (!DEMO) notFound();
   return (
-    <Suspense fallback={<LoadingRows rows={4} />}>
-      <PostByQuery />
-    </Suspense>
+    <PostDetailScope>
+      <Suspense fallback={<LoadingRows rows={4} />}>
+        <PostByQuery />
+      </Suspense>
+    </PostDetailScope>
   );
 }

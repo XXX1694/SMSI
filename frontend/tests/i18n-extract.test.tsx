@@ -25,6 +25,7 @@ import { PrefsProvider } from '@/components/prefs-provider';
 import { ScopePicker } from '@/components/developer/scope-picker';
 import { TrustedPolicyField } from '@/components/developer/trusted-policy';
 import { I18nRoot } from '@/i18n/i18n-root';
+import { MessagesScope } from '@/i18n/scope';
 import { createTranslator } from '@/i18n/translate';
 import { enT } from './helpers/en-t';
 import { ApiError } from '@/lib/api';
@@ -186,7 +187,10 @@ function inPseudo(ui: React.ReactElement) {
   return render(
     <PrefsProvider>
       <I18nRoot enabled={['en']}>
-        <ToastProvider>{ui}</ToastProvider>
+        {/* Every namespace: this test is about hard-coded English, route scopes are covered by i18n-route-scopes.test.tsx. */}
+        <MessagesScope bundles={en}>
+          <ToastProvider>{ui}</ToastProvider>
+        </MessagesScope>
       </I18nRoot>
     </PrefsProvider>,
   );
