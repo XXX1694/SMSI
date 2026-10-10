@@ -12,7 +12,13 @@ cat >"$work/bin/gh" <<'STUB'
 #!/usr/bin/env bash
 echo "gh $*" >>"$STUB_DIR/calls.log"
 case "$1 $2" in
-  "issue list") [ -s "$STUB_DIR/issue" ] && { IFS='|' read -r n t c <"$STUB_DIR/issue"; echo "$n $c"; } || true ;;
+  "issue list")
+    if [ -s "$STUB_DIR/issue" ]; then
+      IFS='|' read -r n t c <"$STUB_DIR/issue"
+      jq -n --argjson n "$n" --arg t "$t" --arg c "$c" '[{number: $n, title: $t, createdAt: $c}]'
+    else
+      echo '[]'
+    fi ;;
   "issue create") echo "42|$(printf '%s\n' "$@" | sed -n '/^--title$/{n;p;}')|2020-01-01T00:00:00Z" >"$STUB_DIR/issue" ;;
   "issue close") : >"$STUB_DIR/issue" ;;
 esac
@@ -45,6 +51,10 @@ expect "down: exit 1" "$(run "http://127.0.0.1:$port/missing")" 1
 expect "down: issue opened once" "$(count 'issue create')" 1
 grep -q 'issue create.*--label incident' "$work/calls.log" && r=yes || r=no
 expect "down: labelled incident" "$r" yes
+grep -q 'issue create.*--label uptime' "$work/calls.log" && r=yes || r=no
+expect "down: labelled uptime" "$r" yes
+grep -q 'issue create.*last HTTP 404' "$work/calls.log" && r=yes || r=no
+expect "down: body names the last HTTP code" "$r" yes
 
 run "http://127.0.0.1:$port/missing" >/dev/null
 expect "second failure: still one issue" "$(count 'issue create')" 1
@@ -58,6 +68,27 @@ expect "recovery: commented" "$(count 'issue comment')" 1
 grep -q 'recovered after' "$work/calls.log" && r=yes || r=no
 expect "recovery: says recovered after" "$r" yes
 expect "recovery: closed" "$(count 'issue close')" 1
+
+# A URL with a quote, a backslash and glob characters: one target, and the second failure finds the open issue.
+odd="http://127.0.0.1:$port/miss\"ing\\?a=*"
+: >"$work/issue"
+: >"$work/calls.log"
+run "$odd" >/dev/null
+run "$odd" >/dev/null
+expect "odd url: still one issue" "$(count 'issue create')" 1
+expect "odd url: second failure commented" "$(count 'issue comment')" 1
+
+# Inside Actions: the run is linked and the job summary gets a table.
+: >"$work/issue"
+: >"$work/calls.log"
+GITHUB_RUN_ID=7 GITHUB_REPOSITORY=o/r GITHUB_STEP_SUMMARY="$work/summary.md" \
+  UPTIME_URLS="http://127.0.0.1:$port/missing http://127.0.0.1:$port/up" bash "$here/uptime.sh" >/dev/null 2>&1 || true
+grep -q 'issue create.*actions/runs/7' "$work/calls.log" && r=yes || r=no
+expect "actions: issue links the run" "$r" yes
+grep -qF "| http://127.0.0.1:$port/missing | **down** | 404 |" "$work/summary.md" && r=yes || r=no
+expect "actions: summary marks the down target" "$r" yes
+grep -qF "| http://127.0.0.1:$port/up | up | 200 |" "$work/summary.md" && r=yes || r=no
+expect "actions: summary marks the up target" "$r" yes
 
 # No targets: skip with a notice.
 out="$(env -u UPTIME_URLS -u API_PUBLIC_URL -u MCP_PUBLIC_URL bash "$here/uptime.sh")"
