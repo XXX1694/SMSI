@@ -231,6 +231,9 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-
       - name: Build
         run: npm run build
+      # First-load JS per route (gzip, layouts included) against frontend/bundle-budget.json, plus two guards (issue #180).
+      - name: JS budget
+        run: npm run budget
       # Reads package-lock.json; devDependencies are out of scope on purpose.
       - name: npm audit (production dependencies, high and above)
         run: npm audit --omit=dev --audit-level=high

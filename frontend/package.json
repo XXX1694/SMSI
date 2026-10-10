@@ -14,7 +14,8 @@
     "test": "vitest run",
     "mock-api": "node scripts/mock-api.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "build:demo": "node scripts/build-demo.mjs"
+    "build:demo": "node scripts/build-demo.mjs",
+    "budget": "node scripts/bundle-budget.mjs"
   },
   "//overrides": "next 15.5.x bundles postcss 8.4.31 (GHSA-qx2v-qp2m-jg93 and others, fixed in 8.5.18); remove once Next ships a patched postcss.",
   "overrides": {
