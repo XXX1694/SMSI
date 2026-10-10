@@ -12,7 +12,7 @@ export default function NotFound() {
   const t = useTranslations('common.notFound');
   return (
     <main id="main" tabIndex={-1} className="mx-auto flex min-h-screen max-w-md items-center px-4 focus:outline-none">
-      <div className="w-full rounded-lg border border-dashed px-6 py-12 text-center">
+      <div className="glass-card w-full rounded-xl border px-6 py-12 text-center">
         <span aria-hidden className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <SearchX className="h-5 w-5" />
         </span>
