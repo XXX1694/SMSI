@@ -1,4 +1,4 @@
-import type { AppT } from '@/i18n/translate';
+import type { AppT, Translator } from '@/i18n/translate';
 import type { Messages } from '@/i18n/catalog';
 
 /** Codes with a sentence in the catalog (`errors.<code>`). Anything else gets `errors.UNKNOWN`, never the code itself. */
@@ -26,8 +26,11 @@ const CODES = [
 type Code = (typeof CODES)[number];
 const isCode = (code: string): code is Code => (CODES as readonly string[]).includes(code);
 
+/** A translator that can say the `errors.*` sentences; any root translator (`AppT`) qualifies. */
+export type ErrorsT = Translator<`errors.${keyof Messages['errors'] & string}`>;
+
 /** A sentence for an error code. Unknown codes get a generic sentence, never the code itself. */
-export function describeErrorCode(code: string | null | undefined, t: AppT): string {
+export function describeErrorCode(code: string | null | undefined, t: ErrorsT): string {
   return t(code && isCode(code) ? `errors.${code}` : 'errors.UNKNOWN');
 }
 

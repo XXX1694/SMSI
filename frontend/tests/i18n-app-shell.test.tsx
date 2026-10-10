@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '@/components/app-shell';
 import { PrefsProvider } from '@/components/prefs-provider';
-import { LocaleProvider } from '@/i18n/locale-provider';
+import { I18nRoot } from '@/i18n/i18n-root';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/posts', useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
 vi.mock('@/components/auth-provider', () => ({ useAuth: () => ({ user: { email: 'a@example.com', display_name: 'Ana' }, logout: vi.fn() }) }));
@@ -15,9 +15,9 @@ const ENABLED = ['en'] as const;
 function shell() {
   return render(
     <PrefsProvider>
-      <LocaleProvider enabled={ENABLED}>
+      <I18nRoot enabled={ENABLED}>
         <AppShell>content</AppShell>
-      </LocaleProvider>
+      </I18nRoot>
     </PrefsProvider>,
   );
 }

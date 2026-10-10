@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addDays, addMonths, monthGrid, shift, startOfWeek, visibleRange, weekDays } from '@/lib/calendar';
 import { formatBytes, validateMediaFile } from '@/lib/media';
 import { summarizeMetrics } from '@/lib/analytics';
-import { enT } from '@/i18n/en';
+import { enT } from './helpers/en-t';
 
 describe('calendar math', () => {
   it('starts weeks on Monday', () => {

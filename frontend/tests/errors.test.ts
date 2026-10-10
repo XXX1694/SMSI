@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { enErrorsT } from '@/i18n/en';
+import errors from '../messages/en/errors.json';
 import { describeErrorCode, friendlyMessage } from '@/lib/errors';
-import { enT } from '@/i18n/en';
+import { enT } from './helpers/en-t';
 
 describe('describeErrorCode', () => {
   it('turns every backend error code into a sentence without the code in it', () => {
@@ -47,5 +49,23 @@ describe('quota errors', () => {
     const { friendlyMessage } = await import('@/lib/errors');
     expect(friendlyMessage('QUOTA_EXCEEDED', 'connected accounts limit reached (5 of 5 used).', enT)).toBe('connected accounts limit reached (5 of 5 used).');
     expect(friendlyMessage('QUOTA_EXCEEDED', 'QUOTA_EXCEEDED', enT)).toMatch(/limit of your plan/);
+  });
+});
+
+describe('enErrorsT (the translator outside React)', () => {
+  it('has a sentence for every error code in errors.json', () => {
+    const codes = Object.keys(errors).filter((key) => /^[A-Z_]+$|^access_denied$/.test(key));
+    expect(codes.length).toBeGreaterThan(10);
+    for (const code of codes) {
+      expect(describeErrorCode(code, enErrorsT)).toBe(errors[code as keyof typeof errors]);
+    }
+    // Every other message of the namespace (with its arguments) resolves too, never to its own key.
+    for (const key of Object.keys(errors)) {
+      expect(enErrorsT(`errors.${key}` as never, { text: 'x', id: 'y' })).not.toContain('errors.');
+    }
+  });
+
+  it('knows only the errors namespace, so the rest of the English catalog is not shared code', () => {
+    expect(enErrorsT('nav.dashboard' as never)).toBe('nav.dashboard');
   });
 });

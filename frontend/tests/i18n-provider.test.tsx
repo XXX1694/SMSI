@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { LanguageSelect } from '@/i18n/language-select';
-import { LocaleProvider, useLocaleSettings } from '@/i18n/locale-provider';
+import { I18nRoot } from '@/i18n/i18n-root';
+import { useLocaleSettings } from '@/i18n/locale-provider';
 import { useFormat } from '@/i18n/use-format';
 import { useTranslations } from '@/i18n/use-translations';
 
@@ -25,9 +26,9 @@ function Probe() {
 function setup(ui = <Probe />, props: { userLocale?: string | null } = {}) {
   return render(
     <PrefsProvider>
-      <LocaleProvider enabled={ENABLED} {...props}>
+      <I18nRoot enabled={ENABLED} {...props}>
         {ui}
-      </LocaleProvider>
+      </I18nRoot>
     </PrefsProvider>,
   );
 }

@@ -6,7 +6,7 @@ import { FocusOnNavigate } from '@/components/focus-on-navigate';
 import { PrefsProvider } from '@/components/prefs-provider';
 import { ToastProvider } from '@/components/toast';
 import { BRAND_HEX } from '@/lib/brand';
-import { LocaleProvider } from '@/i18n/locale-provider';
+import { I18nRoot } from '@/i18n/i18n-root';
 import { availableLocales } from '@/i18n/locales';
 import { localeScript } from '@/i18n/head-script';
 import { DEMO } from '@/lib/demo/config';
@@ -41,13 +41,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <PrefsProvider>
-          <LocaleProvider>
+          <I18nRoot>
             {process.env.NEXT_PUBLIC_DEMO === 'true' ? <DemoBanner /> : null}
             <ToastProvider>
               <AuthProvider>{children}</AuthProvider>
               <FocusOnNavigate />
             </ToastProvider>
-          </LocaleProvider>
+          </I18nRoot>
         </PrefsProvider>
       </body>
     </html>

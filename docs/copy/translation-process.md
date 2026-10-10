@@ -81,7 +81,10 @@ Also:
 - **How code asks for text.** Components call `useTranslations('ns')` (or the root `useTranslations()`). Server components
   that cannot call hooks use `<T k="ns.key" />`. Functions in `src/lib` stay pure: they take the root translator as a
   parameter (`postStatusView(status, t)`, `validateComposer(state, accounts, providers, t)`) and tests pass `enT` from
-  `@/i18n/en`. Errors: `useErrorText()` / `errorMessage(e, t)` map the API `code` to a catalog sentence and show the server
+  `tests/helpers/en-t.ts` (the whole English catalog). Code outside React that only needs error sentences (the API client)
+  uses `enErrorsT` from `@/i18n/en`, which reads `errors.json` alone. A subtree gets its bundles from `MessagesScope`
+  (`src/i18n/scope.tsx`: English imported statically, translations loaded per locale); the root layout wraps the app in one
+  `LegacyMessagesScope` with every bundle until routes declare their own. Errors: `useErrorText()` / `errorMessage(e, t)` map the API `code` to a catalog sentence and show the server
   message only in English.
 - **Pseudo-locales in dev.** `en-XA` (accented, 40 % longer, wrapped in [ ]) and `ar-XB` (RTL pseudo) expose hardcoded
   strings, clipping and RTL bugs before any translator starts.

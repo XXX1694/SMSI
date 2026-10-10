@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { actionLabel, isIrreversible, isOpen, summaryLines, timeLeft } from '@/lib/approvals';
 import type { Approval } from '@/lib/types';
-import { enT } from '@/i18n/en';
+import { enT } from './helpers/en-t';
 
 const NOW = new Date('2026-10-08T12:00:00Z');
 const base: Approval = {
