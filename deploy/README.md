@@ -349,24 +349,30 @@ see section 5.
 
 ## Monitoring
 
-The `Uptime` workflow (`.github/workflows/uptime.yml`) probes the public endpoints every 15 minutes and needs no external
-account. Each URL gets 3 attempts with backoff and a 10 s timeout; 2xx and 3xx count as up. It also warns when a TLS
-certificate expires in under 14 days.
+The `Uptime` workflow (`.github/workflows/uptime.yml`) probes the public endpoints four times an hour, at :07, :22, :37
+and :52 UTC (off-peak minutes, which GitHub drops less often than :00/:15), and needs no external account. Each URL gets 4
+attempts with linear backoff (5, 10, 15 s) and a 10 s timeout before it counts as down, so a short restart does not open
+an incident; 2xx and 3xx count as up. It also warns when a TLS certificate expires in under 14 days, and the run summary
+lists every target with its HTTP code.
 
-- **Outage**: an issue "Uptime: <url> is down" with the label `incident` is opened. Further failures comment on it instead
-  of opening duplicates. When the URL answers again, the workflow comments "recovered after <duration>" and closes it.
+- **Outage**: an issue "Uptime: <url> is down" with the labels `incident` and `uptime` is opened; its body names the last
+  HTTP code (`000`: no answer) and links the run. Further failures comment on it instead of opening duplicates. When the URL answers again, the workflow comments "recovered after <duration>" and closes it.
   Watch the repository (Issues) to get the notification by email.
 - **Targets**: by default `${API_PUBLIC_URL}/ready`, the app login (`API_PUBLIC_URL` with `api.` replaced by `app.`, plus
   `/login`) and `${MCP_PUBLIC_URL%/mcp}/health`, all from repository variables (section 3). To watch other URLs set the
   repository variable `UPTIME_URLS` to a space-separated list; it replaces the defaults. With neither variable set the run
   is skipped with a notice.
-- **Delays**: GitHub may delay or drop scheduled runs under load, so 15 minutes is a target, not a guarantee. On
+- **Delays**: GitHub may delay or drop scheduled runs under load, so the schedule is a target, not a guarantee. On
   2026-10-09 the cron stopped running after 02:30 UTC, so an outage that night would have gone unnoticed. Scheduled
   workflows are best-effort; treat this one as a convenience and add an **external monitor** that does not depend on GitHub.
   Free options (an owner decision; this repository creates no accounts): UptimeRobot (free plan, 5-minute checks),
   Better Stack uptime (free plan), Healthchecks.io (dead-man's switch: a cron on the server pings it, so it also catches a
-  dead server), Uptime Kuma (self-hosted, but not on the host it watches). Point it at `${API_PUBLIC_URL}/ready`. Run the
-  workflow by hand from the Actions tab (`workflow_dispatch`) for an immediate check.
+  dead server), Uptime Kuma (self-hosted, but not on the host it watches). The owner's step-by-step setup, with the exact URLs and
+  keywords, is [OWNER-SETUP](../docs/OWNER-SETUP.md), section 6.
+- **On demand**: run the workflow from the Actions tab (`workflow_dispatch`, optionally with its own `urls`), with
+  `gh workflow run uptime.yml`, or with a `repository_dispatch` of type `uptime-check`
+  (`gh api repos/<owner>/<repo>/dispatches -f event_type=uptime-check`). Dispatch is for repository writers and their
+  local scripts: it needs a token with push access, so never hand one to a third-party monitor.
 
 ## 12. Troubleshooting
 

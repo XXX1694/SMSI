@@ -306,6 +306,77 @@ curl -s https://api.194-238-43-194.sslip.io/api/v1/ready      # backend and its 
 curl -s "${H[@]}" "$API/social/providers" | jq '.items[]|{name,configured,supported}'   # linkedin configured=true once the env vars are in
 ```
 
+## 6. Monitoring and alerts (external monitor)
+
+The `Uptime` GitHub workflow probes the same endpoints and opens an `incident` issue when one is down, but GitHub runs
+scheduled workflows on a best-effort basis: on 2026-10-09 and 2026-10-10 it fired every 3 to 7 hours instead of every 15
+minutes, and a 70-minute outage on 2026-10-09 went unnoticed. Keep the workflow as a second opinion with an issue trail;
+an external monitor is the alarm. You create the account yourself; nothing in this repository signs up anywhere.
+
+**Recommendation: UptimeRobot, Free plan.** 50 monitors at a 5-minute interval, keyword monitors (the body must contain a
+string, not just answer 200), SSL expiry checks and one public status page. Better Stack's free plan was the other
+candidate: 10 monitors, alerts by email and Slack only, also no Telegram, so it fits less. UptimeRobot describes Free as
+"good for hobby and non-profit projects"; move to a paid plan if Steerpost becomes a business.
+
+**Telegram is not on any free plan of the two.** UptimeRobot Free alerts by email and through Google Chat, Discord,
+Pushover, Pushbullet or Splunk; Telegram (and Slack) start at the paid Solo plan. Pick one:
+
+- free: email plus a **Discord** channel of your own (instant push on the phone through the Discord app); or
+- paid: UptimeRobot Solo, then add the Telegram contact as in step 4 (spending money is your call); or
+- free with Telegram: HetrixTools Free (15 monitors, 1-minute checks, Telegram and email, public status page; log in at
+  least once every 90 days or monitoring lapses). The URLs and keywords below apply unchanged.
+
+### 6.1 Monitors to create
+
+| # | Friendly name | Type | URL | Keyword (must exist) | What it proves |
+|---|---|---|---|---|---|
+| 1 | Steerpost app health | Keyword | <https://app.194-238-43-194.sslip.io/api/v1/health> | `"status":"ok"` | the app host answers and Caddy routes `/api` to the backend |
+| 2 | Steerpost API ready | Keyword | <https://api.194-238-43-194.sslip.io/api/v1/ready> | `"status":"ok"` | the API and its Postgres, Redis and storage (it answers `503 "unavailable"` when one is down) |
+| 3 | Steerpost MCP health | Keyword | <https://mcp.194-238-43-194.sslip.io/health> | `socialos-mcp` | the MCP server (`MCP_PUBLIC_URL` with `/mcp` replaced by `/health`; `/mcp` itself only takes POST) |
+| 4 | Steerpost web login | HTTP(s) | <https://app.194-238-43-194.sslip.io/login> | none (expects 2xx) | the Next.js frontend renders |
+
+These are the repository variables `API_PUBLIC_URL` (`https://api.194-238-43-194.sslip.io`) and `MCP_PUBLIC_URL`
+(`https://mcp.194-238-43-194.sslip.io/mcp`). If you change the domain, change the monitors with them. Check each URL first:
+`curl -s <url>` must print the keyword.
+
+`https://irbisa.com/` (the other site on the host) can be a fifth monitor **only if you want it**; it is not ours and
+nothing here adds it. The same applies to the GitHub workflow (`UPTIME_URLS`, see
+[apply-guardrails](../deploy/host-proxy/apply-guardrails.md), step 7).
+
+### 6.2 Step by step (UptimeRobot)
+
+1. Sign up at <https://uptimerobot.com> with your email and confirm it. The Free plan needs no card.
+2. **Email alert:** your sign-up email is already an alert contact; add a second address if you want one. Menu names
+   below may differ slightly as UptimeRobot changes its UI.
+3. **Discord alert (free):** in your Discord server, **Server Settings > Integrations > Webhooks > New Webhook**, pick a
+   private channel such as `#alerts`, **Copy Webhook URL**. In UptimeRobot, **Integrations > Discord > Add**, paste the
+   URL, name it `Steerpost alerts`. The webhook URL is a secret: keep it out of chat and git.
+4. **Telegram alert (Solo plan or HetrixTools):** **Integrations > Telegram > Add**, open the link it shows, press
+   **Start** in the chat with the UptimeRobot bot (for a group: add the bot to the group and send the `/start` message it
+   gives). Send a test notification.
+5. **Monitors:** **+ New monitor** for each row of 6.1:
+   - type **Keyword** (row 4: **HTTP(s)**), URL and friendly name from the table;
+   - keyword from the table, **Alert when: keyword does not exist**, case-insensitive is fine;
+   - **Monitoring interval: 5 minutes** (the Free minimum);
+   - turn on the SSL expiry reminder where the form offers it;
+   - **Notify**: tick email and Discord (or Telegram).
+6. **Test once**: pause monitor 3, edit its URL to `https://mcp.194-238-43-194.sslip.io/nope`, resume, wait for the DOWN
+   alert on every channel, then put the real URL back and wait for UP. Nothing on the server changes.
+7. **Public status page:** **Status pages > + New status page**, name `Steerpost status`, add monitors 1 to 4 (rename
+   them for the public, e.g. "Web app", "API", "MCP server"), leave it public, **Save**, and open the
+   `stats.uptimerobot.com/...` link it shows. A custom domain needs a paid plan. Link it from the README or the site only if
+   you want it public; tell Claude and it will add the link.
+
+### 6.3 When an alert fires
+
+1. Open the URL from the alert; `curl -s https://api.194-238-43-194.sslip.io/api/v1/ready` shows which dependency failed.
+2. Run the GitHub probe right away for an issue with the HTTP codes: **Actions > Uptime > Run workflow** (or
+   `gh workflow run uptime.yml`, or `gh api repos/XXX1694/steerpost/dispatches -f event_type=uptime-check`). It opens or
+   comments on an `incident` + `uptime` issue and closes it with "recovered after ..." once the URL is back. Run these
+   from your own machine only: they need a token with push access, which must never be given to UptimeRobot or any other
+   third-party monitor.
+3. On the server: [deploy/README.md](../deploy/README.md), section 12 (troubleshooting).
+
 ## Sources (read 2026-10-09)
 
 - LinkedIn 3-legged OAuth, redirect URL rules, 60-day tokens: <https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow>
@@ -319,4 +390,8 @@ curl -s "${H[@]}" "$API/social/providers" | jq '.items[]|{name,configured,suppor
 - Mastodon statuses API: <https://docs.joinmastodon.org/methods/statuses/>
 - Bluesky rate limits: <https://docs.bsky.app/docs/advanced-guides/rate-limits>
 - Resend SMTP: <https://resend.com/docs/send-with-smtp>
+- UptimeRobot plans (read 2026-10-10): <https://uptimerobot.com/pricing/>; integrations per plan:
+  <https://help.uptimerobot.com/en/articles/11361285-uptimerobot-integrations-basic-information-overview>
+- Better Stack plans (read 2026-10-10): <https://betterstack.com/pricing>
+- HetrixTools free plan (read 2026-10-10): <https://hetrixtools.com/pricing/uptime-monitor/>
 - Platform blockers (X, Meta, TikTok, YouTube, Pinterest, Reddit, Medium, Hashnode) with their own sources: [PLATFORMS](PLATFORMS.md#sources-accessed-2026-10-09)
